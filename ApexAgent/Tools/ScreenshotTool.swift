@@ -8,6 +8,12 @@ import CoreGraphics
 // and respects Screen Recording permissions.
 
 struct ScreenshotTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "take_screenshot"
     let description = """
     Captures a screenshot of the entire screen and saves it to a PNG file. \
@@ -26,16 +32,16 @@ struct ScreenshotTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let isScreenAllowed = DispatchQueue.main.sync {
-                AgentOrchestrator.shared?.permissions?.screenRecordingAllowed ?? false
+                self.orchestrator.orchestrator.permissions?.screenRecordingAllowed ?? false
             }
             guard isScreenAllowed else {
                 return "ERROR: Screen Recording check is disabled in Settings."
             }
-
+            
             let isDesktopAllowed = DispatchQueue.main.sync {
-                AgentOrchestrator.shared?.permissions?.desktopFolderAllowed ?? false
+                self.orchestrator.orchestrator.permissions?.desktopFolderAllowed ?? false
             }
 
             let timestamp = Int(Date().timeIntervalSince1970)
@@ -49,7 +55,8 @@ struct ScreenshotTool: Tool {
             let savePath: String
             if let arg = arguments.savePath {
                 let expanded = NSString(string: arg).expandingTildeInPath
-                guard AgentOrchestrator.isPathAllowed(expanded) else {
+                let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(expanded) }
+                guard isAllowed else {
                     return "ERROR: Access to the specified path is disabled in settings: \(expanded)"
                 }
                 savePath = expanded

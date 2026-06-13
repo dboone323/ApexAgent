@@ -1,4 +1,0 @@
-module ApexAgent {
-header "ApexAgent-Swift.h"
-export *
-}

@@ -17,6 +17,8 @@
 		1C4DB093304A17D5F670B825 /* CollaborativeServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AA991F35EA79B75FF0D3008 /* CollaborativeServer.swift */; };
 		1D00FF3EC63A01FB4AA7999B /* AccessibilityControlTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D571CF7D494D423A2BDC79D /* AccessibilityControlTool.swift */; };
 		1EECFA2CB9AFE331DCCA0BEE /* ApexAgentApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C76440A35838941EFC30E32 /* ApexAgentApp.swift */; };
+		F2A1B3C4D5E6F7A8B9C0D1E2 /* OrchestratorProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F8A9B0C1D2 /* OrchestratorProvider.swift */; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* ToolEventLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A3 /* ToolEventLogger.swift */; };
 		2268A11AFE18BC98537774C4 /* DiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF6EC58E8437F751F288312 /* DiagnosticsView.swift */; };
 		23A3BCDE2D7377972C8C35BC /* ProjectAuditTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 835966E6BB38D055D4FD2824 /* ProjectAuditTool.swift */; };
 		25159A3D6149001BA215926D /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A92F5162C8780BEFB5CB9E9 /* ContentView.swift */; };
@@ -89,6 +91,8 @@
 		16608A162DA38B28DD3CF9DE /* NotificationTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationTool.swift; sourceTree = "<group>"; };
 		16B28413018F6CF1008978A5 /* Tool+Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tool+Logging.swift"; sourceTree = "<group>"; };
 		1C76440A35838941EFC30E32 /* ApexAgentApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexAgentApp.swift; sourceTree = "<group>"; };
+		E1F2A3B4C5D6E7F8A9B0C1D2 /* OrchestratorProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrchestratorProvider.swift; sourceTree = "<group>"; };
+		B2C3D4E5F6A7B8C9D0E1F2A3 /* ToolEventLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolEventLogger.swift; sourceTree = "<group>"; };
 		2A92F5162C8780BEFB5CB9E9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		2C1D4A4BD44B5370EF991FEB /* ApexAgent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ApexAgent.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2E675D2E8EF03FD61A52FB7A /* ScreenshotTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotTool.swift; sourceTree = "<group>"; };
@@ -280,6 +284,8 @@
 				D179C4E088707045651E9481 /* AgentOrchestrator.swift */,
 				B66A755BDD664BFE2E951C37 /* AgentSystemPrompt.swift */,
 				1C76440A35838941EFC30E32 /* ApexAgentApp.swift */,
+				E1F2A3B4C5D6E7F8A9B0C1D2 /* OrchestratorProvider.swift */,
+				B2C3D4E5F6A7B8C9D0E1F2A3 /* ToolEventLogger.swift */,
 				F89795B5349F400EF42BD8D7 /* Assets.xcassets */,
 				F1B5319BB80068D3AD02DA93 /* Info.plist */,
 				8B99CE7A3398A6B2E600432F /* Models */,
@@ -413,6 +419,8 @@
 				90FEA38AC3BA0B098E472947 /* AgentSystemPrompt.swift in Sources */,
 				074CEA41B0F69FE26CD2BC4F /* AnalyzeImageTool.swift in Sources */,
 				1EECFA2CB9AFE331DCCA0BEE /* ApexAgentApp.swift in Sources */,
+				F2A1B3C4D5E6F7A8B9C0D1E2 /* OrchestratorProvider.swift in Sources */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* ToolEventLogger.swift in Sources */,
 				3EA89EFFC0BAD29E77BA3944 /* AppleScriptTool.swift in Sources */,
 				BF3635D418EF4B24B4E7A922 /* ApplicationControlTool.swift in Sources */,
 				91A82324118D425545F3D94F /* BrowserAutomationTool.swift in Sources */,

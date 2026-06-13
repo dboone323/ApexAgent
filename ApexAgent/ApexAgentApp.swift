@@ -6,8 +6,9 @@ import Carbon
 struct ApexAgentApp: App {
     @State private var orchestrator = AgentOrchestrator()
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-
+    
     init() {
+        AppDelegate.sharedOrchestrator = orchestrator
         let args = CommandLine.arguments
         if let cliIndex = args.firstIndex(of: "--cli"), cliIndex + 1 < args.count {
             let prompt = args[cliIndex + 1]
@@ -39,6 +40,7 @@ struct ApexAgentApp: App {
 
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
+    static var sharedOrchestrator: AgentOrchestrator?
     var statusItem: NSStatusItem?
     var quickPromptPanel: QuickPromptPanel?
     
@@ -102,7 +104,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func toggleQuickPrompt() {
         if quickPromptPanel == nil {
-            if let orchestrator = AgentOrchestrator.shared {
+            if let orchestrator = AppDelegate.getSharedOrchestrator() {
                 quickPromptPanel = QuickPromptPanel(orchestrator: orchestrator)
             }
         }
@@ -115,6 +117,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             panel.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         }
+    }
+
+    @MainActor
+    static func getSharedOrchestrator() -> AgentOrchestrator? {
+        return sharedOrchestrator
     }
 
     @MainActor
@@ -132,8 +139,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } catch {
             print("⚠️ Failed to initialize SwiftData model context: \(error)")
         }
-        AgentOrchestrator.isCLITestMode = true
-        
+        ProcessInfo.processInfo.setValue("1", forKey: "APEX_TEST_MODE")
+
         // Wait a brief moment to ensure SystemLanguageModel is ready/loaded
         try? await Task.sleep(for: .seconds(2))
         

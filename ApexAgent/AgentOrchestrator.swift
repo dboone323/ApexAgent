@@ -5,32 +5,6 @@ import SwiftData
 import AppKit
 
 
-// MARK: - Tool Event Model
-
-enum ToolStatus {
-    case running
-    case success
-    case failed(String)
-    case awaitingConfirmation
-    case denied
-}
-
-struct ToolEvent: Identifiable {
-    let id = UUID()
-    let toolName: String
-    let arguments: String
-    var result: String?
-    var status: ToolStatus
-    let timestamp: Date
-
-    init(toolName: String, arguments: String) {
-        self.toolName = toolName
-        self.arguments = arguments
-        self.status = .running
-        self.timestamp = Date()
-    }
-}
-
 // MARK: - Confirmation Request
 
 struct ConfirmationRequest: Identifiable {
@@ -98,7 +72,11 @@ enum AgentModelPreference: String, CaseIterable, Identifiable, Codable {
 
 @Observable
 @MainActor
-final class AgentOrchestrator {
+public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
+    
+    /// Global test mode flag - set to true when running in test mode
+    /// This allows tools to provide mock responses without needing environment variables
+    static var isTestMode: Bool = false
 
     // MARK: Public State
     var messages: [ChatMessage] = []
@@ -135,42 +113,9 @@ final class AgentOrchestrator {
     var activeAssistantMessageId: UUID?
     var ptySessions: [UUID: PTYSession] = [:]
 
-    // MARK: Tools
-    private let shellTool = ShellTool()
-    private let fileReadTool = FileReadTool()
-    private let fileWriteTool = FileWriteTool()
-    private let listDirectoryTool = ListDirectoryTool()
-    private let createDirectoryTool = CreateDirectoryTool()
-    private let deleteFileTool = DeleteFileTool()
-    private let moveFileTool = MoveFileTool()
-    private let webSearchTool = WebSearchTool()
-    private let appleScriptTool = AppleScriptTool()
-    private let screenshotTool = ScreenshotTool()
-    private let clipboardReadTool = ClipboardReadTool()
-    private let clipboardWriteTool = ClipboardWriteTool()
-    private let notificationTool = NotificationTool()
-    private let systemInfoTool = SystemInfoTool()
-    private let processListTool = ProcessListTool()
-    private let getFrontmostAppTool = GetFrontmostAppTool()
-    private let storeMemoryTool = StoreMemoryTool()
-    private let searchMemoryTool = SearchMemoryTool()
-    private let applicationControlTool = ApplicationControlTool()
-    private let accessibilityControlTool = AccessibilityControlTool()
-    private let browserAutomationTool = BrowserAutomationTool()
-    private let updatePlanTool = UpdatePlanTool()
-    private let projectAuditTool = ProjectAuditTool()
-    private let delegateTaskTool = DelegateTaskTool()
-    private let analyzeImageTool = AnalyzeImageTool()
-    private let detectImageTextTool = DetectImageTextTool()
-    private let conveneMeetingTool = ConveneMeetingTool()
-    private let createSkillTool = CreateSkillTool()
-    private let runWorkflowTool = RunWorkflowTool()
-    private let dynamicToolCallTool = DynamicToolCallTool()
-
     // MARK: Init
 
     init() {
-        AgentOrchestrator.shared = self
         checkModelAvailability()
         resetSession()
         
@@ -218,7 +163,7 @@ final class AgentOrchestrator {
         }
     }
 
-    nonisolated static func isFolderAccessRestricted() -> Bool {
+    nonisolated func isFolderAccessRestricted() -> Bool {
         if Thread.isMainThread {
             return MainActor.assumeIsolated {
                 return isFolderAccessRestrictedInternal()
@@ -233,8 +178,8 @@ final class AgentOrchestrator {
     }
 
     @MainActor
-    private static func isFolderAccessRestrictedInternal() -> Bool {
-        guard let permissions = shared?.permissions else {
+    private func isFolderAccessRestrictedInternal() -> Bool {
+        guard let permissions = self.permissions else {
             return true
         }
         return !permissions.musicFolderAllowed ||
@@ -243,7 +188,7 @@ final class AgentOrchestrator {
                !permissions.downloadsFolderAllowed
     }
 
-    nonisolated static func isPathAllowed(_ path: String) -> Bool {
+    nonisolated func isPathAllowed(_ path: String) -> Bool {
         if Thread.isMainThread {
             return MainActor.assumeIsolated {
                 return isPathAllowedInternal(path)
@@ -258,8 +203,8 @@ final class AgentOrchestrator {
     }
 
     @MainActor
-    private static func isPathAllowedInternal(_ path: String) -> Bool {
-        guard let permissions = shared?.permissions else {
+    private func isPathAllowedInternal(_ path: String) -> Bool {
+        guard let permissions = self.permissions else {
             return false
         }
         
@@ -428,20 +373,20 @@ final class AgentOrchestrator {
         case .localSystem:
             let model = SystemLanguageModel.default
             if multiAgentModeEnabled {
-                let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode)
+                let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self)
                 session = LanguageModelSession(profile: profile, history: transcript)
             } else {
-                let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode)
+                let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self)
                 session = LanguageModelSession(profile: profile, history: transcript)
             }
             
         case .privateCloud:
             let model = PrivateCloudComputeLanguageModel()
             if multiAgentModeEnabled {
-                let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode)
+                let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self)
                 session = LanguageModelSession(profile: profile, history: transcript)
             } else {
-                let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode)
+                let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self)
                 session = LanguageModelSession(profile: profile, history: transcript)
             }
             
@@ -449,10 +394,10 @@ final class AgentOrchestrator {
             let apiKey = KeychainManager.get(key: "geminiAPIKey") ?? ""
             let model = CloudGeminiLanguageModel(apiKey: apiKey)
             if multiAgentModeEnabled {
-                let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode)
+                let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self)
                 session = LanguageModelSession(profile: profile, history: transcript)
             } else {
-                let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode)
+                let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self)
                 session = LanguageModelSession(profile: profile, history: transcript)
             }
             
@@ -460,23 +405,23 @@ final class AgentOrchestrator {
             let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434") ?? URL(string: "http://localhost:11434")!
             let model = LocalOllamaLanguageModel(hostURL: host)
             if multiAgentModeEnabled {
-                let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode)
+                let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self)
                 session = LanguageModelSession(profile: profile, history: transcript)
             } else {
-                let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode)
+                let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self)
                 session = LanguageModelSession(profile: profile, history: transcript)
             }
-
+            
         case .hybrid:
             if multiAgentModeEnabled {
                 // Supervisor (Apex Prime) runs locally on-device
                 let model = SystemLanguageModel.default
-                let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode)
+                let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self)
                 session = LanguageModelSession(profile: profile, history: transcript)
             } else {
                 // Single-agent mode uses Private Cloud Compute for deep reasoning (writing code / research)
                 let model = PrivateCloudComputeLanguageModel()
-                let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode)
+                let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self)
                 session = LanguageModelSession(profile: profile, history: transcript)
             }
         }
@@ -486,15 +431,36 @@ final class AgentOrchestrator {
 
     var allTools: [any Tool] {
         [
-            shellTool, fileReadTool, fileWriteTool, listDirectoryTool,
-            createDirectoryTool, deleteFileTool, moveFileTool,
-            webSearchTool, appleScriptTool, screenshotTool,
-            clipboardReadTool, clipboardWriteTool, notificationTool,
-            systemInfoTool, processListTool, getFrontmostAppTool,
-            storeMemoryTool, searchMemoryTool, applicationControlTool,
-            accessibilityControlTool, browserAutomationTool, updatePlanTool,
-            projectAuditTool, delegateTaskTool, analyzeImageTool, detectImageTextTool, conveneMeetingTool,
-            createSkillTool, runWorkflowTool, dynamicToolCallTool
+            ShellTool(orchestrator: self),
+            FileReadTool(orchestrator: self),
+            FileWriteTool(orchestrator: self),
+            ListDirectoryTool(orchestrator: self),
+            CreateDirectoryTool(orchestrator: self),
+            DeleteFileTool(orchestrator: self),
+            MoveFileTool(orchestrator: self),
+            WebSearchTool(orchestrator: self),
+            AppleScriptTool(orchestrator: self),
+            ScreenshotTool(orchestrator: self),
+            ClipboardReadTool(orchestrator: self),
+            ClipboardWriteTool(orchestrator: self),
+            NotificationTool(orchestrator: self),
+            SystemInfoTool(orchestrator: self),
+            ProcessListTool(orchestrator: self),
+            GetFrontmostAppTool(orchestrator: self),
+            StoreMemoryTool(orchestrator: self),
+            SearchMemoryTool(orchestrator: self),
+            ApplicationControlTool(orchestrator: self),
+            AccessibilityControlTool(orchestrator: self),
+            BrowserAutomationTool(orchestrator: self),
+            UpdatePlanTool(orchestrator: self),
+            ProjectAuditTool(orchestrator: self),
+            DelegateTaskTool(orchestrator: self),
+            AnalyzeImageTool(orchestrator: self),
+            DetectImageTextTool(orchestrator: self),
+            ConveneMeetingTool(orchestrator: self),
+            CreateSkillTool(orchestrator: self),
+            RunWorkflowTool(orchestrator: self),
+            DynamicToolCallTool(orchestrator: self)
         ]
     }
 
@@ -782,14 +748,14 @@ final class AgentOrchestrator {
     }
 
     // MARK: - PTY Management
-
-    func ptySession(for conversationId: UUID) -> PTYSession {
+    
+    func ptySession(for conversationId: UUID) async -> PTYSession {
         if let session = ptySessions[conversationId] {
             return session
         }
         do {
             let workspace = FileManager.default.currentDirectoryPath
-            let session = try PTYSession(workspacePath: workspace)
+            let session = try await PTYSession(workspacePath: workspace, orchestrator: self)
             ptySessions[conversationId] = session
             session.onOutput = { [weak self] output in
                 DispatchQueue.main.async {
@@ -799,16 +765,16 @@ final class AgentOrchestrator {
             return session
         } catch {
             print("Failed to initialize PTY session: \(error)")
-            let fallback = try! PTYSession(workspacePath: FileManager.default.currentDirectoryPath)
+            let fallback = try! await PTYSession(workspacePath: FileManager.default.currentDirectoryPath, orchestrator: self)
             ptySessions[conversationId] = fallback
             return fallback
         }
     }
 
-    func resetPTYSession(for conversationId: UUID) {
+    func resetPTYSession(for conversationId: UUID) async {
         ptySessions[conversationId]?.cleanup()
         ptySessions[conversationId] = nil
-        _ = ptySession(for: conversationId)
+        _ = await ptySession(for: conversationId)
     }
 
     func appendTerminalOutput(conversationId: UUID, text: String) {
@@ -823,56 +789,8 @@ final class AgentOrchestrator {
         }
     }
 
-    // MARK: Confirmation Gate
-
-    func requestConfirmation(
-        toolName: String,
-        arguments: String,
-        riskDescription: String,
-        oldContent: String? = nil,
-        newContent: String? = nil,
-        filePath: String? = nil
-    ) async -> Bool {
-        return await withCheckedContinuation { continuation in
-            let request = ConfirmationRequest(
-                toolName: toolName,
-                arguments: arguments,
-                riskDescription: riskDescription,
-                oldContent: oldContent,
-                newContent: newContent,
-                filePath: filePath,
-                continuation: continuation
-            )
-            pendingConfirmation = request
-
-            // Auto-deny after 60 seconds
-            Task {
-                try? await Task.sleep(for: .seconds(60))
-                if self.pendingConfirmation?.id == request.id {
-                    self.resolveConfirmation(approved: false)
-                }
-            }
-        }
-    }
-
-    func resolveConfirmation(approved: Bool) {
-        guard let pending = pendingConfirmation else { return }
-        pending.continuation?.resume(returning: approved)
-        pendingConfirmation = nil
-    }
-
-    // MARK: Tool Event Logging
-
-    func logToolEvent(_ event: ToolEvent) {
-        toolEvents.insert(event, at: 0) // Most recent first
-        // Limit to 200 events
-        if toolEvents.count > 200 {
-            toolEvents = Array(toolEvents.prefix(200))
-        }
-    }
-
     func captureAndAttachScreenshot() async {
-        let tool = ScreenshotTool()
+        let tool = ScreenshotTool(orchestrator: self)
         let timestamp = Int(Date().timeIntervalSince1970)
         let tempDir = NSTemporaryDirectory()
         let path = tempDir + "apex_temp_screenshot_\(timestamp).png"
@@ -888,134 +806,133 @@ final class AgentOrchestrator {
         }
     }
 
-    // MARK: Tools Interception & Logging (Shared Access)
-
-    @MainActor static var shared: AgentOrchestrator?
-    @MainActor static var isCLITestMode = false
-
-    func shouldConfirmTool(name: String) -> Bool {
-        if Self.isCLITestMode { return false }
-        if requireConfirmationForAll { return true }
-        let dangerousTools = ["run_shell_command", "delete_file", "write_file", "run_applescript"]
-        return dangerousTools.contains(name)
-    }
-
-    func logToolStart(name: String, arguments: String) {
-        activeTurnToolCallCount += 1
-        let event = ToolEvent(toolName: name, arguments: arguments)
-        logToolEvent(event)
-    }
-
-    func updateToolStatus(name: String, status: ToolStatus) {
-        if let index = toolEvents.firstIndex(where: { $0.toolName == name && $0.result == nil }) {
-            toolEvents[index].status = status
-        }
-    }
-
-    func logToolEnd(name: String, result: String, status: ToolStatus) {
-        if let index = toolEvents.firstIndex(where: { $0.toolName == name && $0.result == nil }) {
-            toolEvents[index].result = result
-            toolEvents[index].status = status
-        }
-    }
-
     func executeToolByName(name: String, jsonArguments: String) async throws -> String {
         let decoder = JSONDecoder()
         guard let data = jsonArguments.data(using: .utf8) else {
             throw NSError(domain: "AgentOrchestrator", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON arguments"])
         }
-        
+
         switch name {
         case "run_shell_command":
             let args = try decoder.decode(ShellTool.Arguments.self, from: data)
-            return try await shellTool.call(arguments: args)
+            let tool = ShellTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "read_file":
             let args = try decoder.decode(FileReadTool.Arguments.self, from: data)
-            return try await fileReadTool.call(arguments: args)
+            let tool = FileReadTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "write_file":
             let args = try decoder.decode(FileWriteTool.Arguments.self, from: data)
-            return try await fileWriteTool.call(arguments: args)
+            let tool = FileWriteTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "list_directory":
             let args = try decoder.decode(ListDirectoryTool.Arguments.self, from: data)
-            return try await listDirectoryTool.call(arguments: args)
+            let tool = ListDirectoryTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "create_directory":
             let args = try decoder.decode(CreateDirectoryTool.Arguments.self, from: data)
-            return try await createDirectoryTool.call(arguments: args)
+            let tool = CreateDirectoryTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "delete_file":
             let args = try decoder.decode(DeleteFileTool.Arguments.self, from: data)
-            return try await deleteFileTool.call(arguments: args)
+            let tool = DeleteFileTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "move_file":
             let args = try decoder.decode(MoveFileTool.Arguments.self, from: data)
-            return try await moveFileTool.call(arguments: args)
+            let tool = MoveFileTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "web_search":
             let args = try decoder.decode(WebSearchTool.Arguments.self, from: data)
-            return try await webSearchTool.call(arguments: args)
+            let tool = WebSearchTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "run_applescript":
             let args = try decoder.decode(AppleScriptTool.Arguments.self, from: data)
-            return try await appleScriptTool.call(arguments: args)
+            let tool = AppleScriptTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "take_screenshot":
             let args = try decoder.decode(ScreenshotTool.Arguments.self, from: data)
-            return try await screenshotTool.call(arguments: args)
+            let tool = ScreenshotTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "read_clipboard":
             let args = try decoder.decode(ClipboardReadTool.Arguments.self, from: data)
-            return try await clipboardReadTool.call(arguments: args)
+            let tool = ClipboardReadTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "write_clipboard":
             let args = try decoder.decode(ClipboardWriteTool.Arguments.self, from: data)
-            return try await clipboardWriteTool.call(arguments: args)
+            let tool = ClipboardWriteTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "send_notification":
             let args = try decoder.decode(NotificationTool.Arguments.self, from: data)
-            return try await notificationTool.call(arguments: args)
+            let tool = NotificationTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "get_system_info":
             let args = try decoder.decode(SystemInfoTool.Arguments.self, from: data)
-            return try await systemInfoTool.call(arguments: args)
+            let tool = SystemInfoTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "get_running_processes":
             let args = try decoder.decode(ProcessListTool.Arguments.self, from: data)
-            return try await processListTool.call(arguments: args)
+            let tool = ProcessListTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "get_frontmost_app":
             let args = try decoder.decode(GetFrontmostAppTool.Arguments.self, from: data)
-            return try await getFrontmostAppTool.call(arguments: args)
+            let tool = GetFrontmostAppTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "store_memory":
             let args = try decoder.decode(StoreMemoryTool.Arguments.self, from: data)
-            return try await storeMemoryTool.call(arguments: args)
+            let tool = StoreMemoryTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "search_memory":
             let args = try decoder.decode(SearchMemoryTool.Arguments.self, from: data)
-            return try await searchMemoryTool.call(arguments: args)
+            let tool = SearchMemoryTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "control_app":
             let args = try decoder.decode(ApplicationControlTool.Arguments.self, from: data)
-            return try await applicationControlTool.call(arguments: args)
+            let tool = ApplicationControlTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "control_accessibility":
             let args = try decoder.decode(AccessibilityControlTool.Arguments.self, from: data)
-            return try await accessibilityControlTool.call(arguments: args)
+            let tool = AccessibilityControlTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "control_browser":
             let args = try decoder.decode(BrowserAutomationTool.Arguments.self, from: data)
-            return try await browserAutomationTool.call(arguments: args)
+            let tool = BrowserAutomationTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "update_plan":
             let args = try decoder.decode(UpdatePlanTool.Arguments.self, from: data)
-            return try await updatePlanTool.call(arguments: args)
+            let tool = UpdatePlanTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "audit_projects":
             let args = try decoder.decode(ProjectAuditTool.Arguments.self, from: data)
-            return try await projectAuditTool.call(arguments: args)
+            let tool = ProjectAuditTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "delegate_task":
             let args = try decoder.decode(DelegateTaskTool.Arguments.self, from: data)
-            return try await delegateTaskTool.call(arguments: args)
+            let tool = DelegateTaskTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "analyze_image":
             let args = try decoder.decode(AnalyzeImageTool.Arguments.self, from: data)
-            return try await analyzeImageTool.call(arguments: args)
+            let tool = AnalyzeImageTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "detect_image_text":
             let args = try decoder.decode(DetectImageTextTool.Arguments.self, from: data)
-            return try await detectImageTextTool.call(arguments: args)
+            let tool = DetectImageTextTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "convene_meeting":
             let args = try decoder.decode(ConveneMeetingTool.Arguments.self, from: data)
-            return try await conveneMeetingTool.call(arguments: args)
+            let tool = ConveneMeetingTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "create_skill":
             let args = try decoder.decode(CreateSkillTool.Arguments.self, from: data)
-            return try await createSkillTool.call(arguments: args)
+            let tool = CreateSkillTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "run_workflow":
             let args = try decoder.decode(RunWorkflowTool.Arguments.self, from: data)
-            return try await runWorkflowTool.call(arguments: args)
+            let tool = RunWorkflowTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         case "execute_dynamic_tool":
             let args = try decoder.decode(DynamicToolCallTool.Arguments.self, from: data)
-            return try await dynamicToolCallTool.call(arguments: args)
+            let tool = DynamicToolCallTool(orchestrator: self)
+            return try await tool.call(arguments: args)
         default:
             if DynamicToolbox.shared.dynamicTools[name] != nil {
                 return try await DynamicToolbox.shared.executeTool(name: name, jsonArguments: jsonArguments)
@@ -1030,7 +947,7 @@ final class AgentOrchestrator {
         
         // Add Codex (Developer) node
         graph.addNode(name: "Codex") { state in
-            let developerTool = DelegateTaskTool()
+            let developerTool = DelegateTaskTool(orchestrator: self)
             let args = DelegateTaskTool.Arguments(agentType: "developer", taskDescription: "Implement or fix the following: \(topic). Logs and compiler errors so far: \(state.values["logs"] as? String ?? "None")")
             do {
                 let output = try await developerTool.call(arguments: args)
@@ -1044,7 +961,7 @@ final class AgentOrchestrator {
         
         // Add Auditor (Linter) node
         graph.addNode(name: "Auditor") { state in
-            let linterTool = DelegateTaskTool()
+            let linterTool = DelegateTaskTool(orchestrator: self)
             let args = DelegateTaskTool.Arguments(agentType: "linter", taskDescription: "Audit and review the changes made for syntax issues and style guidelines.")
             do {
                 let output = try await linterTool.call(arguments: args)
@@ -1061,7 +978,7 @@ final class AgentOrchestrator {
         
         // Add Nexus (Executor) node
         graph.addNode(name: "Nexus") { state in
-            let executorTool = DelegateTaskTool()
+            let executorTool = DelegateTaskTool(orchestrator: self)
             let args = DelegateTaskTool.Arguments(agentType: "executor", taskDescription: "Compile the project and run unit tests. Report if there are compile errors or failing tests.")
             do {
                 let output = try await executorTool.call(arguments: args)
@@ -1117,6 +1034,82 @@ final class AgentOrchestrator {
         let finalLogs = finalState.values["logs"] as? String ?? "No logs generated."
         return finalLogs
     }
+
+    // MARK: - OrchestratorProvider Conformance
+    
+    public var orchestrator: AgentOrchestrator { self }
+    
+    // MARK: - ToolEventLogger Conformance
+    
+    public func logToolStart(name: String, arguments: String) {
+        activeTurnToolCallCount += 1
+        let event = ToolEvent(toolName: name, arguments: arguments)
+        logToolEvent(event)
+    }
+    
+    public func logToolEvent(_ event: ToolEvent) {
+        toolEvents.insert(event, at: 0) // Most recent first
+        // Limit to 200 events
+        if toolEvents.count > 200 {
+            toolEvents = Array(toolEvents.prefix(200))
+        }
+    }
+    
+    public func logToolEnd(name: String, result: String, status: ToolStatus) {
+        if let index = toolEvents.firstIndex(where: { $0.toolName == name && $0.result == nil }) {
+            toolEvents[index].result = result
+            toolEvents[index].status = status
+        }
+    }
+    
+    public func updateToolStatus(name: String, status: ToolStatus) {
+        if let index = toolEvents.firstIndex(where: { $0.toolName == name && $0.result == nil }) {
+            toolEvents[index].status = status
+        }
+    }
+    
+    public func shouldConfirmTool(name: String) -> Bool {
+        if ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" { return false }
+        if requireConfirmationForAll { return true }
+        let dangerousTools = ["run_shell_command", "delete_file", "write_file", "run_applescript"]
+        return dangerousTools.contains(name)
+    }
+    
+    public func requestConfirmation(
+        toolName: String,
+        arguments: String,
+        riskDescription: String,
+        oldContent: String? = nil,
+        newContent: String? = nil,
+        filePath: String? = nil
+    ) async -> Bool {
+        return await withCheckedContinuation { continuation in
+            let request = ConfirmationRequest(
+                toolName: toolName,
+                arguments: arguments,
+                riskDescription: riskDescription,
+                oldContent: oldContent,
+                newContent: newContent,
+                filePath: filePath,
+                continuation: continuation
+            )
+            pendingConfirmation = request
+            
+            // Auto-deny after 60 seconds
+            Task {
+                try? await Task.sleep(for: .seconds(60))
+                if self.pendingConfirmation?.id == request.id {
+                    self.resolveConfirmation(approved: false)
+                }
+            }
+        }
+    }
+    
+    public func resolveConfirmation(approved: Bool) {
+        guard let pending = pendingConfirmation else { return }
+        pending.continuation?.resume(returning: approved)
+        pendingConfirmation = nil
+    }
 }
 
 // MARK: - Apex Agent Dynamic Profile
@@ -1125,33 +1118,40 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
     let instructions: String
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
+    let orchestrator: OrchestratorProvider?
     
-    // Core Tools
-    private let shellTool = ShellTool()
-    private let fileReadTool = FileReadTool()
-    private let fileWriteTool = FileWriteTool()
-    private let listDirectoryTool = ListDirectoryTool()
-    private let createDirectoryTool = CreateDirectoryTool()
-    private let deleteFileTool = DeleteFileTool()
-    private let moveFileTool = MoveFileTool()
-    private let webSearchTool = WebSearchTool()
-    private let appleScriptTool = AppleScriptTool()
-    private let screenshotTool = ScreenshotTool()
-    private let clipboardReadTool = ClipboardReadTool()
-    private let clipboardWriteTool = ClipboardWriteTool()
-    private let notificationTool = NotificationTool()
-    private let systemInfoTool = SystemInfoTool()
-    private let processListTool = ProcessListTool()
-    private let getFrontmostAppTool = GetFrontmostAppTool()
-    private let storeMemoryTool = StoreMemoryTool()
-    private let searchMemoryTool = SearchMemoryTool()
-    private let applicationControlTool = ApplicationControlTool()
-    private let accessibilityControlTool = AccessibilityControlTool()
-    private let browserAutomationTool = BrowserAutomationTool()
-    private let updatePlanTool = UpdatePlanTool()
-    private let projectAuditTool = ProjectAuditTool()
-    private let createSkillTool = CreateSkillTool()
-    private let dynamicToolCallTool = DynamicToolCallTool()
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider? = nil) {
+        self.instructions = instructions
+        self.model = model
+        self.toolCallingMode = toolCallingMode
+        self.orchestrator = orchestrator
+    }
+    
+    private var shellTool: ShellTool { ShellTool(orchestrator: orchestrator!) }
+    private var fileReadTool: FileReadTool { FileReadTool(orchestrator: orchestrator!) }
+    private var fileWriteTool: FileWriteTool { FileWriteTool(orchestrator: orchestrator!) }
+    private var listDirectoryTool: ListDirectoryTool { ListDirectoryTool(orchestrator: orchestrator!) }
+    private var createDirectoryTool: CreateDirectoryTool { CreateDirectoryTool(orchestrator: orchestrator!) }
+    private var deleteFileTool: DeleteFileTool { DeleteFileTool(orchestrator: orchestrator!) }
+    private var moveFileTool: MoveFileTool { MoveFileTool(orchestrator: orchestrator!) }
+    private var webSearchTool: WebSearchTool { WebSearchTool(orchestrator: orchestrator!) }
+    private var appleScriptTool: AppleScriptTool { AppleScriptTool(orchestrator: orchestrator!) }
+    private var screenshotTool: ScreenshotTool { ScreenshotTool(orchestrator: orchestrator!) }
+    private var clipboardReadTool: ClipboardReadTool { ClipboardReadTool(orchestrator: orchestrator!) }
+    private var clipboardWriteTool: ClipboardWriteTool { ClipboardWriteTool(orchestrator: orchestrator!) }
+    private var notificationTool: NotificationTool { NotificationTool(orchestrator: orchestrator!) }
+    private var systemInfoTool: SystemInfoTool { SystemInfoTool(orchestrator: orchestrator!) }
+    private var processListTool: ProcessListTool { ProcessListTool(orchestrator: orchestrator!) }
+    private var getFrontmostAppTool: GetFrontmostAppTool { GetFrontmostAppTool(orchestrator: orchestrator!) }
+    private var storeMemoryTool: StoreMemoryTool { StoreMemoryTool(orchestrator: orchestrator!) }
+    private var searchMemoryTool: SearchMemoryTool { SearchMemoryTool(orchestrator: orchestrator!) }
+    private var applicationControlTool: ApplicationControlTool { ApplicationControlTool(orchestrator: orchestrator!) }
+    private var accessibilityControlTool: AccessibilityControlTool { AccessibilityControlTool(orchestrator: orchestrator!) }
+    private var browserAutomationTool: BrowserAutomationTool { BrowserAutomationTool(orchestrator: orchestrator!) }
+    private var updatePlanTool: UpdatePlanTool { UpdatePlanTool(orchestrator: orchestrator!) }
+    private var projectAuditTool: ProjectAuditTool { ProjectAuditTool(orchestrator: orchestrator!) }
+    private var createSkillTool: CreateSkillTool { CreateSkillTool(orchestrator: orchestrator!) }
+    private var dynamicToolCallTool: DynamicToolCallTool { DynamicToolCallTool(orchestrator: orchestrator!) }
 
     var body: some LanguageModelSession.DynamicProfile {
         LanguageModelSession.Profile {

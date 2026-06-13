@@ -32,12 +32,18 @@ final class ApexAgentModelTests: XCTestCase {
         XCTAssertEqual(model.apiKey, key)
     }
 
+    @MainActor
     func testUpdaterControllerSharedInstance() {
         XCTAssertNotNil(UpdaterController.shared)
     }
-
-    func testUpdaterControllerCheckForUpdatesDoesNotThrow() {
-        XCTAssertNoThrow(try UpdaterController.shared.checkForUpdates())
+    
+    @MainActor
+    func testUpdaterControllerCheckForUpdatesDoesNotThrow() async {
+        do {
+            try await UpdaterController.shared.checkForUpdates()
+        } catch {
+            XCTFail("checkForUpdates threw error: \(error)")
+        }
     }
 
     @MainActor

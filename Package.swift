@@ -27,7 +27,7 @@ let package = Package(
         ),
         .testTarget(
             name: "ApexAgentTests",
-            dependencies: ["ApexAgent"],
+            dependencies: ["ApexAgent", .product(name: "Sparkle", package: "Sparkle")],
             path: "ApexAgentTests"
         )
     ]

@@ -12,15 +12,19 @@ class PTYSession: @unchecked Sendable {
     
     var onOutput: ((String) -> Void)?
     var onExit: ((Int32) -> Void)?
+    let orchestrator: OrchestratorProvider?
     
     // Command tracking state
     private var pendingContinuation: CheckedContinuation<String, any Error>?
     private var accumulatedOutput = ""
     private var currentMarker = ""
     
-    init(workspacePath: String? = nil) throws {
+    init(workspacePath: String? = nil, orchestrator: OrchestratorProvider? = nil) async throws {
         let dockerEnabled = UserDefaults.standard.bool(forKey: "apex.dockerSandboxingEnabled")
         let dockerImage = UserDefaults.standard.string(forKey: "apex.dockerImage") ?? "swift:latest"
+        self.orchestrator = orchestrator
+        
+        let isRestricted = await MainActor.run { orchestrator?.orchestrator.isFolderAccessRestricted() ?? false }
         
         var shellPath = "/bin/zsh"
         var shellArgs = [shellPath]
@@ -75,7 +79,7 @@ class PTYSession: @unchecked Sendable {
         let currentPath = env["PATH"] ?? ""
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + currentPath
         
-        if AgentOrchestrator.isFolderAccessRestricted() {
+        if isRestricted {
             let fm = FileManager.default
             let homeDir = fm.homeDirectoryForCurrentUser
             let sandboxDir = homeDir.appendingPathComponent(".apex/sandbox")

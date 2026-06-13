@@ -4,6 +4,12 @@ import FoundationModels
 // MARK: - Web Search Tool (Brave + DuckDuckGo fallback)
 
 struct WebSearchTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "web_search"
     let description = """
     Searches the web using Brave Search (primary) with DuckDuckGo as fallback. \
@@ -21,7 +27,7 @@ struct WebSearchTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let count = arguments.count ?? 5
 
             // Try Brave Search first

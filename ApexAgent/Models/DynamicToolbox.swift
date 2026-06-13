@@ -4,6 +4,8 @@ import Foundation
 class DynamicToolbox {
     static let shared = DynamicToolbox()
     
+    var orchestrator: OrchestratorProvider?
+    
     struct DynamicToolEntry {
         let name: String
         let description: String
@@ -204,8 +206,10 @@ class DynamicToolbox {
         }
         
         guard let scriptPath = tool.scriptPath else {
-            throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Tool \(name) missing execution path"])
+            throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Tool \\(name) missing execution path"])
         }
+        
+        let isRestricted = orchestrator?.orchestrator.isFolderAccessRestricted() ?? false
         
         return try await Task.detached(priority: .userInitiated) {
             let resolvedPath = (scriptPath as NSString).expandingTildeInPath
@@ -217,7 +221,7 @@ class DynamicToolbox {
             var env = ProcessInfo.processInfo.environment
             env["APEX_ARGS"] = jsonArguments
             
-            if AgentOrchestrator.isFolderAccessRestricted() {
+            if isRestricted {
                 let fm = FileManager.default
                 let homeDir = fm.homeDirectoryForCurrentUser
                 let sandboxDir = homeDir.appendingPathComponent(".apex/sandbox")

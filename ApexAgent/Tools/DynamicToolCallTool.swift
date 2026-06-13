@@ -2,6 +2,12 @@ import Foundation
 import FoundationModels
 
 struct DynamicToolCallTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "execute_dynamic_tool"
     let description = "Executes a dynamic tool or MCP tool by name with JSON arguments. Returns the tool output."
 
@@ -15,7 +21,7 @@ struct DynamicToolCallTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let exists = await MainActor.run {
                 DynamicToolbox.shared.dynamicTools[arguments.toolName] != nil
             }

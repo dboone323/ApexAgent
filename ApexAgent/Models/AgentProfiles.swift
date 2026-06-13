@@ -95,16 +95,24 @@ struct SupervisorAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynami
     let instructions: String
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
+    let orchestrator: OrchestratorProvider?
     
-    private let delegateTaskTool = DelegateTaskTool()
-    private let conveneMeetingTool = ConveneMeetingTool()
-    private let updatePlanTool = UpdatePlanTool()
-    private let notificationTool = NotificationTool()
-    private let storeMemoryTool = StoreMemoryTool()
-    private let searchMemoryTool = SearchMemoryTool()
-    private let createSkillTool = CreateSkillTool()
-    private let runWorkflowTool = RunWorkflowTool()
-    private let dynamicToolCallTool = DynamicToolCallTool()
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider? = nil) {
+        self.instructions = instructions
+        self.model = model
+        self.toolCallingMode = toolCallingMode
+        self.orchestrator = orchestrator
+    }
+    
+    private var delegateTaskTool: DelegateTaskTool { DelegateTaskTool(orchestrator: orchestrator!) }
+    private var conveneMeetingTool: ConveneMeetingTool { ConveneMeetingTool(orchestrator: orchestrator!) }
+    private var updatePlanTool: UpdatePlanTool { UpdatePlanTool(orchestrator: orchestrator!) }
+    private var notificationTool: NotificationTool { NotificationTool(orchestrator: orchestrator!) }
+    private var storeMemoryTool: StoreMemoryTool { StoreMemoryTool(orchestrator: orchestrator!) }
+    private var searchMemoryTool: SearchMemoryTool { SearchMemoryTool(orchestrator: orchestrator!) }
+    private var createSkillTool: CreateSkillTool { CreateSkillTool(orchestrator: orchestrator!) }
+    private var runWorkflowTool: RunWorkflowTool { RunWorkflowTool(orchestrator: orchestrator!) }
+    private var dynamicToolCallTool: DynamicToolCallTool { DynamicToolCallTool(orchestrator: orchestrator!) }
 
     var body: some LanguageModelSession.DynamicProfile {
         LanguageModelSession.Profile {
@@ -132,14 +140,23 @@ struct DeveloperAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynamic
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
     
-    private let fileReadTool = FileReadTool()
-    private let fileWriteTool = FileWriteTool()
-    private let listDirectoryTool = ListDirectoryTool()
-    private let createDirectoryTool = CreateDirectoryTool()
-    private let deleteFileTool = DeleteFileTool()
-    private let moveFileTool = MoveFileTool()
-    private let projectAuditTool = ProjectAuditTool()
-    private let createSkillTool = CreateSkillTool()
+        let orchestrator: OrchestratorProvider?
+    
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider? = nil) {
+        self.instructions = instructions
+        self.model = model
+        self.toolCallingMode = toolCallingMode
+        self.orchestrator = orchestrator
+    }
+    
+    private var fileReadTool: FileReadTool { FileReadTool(orchestrator: orchestrator!) }
+    private var fileWriteTool: FileWriteTool { FileWriteTool(orchestrator: orchestrator!) }
+    private var listDirectoryTool: ListDirectoryTool { ListDirectoryTool(orchestrator: orchestrator!) }
+    private var createDirectoryTool: CreateDirectoryTool { CreateDirectoryTool(orchestrator: orchestrator!) }
+    private var deleteFileTool: DeleteFileTool { DeleteFileTool(orchestrator: orchestrator!) }
+    private var moveFileTool: MoveFileTool { MoveFileTool(orchestrator: orchestrator!) }
+    private var projectAuditTool: ProjectAuditTool { ProjectAuditTool(orchestrator: orchestrator!) }
+    private var createSkillTool: CreateSkillTool { CreateSkillTool(orchestrator: orchestrator!) }
 
     var body: some LanguageModelSession.DynamicProfile {
         LanguageModelSession.Profile {
@@ -166,10 +183,19 @@ struct ExecutorAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicP
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
     
-    private let shellTool = ShellTool()
-    private let appleScriptTool = AppleScriptTool()
-    private let applicationControlTool = ApplicationControlTool()
-    private let accessibilityControlTool = AccessibilityControlTool()
+        let orchestrator: OrchestratorProvider?
+    
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider? = nil) {
+        self.instructions = instructions
+        self.model = model
+        self.toolCallingMode = toolCallingMode
+        self.orchestrator = orchestrator
+    }
+    
+    private var shellTool: ShellTool { ShellTool(orchestrator: orchestrator!) }
+    private var appleScriptTool: AppleScriptTool { AppleScriptTool(orchestrator: orchestrator!) }
+    private var applicationControlTool: ApplicationControlTool { ApplicationControlTool(orchestrator: orchestrator!) }
+    private var accessibilityControlTool: AccessibilityControlTool { AccessibilityControlTool(orchestrator: orchestrator!) }
 
     var body: some LanguageModelSession.DynamicProfile {
         LanguageModelSession.Profile {
@@ -192,15 +218,24 @@ struct ControllerAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynami
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
     
-    private let getFrontmostAppTool = GetFrontmostAppTool()
-    private let processListTool = ProcessListTool()
-    private let clipboardReadTool = ClipboardReadTool()
-    private let clipboardWriteTool = ClipboardWriteTool()
-    private let notificationTool = NotificationTool()
-    private let systemInfoTool = SystemInfoTool()
-    private let accessibilityControlTool = AccessibilityControlTool()
-    private let applicationControlTool = ApplicationControlTool()
-    private let browserAutomationTool = BrowserAutomationTool()
+        let orchestrator: OrchestratorProvider?
+    
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider? = nil) {
+        self.instructions = instructions
+        self.model = model
+        self.toolCallingMode = toolCallingMode
+        self.orchestrator = orchestrator
+    }
+    
+    private var getFrontmostAppTool: GetFrontmostAppTool { GetFrontmostAppTool(orchestrator: orchestrator!) }
+    private var processListTool: ProcessListTool { ProcessListTool(orchestrator: orchestrator!) }
+    private var clipboardReadTool: ClipboardReadTool { ClipboardReadTool(orchestrator: orchestrator!) }
+    private var clipboardWriteTool: ClipboardWriteTool { ClipboardWriteTool(orchestrator: orchestrator!) }
+    private var notificationTool: NotificationTool { NotificationTool(orchestrator: orchestrator!) }
+    private var systemInfoTool: SystemInfoTool { SystemInfoTool(orchestrator: orchestrator!) }
+    private var accessibilityControlTool: AccessibilityControlTool { AccessibilityControlTool(orchestrator: orchestrator!) }
+    private var applicationControlTool: ApplicationControlTool { ApplicationControlTool(orchestrator: orchestrator!) }
+    private var browserAutomationTool: BrowserAutomationTool { BrowserAutomationTool(orchestrator: orchestrator!) }
 
     var body: some LanguageModelSession.DynamicProfile {
         LanguageModelSession.Profile {
@@ -228,12 +263,21 @@ struct ResearcherAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynami
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
     
-    private let webSearchTool = WebSearchTool()
-    private let clipboardReadTool = ClipboardReadTool()
-    private let clipboardWriteTool = ClipboardWriteTool()
-    private let fileReadTool = FileReadTool()
-    private let listDirectoryTool = ListDirectoryTool()
-    private let screenshotTool = ScreenshotTool()
+        let orchestrator: OrchestratorProvider?
+    
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider? = nil) {
+        self.instructions = instructions
+        self.model = model
+        self.toolCallingMode = toolCallingMode
+        self.orchestrator = orchestrator
+    }
+    
+    private var webSearchTool: WebSearchTool { WebSearchTool(orchestrator: orchestrator!) }
+    private var clipboardReadTool: ClipboardReadTool { ClipboardReadTool(orchestrator: orchestrator!) }
+    private var clipboardWriteTool: ClipboardWriteTool { ClipboardWriteTool(orchestrator: orchestrator!) }
+    private var fileReadTool: FileReadTool { FileReadTool(orchestrator: orchestrator!) }
+    private var listDirectoryTool: ListDirectoryTool { ListDirectoryTool(orchestrator: orchestrator!) }
+    private var screenshotTool: ScreenshotTool { ScreenshotTool(orchestrator: orchestrator!) }
 
     var body: some LanguageModelSession.DynamicProfile {
         LanguageModelSession.Profile {
@@ -258,11 +302,20 @@ struct LinterAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicPro
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
     
-    private let fileReadTool = FileReadTool()
-    private let fileWriteTool = FileWriteTool()
-    private let listDirectoryTool = ListDirectoryTool()
-    private let shellTool = ShellTool()
-    private let projectAuditTool = ProjectAuditTool()
+        let orchestrator: OrchestratorProvider?
+    
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider? = nil) {
+        self.instructions = instructions
+        self.model = model
+        self.toolCallingMode = toolCallingMode
+        self.orchestrator = orchestrator
+    }
+    
+    private var fileReadTool: FileReadTool { FileReadTool(orchestrator: orchestrator!) }
+    private var fileWriteTool: FileWriteTool { FileWriteTool(orchestrator: orchestrator!) }
+    private var listDirectoryTool: ListDirectoryTool { ListDirectoryTool(orchestrator: orchestrator!) }
+    private var shellTool: ShellTool { ShellTool(orchestrator: orchestrator!) }
+    private var projectAuditTool: ProjectAuditTool { ProjectAuditTool(orchestrator: orchestrator!) }
 
     var body: some LanguageModelSession.DynamicProfile {
         LanguageModelSession.Profile {
@@ -286,12 +339,21 @@ struct UIDesignerAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynami
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
     
-    private let fileReadTool = FileReadTool()
-    private let fileWriteTool = FileWriteTool()
-    private let screenshotTool = ScreenshotTool()
-    private let shellTool = ShellTool()
-    private let appleScriptTool = AppleScriptTool()
-    private let applicationControlTool = ApplicationControlTool()
+        let orchestrator: OrchestratorProvider?
+    
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider? = nil) {
+        self.instructions = instructions
+        self.model = model
+        self.toolCallingMode = toolCallingMode
+        self.orchestrator = orchestrator
+    }
+    
+    private var fileReadTool: FileReadTool { FileReadTool(orchestrator: orchestrator!) }
+    private var fileWriteTool: FileWriteTool { FileWriteTool(orchestrator: orchestrator!) }
+    private var screenshotTool: ScreenshotTool { ScreenshotTool(orchestrator: orchestrator!) }
+    private var shellTool: ShellTool { ShellTool(orchestrator: orchestrator!) }
+    private var appleScriptTool: AppleScriptTool { AppleScriptTool(orchestrator: orchestrator!) }
+    private var applicationControlTool: ApplicationControlTool { ApplicationControlTool(orchestrator: orchestrator!) }
 
     var body: some LanguageModelSession.DynamicProfile {
         LanguageModelSession.Profile {
@@ -316,12 +378,21 @@ struct PlannerAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicPr
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
     
-    private let fileReadTool = FileReadTool()
-    private let fileWriteTool = FileWriteTool()
-    private let listDirectoryTool = ListDirectoryTool()
-    private let updatePlanTool = UpdatePlanTool()
-    private let storeMemoryTool = StoreMemoryTool()
-    private let searchMemoryTool = SearchMemoryTool()
+        let orchestrator: OrchestratorProvider?
+    
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider? = nil) {
+        self.instructions = instructions
+        self.model = model
+        self.toolCallingMode = toolCallingMode
+        self.orchestrator = orchestrator
+    }
+    
+    private var fileReadTool: FileReadTool { FileReadTool(orchestrator: orchestrator!) }
+    private var fileWriteTool: FileWriteTool { FileWriteTool(orchestrator: orchestrator!) }
+    private var listDirectoryTool: ListDirectoryTool { ListDirectoryTool(orchestrator: orchestrator!) }
+    private var updatePlanTool: UpdatePlanTool { UpdatePlanTool(orchestrator: orchestrator!) }
+    private var storeMemoryTool: StoreMemoryTool { StoreMemoryTool(orchestrator: orchestrator!) }
+    private var searchMemoryTool: SearchMemoryTool { SearchMemoryTool(orchestrator: orchestrator!) }
 
     var body: some LanguageModelSession.DynamicProfile {
         LanguageModelSession.Profile {

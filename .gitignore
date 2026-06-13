@@ -1,0 +1,15 @@
+# OS files
+.DS_Store
+
+# Xcode
+build/
+*.xcuserstate
+*.xcuserdatad
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Local logs and outputs
+*.log
+*.txt

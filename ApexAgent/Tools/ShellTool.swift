@@ -4,6 +4,12 @@ import FoundationModels
 // MARK: - Shell Tool
 
 struct ShellTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "run_shell_command"
     let description = "Runs a zsh shell command. Returns stdout, stderr, and exit code. Use for any terminal task."
 
@@ -20,18 +26,14 @@ struct ShellTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, riskDescription: "Executing command in your terminal") {
-            guard let orchestrator = await (MainActor.run { AgentOrchestrator.shared }) else {
-                throw NSError(domain: "ShellTool", code: -1, userInfo: [NSLocalizedDescriptionKey: "AgentOrchestrator not available"])
-            }
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Executing command in your terminal") {
+            let orchestrator = await self.orchestrator.orchestrator
             
             let conversationId = await MainActor.run {
                 orchestrator.currentConversation?.id ?? UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
             }
             
-            let pty = await MainActor.run {
-                orchestrator.ptySession(for: conversationId)
-            }
+            let pty = await orchestrator.ptySession(for: conversationId)
             
             // Log the command run in the TerminalView
             await MainActor.run {

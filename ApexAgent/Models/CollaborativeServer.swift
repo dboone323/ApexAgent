@@ -105,7 +105,7 @@ class CollaborativeServer: NSObject, ObservableObject {
         } else if path == "/api/state" {
             // Serve JSON State
             Task { @MainActor in
-                let json = getJSONState()
+                let json = await getJSONState()
                 sendHTTPResponse(html: json, status: "200 OK", contentType: "application/json", connection: connection)
             }
         } else if path.starts(with: "/api/screen") {
@@ -604,8 +604,8 @@ class CollaborativeServer: NSObject, ObservableObject {
     
     // MARK: - JSON State Fetch
     
-    private func getJSONState() -> String {
-        guard let orchestrator = AgentOrchestrator.shared else {
+    private func getJSONState() async -> String {
+        guard let orchestrator = await AppDelegate.getSharedOrchestrator() else {
             return "{}"
         }
         
@@ -628,7 +628,7 @@ class CollaborativeServer: NSObject, ObservableObject {
             ]
         }
         
-        let diagnostics = DiagnosticManager.runSelfCheck().map { item -> [String: Any] in
+        let diagnostics = await DiagnosticManager.runSelfCheck().map { item -> [String: Any] in
             return [
                 "name": item.name,
                 "category": item.category,

@@ -2,6 +2,12 @@ import Foundation
 import FoundationModels
 
 struct CreateSkillTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "create_skill"
     let description = "Creates a new reusable skill (tool) for the agent. Saves the script and its JSON schema parameter manifest in ~/.apex/skills/ so it can be dynamically loaded and run in subsequent turns."
 
@@ -21,7 +27,7 @@ struct CreateSkillTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let fileManager = FileManager.default
             let homeDir = fileManager.homeDirectoryForCurrentUser
             let skillsDir = homeDir.appendingPathComponent(".apex/skills")

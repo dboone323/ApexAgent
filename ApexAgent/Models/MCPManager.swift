@@ -10,14 +10,21 @@ struct MCPServerConfig: Codable, Identifiable, Equatable {
 
 @Observable
 @MainActor
-final class MCPManager {
+final class MCPManager: OrchestratorProvider {
     static let shared = MCPManager()
     
     var servers: [MCPServerConfig] = []
     private var clients: [UUID: MCPClient] = [:]
+    private var eventLogger: ToolEventLogger?
+    
+    var orchestrator: AgentOrchestrator { AppDelegate.getSharedOrchestrator()! }
     
     private init() {
         loadConfigs()
+    }
+    
+    func setEventLogger(_ logger: ToolEventLogger) {
+        self.eventLogger = logger
     }
     
     func loadConfigs() {
@@ -63,7 +70,8 @@ final class MCPManager {
         if let client = clients[config.id] {
             return client
         }
-        let client = MCPClient(serverName: config.name, command: config.command, arguments: config.arguments)
+        let logger = eventLogger ?? AppDelegate.getSharedOrchestrator() ?? ToolEventLoggerImpl()
+        let client = MCPClient(serverName: config.name, command: config.command, arguments: config.arguments, logger: logger, orchestrator: self)
         clients[config.id] = client
         return client
     }

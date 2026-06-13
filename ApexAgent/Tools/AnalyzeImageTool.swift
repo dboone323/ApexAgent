@@ -20,6 +20,12 @@ struct MultimodalReaderProfile<Model: LanguageModel>: LanguageModelSession.Dynam
 // MARK: - Analyze Image Tool
 
 struct AnalyzeImageTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "analyze_image"
     let description = "Analyzes an image file locally using on-device vision/multimodal capabilities to answer questions about its content."
 
@@ -33,7 +39,7 @@ struct AnalyzeImageTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let expandedPath = NSString(string: arguments.imagePath).expandingTildeInPath
             guard FileManager.default.fileExists(atPath: expandedPath) else {
                 return "ERROR: File not found at path: \(expandedPath)"
@@ -43,9 +49,7 @@ struct AnalyzeImageTool: Tool {
                 return "ERROR: Could not load image from: \(expandedPath). Ensure it is a valid image file."
             }
             
-            guard let orchestrator = await AgentOrchestrator.shared else {
-                return "ERROR: AgentOrchestrator is not available"
-            }
+            let orchestrator = await self.orchestrator.orchestrator
             
             let preference = await orchestrator.modelPreference
             let instructions = "You are a visual assistant. Analyze the image and answer the user's query precisely based on the image content."

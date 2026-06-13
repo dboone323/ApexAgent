@@ -5,6 +5,12 @@ import AppKit
 // MARK: - Convene Meeting Tool
 
 struct ConveneMeetingTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "convene_meeting"
     let description = "Convenes a panel meeting/debate between specialized sub-agents to discuss findings, review issues, and reach a consensus."
 
@@ -23,12 +29,10 @@ struct ConveneMeetingTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
-            guard let orchestrator = await AgentOrchestrator.shared else {
-                return "ERROR: AgentOrchestrator is not available"
-            }
-
-            if await AgentOrchestrator.isCLITestMode {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+            let orchestrator = await self.orchestrator.orchestrator
+            
+            if ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
                 return "Debate Consensus Transcript:\n- Developer: Discussed topic \(arguments.topic) and agreed on a plan.\n- Planner: Agreed to prioritize concurrency fixes."
             }
 

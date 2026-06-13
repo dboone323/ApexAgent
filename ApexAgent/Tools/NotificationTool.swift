@@ -5,6 +5,12 @@ import UserNotifications
 // MARK: - Notification Tool
 
 struct NotificationTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "send_notification"
     let description = """
     Sends a macOS user notification that appears in Notification Center. \
@@ -25,7 +31,7 @@ struct NotificationTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let center = UNUserNotificationCenter.current()
 
             // Request permission if needed

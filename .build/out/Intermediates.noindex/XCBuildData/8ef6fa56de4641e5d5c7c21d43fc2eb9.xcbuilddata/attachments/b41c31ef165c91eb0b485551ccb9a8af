@@ -1,4 +1,0 @@
-module SharedKitCore {
-header "SharedKitCore-Swift.h"
-export *
-}

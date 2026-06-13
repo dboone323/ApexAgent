@@ -36,6 +36,12 @@ class UIRegistry {
 // MARK: - Accessibility Control Tool
 
 struct AccessibilityControlTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "control_accessibility"
     let description = "Performs UI automation actions on the active application window using accessibility (AXUIElement) APIs. Requires Accessibility permissions."
 
@@ -52,14 +58,12 @@ struct AccessibilityControlTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, riskDescription: "Controlling system user interface via Accessibility APIs") {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Controlling system user interface via Accessibility APIs") {
             if !AXIsProcessTrusted() {
                 return "ERROR: Accessibility permissions are disabled. Please enable accessibility access for Apex Agent in System Settings > Privacy & Security > Accessibility."
             }
             
-            guard let orchestrator = await AgentOrchestrator.shared else {
-                return "ERROR: AgentOrchestrator is not available"
-            }
+            let orchestrator = await self.orchestrator.orchestrator
             
             let conversationId = await MainActor.run {
                 orchestrator.currentConversation?.id ?? UUID(uuidString: "00000000-0000-0000-0000-000000000000")!

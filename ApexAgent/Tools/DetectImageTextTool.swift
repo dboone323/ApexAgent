@@ -6,6 +6,12 @@ import AppKit
 // MARK: - Detect Image Text Tool
 
 struct DetectImageTextTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "detect_image_text"
     let description = "Performs fast, fully on-device optical character recognition (OCR) using macOS Vision APIs to extract all text from an image file."
 
@@ -16,7 +22,7 @@ struct DetectImageTextTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let expandedPath = NSString(string: arguments.imagePath).expandingTildeInPath
             guard FileManager.default.fileExists(atPath: expandedPath) else {
                 return "ERROR: File not found at path: \(expandedPath)"

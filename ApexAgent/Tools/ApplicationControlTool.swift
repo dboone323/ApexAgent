@@ -3,6 +3,12 @@ import FoundationModels
 import AppKit
 
 struct ApplicationControlTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "control_app"
     let description = "Performs reliable, pre-tested GUI automation actions on common macOS apps (Safari, Chrome, Finder, System Settings)."
 
@@ -19,7 +25,7 @@ struct ApplicationControlTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, riskDescription: "Controlling \(arguments.appName) using system AppleScript") {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Controlling \(arguments.appName) using system AppleScript") {
             let script: String
             
             switch (arguments.appName.lowercased(), arguments.action.lowercased()) {

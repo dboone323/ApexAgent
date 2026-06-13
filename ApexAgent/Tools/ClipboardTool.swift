@@ -5,6 +5,11 @@ import AppKit
 // MARK: - Clipboard Read Tool
 
 struct ClipboardReadTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
     let name = "read_clipboard"
     let description = "Reads the current text content of the macOS clipboard (pasteboard) and returns it."
 
@@ -12,7 +17,7 @@ struct ClipboardReadTool: Tool {
     struct Arguments: Decodable {}
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             return await MainActor.run {
                 let pasteboard = NSPasteboard.general
                 if let text = pasteboard.string(forType: .string) {
@@ -37,6 +42,11 @@ struct ClipboardReadTool: Tool {
 // MARK: - Clipboard Write Tool
 
 struct ClipboardWriteTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
     let name = "write_clipboard"
     let description = "Sets the macOS clipboard (pasteboard) to the specified text content."
 
@@ -47,7 +57,7 @@ struct ClipboardWriteTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             return await MainActor.run {
                 let pasteboard = NSPasteboard.general
                 pasteboard.clearContents()

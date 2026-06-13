@@ -5,6 +5,12 @@ import AppKit
 // MARK: - System Info Tool
 
 struct SystemInfoTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "get_system_info"
     let description = """
     Returns detailed information about the macOS system including \
@@ -16,7 +22,7 @@ struct SystemInfoTool: Tool {
     struct Arguments: Decodable {}
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             var info = "## System Information\n\n"
 
             // OS Info
@@ -79,6 +85,12 @@ struct SystemInfoTool: Tool {
 // MARK: - Process List Tool
 
 struct ProcessListTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+    
     let name = "get_running_processes"
     let description = "Returns a list of currently running macOS applications (user-visible apps, not background daemons)."
 
@@ -89,7 +101,7 @@ struct ProcessListTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             return await MainActor.run {
                 let includeBackground = arguments.includeBackground ?? false
 

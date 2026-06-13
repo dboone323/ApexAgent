@@ -28,7 +28,7 @@ struct TerminalView: View {
                 .foregroundStyle(.secondary)
                 
                 if let conversation = orchestrator.currentConversation {
-                    Button(action: { orchestrator.resetPTYSession(for: conversation.id) }) {
+                    Button(action: { Task { await orchestrator.resetPTYSession(for: conversation.id) } }) {
                         Label("Reset Shell", systemImage: "arrow.clockwise")
                     }
                     .buttonStyle(.plain)

@@ -18,11 +18,14 @@ enum DiagnosticStatus: String, Codable {
 
 struct DiagnosticManager {
     @MainActor
-    static func runSelfCheck() -> [DiagnosticItem] {
+    static func runSelfCheck(provider: OrchestratorProvider? = nil) async -> [DiagnosticItem] {
         var items: [DiagnosticItem] = []
         
+        let sharedOrchestrator = await AppDelegate.getSharedOrchestrator()
+        let orchestrator = provider?.orchestrator ?? sharedOrchestrator
+        
         // 1. Check Xcode CLI Tools
-        let hasXcodeSelect = checkCommandExists("xcode-select -p")
+        let hasXcodeSelect = checkCommandExists("xcode-select -p", orchestrator: orchestrator)
         items.append(DiagnosticItem(
             name: "Xcode Command Line Tools",
             category: "CLI Tools",
@@ -31,7 +34,7 @@ struct DiagnosticManager {
         ))
         
         // 2. Check Homebrew
-        let hasBrew = checkCommandExists("which brew")
+        let hasBrew = checkCommandExists("which brew", orchestrator: orchestrator)
         items.append(DiagnosticItem(
             name: "Homebrew",
             category: "CLI Tools",
@@ -40,7 +43,7 @@ struct DiagnosticManager {
         ))
         
         // 3. Check Node.js
-        let hasNode = checkCommandExists("which node")
+        let hasNode = checkCommandExists("which node", orchestrator: orchestrator)
         items.append(DiagnosticItem(
             name: "Node.js",
             category: "CLI Tools",
@@ -49,7 +52,7 @@ struct DiagnosticManager {
         ))
         
         // 4. Check Python 3
-        let hasPython = checkCommandExists("which python3")
+        let hasPython = checkCommandExists("which python3", orchestrator: orchestrator)
         items.append(DiagnosticItem(
             name: "Python 3",
             category: "CLI Tools",
@@ -58,7 +61,7 @@ struct DiagnosticManager {
         ))
         
         // 5. Check Git
-        let hasGit = checkCommandExists("which git")
+        let hasGit = checkCommandExists("which git", orchestrator: orchestrator)
         items.append(DiagnosticItem(
             name: "Git",
             category: "CLI Tools",
@@ -68,7 +71,7 @@ struct DiagnosticManager {
         
         // 6. Check Accessibility Permissions
         let isAccessibilityTrusted = AXIsProcessTrusted()
-        let isAccessibilityAllowedInSettings = AgentOrchestrator.shared?.permissions?.accessibilityAllowed ?? false
+        let isAccessibilityAllowedInSettings = orchestrator?.permissions?.accessibilityAllowed ?? false
         items.append(DiagnosticItem(
             name: "Accessibility Entitlement",
             category: "System Permissions",
@@ -80,7 +83,7 @@ struct DiagnosticManager {
         
         // 7. Check Screen Recording Permissions
         let screenAccess = checkScreenRecordingAccess()
-        let isScreenAllowedInSettings = AgentOrchestrator.shared?.permissions?.screenRecordingAllowed ?? false
+        let isScreenAllowedInSettings = orchestrator?.permissions?.screenRecordingAllowed ?? false
         items.append(DiagnosticItem(
             name: "Screen Recording Entitlement",
             category: "System Permissions",
@@ -128,7 +131,7 @@ struct DiagnosticManager {
         
         return items
     }
-    private static func checkCommandExists(_ command: String) -> Bool {
+    private static func checkCommandExists(_ command: String, orchestrator: AgentOrchestrator?) -> Bool {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
         process.arguments = ["-c", command]
@@ -137,7 +140,7 @@ struct DiagnosticManager {
         let currentPath = env["PATH"] ?? ""
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + currentPath
         
-        if AgentOrchestrator.isFolderAccessRestricted() {
+        if orchestrator?.isFolderAccessRestricted() ?? false {
             let fm = FileManager.default
             let homeDir = fm.homeDirectoryForCurrentUser
             let sandboxDir = homeDir.appendingPathComponent(".apex/sandbox")

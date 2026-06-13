@@ -57,37 +57,43 @@ actor MCPClient {
     nonisolated let serverName: String
     let command: String
     let arguments: [String]
-
+    private let logger: ToolEventLogger
+    let orchestrator: OrchestratorProvider?
+    
     private var process: Process?
     private var stdinPipe: Pipe?
     private var stdoutPipe: Pipe?
     private var stderrPipe: Pipe?
-
+    
     private var nextRequestId = 1
     private var pendingRequests: [Int: CheckedContinuation<Data, Error>] = [:]
-
-    init(serverName: String, command: String, arguments: [String] = []) {
+    
+    init(serverName: String, command: String, arguments: [String] = [], logger: ToolEventLogger, orchestrator: OrchestratorProvider? = nil) {
         self.serverName = serverName
         self.command = command
         self.arguments = arguments
+        self.logger = logger
+        self.orchestrator = orchestrator
     }
-
-    func start() throws {
+    
+    func start() async throws {
         signal(SIGPIPE, SIG_IGN)
         guard process == nil else { return }
-
+        
+        let isRestricted = await MainActor.run { orchestrator?.orchestrator.isFolderAccessRestricted() ?? false }
+        
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
-
+        
         // Wrap command in zsh shell execution to support environment loading and paths
         let shellArgs = ["-c", "\(command) " + arguments.joined(separator: " ")]
         proc.arguments = shellArgs
-
+        
         var env = ProcessInfo.processInfo.environment
         let currentPath = env["PATH"] ?? ""
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + currentPath
-
-        if AgentOrchestrator.isFolderAccessRestricted() {
+        
+        if isRestricted {
             let fm = FileManager.default
             let homeDir = fm.homeDirectoryForCurrentUser
             let sandboxDir = homeDir.appendingPathComponent(".apex/sandbox")
@@ -136,7 +142,7 @@ actor MCPClient {
                         }
                     }
                 } catch {
-                    await AgentOrchestrator.shared?.logToolEnd(
+                    await self.logger.logToolEnd(
                         name: "mcp:\(serverNameForStdout)",
                         result: "MCPClient stdout read error: \(error)",
                         status: .failed("MCPClient stdout read error")
@@ -159,7 +165,7 @@ actor MCPClient {
                     }
                     let chunk = String(data: data, encoding: .utf8) ?? ""
                     if !chunk.isEmpty {
-                        await AgentOrchestrator.shared?.logToolEnd(
+                        await self.logger.logToolEnd(
                             name: "mcp:\(serverNameForLogs)",
                             result: "stderr: \(chunk)",
                             status: .failed("MCP stderr output")
@@ -202,7 +208,7 @@ actor MCPClient {
 
     func sendRequest<Params: Codable, Result: Codable>(method: String, params: Params) async throws -> Result {
         if !isRunning() {
-            try start()
+            try await start()
         }
 
         let id = nextRequestId

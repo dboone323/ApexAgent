@@ -4,6 +4,11 @@ import FoundationModels
 // MARK: - File Read Tool
 
 struct FileReadTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
     let name = "read_file"
     let description = "Reads a file and returns its contents. Supports tilde paths (~/)."
 
@@ -17,9 +22,10 @@ struct FileReadTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let expandedPath = NSString(string: arguments.path).expandingTildeInPath
-            guard AgentOrchestrator.isPathAllowed(expandedPath) else {
+            let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(expandedPath) }
+            guard isAllowed else {
                 return "ERROR: Access to path is disabled in settings: \(expandedPath)"
             }
             let url = URL(fileURLWithPath: expandedPath)
@@ -63,6 +69,11 @@ struct FileReadTool: Tool {
 // MARK: - File Write Tool
 
 struct FileWriteTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
     let name = "write_file"
     let description = "Writes text content to a file. Creates the file and parent directories if needed."
 
@@ -80,7 +91,8 @@ struct FileWriteTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         let expandedPath = NSString(string: arguments.path).expandingTildeInPath
-        guard AgentOrchestrator.isPathAllowed(expandedPath) else {
+        let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(expandedPath) }
+        guard isAllowed else {
             return "ERROR: Access to path is disabled in settings: \(expandedPath)"
         }
         let url = URL(fileURLWithPath: expandedPath)
@@ -91,6 +103,7 @@ struct FileWriteTool: Tool {
         
         return try await executeWithLogging(
             arguments: arguments,
+            orchestrator: orchestrator,
             riskDescription: "Writing to file \(expandedPath)",
             oldContent: oldContent,
             newContent: newContent,
@@ -119,6 +132,11 @@ struct FileWriteTool: Tool {
 // MARK: - List Directory Tool
 
 struct ListDirectoryTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
     let name = "list_directory"
     let description = "Lists files and subdirectories at a path with sizes. Supports tilde paths."
 
@@ -135,9 +153,10 @@ struct ListDirectoryTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let expandedPath = NSString(string: arguments.path).expandingTildeInPath
-            guard AgentOrchestrator.isPathAllowed(expandedPath) else {
+            let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(expandedPath) }
+            guard isAllowed else {
                 return "ERROR: Access to path is disabled in settings: \(expandedPath)"
             }
             let showHidden = arguments.showHidden ?? false
@@ -201,6 +220,11 @@ struct ListDirectoryTool: Tool {
 // MARK: - Create Directory Tool
 
 struct CreateDirectoryTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
     let name = "create_directory"
     let description = "Creates a directory (including parent directories) at the given path."
 
@@ -211,9 +235,10 @@ struct CreateDirectoryTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let expandedPath = NSString(string: arguments.path).expandingTildeInPath
-            guard AgentOrchestrator.isPathAllowed(expandedPath) else {
+            let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(expandedPath) }
+            guard isAllowed else {
                 return "ERROR: Access to path is disabled in settings: \(expandedPath)"
             }
             do {
@@ -229,6 +254,11 @@ struct CreateDirectoryTool: Tool {
 // MARK: - Delete File Tool
 
 struct DeleteFileTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
     let name = "delete_file"
     let description = "Moves a file or directory to Trash (or permanently deletes if permanent=true). DESTRUCTIVE."
 
@@ -242,9 +272,10 @@ struct DeleteFileTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, riskDescription: "Deleting a file or directory on your system") {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Deleting a file or directory on your system") {
             let expandedPath = NSString(string: arguments.path).expandingTildeInPath
-            guard AgentOrchestrator.isPathAllowed(expandedPath) else {
+            let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(expandedPath) }
+            guard isAllowed else {
                 return "ERROR: Access to path is disabled in settings: \(expandedPath)"
             }
             let url = URL(fileURLWithPath: expandedPath)
@@ -273,6 +304,11 @@ struct DeleteFileTool: Tool {
 // MARK: - Move File Tool
 
 struct MoveFileTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
     let name = "move_file"
     let description = "Moves or renames a file or directory from source to destination."
 
@@ -286,11 +322,13 @@ struct MoveFileTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, riskDescription: "Moving or renaming a file or directory on your system") {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Moving or renaming a file or directory on your system") {
             let srcExpanded = NSString(string: arguments.sourcePath).expandingTildeInPath
             let dstExpanded = NSString(string: arguments.destinationPath).expandingTildeInPath
             
-            guard AgentOrchestrator.isPathAllowed(srcExpanded) && AgentOrchestrator.isPathAllowed(dstExpanded) else {
+            let srcAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(srcExpanded) }
+            let dstAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(dstExpanded) }
+            guard srcAllowed && dstAllowed else {
                 return "ERROR: Access to source or destination path is disabled in settings."
             }
 

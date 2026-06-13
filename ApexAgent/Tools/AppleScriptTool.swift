@@ -5,6 +5,12 @@ import AppKit
 // MARK: - AppleScript Tool
 
 struct AppleScriptTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "run_applescript"
     let description = """
     Executes an AppleScript string and returns the result. \
@@ -19,7 +25,7 @@ struct AppleScriptTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, riskDescription: "Executing script controlling system applications") {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Executing script controlling system applications") {
             return await withCheckedContinuation { continuation in
                 DispatchQueue.global(qos: .userInitiated).async {
                     var error: NSDictionary?
@@ -45,6 +51,12 @@ struct AppleScriptTool: Tool {
 // MARK: - Get Frontmost App Tool
 
 struct GetFrontmostAppTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+    
     let name = "get_frontmost_app"
     let description = "Returns the bundle ID, name, and process ID of the currently active (frontmost) macOS application."
 
@@ -52,7 +64,7 @@ struct GetFrontmostAppTool: Tool {
     struct Arguments: Decodable {}
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             return await MainActor.run {
                 guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
                     return "No frontmost application found"

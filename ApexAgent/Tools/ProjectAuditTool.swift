@@ -2,6 +2,12 @@ import Foundation
 import FoundationModels
 
 struct ProjectAuditTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "audit_projects"
     let description = "Audits Swift/Xcode projects in the specified directory. Scans for targets, swift versions, strict concurrency compliance, and broken references."
 
@@ -12,7 +18,7 @@ struct ProjectAuditTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let path = arguments.directoryPath ?? "~/github-projects/fleet/apps"
             let auditor = await ProjectAuditor.shared
             let reports = await auditor.runWorkspaceAudit(at: path)

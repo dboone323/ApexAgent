@@ -151,6 +151,12 @@ class BrowserManager: NSObject, WKNavigationDelegate {
 // MARK: - Browser Automation Tool
 
 struct BrowserAutomationTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "control_browser"
     let description = "Controls a headless, windowless web browser (Safari/WebKit based) to open pages, scrape content, click elements, and fill forms."
 
@@ -170,7 +176,7 @@ struct BrowserAutomationTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, riskDescription: "Automating browser navigation and interactions") {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Automating browser navigation and interactions") {
             switch arguments.action {
             case "open_url":
                 guard let url = arguments.url else {

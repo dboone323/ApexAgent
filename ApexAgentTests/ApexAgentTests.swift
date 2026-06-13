@@ -3,7 +3,51 @@ import FoundationModels
 import SwiftData
 @testable import ApexAgent
 
+// MARK: - Mock ToolEventLogger for Testing
+@MainActor
+class MockToolEventLogger: ToolEventLogger {
+    var events: [String] = []
+    
+    func logToolStart(name: String, arguments: String) {
+        events.append("start: \(name)")
+    }
+    
+    func logToolEvent(_ event: ToolEvent) {
+        events.append("event: \(event.toolName)")
+    }
+    
+    func logToolEnd(name: String, result: String, status: ToolStatus) {
+        events.append("end: \(name) - \(status)")
+    }
+    
+    func updateToolStatus(name: String, status: ToolStatus) {
+        events.append("status: \(name) - \(status)")
+    }
+    
+    func shouldConfirmTool(name: String) -> Bool {
+        return false
+    }
+    
+    func requestConfirmation(
+        toolName: String,
+        arguments: String,
+        riskDescription: String,
+        oldContent: String?,
+        newContent: String?,
+        filePath: String?
+    ) async -> Bool {
+        return true
+    }
+    
+    func resolveConfirmation(approved: Bool) {
+        // no-op
+    }
+}
+
+
 struct TestTruncationTool: Tool {
+    let orchestrator: any OrchestratorProvider
+    
     let name = "test_truncation_tool"
     let description = "A tool to test centralized truncation"
     
@@ -11,7 +55,7 @@ struct TestTruncationTool: Tool {
     struct Arguments {}
     
     func call(arguments: Arguments) async throws -> String {
-        try await executeWithLogging(arguments: arguments) {
+        try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             return String(repeating: "X", count: 3000)
         }
     }
@@ -23,16 +67,16 @@ final class ApexAgentTests: XCTestCase {
         super.setUp()
         MainActor.assumeIsolated {
             let orchestrator = AgentOrchestrator()
-            AgentOrchestrator.shared = orchestrator
+            AppDelegate.sharedOrchestrator = orchestrator
             orchestrator.activeTurnToolCallCount = 0
-            AgentOrchestrator.isCLITestMode = false
+            AgentOrchestrator.isTestMode = true
         }
     }
     
     @MainActor
     func testAgentOrchestratorInitialization() {
         let orchestrator = AgentOrchestrator()
-        XCTAssertNotNil(AgentOrchestrator.shared)
+        XCTAssertNotNil(AppDelegate.getSharedOrchestrator())
         XCTAssertEqual(orchestrator.currentConversationTitle, "New Conversation")
         XCTAssertTrue(orchestrator.messages.isEmpty)
         XCTAssertTrue(orchestrator.toolEvents.isEmpty)
@@ -71,7 +115,10 @@ final class ApexAgentTests: XCTestCase {
     
     @MainActor
     func testToolOutputTruncation() async throws {
-        let tool = TestTruncationTool()
+        let orchestrator = AgentOrchestrator()
+        AppDelegate.sharedOrchestrator = orchestrator
+        
+        let tool = TestTruncationTool(orchestrator: orchestrator)
         let result = try await tool.call(arguments: TestTruncationTool.Arguments())
         XCTAssertEqual(result.count, 1000 + "\n\n[... output truncated at 1000 characters to optimize token usage ...]".count)
         XCTAssertTrue(result.contains("truncated"))
@@ -141,7 +188,7 @@ final class ApexAgentTests: XCTestCase {
             var body: some LanguageModelSession.DynamicProfile {
                 LanguageModelSession.Profile {
                     Instructions("Test Instructions")
-                    SystemInfoTool()
+                    // SystemInfoTool() - requires orchestrator, not used in this test
                 }
                 .model(SystemLanguageModel.default)
                 .toolCallingMode(.allowed)
@@ -198,8 +245,8 @@ final class ApexAgentTests: XCTestCase {
         let container = try ModelContainer(for: schema, configurations: config)
         orchestrator.modelContext = ModelContext(container)
         
-        let storeTool = StoreMemoryTool()
-        let searchTool = SearchMemoryTool()
+        let storeTool = StoreMemoryTool(orchestrator: orchestrator)
+        let searchTool = SearchMemoryTool(orchestrator: orchestrator)
         
         let storeResult = try await storeTool.call(arguments: StoreMemoryTool.Arguments(key: "test_key", value: "Remember this sentence."))
         XCTAssertTrue(storeResult.contains("Successfully"))
@@ -238,8 +285,8 @@ final class ApexAgentTests: XCTestCase {
     }
     
     @MainActor
-    func testDiagnosticChecks() {
-        let items = DiagnosticManager.runSelfCheck()
+    func testDiagnosticChecks() async {
+        let items = await DiagnosticManager.runSelfCheck()
         XCTAssertFalse(items.isEmpty)
         
         // Make sure all standard items are returned
@@ -254,7 +301,7 @@ final class ApexAgentTests: XCTestCase {
     }
     
     func testPTYSessionEchoCommand() async throws {
-        let pty = try PTYSession()
+        let pty = try await PTYSession()
         let result = try await pty.runCommand("echo \"hello pty test\"")
         XCTAssertTrue(result.contains("hello pty test"))
         pty.cleanup()
@@ -279,7 +326,10 @@ final class ApexAgentTests: XCTestCase {
     
     @MainActor
     func testAccessibilityTool() async throws {
-        let tool = AccessibilityControlTool()
+        let orchestrator = AgentOrchestrator()
+        AppDelegate.sharedOrchestrator = orchestrator
+        
+        let tool = AccessibilityControlTool(orchestrator: orchestrator)
         // Run list_elements (will return descriptive error if accessibility permissions are not granted, or list elements)
         let listResult = try await tool.call(arguments: AccessibilityControlTool.Arguments(action: "list_elements"))
         XCTAssertTrue(listResult.contains("active window") || listResult.contains("Accessibility permissions are disabled"))
@@ -291,7 +341,10 @@ final class ApexAgentTests: XCTestCase {
     
     @MainActor
     func testBrowserAutomation() async throws {
-        let tool = BrowserAutomationTool()
+        let orchestrator = AgentOrchestrator()
+        AppDelegate.sharedOrchestrator = orchestrator
+        
+        let tool = BrowserAutomationTool(orchestrator: orchestrator)
         
         // Scraping before loading should return an error
         let scrapeBefore = try await tool.call(arguments: BrowserAutomationTool.Arguments(action: "scrape_page"))
@@ -416,7 +469,7 @@ final class ApexAgentTests: XCTestCase {
         UserDefaults.standard.set(true, forKey: "apex.dockerSandboxingEnabled")
         UserDefaults.standard.set(true, forKey: "apex.testDockerFallback")
         
-        let pty = try PTYSession(workspacePath: "/tmp")
+        let pty = try await PTYSession(workspacePath: "/tmp")
         XCTAssertNotNil(pty)
         
         let result = try await pty.runCommand("echo \"fallback_works\"")
@@ -484,7 +537,10 @@ final class ApexAgentTests: XCTestCase {
     
     @MainActor
     func testProjectAuditToolInvocation() async throws {
-        let tool = ProjectAuditTool()
+        let orchestrator = AgentOrchestrator()
+        AppDelegate.sharedOrchestrator = orchestrator
+        
+        let tool = ProjectAuditTool(orchestrator: orchestrator)
         let result = try await tool.call(arguments: ProjectAuditTool.Arguments(directoryPath: "/Users/danielstevens/github-projects/fleet/apps"))
         
         XCTAssertTrue(result.contains("Workspace Audit Report") || result.contains("No Xcode projects found"))
@@ -511,8 +567,11 @@ final class ApexAgentTests: XCTestCase {
     
     @MainActor
     func testDetectImageTextTool() async throws {
-        AgentOrchestrator.isCLITestMode = true
-        defer { AgentOrchestrator.isCLITestMode = false }
+        let orchestrator = AgentOrchestrator()
+        AppDelegate.sharedOrchestrator = orchestrator
+        
+        AgentOrchestrator.isTestMode = true
+        defer { AgentOrchestrator.isTestMode = false }
         
         // 1. Create a dummy image with text "Hello OCR Test"
         let size = NSSize(width: 200, height: 100)
@@ -543,7 +602,7 @@ final class ApexAgentTests: XCTestCase {
         try pngData!.write(to: URL(fileURLWithPath: tempPath))
         
         // 3. Perform OCR using the tool
-        let tool = DetectImageTextTool()
+        let tool = DetectImageTextTool(orchestrator: orchestrator)
         let result = try await tool.call(arguments: DetectImageTextTool.Arguments(imagePath: tempPath))
         
         // 4. Verify OCR result contains our drawn words (case-insensitive checks)
@@ -553,8 +612,11 @@ final class ApexAgentTests: XCTestCase {
     
     @MainActor
     func testAnalyzeImageTool() async throws {
-        AgentOrchestrator.isCLITestMode = true
-        defer { AgentOrchestrator.isCLITestMode = false }
+        let orchestrator = AgentOrchestrator()
+        AppDelegate.sharedOrchestrator = orchestrator
+        
+        AgentOrchestrator.isTestMode = true
+        defer { AgentOrchestrator.isTestMode = false }
         
         // 1. Create a dummy image
         let size = NSSize(width: 10, height: 10)
@@ -573,7 +635,7 @@ final class ApexAgentTests: XCTestCase {
         try pngData.write(to: URL(fileURLWithPath: tempPath))
         
         // 2. Execute tool
-        let tool = AnalyzeImageTool()
+        let tool = AnalyzeImageTool(orchestrator: orchestrator)
         do {
             let result = try await tool.call(arguments: AnalyzeImageTool.Arguments(imagePath: tempPath, query: "What color is this?"))
             XCTAssertNotNil(result)
@@ -599,14 +661,14 @@ final class ApexAgentTests: XCTestCase {
     
     @MainActor
     func testConveneMeetingTool() async throws {
-        AgentOrchestrator.isCLITestMode = true
-        defer { AgentOrchestrator.isCLITestMode = false }
+        AgentOrchestrator.isTestMode = true
+        defer { AgentOrchestrator.isTestMode = false }
         
         let orchestrator = AgentOrchestrator()
         // Ensure shared static pointer is set so the tool can find it
-        AgentOrchestrator.shared = orchestrator
+        AppDelegate.sharedOrchestrator = orchestrator
         
-        let tool = ConveneMeetingTool()
+        let tool = ConveneMeetingTool(orchestrator: orchestrator)
         let arguments = ConveneMeetingTool.Arguments(
             topic: "Test debating coding standards",
             participants: ["linter", "uiDesigner", "planner"]
@@ -649,7 +711,10 @@ final class ApexAgentTests: XCTestCase {
     
     @MainActor
     func testCreateSkillTool() async throws {
-        let tool = CreateSkillTool()
+        let orchestrator = AgentOrchestrator()
+        AppDelegate.sharedOrchestrator = orchestrator
+        
+        let tool = CreateSkillTool(orchestrator: orchestrator)
         let arguments = CreateSkillTool.Arguments(
             skillName: "test_temp_skill",
             skillDescription: "A test skill creation tool",
@@ -671,9 +736,12 @@ final class ApexAgentTests: XCTestCase {
     
     @MainActor
     func testMCPClient() async throws {
+        let orchestrator = AgentOrchestrator()
+        AppDelegate.sharedOrchestrator = orchestrator
+        
         // Use a simple zsh mock command that reads stdin and echos a JSON-RPC response
         let mockCommand = "read line; echo '{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"tools\":[{\"name\":\"mock_tool\",\"description\":\"A mock tool\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"required\":[]}}]}}'"
-        let client = MCPClient(serverName: "Mock Server", command: mockCommand)
+        let client = MCPClient(serverName: "Mock Server", command: mockCommand, logger: orchestrator, orchestrator: orchestrator)
         
         try await client.start()
         let isRunning1 = await client.isRunning()
@@ -746,14 +814,15 @@ final class ApexAgentTests: XCTestCase {
         let container = try ModelContainer(for: schema, configurations: config)
         orchestrator.modelContext = ModelContext(container)
         
-        AgentOrchestrator.shared = orchestrator
-        AgentOrchestrator.isCLITestMode = true
-        defer { AgentOrchestrator.isCLITestMode = false }
+        AppDelegate.sharedOrchestrator = orchestrator
+        AgentOrchestrator.isTestMode = true
+        defer { AgentOrchestrator.isTestMode = false }
         
         // 1. Test System Info Tool
         print("--- Testing SystemInfoTool ---")
         orchestrator.activeTurnToolCallCount = 0
-        let sysInfoTool = SystemInfoTool()
+
+        let sysInfoTool = SystemInfoTool(orchestrator: orchestrator)
         if let info = try? await sysInfoTool.call(arguments: SystemInfoTool.Arguments()) {
             print("SystemInfoTool result: \(info)")
         } else {
@@ -763,7 +832,8 @@ final class ApexAgentTests: XCTestCase {
         // 2. Test Shell Tool
         print("--- Testing ShellTool ---")
         orchestrator.activeTurnToolCallCount = 0
-        let shellTool = ShellTool()
+
+        let shellTool = ShellTool(orchestrator: orchestrator)
         if let shellRes = try? await shellTool.call(arguments: ShellTool.Arguments(command: "echo 'Hello from Apex Shell!'")) {
             print("ShellTool result: \(shellRes)")
         } else {
@@ -773,7 +843,8 @@ final class ApexAgentTests: XCTestCase {
         // 3. Test File System Tools (ListDirectoryTool)
         print("--- Testing ListDirectoryTool ---")
         orchestrator.activeTurnToolCallCount = 0
-        let fsTool = ListDirectoryTool()
+
+        let fsTool = ListDirectoryTool(orchestrator: orchestrator)
         if let fsRes = try? await fsTool.call(arguments: ListDirectoryTool.Arguments(path: ".", showHidden: false, depth: 1)) {
             print("ListDirectoryTool result: \(fsRes)")
         } else {
@@ -783,25 +854,25 @@ final class ApexAgentTests: XCTestCase {
         // 4. Test Memory Tools (StoreMemoryTool & SearchMemoryTool)
         print("--- Testing MemoryTools ---")
         orchestrator.activeTurnToolCallCount = 0
-        let storeTool = StoreMemoryTool()
+        let storeTool = StoreMemoryTool(orchestrator: orchestrator)
         let storeRes = try? await storeTool.call(arguments: StoreMemoryTool.Arguments(key: "test_key", value: "Test memory context content"))
         print("StoreMemoryTool result: \(String(describing: storeRes))")
-        
-        let searchTool = SearchMemoryTool()
+
+        let searchTool = SearchMemoryTool(orchestrator: orchestrator)
         let searchRes = try? await searchTool.call(arguments: SearchMemoryTool.Arguments(query: "test_key"))
         print("SearchMemoryTool result: \(String(describing: searchRes))")
         
         // 5. Test Screenshot Tool
         print("--- Testing ScreenshotTool ---")
         orchestrator.activeTurnToolCallCount = 0
-        let screenshotTool = ScreenshotTool()
+        let screenshotTool = ScreenshotTool(orchestrator: orchestrator)
         if let screenshotPath = try? await screenshotTool.call(arguments: ScreenshotTool.Arguments(savePath: "/tmp/apex_test_screenshot.png", windowOnly: false)) {
             print("ScreenshotTool result: \(screenshotPath)")
-            
+
             // 6. Test OCR Text Recognition on Screenshot
             print("--- Testing DetectImageTextTool on screenshot ---")
             orchestrator.activeTurnToolCallCount = 0
-            let ocrTool = DetectImageTextTool()
+            let ocrTool = DetectImageTextTool(orchestrator: orchestrator)
             if let ocrRes = try? await ocrTool.call(arguments: DetectImageTextTool.Arguments(imagePath: "/tmp/apex_test_screenshot.png")) {
                 print("DetectImageTextTool result: \(ocrRes)")
             } else {
@@ -814,7 +885,7 @@ final class ApexAgentTests: XCTestCase {
         // 7. Test Convene Meeting Tool
         print("--- Testing ConveneMeetingTool ---")
         orchestrator.activeTurnToolCallCount = 0
-        let meetingTool = ConveneMeetingTool()
+        let meetingTool = ConveneMeetingTool(orchestrator: orchestrator)
         if let meetingRes = try? await meetingTool.call(arguments: ConveneMeetingTool.Arguments(topic: "Discuss strict concurrency in Swift 6", participants: ["linter", "planner"])) {
             print("ConveneMeetingTool result: \(meetingRes)")
         } else {
@@ -824,7 +895,7 @@ final class ApexAgentTests: XCTestCase {
         // 8. Test Delegate Task Tool
         print("--- Testing DelegateTaskTool ---")
         orchestrator.activeTurnToolCallCount = 0
-        let delegateTool = DelegateTaskTool()
+        let delegateTool = DelegateTaskTool(orchestrator: orchestrator)
         if let delegateRes = try? await delegateTool.call(arguments: DelegateTaskTool.Arguments(agentType: "developer", taskDescription: "Explain strict concurrency in 1 sentence")) {
             print("DelegateTaskTool (developer) result: \(delegateRes)")
         } else {
@@ -834,7 +905,7 @@ final class ApexAgentTests: XCTestCase {
         // 9. Test AppleScript Tool
         print("--- Testing AppleScriptTool ---")
         orchestrator.activeTurnToolCallCount = 0
-        let appleScriptTool = AppleScriptTool()
+        let appleScriptTool = AppleScriptTool(orchestrator: orchestrator)
         if let scriptRes = try? await appleScriptTool.call(arguments: AppleScriptTool.Arguments(script: "say \"Apex Agent Testing complete\"")) {
             print("AppleScriptTool result: \(scriptRes)")
         } else {
@@ -844,7 +915,8 @@ final class ApexAgentTests: XCTestCase {
         // 10. Test Notification Tool
         print("--- Testing NotificationTool ---")
         orchestrator.activeTurnToolCallCount = 0
-        let notificationTool = NotificationTool()
+
+        let notificationTool = NotificationTool(orchestrator: orchestrator)
         if let notifRes = try? await notificationTool.call(arguments: NotificationTool.Arguments(title: "Apex Test", body: "All features running perfectly")) {
             print("NotificationTool result: \(notifRes)")
         } else {
@@ -854,7 +926,8 @@ final class ApexAgentTests: XCTestCase {
         // 11. Test Project Audit Tool
         print("--- Testing ProjectAuditTool ---")
         orchestrator.activeTurnToolCallCount = 0
-        let auditTool = ProjectAuditTool()
+
+        let auditTool = ProjectAuditTool(orchestrator: orchestrator)
         if let auditRes = try? await auditTool.call(arguments: ProjectAuditTool.Arguments(directoryPath: ".")) {
             print("ProjectAuditTool result: \(auditRes.prefix(300))")
         } else {
@@ -864,7 +937,7 @@ final class ApexAgentTests: XCTestCase {
         // 12. Test Browser Automation Tool
         print("--- Testing BrowserAutomationTool ---")
         orchestrator.activeTurnToolCallCount = 0
-        let browserTool = BrowserAutomationTool()
+        let browserTool = BrowserAutomationTool(orchestrator: orchestrator)
         if let browserRes = try? await browserTool.call(arguments: BrowserAutomationTool.Arguments(action: "open_url", url: "https://example.com")) {
             print("BrowserAutomationTool result: \(browserRes)")
         } else {
@@ -907,15 +980,19 @@ final class ApexAgentTests: XCTestCase {
     
     @MainActor
     func testClipboardTools() async throws {
+        let orchestrator = AppDelegate.getSharedOrchestrator()!
         let originalText = NSPasteboard.general.string(forType: .string)
         
         let testString = "ApexAgent Clipboard Integration Test \(UUID().uuidString)"
-        let writeTool = ClipboardWriteTool()
+        
+        let writeTool = ClipboardWriteTool(orchestrator: orchestrator)
         let writeArgs = ClipboardWriteTool.Arguments(text: testString)
         let writeResult = try await writeTool.call(arguments: writeArgs)
         XCTAssertTrue(writeResult.contains("Copied"))
         
-        let readTool = ClipboardReadTool()
+
+        
+        let readTool = ClipboardReadTool(orchestrator: orchestrator)
         let readResult = try await readTool.call(arguments: ClipboardReadTool.Arguments())
         XCTAssertTrue(readResult.contains(testString))
         
@@ -929,13 +1006,13 @@ final class ApexAgentTests: XCTestCase {
     @MainActor
     func testUpdatePlanTool() async throws {
         let orchestrator = AgentOrchestrator()
-        AgentOrchestrator.shared = orchestrator
+        AppDelegate.sharedOrchestrator = orchestrator
         
         let step1 = UpdatePlanTool.Arguments.Step(title: "Design System Implementation", status: "completed")
         let step2 = UpdatePlanTool.Arguments.Step(title: "Verification Testing", status: "running")
         let args = UpdatePlanTool.Arguments(steps: [step1, step2])
         
-        let tool = UpdatePlanTool()
+        let tool = UpdatePlanTool(orchestrator: orchestrator)
         let result = try await tool.call(arguments: args)
         XCTAssertTrue(result.contains("Plan updated successfully"))
         
@@ -948,7 +1025,8 @@ final class ApexAgentTests: XCTestCase {
     
     @MainActor
     func testWebSearchToolDuckDuckGo() async throws {
-        let tool = WebSearchTool()
+        let orchestrator = AppDelegate.getSharedOrchestrator()!
+        let tool = WebSearchTool(orchestrator: orchestrator)
         let query = "Swift programming language"
         let result = try await tool.call(arguments: WebSearchTool.Arguments(query: query, count: 3))
         
@@ -959,7 +1037,8 @@ final class ApexAgentTests: XCTestCase {
     
     @MainActor
     func testApplicationControlToolUnsupported() async throws {
-        let tool = ApplicationControlTool()
+        let orchestrator = AppDelegate.getSharedOrchestrator()!
+        let tool = ApplicationControlTool(orchestrator: orchestrator)
         let result = try await tool.call(arguments: ApplicationControlTool.Arguments(appName: "NonExistentDummyApp", action: "open_url", parameter: "https://localhost"))
         XCTAssertTrue(result.contains("ERROR"))
         XCTAssertTrue(result.contains("Unsupported application"))
@@ -967,13 +1046,14 @@ final class ApexAgentTests: XCTestCase {
     
     @MainActor
     func testApplicationControlToolFinder() async throws {
+        let orchestrator = AppDelegate.getSharedOrchestrator()!
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true, attributes: nil)
         defer {
             try? FileManager.default.removeItem(at: tempDir)
         }
         
-        let tool = ApplicationControlTool()
+        let tool = ApplicationControlTool(orchestrator: orchestrator)
         let result = try await tool.call(arguments: ApplicationControlTool.Arguments(appName: "Finder", action: "open_folder", parameter: tempDir.path))
         XCTAssertNotNil(result)
     }

@@ -40,6 +40,11 @@ class EmbeddingHelper {
 // MARK: - Store Memory Tool
 
 struct StoreMemoryTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
     let name = "store_memory"
     let description = "Stores or updates a key-value memory record in the on-device SQLite database. Use this to remember important system locations, file changes, or status of long-running tasks."
 
@@ -53,11 +58,9 @@ struct StoreMemoryTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             return await MainActor.run {
-                guard let context = AgentOrchestrator.shared?.modelContext else {
-                    return "ERROR: Database context not available"
-                }
+                let context = orchestrator.orchestrator.modelContext
 
                 let keyToFind = arguments.key.trimmingCharacters(in: .whitespacesAndNewlines)
                 var descriptor = FetchDescriptor<AgentMemory>(
@@ -66,7 +69,7 @@ struct StoreMemoryTool: Tool {
                 descriptor.fetchLimit = 1
                 
                 do {
-                    let existing = try context.fetch(descriptor)
+                    let existing = try context!.fetch(descriptor)
                     let textToEmbed = "\(keyToFind): \(arguments.value)"
                     let vector = EmbeddingHelper.getVector(for: textToEmbed)
                     let embeddingData = vector.flatMap { EmbeddingHelper.serialize($0) }
@@ -78,9 +81,9 @@ struct StoreMemoryTool: Tool {
                     } else {
                         let newMemory = AgentMemory(key: keyToFind, val: arguments.value)
                         newMemory.embeddingData = embeddingData
-                        context.insert(newMemory)
+                        context!.insert(newMemory)
                     }
-                    try context.save()
+                    try context!.save()
                     return "✅ Successfully saved memory for key: '\(keyToFind)'"
                 } catch {
                     return "ERROR: Failed to save to database: \(error.localizedDescription)"
@@ -93,6 +96,11 @@ struct StoreMemoryTool: Tool {
 // MARK: - Search Memory Tool
 
 struct SearchMemoryTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
     let name = "search_memory"
     let description = "Searches the long-term SQLite memory database for entries matching the query keyword."
 
@@ -103,18 +111,16 @@ struct SearchMemoryTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             return await MainActor.run {
-                guard let context = AgentOrchestrator.shared?.modelContext else {
-                    return "ERROR: Database context not available"
-                }
+                let context = orchestrator.orchestrator.modelContext
 
                 var descriptor = FetchDescriptor<AgentMemory>(
                     sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
                 )
                 
                 do {
-                    let allMemories = try context.fetch(descriptor)
+                    let allMemories = try context!.fetch(descriptor)
                     
                     let filtered: [AgentMemory]
                     if let query = arguments.query?.lowercased().trimTime(), !query.isEmpty {

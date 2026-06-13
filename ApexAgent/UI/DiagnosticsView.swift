@@ -77,7 +77,7 @@ struct DiagnosticsView: View {
     private func runDiagnostics() {
         isRunning = true
         Task { @MainActor in
-            let selfCheckItems = DiagnosticManager.runSelfCheck()
+            let selfCheckItems = await DiagnosticManager.runSelfCheck()
             self.results = selfCheckItems
             self.isRunning = false
         }

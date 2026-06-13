@@ -5,6 +5,12 @@ import AppKit
 // MARK: - Delegate Task Tool
 
 struct DelegateTaskTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
     let name = "delegate_task"
     let description = "Delegates a specific sub-task to a specialized sub-agent (developer, executor, controller, researcher) and returns their final response report."
 
@@ -18,12 +24,10 @@ struct DelegateTaskTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments) {
-            guard let orchestrator = await AgentOrchestrator.shared else {
-                return "ERROR: AgentOrchestrator is not available"
-            }
-
-            if await AgentOrchestrator.isCLITestMode {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+            let orchestrator = await self.orchestrator.orchestrator
+            
+            if ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
                 return "Mock delegation response for agent \(arguments.agentType): \(arguments.taskDescription)"
             }
             
