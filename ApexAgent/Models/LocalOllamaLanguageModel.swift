@@ -1,0 +1,313 @@
+import Foundation
+import FoundationModels
+
+public struct LocalOllamaLanguageModel: LanguageModel {
+    public typealias Executor = LocalOllamaLanguageModelExecutor
+    public let hostURL: URL
+    
+    public var capabilities: LanguageModelCapabilities {
+        LanguageModelCapabilities(capabilities: [.toolCalling, .reasoning])
+    }
+    
+    public var executorConfiguration: LocalOllamaLanguageModelExecutor.Configuration {
+        LocalOllamaLanguageModelExecutor.Configuration(hostURL: hostURL)
+    }
+    
+    public init(hostURL: URL) {
+        self.hostURL = hostURL
+    }
+}
+
+public struct ParsedToolCall {
+    public let id: String
+    public let name: String
+    public let arguments: [String: Any]
+    public let argumentsString: String
+    
+    public init(id: String, name: String, arguments: [String: Any], argumentsString: String) {
+        self.id = id
+        self.name = name
+        self.arguments = arguments
+        self.argumentsString = argumentsString
+    }
+}
+
+public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor {
+    public typealias Model = LocalOllamaLanguageModel
+    
+    public struct Configuration: Hashable, Sendable {
+        public let hostURL: URL
+    }
+    
+    public let configuration: Configuration
+    
+    public init(configuration: Configuration) throws {
+        self.configuration = configuration
+    }
+    
+    public func prewarm(model: LocalOllamaLanguageModel, transcript: Transcript) {}
+    
+    private func getOllamaTools(for names: [String]) async -> [[String: Any]] {
+        let data = await getParsedSchemasJSONData()
+        guard let schemas = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
+            return []
+        }
+        let filtered = schemas.filter { schema in
+            guard let name = schema["name"] as? String else { return false }
+            return names.contains(name)
+        }
+        return filtered.map { schema in
+            [
+                "type": "function",
+                "function": schema
+            ]
+        }
+    }
+    
+    public func respond(
+        to request: LanguageModelExecutorGenerationRequest,
+        model: LocalOllamaLanguageModel,
+        streamingInto channel: LanguageModelExecutorGenerationChannel
+    ) async throws {
+        let savedModel = UserDefaults.standard.string(forKey: "apex.ollamaModel") ?? "qwen2.5-coder:latest"
+        
+        var ollamaMessages: [[String: Any]] = []
+        for entry in request.transcript {
+            switch entry {
+            case .instructions(let inst):
+                var systemText = ""
+                for segment in inst.segments {
+                    if case .text(let textSeg) = segment {
+                        systemText += textSeg.content
+                    }
+                }
+                ollamaMessages.append(["role": "system", "content": systemText])
+            case .prompt(let prompt):
+                var userText = ""
+                for segment in prompt.segments {
+                    if case .text(let textSeg) = segment {
+                        userText += textSeg.content
+                    }
+                }
+                ollamaMessages.append(["role": "user", "content": userText])
+            case .response(let response):
+                var assistantText = ""
+                for segment in response.segments {
+                    if case .text(let textSeg) = segment {
+                        assistantText += textSeg.content
+                    }
+                }
+                ollamaMessages.append(["role": "assistant", "content": assistantText])
+            case .toolCalls(let toolCalls):
+                var callsArray: [[String: Any]] = []
+                for call in toolCalls {
+                    let args = jsonObject(from: call.arguments)
+                    callsArray.append([
+                        "id": call.id,
+                        "type": "function",
+                        "function": [
+                            "name": call.toolName,
+                            "arguments": args
+                        ]
+                    ])
+                }
+                ollamaMessages.append([
+                    "role": "assistant",
+                    "content": "",
+                    "tool_calls": callsArray
+                ])
+            case .toolOutput(let toolOutput):
+                var contentText = ""
+                for segment in toolOutput.segments {
+                    if case .text(let textSeg) = segment {
+                        contentText += textSeg.content
+                    }
+                }
+                ollamaMessages.append([
+                    "role": "tool",
+                    "content": contentText,
+                    "name": toolOutput.toolName,
+                    "tool_call_id": toolOutput.id
+                ])
+            case .reasoning(let reasoning):
+                var reasoningText = ""
+                for segment in reasoning.segments {
+                    if case .text(let textSeg) = segment {
+                        reasoningText += textSeg.content
+                    }
+                }
+                if !reasoningText.isEmpty {
+                    ollamaMessages.append(["role": "assistant", "content": reasoningText])
+                }
+            @unknown default:
+                break
+            }
+        }
+        
+        var currentMessages = ollamaMessages
+        var loopCount = 0
+        let maxLoops = 8
+        
+        while loopCount < maxLoops {
+            var requestBody: [String: Any] = [
+                "model": savedModel,
+                "messages": currentMessages,
+                "stream": true
+            ]
+            
+            if request.generationOptions.toolCallingMode != .disallowed {
+                let names = request.enabledToolDefinitions.map { $0.name }
+                let tools = await getOllamaTools(for: names)
+                if !tools.isEmpty {
+                    requestBody["tools"] = tools
+                }
+            }
+            
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: requestBody) else {
+                throw NSError(domain: "LocalOllamaLanguageModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to serialize Ollama request payload."])
+            }
+            
+            var urlRequest = URLRequest(url: configuration.hostURL.appendingPathComponent("api/chat"))
+            urlRequest.httpMethod = "POST"
+            urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            urlRequest.httpBody = jsonData
+            urlRequest.timeoutInterval = 60
+            
+            let bytes: URLSession.AsyncBytes
+            let response: URLResponse
+            do {
+                (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
+            } catch {
+                throw NSError(domain: "LocalOllamaLanguageModel", code: -3, userInfo: [NSLocalizedDescriptionKey: "Failed to connect to Ollama. Make sure Ollama is running at \(configuration.hostURL.absoluteString) and the model '\(savedModel)' has been pulled. Error: \(error.localizedDescription)"])
+            }
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+                throw NSError(domain: "LocalOllamaLanguageModel", code: -2, userInfo: [NSLocalizedDescriptionKey: "Ollama returned status code \(code)"])
+            }
+            
+            var accumulatedText = ""
+            var detectedToolCalls: [ParsedToolCall] = []
+            
+            for try await line in bytes.lines {
+                let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty,
+                      let data = trimmed.data(using: .utf8),
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                    continue
+                }
+                
+                if let message = json["message"] as? [String: Any] {
+                    if let content = message["content"] as? String, !content.isEmpty {
+                        accumulatedText += content
+                        await channel.send(LanguageModelExecutorGenerationChannel.Response.response(action: .appendText(content, tokenCount: 0)))
+                    }
+                    if let toolCalls = message["tool_calls"] as? [[String: Any]] {
+                        for toolCall in toolCalls {
+                            guard let function = toolCall["function"] as? [String: Any],
+                                  let name = function["name"] as? String,
+                                  let args = function["arguments"] as? [String: Any] else {
+                                continue
+                            }
+                            let callId = toolCall["id"] as? String ?? UUID().uuidString
+                            guard let argsData = try? JSONSerialization.data(withJSONObject: args),
+                                  let argsStr = String(data: argsData, encoding: .utf8) else {
+                                continue
+                            }
+                            detectedToolCalls.append(ParsedToolCall(id: callId, name: name, arguments: args, argumentsString: argsStr))
+                        }
+                    }
+                }
+            }
+            
+            if !detectedToolCalls.isEmpty {
+                var dynamicToolCalls: [ParsedToolCall] = []
+                var staticToolCalls: [ParsedToolCall] = []
+                
+                let enabledNames = Set(request.enabledToolDefinitions.map { $0.name })
+                
+                for tc in detectedToolCalls {
+                    let toolName = tc.name
+                    let isDynamic = await MainActor.run {
+                        return DynamicToolbox.shared.dynamicTools[toolName] != nil
+                    }
+                    if isDynamic && !enabledNames.contains(tc.name) {
+                        dynamicToolCalls.append(tc)
+                    } else {
+                        staticToolCalls.append(tc)
+                    }
+                }
+                
+                if !staticToolCalls.isEmpty {
+                    for tc in staticToolCalls {
+                        let toolCallAction = LanguageModelExecutorGenerationChannel.ToolCalls.ToolCall.Action.appendArguments(tc.argumentsString, tokenCount: 0)
+                        let action = LanguageModelExecutorGenerationChannel.ToolCalls.Action.toolCall(id: tc.id, name: tc.name, action: toolCallAction)
+                        let event = LanguageModelExecutorGenerationChannel.ToolCalls.toolCalls(action: action)
+                        await channel.send(event)
+                    }
+                    return
+                } else {
+                    var toolCallsArray: [[String: Any]] = []
+                    for tc in dynamicToolCalls {
+                        toolCallsArray.append([
+                            "id": tc.id,
+                            "type": "function",
+                            "function": [
+                                "name": tc.name,
+                                "arguments": tc.arguments
+                            ]
+                        ])
+                    }
+                    
+                    currentMessages.append([
+                        "role": "assistant",
+                        "content": accumulatedText,
+                        "tool_calls": toolCallsArray
+                    ])
+                    
+                    for tc in dynamicToolCalls {
+                        let output: String
+                        do {
+                            output = try await DynamicToolbox.shared.executeTool(name: tc.name, jsonArguments: tc.argumentsString)
+                        } catch {
+                            output = "ERROR: \(error.localizedDescription)"
+                        }
+                        currentMessages.append([
+                            "role": "tool",
+                            "content": output,
+                            "name": tc.name,
+                            "tool_call_id": tc.id
+                        ])
+                    }
+                }
+            } else {
+                return
+            }
+            loopCount += 1
+        }
+    }
+}
+
+// Helpers
+private func jsonObject(from content: GeneratedContent) -> Any {
+    switch content.kind {
+    case .null:
+        return NSNull()
+    case .bool(let value):
+        return value
+    case .number(let value):
+        return value
+    case .string(let value):
+        return value
+    case .array(let array):
+        return array.map { jsonObject(from: $0) }
+    case .structure(let properties, _):
+        var dict: [String: Any] = [:]
+        for (k, v) in properties {
+            dict[k] = jsonObject(from: v)
+        }
+        return dict
+    @unknown default:
+        return NSNull()
+    }
+}

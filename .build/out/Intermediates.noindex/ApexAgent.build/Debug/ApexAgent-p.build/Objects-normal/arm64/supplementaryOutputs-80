@@ -1,0 +1,37 @@
+{
+  "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/UI/QuickPromptPanel.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/QuickPromptPanel.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/QuickPromptPanel.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/QuickPromptPanel.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/QuickPromptPanel.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/QuickPromptPanel.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/UI/SettingsView.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/SettingsView.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/SettingsView.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/SettingsView.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/SettingsView.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/SettingsView.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/UI/TerminalView.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/TerminalView.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/TerminalView.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/TerminalView.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/TerminalView.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/TerminalView.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/UI/ToolActivityView.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/ToolActivityView.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/ToolActivityView.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/ToolActivityView.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/ToolActivityView.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent-p.build/Objects-normal/arm64/ToolActivityView.swiftdeps"
+  }
+}

@@ -1,0 +1,103 @@
+name: ApexAgent
+options:
+  bundleIdPrefix: com.apexagent
+  deploymentTarget:
+    macOS: "27.0"
+  xcodeVersion: "27.0"
+  generateEmptyDirectories: true
+  createIntermediateGroups: true
+
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: 2.6.0
+
+settings:
+  base:
+    SWIFT_VERSION: 6.0
+    MACOSX_DEPLOYMENT_TARGET: 27.0
+    PRODUCT_NAME: ApexAgent
+    PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgent
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: YES
+    CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent.entitlements
+    SWIFT_STRICT_CONCURRENCY: complete
+    OTHER_SWIFT_FLAGS: ""
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  configs:
+    Debug:
+      DEBUG_INFORMATION_FORMAT: dwarf
+      SWIFT_OPTIMIZATION_LEVEL: "-Onone"
+      SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+    Release:
+      DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+      SWIFT_OPTIMIZATION_LEVEL: "-O"
+
+targets:
+  ApexAgent:
+    type: application
+    platform: macOS
+    deploymentTarget: "27.0"
+    sources:
+      - path: ApexAgent
+        excludes:
+          - "**/*.entitlements"
+    resources:
+      - path: ApexAgent/Resources
+        optional: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgent
+        INFOPLIST_FILE: ApexAgent/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent.entitlements
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks
+        ENABLE_PREVIEWS: YES
+    dependencies:
+      - framework: FoundationModels.framework
+        embed: false
+      - framework: SwiftUI.framework
+        embed: false
+      - framework: SwiftData.framework
+        embed: false
+      - package: Sparkle
+        product: Sparkle
+    scheme:
+      testTargets:
+        - ApexAgentTests
+      environmentVariables:
+        APEX_DEBUG: "1"
+
+  ApexAgentTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "27.0"
+    sources:
+      - path: ApexAgentTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_NAME: ApexAgentTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgentTests
+    dependencies:
+      - target: ApexAgent
+      - framework: FoundationModels.framework
+        embed: false
+      - framework: SwiftData.framework
+        embed: false
+
+schemes:
+  ApexAgent:
+    build:
+      targets:
+        ApexAgent: all
+        ApexAgentTests: [test]
+    run:
+      config: Debug
+      commandLineArguments:
+        "--debug": false
+    test:
+      config: Debug
+    archive:
+      config: Release

@@ -1,0 +1,37 @@
+{
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/StateGraph.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/StateGraph.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/StateGraph.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/StateGraph.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/StateGraph.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/StateGraph.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/ShellTool.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ShellTool.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ShellTool.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ShellTool.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ShellTool.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ShellTool.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/SystemInfoTool.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/SystemInfoTool.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/SystemInfoTool.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/SystemInfoTool.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/SystemInfoTool.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/SystemInfoTool.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/Tool+Logging.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/Tool+Logging.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/Tool+Logging.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/Tool+Logging.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/Tool+Logging.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/Tool+Logging.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/UI/TerminalView.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/TerminalView.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/TerminalView.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/TerminalView.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/TerminalView.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/TerminalView.swiftdeps"
+  }
+}

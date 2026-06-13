@@ -1,0 +1,4 @@
+module CNIODarwin {
+umbrella header "/Users/danielstevens/Developer/ApexAgent/.build/checkouts/swift-nio/Sources/CNIODarwin/include/CNIODarwin.h"
+export *
+}

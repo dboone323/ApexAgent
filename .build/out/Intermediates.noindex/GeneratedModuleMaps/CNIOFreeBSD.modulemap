@@ -1,0 +1,4 @@
+module CNIOFreeBSD {
+umbrella header "/Users/danielstevens/Developer/ApexAgent/.build/checkouts/swift-nio/Sources/CNIOFreeBSD/include/CNIOFreeBSD.h"
+export *
+}

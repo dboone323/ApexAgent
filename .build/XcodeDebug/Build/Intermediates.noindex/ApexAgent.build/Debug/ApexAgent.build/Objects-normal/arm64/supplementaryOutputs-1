@@ -1,0 +1,44 @@
+{
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/AgentOrchestrator.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentOrchestrator.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentOrchestrator.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentOrchestrator.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentOrchestrator.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentOrchestrator.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/AgentSystemPrompt.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentSystemPrompt.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentSystemPrompt.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentSystemPrompt.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentSystemPrompt.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentSystemPrompt.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/AgentEngine.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentEngine.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentEngine.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentEngine.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentEngine.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentEngine.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/AgentProfiles.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentProfiles.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentProfiles.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentProfiles.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentProfiles.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AgentProfiles.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/AccessibilityControlTool.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AccessibilityControlTool.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AccessibilityControlTool.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AccessibilityControlTool.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AccessibilityControlTool.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/AccessibilityControlTool.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/UI/ANSIColorParser.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ANSIColorParser.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ANSIColorParser.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ANSIColorParser.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ANSIColorParser.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ANSIColorParser.swiftdeps"
+  }
+}

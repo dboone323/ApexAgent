@@ -1,0 +1,81 @@
+[
+  {
+    "typeName": "NIOPosix.GetaddrinfoResolver",
+    "mangledTypeName": "8NIOPosix19GetaddrinfoResolverC",
+    "kind": "class",
+    "file": "/Users/danielstevens/Developer/ApexAgent/.build/checkouts/swift-nio/Sources/NIOPosix/GetaddrinfoResolver.swift",
+    "line": 55,
+    "conformances": [
+      "NIOPosix.Resolver",
+      "Swift.Sendable",
+      "Swift.SendableMetatype"
+    ],
+    "allConformances": [
+      {
+        "protocolName": "NIOPosix.Resolver",
+        "conformanceDefiningModule": "NIOPosix"
+      },
+      {
+        "protocolName": "Swift.Sendable",
+        "conformanceDefiningModule": "NIOPosix"
+      },
+      {
+        "protocolName": "Swift.SendableMetatype",
+        "conformanceDefiningModule": "NIOPosix"
+      }
+    ],
+    "associatedTypeAliases": [],
+    "properties": [
+      {
+        "label": "loop",
+        "type": "any NIOCore.EventLoop",
+        "mangledTypeName": "n/a - deprecated",
+        "isStatic": "false",
+        "isComputed": "false",
+        "file": "/Users/danielstevens/Developer/ApexAgent/.build/checkouts/swift-nio/Sources/NIOPosix/GetaddrinfoResolver.swift",
+        "line": 56,
+        "valueKind": "Runtime"
+      },
+      {
+        "label": "v4Future",
+        "type": "NIOCore.EventLoopPromise<Swift.Array<NIOCore.SocketAddress>>",
+        "mangledTypeName": "n/a - deprecated",
+        "isStatic": "false",
+        "isComputed": "false",
+        "file": "/Users/danielstevens/Developer/ApexAgent/.build/checkouts/swift-nio/Sources/NIOPosix/GetaddrinfoResolver.swift",
+        "line": 57,
+        "valueKind": "Runtime"
+      },
+      {
+        "label": "v6Future",
+        "type": "NIOCore.EventLoopPromise<Swift.Array<NIOCore.SocketAddress>>",
+        "mangledTypeName": "n/a - deprecated",
+        "isStatic": "false",
+        "isComputed": "false",
+        "file": "/Users/danielstevens/Developer/ApexAgent/.build/checkouts/swift-nio/Sources/NIOPosix/GetaddrinfoResolver.swift",
+        "line": 58,
+        "valueKind": "Runtime"
+      },
+      {
+        "label": "aiSocktype",
+        "type": "NIOCore.NIOBSDSocket.SocketType",
+        "mangledTypeName": "n/a - deprecated",
+        "isStatic": "false",
+        "isComputed": "false",
+        "file": "/Users/danielstevens/Developer/ApexAgent/.build/checkouts/swift-nio/Sources/NIOPosix/GetaddrinfoResolver.swift",
+        "line": 59,
+        "valueKind": "Runtime"
+      },
+      {
+        "label": "aiProtocol",
+        "type": "NIOCore.NIOBSDSocket.OptionLevel",
+        "mangledTypeName": "n/a - deprecated",
+        "isStatic": "false",
+        "isComputed": "false",
+        "file": "/Users/danielstevens/Developer/ApexAgent/.build/checkouts/swift-nio/Sources/NIOPosix/GetaddrinfoResolver.swift",
+        "line": 60,
+        "valueKind": "Runtime"
+      }
+    ]
+  }
+]

@@ -1,0 +1,30 @@
+{
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKitCore/Models/EnhancedFinancialModels.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedFinancialModels.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedFinancialModels.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedFinancialModels.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedFinancialModels.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedFinancialModels.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKitCore/Models/EnhancedInfrastructure/EnhancedComputationSupport.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedComputationSupport.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedComputationSupport.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedComputationSupport.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedComputationSupport.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedComputationSupport.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKitCore/Models/EnhancedInfrastructure/EnhancedEducationSupport.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedEducationSupport.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedEducationSupport.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedEducationSupport.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedEducationSupport.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedEducationSupport.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKitCore/Models/EnhancedInfrastructure/EnhancedGovernanceSupport.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedGovernanceSupport.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedGovernanceSupport.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedGovernanceSupport.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedGovernanceSupport.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedGovernanceSupport.swiftdeps"
+  }
+}

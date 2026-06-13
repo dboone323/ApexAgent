@@ -1,0 +1,44 @@
+{
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKit/Agents/SkillRegistry.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SkillRegistry.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SkillRegistry.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SkillRegistry.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SkillRegistry.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SkillRegistry.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKit/AppleAI/EvaluationsProtocol.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/EvaluationsProtocol.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/EvaluationsProtocol.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/EvaluationsProtocol.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/EvaluationsProtocol.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/EvaluationsProtocol.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKit/AppleAI/FoundationModelsSessionProtocol.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/FoundationModelsSessionProtocol.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/FoundationModelsSessionProtocol.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/FoundationModelsSessionProtocol.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/FoundationModelsSessionProtocol.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/FoundationModelsSessionProtocol.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKit/AppleAI/PencilHandwritingProtocol.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/PencilHandwritingProtocol.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/PencilHandwritingProtocol.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/PencilHandwritingProtocol.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/PencilHandwritingProtocol.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/PencilHandwritingProtocol.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKit/AppleAI/SemanticSchemaProtocol.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SemanticSchemaProtocol.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SemanticSchemaProtocol.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SemanticSchemaProtocol.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SemanticSchemaProtocol.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SemanticSchemaProtocol.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKit/AppleAI/SwiftDataProtocol.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SwiftDataProtocol.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SwiftDataProtocol.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SwiftDataProtocol.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SwiftDataProtocol.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/SwiftDataProtocol.swiftdeps"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKit/AICoordinator.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AICoordinator.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AICoordinator.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AICoordinator.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AICoordinator.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AICoordinator.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKit/AIServiceProtocols.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AIServiceProtocols.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AIServiceProtocols.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AIServiceProtocols.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AIServiceProtocols.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AIServiceProtocols.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKit/AITaskPrioritizationService.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AITaskPrioritizationService.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AITaskPrioritizationService.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AITaskPrioritizationService.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AITaskPrioritizationService.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AITaskPrioritizationService.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKit/AccessibilityLabels.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AccessibilityLabels.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AccessibilityLabels.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AccessibilityLabels.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AccessibilityLabels.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/AccessibilityLabels.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKit/Agents/BaseAgent.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/BaseAgent.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/BaseAgent.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/BaseAgent.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/BaseAgent.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/BaseAgent.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKit/Agents/DecisionEngine.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/DecisionEngine.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/DecisionEngine.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/DecisionEngine.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/DecisionEngine.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKit-t.build/Objects-normal/arm64/DecisionEngine.swiftdeps"
+  }
+}

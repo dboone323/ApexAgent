@@ -1,0 +1,23 @@
+{
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKitCore/Security/EncryptedFileStore.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EncryptedFileStore.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EncryptedFileStore.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EncryptedFileStore.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EncryptedFileStore.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EncryptedFileStore.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKitCore/SecurityFramework.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/SecurityFramework.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/SecurityFramework.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/SecurityFramework.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/SecurityFramework.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/SecurityFramework.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKitCore/Services/BackupRestoreService.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/BackupRestoreService.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/BackupRestoreService.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/BackupRestoreService.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/BackupRestoreService.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/BackupRestoreService.swiftdeps"
+  }
+}

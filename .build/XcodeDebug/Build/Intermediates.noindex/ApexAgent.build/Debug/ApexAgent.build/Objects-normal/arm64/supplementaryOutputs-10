@@ -1,0 +1,37 @@
+{
+  "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/UpdaterController.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/UpdaterController.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/UpdaterController.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/UpdaterController.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/UpdaterController.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/UpdaterController.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/VoiceController.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/VoiceController.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/VoiceController.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/VoiceController.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/VoiceController.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/VoiceController.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/WebSearchTool.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/WebSearchTool.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/WebSearchTool.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/WebSearchTool.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/WebSearchTool.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/WebSearchTool.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/UI/ToolActivityView.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ToolActivityView.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ToolActivityView.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ToolActivityView.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ToolActivityView.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/ToolActivityView.swiftdeps"
+  }
+}

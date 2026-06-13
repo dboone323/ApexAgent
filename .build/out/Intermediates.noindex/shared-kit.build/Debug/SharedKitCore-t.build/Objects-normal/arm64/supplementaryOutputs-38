@@ -1,0 +1,23 @@
+{
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKitCore/Services/DependencyContainer.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/DependencyContainer.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/DependencyContainer.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/DependencyContainer.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/DependencyContainer.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/DependencyContainer.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKitCore/Services/PlatformFeatureRegistry.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/PlatformFeatureRegistry.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/PlatformFeatureRegistry.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/PlatformFeatureRegistry.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/PlatformFeatureRegistry.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/PlatformFeatureRegistry.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKitCore/Services/ServiceProtocols.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/ServiceProtocols.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/ServiceProtocols.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/ServiceProtocols.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/ServiceProtocols.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/ServiceProtocols.swiftdeps"
+  }
+}

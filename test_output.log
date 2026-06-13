@@ -1,0 +1,1649 @@
+Command line invocation:
+    /Applications/Xcode-beta.app/Contents/Developer/usr/bin/xcodebuild -project ApexAgent.xcodeproj -scheme ApexAgent -configuration Debug -derivedDataPath .build/XcodeDebug test
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  Sparkle: https://github.com/sparkle-project/Sparkle @ 2.9.3
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:macOS, arch:arm64, id:00006000-001649660AE2801E, name:My Mac }
+{ platform:macOS, name:Any Mac }
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (3 targets)
+    Target 'ApexAgentTests' in project 'ApexAgent'
+        ➜ Explicit dependency on target 'ApexAgent' in project 'ApexAgent'
+    Target 'ApexAgent' in project 'ApexAgent'
+        ➜ Explicit dependency on target 'Sparkle-product' in project 'Sparkle'
+    Target 'Sparkle-product' in project 'Sparkle' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode-beta.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: 72437a44979236586d0ec27f9f0ab85b
+Build description path: /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/XCBuildData/72437a44979236586d0ec27f9f0ab85b.xcbuilddata
+ClangStatCache /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/SDKStatCaches.noindex/macosx27.0-26A5353p-802b3160ec225d8f0f354b513c6f7a3245874285e5972fffeae925c4ab065928.sdkstatcache
+    cd /Users/danielstevens/Developer/ApexAgent/ApexAgent.xcodeproj
+    /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -o /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/SDKStatCaches.noindex/macosx27.0-26A5353p-802b3160ec225d8f0f354b513c6f7a3245874285e5972fffeae925c4ab065928.sdkstatcache
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/empty-ApexAgentTests.plist (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/empty-ApexAgentTests.plist
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.DependencyStaticMetadataFileList (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.hmap (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.hmap
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/DerivedSources/Entitlements.plist (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/DerivedSources/Entitlements.plist
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.LinkFileList (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.LinkFileList
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.SwiftFileList (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.SwiftFileList
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests-OutputFileMap.json (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests-OutputFileMap.json
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests_const_extract_protocols.json (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests_const_extract_protocols.json
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.SwiftConstValuesFileList (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.DependencyMetadataFileList (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.DependencyMetadataFileList
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-project-headers.hmap (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-project-headers.hmap
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-own-target-headers.hmap (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-own-target-headers.hmap
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-generated-files.hmap (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-generated-files.hmap
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-all-target-headers.hmap (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-all-target-headers.hmap
+
+WriteAuxiliaryFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-all-non-framework-target-headers.hmap (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    write-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-all-non-framework-target-headers.hmap
+
+MkDir /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    /bin/mkdir -p /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest
+
+MkDir /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    /bin/mkdir -p /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents
+
+MkDir /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/MacOS (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    /bin/mkdir -p /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/MacOS
+
+MkDir /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns (in target 'ApexAgent' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    /bin/mkdir -p /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns
+
+ProcessProductPackaging /Users/danielstevens/Developer/ApexAgent/ApexAgent/ApexAgent.entitlements /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/ApexAgent.app.xcent (in target 'ApexAgent' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    
+    Entitlements:
+    
+    {
+    "com.apple.security.app-sandbox" = 0;
+    "com.apple.security.automation.apple-events" = 1;
+    "com.apple.security.cs.allow-jit" = 0;
+    "com.apple.security.files.downloads.read-write" = 1;
+    "com.apple.security.files.user-selected.read-write" = 1;
+    "com.apple.security.get-task-allow" = 1;
+    "com.apple.security.network.client" = 1;
+    "com.apple.security.network.server" = 1;
+}
+    
+    builtin-productPackagingUtility /Users/danielstevens/Developer/ApexAgent/ApexAgent/ApexAgent.entitlements -entitlements -format xml -o /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/ApexAgent.app.xcent
+
+ProcessProductPackagingDER /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/ApexAgent.app.xcent /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/ApexAgent.app.xcent.der (in target 'ApexAgent' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    /usr/bin/derq query -f xml -i /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/ApexAgent.app.xcent -o /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/ApexAgent.app.xcent.der --raw
+
+ProcessInfoPlistFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/Info.plist /Users/danielstevens/Developer/ApexAgent/ApexAgent/Info.plist (in target 'ApexAgent' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-infoPlistUtility /Users/danielstevens/Developer/ApexAgent/ApexAgent/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PkgInfo -expandbuildsettings -platform macosx -additionalcontentfile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/assetcatalog_generated_info.plist -scanforprivacyfile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/Frameworks/Sparkle.framework -o /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/Info.plist
+
+CopySwiftLibs /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app (in target 'ApexAgent' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-swiftStdLibTool --copy --verbose --sign - --scan-executable /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/MacOS/ApexAgent.debug.dylib --scan-folder /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/Frameworks --scan-folder /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns --scan-folder /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/Library/SystemExtensions --scan-folder /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/Extensions --scan-folder /Users/danielstevens/Developer/ApexAgent/FoundationModels.framework --scan-folder /Users/danielstevens/Developer/ApexAgent/SwiftUI.framework --scan-folder /Users/danielstevens/Developer/ApexAgent/SwiftData.framework --platform macosx --toolchain /var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v27.1.5194.15.LRJ76B/Metal.xctoolchain --toolchain /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ProcessProductPackaging /Users/danielstevens/Developer/ApexAgent/ApexAgent/ApexAgent.entitlements /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.xctest.xcent (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    
+    Entitlements:
+    
+    {
+    "com.apple.security.app-sandbox" = 0;
+    "com.apple.security.automation.apple-events" = 1;
+    "com.apple.security.cs.allow-jit" = 0;
+    "com.apple.security.files.downloads.read-write" = 1;
+    "com.apple.security.files.user-selected.read-write" = 1;
+    "com.apple.security.network.client" = 1;
+    "com.apple.security.network.server" = 1;
+}
+    
+    builtin-productPackagingUtility /Users/danielstevens/Developer/ApexAgent/ApexAgent/ApexAgent.entitlements -entitlements -format xml -o /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.xctest.xcent
+
+ProcessProductPackagingDER /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.xctest.xcent /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.xctest.xcent.der (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    /usr/bin/derq query -f xml -i /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.xctest.xcent -o /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.xctest.xcent.der --raw
+
+SwiftDriver ApexAgentTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-SwiftDriver -- /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name ApexAgentTests -Onone @/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.SwiftFileList -DDEBUG -plugin-path /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -target arm64-apple-macos27.0 -g -module-cache-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 6 -I /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug -Isystem /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug -F . -F /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -parse-as-library -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/SDKStatCaches.noindex/macosx27.0-26A5353p-802b3160ec225d8f0f354b513c6f7a3245874285e5972fffeae925c4ab065928.sdkstatcache -output-file-map /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/ModuleCache.noindex -sdk-module-cache-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/ModuleCache.noindex -emit-dependencies -emit-module -emit-module-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests_const_extract_protocols.json -Xcc -iquote -Xcc /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-generated-files.hmap -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-own-target-headers.hmap -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-all-target-headers.hmap -Xcc -iquote -Xcc /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-project-headers.hmap -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/include -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/DerivedSources-normal/arm64 -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/DerivedSources/arm64 -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests-Swift.h -working-directory /Users/danielstevens/Developer/ApexAgent -experimental-emit-module-separately -disable-cmo
+
+ProcessInfoPlistFile /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/Info.plist /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/empty-ApexAgentTests.plist (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-infoPlistUtility /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/empty-ApexAgentTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -platform macosx -o /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/Info.plist
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCUIAutomation-AWFCBZ4TY2VE5AV818UQ0YPHX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCTest-ATEW8CNLC55B8575F0RIL4158.pcm
+
+SwiftExplicitDependencyCompileModuleFromInterface arm64 /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCUIAutomation-NXMXMCCL9HXQ.swiftmodule
+
+SwiftExplicitDependencyCompileModuleFromInterface arm64 /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCTest-1UB4EYLASNJDQ.swiftmodule
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ ApexAgentTests (in target 'ApexAgentTests' from project 'ApexAgent')
+
+SwiftCompile normal arm64 (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    
+
+SwiftCompile normal arm64 Compiling\ ApexAgentTests.swift /Users/danielstevens/Developer/ApexAgent/ApexAgentTests/ApexAgentTests.swift (in target 'ApexAgentTests' from project 'ApexAgent')
+
+SwiftCompile normal arm64 /Users/danielstevens/Developer/ApexAgent/ApexAgentTests/ApexAgentTests.swift (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-SwiftPerFileCompile ApexAgentTests.swift
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for ApexAgentTests (in target 'ApexAgentTests' from project 'ApexAgent')
+
+SwiftDriver\ Compilation\ Requirements ApexAgentTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name ApexAgentTests -Onone @/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.SwiftFileList -DDEBUG -plugin-path /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -target arm64-apple-macos27.0 -g -module-cache-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 6 -I /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug -Isystem /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug -F . -F /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -parse-as-library -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/SDKStatCaches.noindex/macosx27.0-26A5353p-802b3160ec225d8f0f354b513c6f7a3245874285e5972fffeae925c4ab065928.sdkstatcache -output-file-map /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/ModuleCache.noindex -sdk-module-cache-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/ModuleCache.noindex -emit-dependencies -emit-module -emit-module-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests_const_extract_protocols.json -Xcc -iquote -Xcc /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-generated-files.hmap -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-own-target-headers.hmap -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-all-target-headers.hmap -Xcc -iquote -Xcc /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-project-headers.hmap -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/include -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/DerivedSources-normal/arm64 -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/DerivedSources/arm64 -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests-Swift.h -working-directory /Users/danielstevens/Developer/ApexAgent -experimental-emit-module-separately -disable-cmo
+
+SwiftMergeGeneratedHeaders /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/DerivedSources/ApexAgentTests-Swift.h /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests-Swift.h (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-swiftHeaderTool -arch arm64 /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests-Swift.h -o /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/DerivedSources/ApexAgentTests-Swift.h
+
+Copy /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgentTests.swiftmodule/arm64-apple-macos.abi.json /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.abi.json (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.abi.json /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgentTests.swiftmodule/arm64-apple-macos.abi.json
+
+Copy /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgentTests.swiftmodule/arm64-apple-macos.swiftdoc /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.swiftdoc (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.swiftdoc /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgentTests.swiftmodule/arm64-apple-macos.swiftdoc
+
+Copy /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgentTests.swiftmodule/arm64-apple-macos.swiftmodule /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.swiftmodule (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.swiftmodule /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgentTests.swiftmodule/arm64-apple-macos.swiftmodule
+
+Copy /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgentTests.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.swiftsourceinfo (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.swiftsourceinfo /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgentTests.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo
+
+SwiftDriverJobDiscovery normal arm64 Compiling ApexAgentTests.swift (in target 'ApexAgentTests' from project 'ApexAgent')
+
+SwiftDriver\ Compilation ApexAgentTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-Swift-Compilation -- /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name ApexAgentTests -Onone @/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.SwiftFileList -DDEBUG -plugin-path /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -target arm64-apple-macos27.0 -g -module-cache-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 6 -I /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug -Isystem /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug -F . -F /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -parse-as-library -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/SDKStatCaches.noindex/macosx27.0-26A5353p-802b3160ec225d8f0f354b513c6f7a3245874285e5972fffeae925c4ab065928.sdkstatcache -output-file-map /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/ModuleCache.noindex -sdk-module-cache-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/ModuleCache.noindex -emit-dependencies -emit-module -emit-module-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests_const_extract_protocols.json -Xcc -iquote -Xcc /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-generated-files.hmap -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-own-target-headers.hmap -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-all-target-headers.hmap -Xcc -iquote -Xcc /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests-project-headers.hmap -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/include -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/DerivedSources-normal/arm64 -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/DerivedSources/arm64 -Xcc -I/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests-Swift.h -working-directory /Users/danielstevens/Developer/ApexAgent -experimental-emit-module-separately -disable-cmo
+
+Ld /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/MacOS/ApexAgentTests normal (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos27.0 -bundle -isysroot /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk -O0 -Xlinker -no_warn_duplicate_libraries -L/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -L/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug -L/Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -F/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug -F. -iframework /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -filelist /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.LinkFileList -Xlinker -rpath -Xlinker @loader_path/../Frameworks -Xlinker -rpath -Xlinker @executable_path/../Frameworks -bundle_loader /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/MacOS/ApexAgent -Xlinker -object_path_lto -Xlinker /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -dependency_info -Xlinker /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.swiftmodule -Xlinker -needed_framework -Xlinker XCTest -framework XCTest -Xlinker -needed-lXCTestSwiftSupport -lXCTestSwiftSupport -framework FoundationModels -framework SwiftData /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/MacOS/ApexAgent.debug.dylib -Xlinker -no_adhoc_codesign -o /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/MacOS/ApexAgentTests
+
+CopySwiftLibs /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-swiftStdLibTool --copy --verbose --sign - --scan-executable /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/MacOS/ApexAgentTests --scan-folder /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/Frameworks --scan-folder /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/PlugIns --scan-folder /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/Library/SystemExtensions --scan-folder /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/Extensions --scan-folder /Users/danielstevens/Developer/ApexAgent/FoundationModels.framework --scan-folder /Users/danielstevens/Developer/ApexAgent/SwiftData.framework --platform macosx --toolchain /var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v27.1.5194.15.LRJ76B/Metal.xctoolchain --toolchain /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/Frameworks --strip-bitcode --scan-executable /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+ExtractAppIntentsMetadata (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v27.1.5194.15.LRJ76B/Metal.xctoolchain --module-name ApexAgentTests --sdk-root /Applications/Xcode-beta.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX27.0.sdk --xcode-version 27A5194q --platform-family macOS --deployment-target 27.0 --bundle-identifier com.apexagent.ApexAgentTests --output /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/Resources --target-triple arm64-apple-macos27.0 --binary-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest/Contents/MacOS/ApexAgentTests --dependency-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests_dependency_info.dat --stringsdata-file /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.SwiftFileList --metadata-file-list /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.DependencyMetadataFileList --static-metadata-file-list /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.DependencyStaticMetadataFileList --swift-const-vals-list /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/Objects-normal/arm64/ApexAgentTests.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-06-12 19:21:41.538 appintentsmetadataprocessor[96644:3780453] Starting appintentsmetadataprocessor export
+2026-06-12 19:21:41.540 appintentsmetadataprocessor[96644:3780453] warning: Metadata extraction skipped, no AppIntents.framework dependency found
+
+CodeSign /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - -o runtime --entitlements /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgentTests.build/ApexAgentTests.xctest.xcent --timestamp\=none --generate-entitlement-der /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest
+
+RegisterExecutionPolicyException /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-RegisterExecutionPolicyException /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest
+
+Touch /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest (in target 'ApexAgentTests' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    /usr/bin/touch -c /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/PlugIns/ApexAgentTests.xctest
+
+CodeSign /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/MacOS/ApexAgent.debug.dylib (in target 'ApexAgent' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/MacOS/ApexAgent.debug.dylib
+/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/MacOS/ApexAgent.debug.dylib: replacing existing signature
+
+CodeSign /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/MacOS/__preview.dylib (in target 'ApexAgent' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/MacOS/__preview.dylib
+/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app/Contents/MacOS/__preview.dylib: replacing existing signature
+
+CodeSign /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app (in target 'ApexAgent' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    
+    Signing Identity:     "Sign to Run Locally"
+    
+    /usr/bin/codesign --force --sign - --entitlements /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/ApexAgent.app.xcent --timestamp\=none --generate-entitlement-der /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app
+/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app: replacing existing signature
+
+Validate /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app (in target 'ApexAgent' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    builtin-validationUtility /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app -no-validate-extension -infoplist-subpath Contents/Info.plist
+
+RegisterWithLaunchServices /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app (in target 'ApexAgent' from project 'ApexAgent')
+    cd /Users/danielstevens/Developer/ApexAgent
+    /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f -R -trusted /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Products/Debug/ApexAgent.app
+
+PruneExplicitPrecompiledModules /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+note: Disabling hardened runtime with ad-hoc codesigning. (in target 'ApexAgent' from project 'ApexAgent')
+2026-06-12 19:21:43.482945-0500 ApexAgent[96651:3780591] [Connection] Unable to get synchronousRemoteObjectProxy, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-06-12 19:21:43.483587-0500 ApexAgent[96651:3780589] [Connection] Unable to get synchronousRemoteObjectProxy, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-06-12 19:21:43.483825-0500 ApexAgent[96651:3780591] [Application] Error registering app with intents framework: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-06-12 19:21:43.483828-0500 ApexAgent[96651:3780589] [Connection] Unable to re-register with Process Instance Registry, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-06-12 19:21:43.484172-0500 ApexAgent[96651:3780649] [Connection] Unable to get synchronousRemoteObjectProxy, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-06-12 19:21:43.484192-0500 ApexAgent[96651:3780649] [Connection] Unable to re-register with Process Instance Registry, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-06-12 19:21:43.484662-0500 ApexAgent[96651:3780649] [Connection] Will NOT re-try to establish the connection
+2026-06-12 19:21:43.484698-0500 ApexAgent[96651:3780590] [Connection] Unable to get synchronousRemoteObjectProxy, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-06-12 19:21:43.484716-0500 ApexAgent[96651:3780590] [Connection] Unable to re-register with Process Instance Registry, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+2026-06-12 19:21:44.165910-0500 ApexAgent[96651:3780523] ApplePersistenceIgnoreState: Existing state will not be touched. New state will be written to /var/folders/5d/2rv91jzx16j4g9knxlbqh9rm0000gn/T/com.apexagent.ApexAgent.savedState
+2026-06-12 19:21:45.528964-0500 ApexAgent[96651:3780591] [index] {CSInlineDonation[async]: "com.apexagent.ApexAgent" delete-domains:1}: Failed to request donation Error Domain=CSIndexErrorDomain Code=-1000 "Failed to request donation" UserInfo={NSDebugDescription=Failed to request donation, NSUnderlyingError=0x7bbc0acf60 {Error Domain=NSCocoaErrorDomain Code=4099 "The connection to service named com.apple.SetStoreUpdateService was invalidated from this process." UserInfo={NSDebugDescription=The connection to service named com.apple.SetStoreUpdateService was invalidated from this process.}}}
+2026-06-12 19:21:45.823462-0500 ApexAgent[96651:3780649] [index] {CSInlineDonation[async]: "com.apexagent.ApexAgent" add-update-items:2 delete-items:0}: Failed to request donation Error Domain=CSIndexErrorDomain Code=-1000 "Failed to request donation" UserInfo={NSDebugDescription=Failed to request donation, NSUnderlyingError=0x7bbc0ae820 {Error Domain=NSCocoaErrorDomain Code=4099 "The connection to service named com.apple.SetStoreUpdateService was invalidated from this process." UserInfo={NSDebugDescription=The connection to service named com.apple.SetStoreUpdateService was invalidated from this process.}}}
+Test Suite 'All tests' started at 2026-06-12 19:21:46.162.
+Test Suite 'ApexAgentTests.xctest' started at 2026-06-12 19:21:46.163.
+Test Suite 'ApexAgentTests' started at 2026-06-12 19:21:46.163.
+Test Case '-[ApexAgentTests.ApexAgentTests testAccessibilityTool]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testAccessibilityTool]' passed (0.022 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testAgentOrchestratorInitialization]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testAgentOrchestratorInitialization]' passed (0.008 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testAgentTypeInitialization]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testAgentTypeInitialization]' passed (0.004 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testAnalyzeImageTool]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+2026-06-12 19:21:46.230754-0500 ApexAgent[96651:3780787] [IPC] Passing along Session 58D22613-36EC-4837-84B9-8B1E65C94388 in Canceled state in response to PrewarmSession
+2026-06-12 19:21:46.256756-0500 ApexAgent[96651:3780589] [IPC] Passing along Session DDDA5163-82D7-46FF-B507-C3E1BDB83B74 in Canceled state in response to PrewarmSession
+2026-06-12 19:21:46.299495-0500 ApexAgent[96651:3780792] [IPC] Passing along Session 0BBD2061-EC52-47B8-90BE-4F180A6AB5E6 in Canceled state in response to PrewarmSession
+2026-06-12 19:21:46.315556-0500 ApexAgent[96651:3780589] [IPC] Passing along Session 4C465F84-D5CA-44B7-B878-76B5A8A02685 in Canceled state in response to PrewarmSession
+2026-06-12 19:21:46.389084-0500 ApexAgent[96651:3780787] [IPC] Passing along Session 3D9AE896-74D4-471D-8395-3271ECC9B71B in Canceled state in response to PrewarmSession
+2026-06-12 19:21:46.408607-0500 ApexAgent[96651:3780792] [IPC] Passing along Session 078C7277-790D-4A0E-9434-FFE22965856F in Canceled state in response to PrewarmSession
+2026-06-12 19:21:46.666120-0500 ApexAgent[96651:3780589] [BiomeStorage] Can't create stream folder at /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/local with error Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}, protectionClass: BMDataProtectionClassC isUnlocked: 1
+2026-06-12 19:21:46.668292-0500 ApexAgent[96651:3780589] [BiomeStorage] Failed to get contents of directory: <HOME>/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/local, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:21:46.671729-0500 ApexAgent[96651:3780589] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:21:46.671773-0500 ApexAgent[96651:3780589] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:21:46.671783-0500 ApexAgent[96651:3780589] [BiomeSource] Error saving biome store event
+2026-06-12 19:21:46.674130-0500 ApexAgent[96651:3780589] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:21:46.674161-0500 ApexAgent[96651:3780589] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:21:46.674170-0500 ApexAgent[96651:3780589] [BiomeSource] Error saving biome store event
+2026-06-12 19:21:46.676828-0500 ApexAgent[96651:3780589] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:21:46.676859-0500 ApexAgent[96651:3780589] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:21:46.676871-0500 ApexAgent[96651:3780589] [BiomeSource] Error saving biome store event
+2026-06-12 19:21:46.678526-0500 ApexAgent[96651:3780589] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:21:46.678571-0500 ApexAgent[96651:3780589] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:21:46.678582-0500 ApexAgent[96651:3780589] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:00.559500-0500 ApexAgent[96651:3780591] [LanguageModelSession] PromptCompletionEventConverter dropping unsupported event: PromptCompletionEventRenderedPrompt
+2026-06-12 19:22:00.860500-0500 ApexAgent[96651:3780739] [LanguageModelSession] PromptCompletionEventConverter dropping unsupported event: PromptCompletionEventCandidateFinished
+2026-06-12 19:22:00.923323-0500 ApexAgent[96651:3780657] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:00.923893-0500 ApexAgent[96651:3780657] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:00.923911-0500 ApexAgent[96651:3780657] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:00.925189-0500 ApexAgent[96651:3780657] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:00.925219-0500 ApexAgent[96651:3780657] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:00.925226-0500 ApexAgent[96651:3780657] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:00.927300-0500 ApexAgent[96651:3780657] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:00.927344-0500 ApexAgent[96651:3780657] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:00.927354-0500 ApexAgent[96651:3780657] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:00.928939-0500 ApexAgent[96651:3780657] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:00.928974-0500 ApexAgent[96651:3780657] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:00.928983-0500 ApexAgent[96651:3780657] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:01.189755-0500 ApexAgent[96651:3780649] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:01.189797-0500 ApexAgent[96651:3780649] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:01.189806-0500 ApexAgent[96651:3780649] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:01.190974-0500 ApexAgent[96651:3780649] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:01.191005-0500 ApexAgent[96651:3780649] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:01.191013-0500 ApexAgent[96651:3780649] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:01.194094-0500 ApexAgent[96651:3780649] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:01.194138-0500 ApexAgent[96651:3780649] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:01.194146-0500 ApexAgent[96651:3780649] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:01.195975-0500 ApexAgent[96651:3780649] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:01.196014-0500 ApexAgent[96651:3780649] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:01.196022-0500 ApexAgent[96651:3780649] [BiomeSource] Error saving biome store event
+Test Case '-[ApexAgentTests.ApexAgentTests testAnalyzeImageTool]' passed (15.175 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testApexAgentProfileInstantiation]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testApexAgentProfileInstantiation]' passed (0.015 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testApplicationControlToolFinder]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+2026-06-12 19:22:01.394437-0500 ApexAgent[96651:3780591] [IPC] Passing along Session 2BB57DB9-9179-4D1D-98A4-595CB8FCEE3A in Canceled state in response to PrewarmSession
+2026-06-12 19:22:01.402728-0500 ApexAgent[96651:3780740] [IPC] Passing along Session 5AD102B2-5841-4920-9282-05FDD77D0F2B in Canceled state in response to PrewarmSession
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Test Case '-[ApexAgentTests.ApexAgentTests testApplicationControlToolFinder]' passed (2.700 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testApplicationControlToolUnsupported]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testApplicationControlToolUnsupported]' passed (0.015 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testAttachmentCompilation]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+2026-06-12 19:22:04.126609-0500 ApexAgent[96651:3780649] [IPC] Passing along Session 02D00EEE-BC56-453F-AA4B-469E46CF38B9 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:04.133386-0500 ApexAgent[96651:3780649] [IPC] Passing along Session C8F1ADBE-3466-4E3A-B755-493A762F7795 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:04.230059-0500 ApexAgent[96651:3780740] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:04.230097-0500 ApexAgent[96651:3780740] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:04.230105-0500 ApexAgent[96651:3780740] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:04.231508-0500 ApexAgent[96651:3780740] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:04.231535-0500 ApexAgent[96651:3780740] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:04.231542-0500 ApexAgent[96651:3780740] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:04.235004-0500 ApexAgent[96651:3780740] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:04.235037-0500 ApexAgent[96651:3780740] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:04.235047-0500 ApexAgent[96651:3780740] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:04.236505-0500 ApexAgent[96651:3780740] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:04.236550-0500 ApexAgent[96651:3780740] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:04.236561-0500 ApexAgent[96651:3780740] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:08.421488-0500 ApexAgent[96651:3780792] [LanguageModelSession] PromptCompletionEventConverter dropping unsupported event: PromptCompletionEventRenderedPrompt
+2026-06-12 19:22:08.831434-0500 ApexAgent[96651:3780591] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:08.831475-0500 ApexAgent[96651:3780591] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:08.831484-0500 ApexAgent[96651:3780591] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:08.833272-0500 ApexAgent[96651:3780591] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:08.833323-0500 ApexAgent[96651:3780591] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:08.833331-0500 ApexAgent[96651:3780591] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:08.834957-0500 ApexAgent[96651:3780591] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:08.834990-0500 ApexAgent[96651:3780591] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:08.834998-0500 ApexAgent[96651:3780591] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:08.839350-0500 ApexAgent[96651:3780591] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:08.839385-0500 ApexAgent[96651:3780591] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:08.839393-0500 ApexAgent[96651:3780591] [BiomeSource] Error saving biome store event
+Test Case '-[ApexAgentTests.ApexAgentTests testAttachmentCompilation]' passed (4.921 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testBrowserAutomation]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+2026-06-12 19:22:09.339977-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.340051-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.340186-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.340240-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.340270-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.341485-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.456779-0500 ApexAgent[96651:3780523] [general] WebContent[96757] Connection to 'pboard' server had an error: <dictionary: 0x1eecad110> { count = 1, transaction: 0, voucher = 0x0, contents =
+	"XPCErrorDescription" => <string: 0x1eecad250> { string cache = 0x0, length = 18, contents = "Connection invalid" }
+}
+Invalidation reason: Connection init failed at lookup with error 159 - Sandbox restriction
+2026-06-12 19:22:09.456848-0500 ApexAgent[96651:3780523] [general] WebContent[96757] Failed to set up CFPasteboardRef 'Apple CFPasteboard general'. Error: <dictionary: 0x1eecad110> { count = 1, transaction: 0, voucher = 0x0, contents =
+	"XPCErrorDescription" => <string: 0x1eecad250> { string cache = 0x0, length = 18, contents = "Connection invalid" }
+}
+Invalidation reason: Connection init failed at lookup with error 159 - Sandbox restriction
+2026-06-12 19:22:09.466451-0500 ApexAgent[96651:3780523] [cas] WebContent[96757] CONNECT: Attempt to connect to launchservicesd prohibited because kLSServerConnectionStatusProcessIsDaemonMask is set.
+2026-06-12 19:22:09.466487-0500 ApexAgent[96651:3780523] [cas] WebContent[96757] CRASHSTRING: rdar://problem/28724618 Couldn't connect to launchservicesd.
+2026-06-12 19:22:09.483045-0500 ApexAgent[96651:3780523] [access] WebContent[96757] send_message_with_reply_sync(): XPC_ERROR_CONNECTION_INVALID for msgID=96757.1 (function=TCCAccessRequest, service=kTCCServiceListenEvent)
+2026-06-12 19:22:09.483084-0500 ApexAgent[96651:3780523] [access] WebContent[96757] TCCAccessRequest_block_invoke: Connection invalid
+2026-06-12 19:22:09.490254-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.490294-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.490303-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.499451-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.546993-0500 ApexAgent[96651:3780523] WebContent[96757] invalid product id '(null)'
+2026-06-12 19:22:09.547296-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.547395-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.547466-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.552665-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.580386-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.583803-0500 ApexAgent[96651:3780523] [ResourceLoadStatistics] WebContent[96757] Unable to filter tracking query parameters (missing data)
+2026-06-12 19:22:09.583934-0500 ApexAgent[96651:3780523] [ResourceLoadStatistics] WebContent[96757] Unable to filter tracking query parameters (missing data)
+2026-06-12 19:22:09.591352-0500 ApexAgent[96651:3780523] WebContent[96757] networkd_settings_read_from_file_locked Sandbox is preventing this process from reading networkd settings file at "/Library/Preferences/com.apple.networkd.plist", please add an exception.
+2026-06-12 19:22:09.591454-0500 ApexAgent[96651:3780523] WebContent[96757] networkd_settings_read_from_file_locked Sandbox is preventing this process from reading networkd settings file at "/Library/Preferences/com.apple.networkd.plist", please add an exception.
+2026-06-12 19:22:09.614727-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.614758-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.614767-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.614777-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.614785-0500 ApexAgent[96651:3780523] [cfprefsd] WebContent[96757] Couldn't open <private> due to No such file or directory
+2026-06-12 19:22:09.614810-0500 ApexAgent[96651:3780523] [audiocomp] WebContent[96757] AudioComponentPluginMgr.mm:593   reg server remote proxy error Error Domain=NSCocoaErrorDomain Code=4099 "The connection to service named com.apple.audio.AudioComponentRegistrar was invalidated: Connection init failed at lookup with error 1 - Operation not permitted." UserInfo={NSDebugDescription=The connection to service named com.apple.audio.AudioComponentRegistrar was invalidated: Connection init failed at lookup with error 1 - Operation not permitted.}
+2026-06-12 19:22:09.626324-0500 ApexAgent[96651:3780523] [Process] 0x7bb9bab118 - [pageProxyID=5, webPageID=6, PID=96757] WebPageProxy::didFailProvisionalLoadForFrame: frameID=4294967297, isMainFrame=1, domain=NSURLErrorDomain, code=-1004, isMainFrame=1, willInternallyHandleFailure=0
+Test Case '-[ApexAgentTests.ApexAgentTests testBrowserAutomation]' passed (0.601 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testClipboardTools]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Test Case '-[ApexAgentTests.ApexAgentTests testClipboardTools]' passed (0.031 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testCollaborativeServerEndpoints]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+🛑 Collaborative server stopped
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+2026-06-12 19:22:10.229185-0500 ApexAgent[96651:3780719] [connection] nw_socket_handle_socket_event [C1.1.1:2] Socket SO_ERROR [61: Connection refused]
+2026-06-12 19:22:10.229774-0500 ApexAgent[96651:3780719] [connection] nw_endpoint_flow_failed_with_error [C1.1.1 ::1.1338 in_progress socket-flow (satisfied (Path is satisfied), viable, interface: lo0)] already failing, returning
+2026-06-12 19:22:10.587668-0500 ApexAgent[96651:3780658] [connection] nw_socket_handle_socket_event [C3.1.1:2] Socket SO_ERROR [61: Connection refused]
+2026-06-12 19:22:10.587736-0500 ApexAgent[96651:3780658] [connection] nw_endpoint_flow_failed_with_error [C3.1.1 ::1.1338 in_progress socket-flow (satisfied (Path is satisfied), viable, interface: lo0)] already failing, returning
+🛑 Collaborative server stopped
+Test Case '-[ApexAgentTests.ApexAgentTests testCollaborativeServerEndpoints]' passed (0.930 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testConfirmationForAllOption]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testConfirmationForAllOption]' passed (0.010 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testContextCompactor]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+2026-06-12 19:22:10.692614-0500 ApexAgent[96651:3781873] [IPC] Passing along Session 8255B853-AE9D-4294-9601-B00CB9F27E9D in Canceled state in response to PrewarmSession
+2026-06-12 19:22:10.880718-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:10.880756-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:10.880766-0500 ApexAgent[96651:3780792] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:10.882221-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:10.882254-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:10.882262-0500 ApexAgent[96651:3780792] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:10.884452-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:10.884491-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:10.884499-0500 ApexAgent[96651:3780792] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:10.886910-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:10.887001-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:10.887015-0500 ApexAgent[96651:3780792] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:21.519488-0500 ApexAgent[96651:3780792] [LanguageModelSession] PromptCompletionEventConverter dropping unsupported event: PromptCompletionEventRenderedPrompt
+2026-06-12 19:22:27.665829-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:27.665885-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:27.665924-0500 ApexAgent[96651:3780792] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:27.668960-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:27.668991-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:27.668999-0500 ApexAgent[96651:3780792] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:27.671117-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:27.671158-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:27.671168-0500 ApexAgent[96651:3780792] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:27.673568-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:27.673607-0500 ApexAgent[96651:3780792] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:27.673617-0500 ApexAgent[96651:3780792] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:27.998117-0500 ApexAgent[96651:3780658] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:27.998165-0500 ApexAgent[96651:3780658] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:27.998177-0500 ApexAgent[96651:3780658] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.000639-0500 ApexAgent[96651:3780658] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.000690-0500 ApexAgent[96651:3780658] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.000701-0500 ApexAgent[96651:3780658] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.003383-0500 ApexAgent[96651:3780658] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.003439-0500 ApexAgent[96651:3780658] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.003453-0500 ApexAgent[96651:3780658] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.007428-0500 ApexAgent[96651:3780658] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.007467-0500 ApexAgent[96651:3780658] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.007477-0500 ApexAgent[96651:3780658] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.425708-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.425750-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.425758-0500 ApexAgent[96651:3782139] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.427874-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.427930-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.427939-0500 ApexAgent[96651:3782139] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.429774-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.429798-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.429806-0500 ApexAgent[96651:3782139] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.431455-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.431485-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.431491-0500 ApexAgent[96651:3782139] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.551206-0500 ApexAgent[96651:3780792] [LanguageModelSession] PromptCompletionEventConverter dropping unsupported event: PromptCompletionEventCandidateFinished
+2026-06-12 19:22:28.616784-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.616834-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.616843-0500 ApexAgent[96651:3782139] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.618898-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.618924-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.618932-0500 ApexAgent[96651:3782139] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.624473-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.624516-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.624525-0500 ApexAgent[96651:3782139] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.626522-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.626578-0500 ApexAgent[96651:3782139] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.626587-0500 ApexAgent[96651:3782139] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.734191-0500 ApexAgent[96651:3782135] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.734238-0500 ApexAgent[96651:3782135] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.734247-0500 ApexAgent[96651:3782135] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.739892-0500 ApexAgent[96651:3782135] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.739930-0500 ApexAgent[96651:3782135] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.739937-0500 ApexAgent[96651:3782135] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.741693-0500 ApexAgent[96651:3782135] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.741730-0500 ApexAgent[96651:3782135] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.741739-0500 ApexAgent[96651:3782135] [BiomeSource] Error saving biome store event
+2026-06-12 19:22:28.743490-0500 ApexAgent[96651:3782135] [BiomeStorage] Failed to open lockfile /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation/lock: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.biome.access.user" UserInfo={NSDebugDescription=connection to service named com.apple.biome.access.user}
+2026-06-12 19:22:28.743518-0500 ApexAgent[96651:3782135] [BiomeStorage] Failed to assign a frameStore for: /Users/danielstevens/Library/Biome/streams/restricted/GenerativeModels.GenerativeFunctions.Instrumentation
+2026-06-12 19:22:28.743526-0500 ApexAgent[96651:3782135] [BiomeSource] Error saving biome store event
+Context compacted successfully! Reduced message history size.
+Completed compactContextIfNeeded test execution.
+Test Case '-[ApexAgentTests.ApexAgentTests testContextCompactor]' passed (18.325 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testConveneMeetingTool]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Test Case '-[ApexAgentTests.ApexAgentTests testConveneMeetingTool]' passed (0.015 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testCreateSkillTool]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+2026-06-12 19:22:28.955272-0500 ApexAgent[96651:3782140] [IPC] Passing along Session 4E502452-A464-4FE8-A9D1-07BC2D1F0A3A in Canceled state in response to PrewarmSession
+Loaded dynamic script tool: test_temp_skill -> ~/.apex/skills/test_temp_skill.sh
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testCreateSkillTool]' passed (0.038 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testDetectImageTextTool]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+2026-06-12 19:22:28.997967-0500 ApexAgent[96651:3782180] [IPC] Passing along Session E7873007-2153-4B70-AD21-33C122A32789 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:29.009203-0500 ApexAgent[96651:3782169] [IPC] Passing along Session 3D8A31FF-32E6-4AA5-9BAA-644147CDC42D in Canceled state in response to PrewarmSession
+Unable to find a valid E5 in provided path /System/Library/PrivateFrameworks/TextRecognition.framework/Resources/cr_td_model_v3_e5.mlmodelc.bundle/. Found bundles : { }. Expected : { H13S.bundle H13C.bundle H13G.bundle H13D.bundle H13.bundle H13P.bundle universal.bundle jit.bundle }. @ GetE5PathFromCompositeBundleUnable to find a valid E5 in provided path /System/Library/PrivateFrameworks/TextRecognition.framework/Resources/cr_tr_model_latincyrillic_v3_e5.mlmodelc.bundle/. Found bundles : { }. Expected : { H13S.bundle H13C.bundle H13G.bundle H13D.bundle H13.bundle H13P.bundle universal.bundle jit.bundle }. @ GetE5PathFromCompositeBundleUnable to find a valid E5 in provided path /System/Library/PrivateFrameworks/TextRecognition.framework/Resources/cr_orientation_model_v1_e5.mlmodelc.bundle/. Found bundles : { }. Expected : { H13S.bundle H13C.bundle H13G.bundle H13D.bundle H13.bundle H13P.bundle universal.bundle jit.bundle }. @ GetE5PathFromCompositeBundleTest Case '-[ApexAgentTests.ApexAgentTests testDetectImageTextTool]' passed (0.443 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testDiagnosticChecks]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Test Case '-[ApexAgentTests.ApexAgentTests testDiagnosticChecks]' passed (0.332 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testDiffHelperLCS]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testDiffHelperLCS]' passed (0.014 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testDynamicProfile]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testDynamicProfile]' passed (0.004 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testDynamicToolLoading]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+2026-06-12 19:22:29.804999-0500 ApexAgent[96651:3780719] [IPC] Passing along Session 4C9AD8EF-5BAC-40B0-942E-2E1AA288DEE0 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:29.843346-0500 ApexAgent[96651:3780719] [IPC] Passing along Session F5CD0B52-FF6F-4553-A7BF-2EEEA7D91F56 in Canceled state in response to PrewarmSession
+Loaded dynamic script tool: test_dynamic_tool -> /Users/danielstevens/.apex/tools/test_dynamic_tool_script.sh
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testDynamicToolLoading]' passed (0.379 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testInteractiveFeatureTesting]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+======== STARTING INTERACTIVE FEATURE TESTING ========
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+--- Testing SystemInfoTool ---
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+2026-06-12 19:22:30.812859-0500 ApexAgent[96651:3781874] [IPC] Passing along Session 1FC32DED-4C06-4914-B773-6697E93183C8 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:30.814145-0500 ApexAgent[96651:3782177] [IPC] Passing along Session 75B70FD4-9FE8-4BB5-8CC5-B3A08C0139ED in Canceled state in response to PrewarmSession
+SystemInfoTool result: ## System Information
+
+**OS:** macOS Version 27.0 (Build 26A5353q)
+**Model:** MacBookPro18,1
+**CPU:** Apple M1 Pro
+**Cores:** 10 physical, 10 logical
+**RAM:** 16 GB unified memory
+**Storage:** 54 GB free of 460 GB
+**Hostname:** MacBook-Pro-2.local
+**Username:** danielstevens
+**Home Directory:** /Users/danielstevens
+**Architecture:** Apple Silicon (arm64)
+
+--- Testing ShellTool ---
+ShellTool result: echo 'Hello from Apex Shell!'; echo "\n
+--- Testing ListDirectoryTool ---
+2026-06-12 19:22:30.996664-0500 ApexAgent[96651:3782140] [FileIDMap] FileIDTreeGetVRefNumForDevice(1944707934) returned -36
+ListDirectoryTool result: Directory: .
+📁 Applications/
+📁 Library/
+📁 System/
+📁 Users/
+📁 Volumes/
+📁 bin/
+📁 cores/
+📁 dev/
+📁 etc/
+📁 home/
+📁 opt/
+📁 pkg/
+📁 private/
+📁 sbin/
+📁 tmp/
+📁 usr/
+📁 var/
+
+--- Testing MemoryTools ---
+StoreMemoryTool result: Optional("✅ Successfully saved memory for key: \'test_key\'")
+SearchMemoryTool result: Optional("🧠 Found 1 memory records:\n\n--- test_key (6/12/2026, 7:22 PM) ---\nTest memory context content\n")
+--- Testing ScreenshotTool ---
+ScreenshotTool result: ERROR: Screen Recording check is disabled in Settings.
+--- Testing DetectImageTextTool on screenshot ---
+DetectImageTextTool result: ERROR: File not found at path: /tmp/apex_test_screenshot.png
+--- Testing ConveneMeetingTool ---
+ConveneMeetingTool result: Debate Consensus Transcript:
+- Developer: Discussed topic Discuss strict concurrency in Swift 6 and agreed on a plan.
+- Planner: Agreed to prioritize concurrency fixes.
+--- Testing DelegateTaskTool ---
+DelegateTaskTool (developer) result: Mock delegation response for agent developer: Explain strict concurrency in 1 sentence
+--- Testing AppleScriptTool ---
+2026-06-12 19:22:31.147000-0500 ApexAgent[96651:3782262] [plugin] AddInstanceForFactory: No factory registered for id <CFUUID 0x7bb6719f20> F8BB1C28-BAE8-11D6-9C31-00039315CD46
+2026-06-12 19:22:31.326539-0500 ApexAgent[96651:3782262] [Client] -[AFLocalization outputVoiceDescriptorForOutputLanguageCode:voiceName:] No descriptor found for language code as-IN, voice name Aman
+2026-06-12 19:22:31.327014-0500 ApexAgent[96651:3782262] [Client] -[AFLocalization outputVoiceDescriptorForOutputLanguageCode:voiceName:] No descriptor found for language code as-IN, voice name aman
+2026-06-12 19:22:31.332577-0500 ApexAgent[96651:3782262] [Client] -[AFLocalization outputVoiceDescriptorForOutputLanguageCode:voiceName:] No descriptor found for language code kk-KZ, voice name Aru
+2026-06-12 19:22:31.332617-0500 ApexAgent[96651:3782262] [Client] -[AFLocalization outputVoiceDescriptorForOutputLanguageCode:voiceName:] No descriptor found for language code kk-KZ, voice name aru
+2026-06-12 19:22:31.445611-0500 ApexAgent[96651:3782262] [Client] -[AFLocalization outputVoiceDescriptorForOutputLanguageCode:voiceName:] No descriptor found for language code lt-LT, voice name Ona
+2026-06-12 19:22:31.445654-0500 ApexAgent[96651:3782262] [Client] -[AFLocalization outputVoiceDescriptorForOutputLanguageCode:voiceName:] No descriptor found for language code lt-LT, voice name ona
+2026-06-12 19:22:31.508575-0500 ApexAgent[96651:3782262] [Client] -[AFLocalization outputVoiceDescriptorForOutputLanguageCode:voiceName:] No descriptor found for language code as-IN, voice name Tara
+2026-06-12 19:22:31.508637-0500 ApexAgent[96651:3782262] [Client] -[AFLocalization outputVoiceDescriptorForOutputLanguageCode:voiceName:] No descriptor found for language code as-IN, voice name tara
+2026-06-12 19:22:31.964259-0500 ApexAgent[96651:3782169] [crashhandler]         AUCrashHandler.mm:126   invalidated
+2026-06-12 19:22:35.164632-0500 ApexAgent[96651:3782246] [AVAB]          AVAudioBuffer.mm:281   mBuffers[0].mDataByteSize (0) should be non-zero
+AppleScriptTool result: Script executed successfully (no return value)
+--- Testing NotificationTool ---
+NotificationTool result: ✅ Notification sent: "Apex Test"
+--- Testing ProjectAuditTool ---
+ProjectAuditTool result: No Xcode projects found in '.'.
+--- Testing BrowserAutomationTool ---
+2026-06-12 19:22:35.761840-0500 ApexAgent[96651:3781799] [ResourceLoadStatistics] WebContent[96757] Unable to hide query parameters from script (missing data)
+BrowserAutomationTool result: ✅ Successfully loaded page: 'Example Domain'
+--- Testing Model Preference: Local System (AFM 3) ---
+--- Testing Model Preference: Private Cloud Compute ---
+2026-06-12 19:22:35.788547-0500 ApexAgent[96651:3780523] [PrivateCloudComputeLanguageModel] Process is missing required entitlement: com.apple.developer.private-cloud-compute
+--- Testing Model Preference: Cloud Gemini ---
+2026-06-12 19:22:35.803567-0500 ApexAgent[96651:3782246] [IPC] Passing along Operation not permitted: Operation not permitted in response to CreateSessionRequest
+2026-06-12 19:22:35.803652-0500 ApexAgent[96651:3782267] [General] establishment of session failed with Operation not permitted: Operation not permitted
+2026-06-12 19:22:35.803710-0500 ApexAgent[96651:3782246] [TokenGenerator] Received ModelManagerError that couldn't be converted to a TokenGenerationError: Operation not permitted: Operation not permitted
+2026-06-12 19:22:35.804055-0500 ApexAgent[96651:3782256] [IPC] Passing along Operation not permitted: Operation not permitted in response to CreateSessionRequest
+2026-06-12 19:22:35.804118-0500 ApexAgent[96651:3782267] [General] establishment of session failed with Operation not permitted: Operation not permitted
+2026-06-12 19:22:35.804128-0500 ApexAgent[96651:3782180] [TokenGenerator] Received ModelManagerError that couldn't be converted to a TokenGenerationError: Operation not permitted: Operation not permitted
+2026-06-12 19:22:35.804203-0500 ApexAgent[96651:3782180] [TokenGenerator] Prewarm failed: Operation not permitted: Operation not permitted
+2026-06-12 19:22:35.807092-0500 ApexAgent[96651:3782246] [QuotaTracker] Failed to check usage limit status: Error Domain=FoundationModels.LanguageModelError Code=-1 "The operation couldn’t be completed. (ModelManagerServices.ModelManagerError error 1046.)" UserInfo={NSLocalizedDescription=The operation couldn’t be completed. (ModelManagerServices.ModelManagerError error 1046.), NSMultipleUnderlyingErrorsKey=(
+    "Error Domain=ModelManagerServices.ModelManagerError Code=1046 \"(null)\" UserInfo={NSMultipleUnderlyingErrorsKey=(\n)}"
+)}
+2026-06-12 19:22:35.808381-0500 ApexAgent[96651:3782256] [IPC] Passing along Session 3AF6A609-D2F9-4230-823F-0807B409A199 in Canceled state in response to PrewarmSession
+Skipping Cloud Gemini because api key is empty.
+--- Testing Model Preference: Local Ollama ---
+2026-06-12 19:22:35.818395-0500 ApexAgent[96651:3782256] [connection] nw_socket_handle_socket_event [C5.1.1:2] Socket SO_ERROR [61: Connection refused]
+2026-06-12 19:22:35.818457-0500 ApexAgent[96651:3782256] [connection] nw_endpoint_flow_failed_with_error [C5.1.1 ::1.11434 in_progress socket-flow (satisfied (Path is satisfied), viable, interface: lo0)] already failing, returning
+2026-06-12 19:22:35.818923-0500 ApexAgent[96651:3782256] [connection] nw_socket_handle_socket_event [C5.1.2:2] Socket SO_ERROR [61: Connection refused]
+2026-06-12 19:22:35.819035-0500 ApexAgent[96651:3782256] [connection] nw_endpoint_flow_failed_with_error [C5.1.2 127.0.0.1:11434 in_progress socket-flow (satisfied (Path is satisfied), viable, interface: lo0)] already failing, returning
+2026-06-12 19:22:35.819102-0500 ApexAgent[96651:3782256] [connection] nw_endpoint_flow_failed_with_error [C5.1.2 127.0.0.1:11434 cancelled socket-flow ((null))] already failing, returning
+2026-06-12 19:22:35.819183-0500 ApexAgent[96651:3782256] [Default] Connection 5: received failure notification
+2026-06-12 19:22:35.819482-0500 ApexAgent[96651:3782256] [Default] Connection 5: failed to connect 1:61, reason -1
+2026-06-12 19:22:35.819492-0500 ApexAgent[96651:3782256] [Default] Connection 5: encountered error(1:61)
+2026-06-12 19:22:35.819790-0500 ApexAgent[96651:3782246] [Default] Task <68E97CFC-A624-46DF-8D94-F4F10ECED8C1>.<3> HTTP load failed, 0/0 bytes (error code: -1004 [1:61])
+2026-06-12 19:22:35.820128-0500 ApexAgent[96651:3782256] [IPC] Passing along Session ADA99FF0-846C-4DC7-BC8B-706D33974E61 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:35.820314-0500 ApexAgent[96651:3782246] [Default] Task <68E97CFC-A624-46DF-8D94-F4F10ECED8C1>.<3> finished with error [-1004] Error Domain=NSURLErrorDomain Code=-1004 "Could not connect to the server." UserInfo={_kCFStreamErrorCodeKey=61, NSUnderlyingError=0x7bbcd17510 {Error Domain=kCFErrorDomainCFNetwork Code=-1004 "(null)" UserInfo={_NSURLErrorNWPathKey=satisfied (Path is satisfied), interface: lo0, _kCFStreamErrorCodeKey=61, _kCFStreamErrorDomainKey=1}}, _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <68E97CFC-A624-46DF-8D94-F4F10ECED8C1>.<3>, _NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <68E97CFC-A624-46DF-8D94-F4F10ECED8C1>.<3>"
+), NSLocalizedDescription=Could not connect to the server., NSErrorFailingURLStringKey=http://localhost:11434/api/tags, NSErrorFailingURLKey=http://localhost:11434/api/tags, _kCFStreamErrorDomainKey=1}
+Skipping Local Ollama because it is not reachable.
+--- Testing Model Preference: Hybrid (On-Device + PCC Fallback) ---
+2026-06-12 19:22:35.821533-0500 ApexAgent[96651:3782256] [General] Sending cancel session failed with Operation not permitted: Operation not permitted
+2026-06-12 19:22:35.821628-0500 ApexAgent[96651:3782257] [General] Sending cancel session failed with Operation not permitted: Operation not permitted
+2026-06-12 19:22:35.822123-0500 ApexAgent[96651:3782257] [IPC] Passing along Internal error in response to DeleteSessionRequest
+2026-06-12 19:22:35.822173-0500 ApexAgent[96651:3782257] [General] Sending deletion session failed with Internal error
+2026-06-12 19:22:35.822172-0500 ApexAgent[96651:3782256] [IPC] Passing along Internal error in response to DeleteSessionRequest
+2026-06-12 19:22:35.822217-0500 ApexAgent[96651:3782256] [General] Sending deletion session failed with Internal error
+======== COMPLETED INTERACTIVE FEATURE TESTING ========
+Test Case '-[ApexAgentTests.ApexAgentTests testInteractiveFeatureTesting]' passed (5.670 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testKeychainStorage]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+2026-06-12 19:22:35.858646-0500 ApexAgent[96651:3782262] [IPC] Passing along Session A54B71A0-D7AC-44CA-BC69-693AA2966734 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:35.865117-0500 ApexAgent[96651:3782262] [IPC] Passing along Session C478771D-4BD1-4C98-97A8-943E5B8EEAA7 in Canceled state in response to PrewarmSession
+Test Case '-[ApexAgentTests.ApexAgentTests testKeychainStorage]' passed (0.336 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testMCPClient]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Test Case '-[ApexAgentTests.ApexAgentTests testMCPClient]' passed (0.040 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testMemoryStorageAndRetrieval]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+2026-06-12 19:22:36.220558-0500 ApexAgent[96651:3782263] [IPC] Passing along Session BE83D8B8-8231-4847-A602-9505EA19B091 in Canceled state in response to PrewarmSession
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Test Case '-[ApexAgentTests.ApexAgentTests testMemoryStorageAndRetrieval]' passed (0.043 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testModelPreferenceConfiguration]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+2026-06-12 19:22:36.248064-0500 ApexAgent[96651:3782178] [IPC] Passing along Session A00BE09A-482A-460B-ACB1-DEE0EFFBBEEE in Canceled state in response to PrewarmSession
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+2026-06-12 19:22:36.252517-0500 ApexAgent[96651:3780523] [PrivateCloudComputeLanguageModel] Process is missing required entitlement: com.apple.developer.private-cloud-compute
+Test Case '-[ApexAgentTests.ApexAgentTests testModelPreferenceConfiguration]' passed (0.011 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testModelProtocols]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testModelProtocols]' passed (0.007 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testNewAgentProfiles]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testNewAgentProfiles]' passed (0.006 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testProjectAuditorScanning]' started.
+2026-06-12 19:22:36.268865-0500 ApexAgent[96651:3782178] [IPC] Passing along Operation not permitted: Operation not permitted in response to CreateSessionRequest
+2026-06-12 19:22:36.268984-0500 ApexAgent[96651:3782178] [IPC] Passing along Operation not permitted: Operation not permitted in response to CreateSessionRequest
+2026-06-12 19:22:36.269194-0500 ApexAgent[96651:3782178] [TokenGenerator] Received ModelManagerError that couldn't be converted to a TokenGenerationError: Operation not permitted: Operation not permitted
+2026-06-12 19:22:36.269236-0500 ApexAgent[96651:3782272] [General] establishment of session failed with Operation not permitted: Operation not permitted
+2026-06-12 19:22:36.269281-0500 ApexAgent[96651:3782272] [TokenGenerator] Received ModelManagerError that couldn't be converted to a TokenGenerationError: Operation not permitted: Operation not permitted
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+2026-06-12 19:22:36.269466-0500 ApexAgent[96651:3782586] [General] establishment of session failed with Operation not permitted: Operation not permitted
+2026-06-12 19:22:36.269341-0500 ApexAgent[96651:3782178] [TokenGenerator] Prewarm failed: Operation not permitted: Operation not permitted
+2026-06-12 19:22:36.274979-0500 ApexAgent[96651:3782178] [General] Sending cancel session failed with Operation not permitted: Operation not permitted
+2026-06-12 19:22:36.275013-0500 ApexAgent[96651:3782272] [QuotaTracker] Failed to check usage limit status: Error Domain=FoundationModels.LanguageModelError Code=-1 "The operation couldn’t be completed. (ModelManagerServices.ModelManagerError error 1046.)" UserInfo={NSMultipleUnderlyingErrorsKey=(
+    "Error Domain=ModelManagerServices.ModelManagerError Code=1046 \"(null)\" UserInfo={NSMultipleUnderlyingErrorsKey=(\n)}"
+), NSLocalizedDescription=The operation couldn’t be completed. (ModelManagerServices.ModelManagerError error 1046.)}
+2026-06-12 19:22:39.307325-0500 ApexAgent[96651:3782272] [General] Sending cancel session failed with Operation not permitted: Operation not permitted
+2026-06-12 19:22:39.307564-0500 ApexAgent[96651:3782272] [IPC] Passing along Operation not permitted: Operation not permitted in response to CreateSessionRequest
+2026-06-12 19:22:39.307603-0500 ApexAgent[96651:3782272] [IPC] Passing along Internal error in response to DeleteSessionRequest
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+2026-06-12 19:22:39.307639-0500 ApexAgent[96651:3782272] [General] Sending deletion session failed with Internal error
+Loaded MCP tool: read_media_file from server Filesystem MCP
+2026-06-12 19:22:39.307665-0500 ApexAgent[96651:3782272] [General] establishment of session failed with Operation not permitted: Operation not permitted
+Loaded MCP tool: read_multiple_files from server Filesystem MCP2026-06-12 19:22:39.307661-0500 ApexAgent[96651:3782586] [TokenGenerator] R
+eceived ModelManagerError that couldn't be converted to a TokenGenerationError: Operation not permitted: Operation not permitted
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+2026-06-12 19:22:39.308402-0500 ApexAgent[96651:3782586] [QuoLoaded MCP tool: write_file from server Filesystem MCPtaTracker] Failed to check usage limit status: Error Domain=FoundationModels.LanguageModelError Code=-1 "The operation couldn’t be completed. (ModelManagerServices.ModelManagerError error 1046.)" UserInfo={NSMultipleUnderlyingErrorsKey=(
+    "Error Domain=ModelManagerServices.ModelManagerError Code=1046 \"(null)\" UserInfo={NSMultipleUnderlyingErrorsKey=(\n)}"
+), NSLocalizedDescription=The operation couldn’t be completed. (ModelManagerServices.ModelManagerError error 1046.)}
+2026-06-12 19:22:39.308517-0500 ApexAgent[96651:3782272] [IPC] Passing along Internal error in response to DeleteSessionRequest
+
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+2026-06-12 19:22:39.308879-0500 ApexAgent[96651:378258Loaded MCP tool: move_file from server Filesystem MCP7] [General] Sending cancel session failed with Operation not permitted: Operation not permitted
+
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+2026-06-12 19:22:39.309171-0500 ApexAgent[96651:3782587] [IPC] Passing along Session 3F267C39-AFC7-429D-A992-B51EB1DB7F67 in Canceled state in response to PrewarmSession
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP2026-06-12 19:22:39.309202-0500 ApexAgent[96651:3782272] [General] Sending deletion session failed with Internal error
+
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+2026-06-12 19:22:39.312569-0500 ApexAgent[96651:3782180] [IPC] Passing along Internal error in response to DeleteSessionRequest
+2026-06-12 19:22:39.312649-0500 ApexAgent[96651:3782586] [IPC] Passing along Session D3670673-ED0D-46F7-AF39-BF3193B9DFBA in Canceled state in response to PrewarmSession
+2026-06-12 19:22:39.312653-0500 ApexAgent[96651:3782180] [General] Sending deletion session failed with Internal error
+2026-06-12 19:22:39.319681-0500 ApexAgent[96651:3782586] [IPC] Passing along Session 37EDBC2B-91A6-40FA-9BBA-CF91E93C780E in Canceled state in response to PrewarmSession
+2026-06-12 19:22:39.319754-0500 ApexAgent[96651:3782586] [IPC] Passing along Session E5AE9B7D-F938-4210-AD68-766CF02EA6FC in Canceled state in response to PrewarmSession
+2026-06-12 19:22:39.319783-0500 ApexAgent[96651:3782180] [IPC] Passing along Session 93C0464A-4254-44BB-B116-77062390A1A7 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:39.320967-0500 ApexAgent[96651:3782587] [IPC] Passing along Session 478FB813-CA5B-45A8-AB13-1628008A9AAF in Canceled state in response to PrewarmSession
+2026-06-12 19:22:39.322503-0500 ApexAgent[96651:3782180] [IPC] Passing along Session 993C107B-A141-489C-ABB3-513C3CC4B8F1 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:39.322567-0500 ApexAgent[96651:3782180] [IPC] Passing along Session 6BC0286A-51EE-4092-9D30-BC338FCEE104 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:39.322679-0500 ApexAgent[96651:3782587] [IPC] Passing along Session 41C2FEAC-678A-4ADF-B305-6F75197BEFFD in Canceled state in response to PrewarmSession
+2026-06-12 19:22:39.323329-0500 ApexAgent[96651:3782180] [IPC] Passing along Session 76E059A8-51E2-48DB-8CE7-0309B971AEAF in Canceled state in response to PrewarmSession
+Test Case '-[ApexAgentTests.ApexAgentTests testProjectAuditorScanning]' passed (5.443 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testProjectAuditToolInvocation]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Test Case '-[ApexAgentTests.ApexAgentTests testProjectAuditToolInvocation]' passed (2.398 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testPTYSandboxFallback]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Test Case '-[ApexAgentTests.ApexAgentTests testPTYSandboxFallback]' passed (0.064 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testPTYSessionEchoCommand]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Test Case '-[ApexAgentTests.ApexAgentTests testPTYSessionEchoCommand]' passed (0.013 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testSemanticEmbeddingSimilarity]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+2026-06-12 19:22:44.199788-0500 ApexAgent[96651:3782267] [IPC] Passing along Session 7A4A285B-4312-44A5-8481-68519F3F856B in Canceled state in response to PrewarmSession
+2026-06-12 19:22:44.204400-0500 ApexAgent[96651:3782259] [IPC] Passing along Session 6FE0633F-506F-4B01-9D45-B82877BF7D3E in Canceled state in response to PrewarmSession
+Test Case '-[ApexAgentTests.ApexAgentTests testSemanticEmbeddingSimilarity]' passed (0.048 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testSlidingRehydrationWindow]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testSlidingRehydrationWindow]' passed (0.010 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testStateGraphRouting]' started.
+2026-06-12 19:22:44.248364-0500 ApexAgent[96651:3782587] [IPC] Passing along Session 7FBCD97B-9E1C-4520-AA5F-A6E22EA8E3FE in Canceled state in response to PrewarmSession
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Node running: NodeA
+Node running: NodeB
+Test Case '-[ApexAgentTests.ApexAgentTests testStateGraphRouting]' passed (0.005 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testSupervisorSetup]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testSupervisorSetup]' passed (0.009 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testToolCallingModeOption]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testToolCallingModeOption]' passed (0.007 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testToolOutputTruncation]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+2026-06-12 19:22:46.755904-0500 ApexAgent[96651:3782263] [IPC] Passing along Session 8A6D0686-E5F7-41A5-A1CB-37E3CC443D79 in Canceled state in response to PrewarmSession
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+2026-06-12 19:22:46.756486-0500 ApexAgent[96651:3782837] [IPC] Passing along Session 3B121187-9336-4143-A37C-E07F6A0EDF14 in Canceled state in response to PrewarmSession
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+2026-06-12 19:22:46.757973-0500 ApexAgent[96651:3782263] [IPC] Passing along Session D0E0F6BA-BB50-4CE6-874F-BC1D83B68639 in Canceled state in response to PrewarmSession
+Test Case '-[ApexAgentTests.ApexAgentTests testToolOutputTruncation]' passed (2.489 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testToolSafetyChecks]' started.
+2026-06-12 19:22:46.759825-0500 ApexAgent[96651:3782263] [IPC] Passing along Session 5A87AD51-CB53-4F8D-B189-B2DDCC21870E in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.760169-0500 ApexAgent[96651:3782272] [IPC] Passing along Session 3ADE271B-5D69-486C-B1CB-5CF317BEEC11 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.760208-0500 ApexAgent[96651:3782272] [IPC] Passing along Session 6CE2F245-B4D8-438D-B88A-111A9048237E in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.760705-0500 ApexAgent[96651:3782263] [IPC] Passing along Session EF051654-1709-4B69-89E3-B5BF2021BE0F in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.761290-0500 ApexAgent[96651:3782272] [IPC] Passing along Session 39F11141-5500-4345-859D-CB4BF4753FC4 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.763314-0500 ApexAgent[96651:3782263] [IPC] Passing along Session 970CBCF7-980D-4A29-A4C0-4FFD2E4F0DA3 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.763405-0500 ApexAgent[96651:3782272] [IPC] Passing along Session A900F433-A324-4FEA-8D2C-4CD1B189C931 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.764340-0500 ApexAgent[96651:3782272] [IPC] Passing along Session 6035F5C8-6A1F-4700-94F8-D08685E2A8A3 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.765182-0500 ApexAgent[96651:3782263] [IPC] Passing along Session FB569026-6E3B-44B1-815E-58883E418836 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.767270-0500 ApexAgent[96651:3782263] [IPC] Passing along Session 1F481B03-A62B-4980-906E-06E0FDED8062 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.768300-0500 ApexAgent[96651:3782267] [IPC] Passing along Session CDB90D6D-D030-430A-B21A-433CFD3EE292 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.768620-0500 ApexAgent[96651:3782178] [IPC] Passing along Session B8BB3385-C9D8-4B31-B13A-B116FFBBDCEA in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.769245-0500 ApexAgent[96651:3782178] [IPC] Passing along Session 13B2A937-A90F-42B5-8819-FBE0C8961F2C in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.769543-0500 ApexAgent[96651:3782178] [IPC] Passing along Session F8CAF69B-EE76-4CC3-8768-21DE11E4DFD6 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.769578-0500 ApexAgent[96651:3782178] [IPC] Passing along Session 840CC300-EDEE-437D-8FC0-AADCE40070C8 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.769945-0500 ApexAgent[96651:3782263] [IPC] Passing along Session EA6AA2D7-9C6A-49DC-ABD0-97133376E431 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.772141-0500 ApexAgent[96651:3782178] [IPC] Passing along Session CD7AF3AC-7ECC-4E91-9E73-EC04B299F17C in Canceled state in response to PrewarmSession
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testToolSafetyChecks]' passed (0.035 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testUpdatePlanTool]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Test Case '-[ApexAgentTests.ApexAgentTests testUpdatePlanTool]' passed (0.009 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testVoiceControllerPlayback]' started.
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+2026-06-12 19:22:46.825055-0500 ApexAgent[96651:3782270] [IPC] Passing along Session 360E7EA4-931A-4107-B91D-DB3B435A57CE in Canceled state in response to PrewarmSession
+Test Case '-[ApexAgentTests.ApexAgentTests testVoiceControllerPlayback]' passed (0.032 seconds).
+Test Case '-[ApexAgentTests.ApexAgentTests testWebSearchToolDuckDuckGo]' started.
+2026-06-12 19:22:46.837335-0500 ApexAgent[96651:3782270] [IPC] Passing along Session FEA854FF-BD24-4383-9224-367DF4B27956 in Canceled state in response to PrewarmSession
+Loaded dynamic script tool: strict_concurrency -> ~/.apex/skills/strict_concurrency.sh
+Loaded MCP tool: read_file from server Filesystem MCP2026-06-12 19:22:46.846680-0500 ApexAgent[96651:3782246] [crashhandler]         AUCrashHandler.mm:126   invalidated
+
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+Loaded MCP tool: read_file from server Filesystem MCP
+Loaded MCP tool: read_text_file from server Filesystem MCP
+Loaded MCP tool: read_media_file from server Filesystem MCP
+Loaded MCP tool: read_multiple_files from server Filesystem MCP
+Loaded MCP tool: write_file from server Filesystem MCP
+Loaded MCP tool: edit_file from server Filesystem MCP
+Loaded MCP tool: create_directory from server Filesystem MCP
+Loaded MCP tool: list_directory from server Filesystem MCP
+Loaded MCP tool: list_directory_with_sizes from server Filesystem MCP
+Loaded MCP tool: directory_tree from server Filesystem MCP
+Loaded MCP tool: move_file from server Filesystem MCP
+Loaded MCP tool: search_files from server Filesystem MCP
+Loaded MCP tool: get_file_info from server Filesystem MCP
+Loaded MCP tool: list_allowed_directories from server Filesystem MCP
+2026-06-12 19:22:46.879430-0500 ApexAgent[96651:3782837] [IPC] Passing along Session 4CF1A22F-7FBF-46D1-82BE-8A788C49C988 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.885357-0500 ApexAgent[96651:3782259] [IPC] Passing along Session B5920CFE-0047-4B9B-94C0-16B77D62E240 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.905675-0500 ApexAgent[96651:3782259] [IPC] Passing along Session ED57E973-2CCE-4D1D-84BD-CE627461CF1E in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.911372-0500 ApexAgent[96651:3782263] [IPC] Passing along Session 3AF0F38A-19DF-4D02-A025-A0AD6DBEAED0 in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.929189-0500 ApexAgent[96651:3782259] [connection] nw_proxy_resolver_create_parsed_array [C6.1.1 proxy pac] Evaluation error: NSURLErrorDomain: -1003
+2026-06-12 19:22:46.931411-0500 ApexAgent[96651:3782837] [IPC] Passing along Session EFB0FF40-24CD-4A25-B850-4B8B419312BC in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.939713-0500 ApexAgent[96651:3782837] [IPC] Passing along Session 4163AAB9-8A49-4074-B8F4-EC04F0FC2F7F in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.949153-0500 ApexAgent[96651:3782259] [IPC] Passing along Session 82ECA061-7EDD-4A3A-9971-9A408639529B in Canceled state in response to PrewarmSession
+2026-06-12 19:22:46.966630-0500 ApexAgent[96651:3782259] [IPC] Passing along Session 2E70577A-BA50-463E-9CE3-D1A7C1D66212 in Canceled state in response to PrewarmSession
+Test Case '-[ApexAgentTests.ApexAgentTests testWebSearchToolDuckDuckGo]' passed (0.570 seconds).
+Test Suite 'ApexAgentTests' passed at 2026-06-12 19:22:47.405.
+	 Executed 41 tests, with 0 failures (0 unexpected) in 61.228 (61.242) seconds
+Test Suite 'ApexAgentTests.xctest' passed at 2026-06-12 19:22:47.406.
+	 Executed 41 tests, with 0 failures (0 unexpected) in 61.228 (61.243) seconds
+Test Suite 'All tests' passed at 2026-06-12 19:22:47.406.
+	 Executed 41 tests, with 0 failures (0 unexpected) in 61.228 (61.244) seconds
+2026-06-12 19:22:47.764 xcodebuild[96585:3779800] [MT] IDETestOperationsObserverDebug: 65.886 elapsed -- Testing started completed.
+2026-06-12 19:22:47.764 xcodebuild[96585:3779800] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-06-12 19:22:47.764 xcodebuild[96585:3779800] [MT] IDETestOperationsObserverDebug: 65.886 sec, +65.886 sec -- end
+
+Test session results, code coverage, and logs:
+	/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Logs/Test/Test-ApexAgent-2026.06.12_19-21-35--0500.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started

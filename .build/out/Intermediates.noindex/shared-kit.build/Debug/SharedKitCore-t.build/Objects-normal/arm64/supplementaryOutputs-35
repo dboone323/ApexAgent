@@ -1,0 +1,23 @@
+{
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKitCore/Models/EnhancedInfrastructure/EnhancedQuantumGovernanceSystem.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumGovernanceSystem.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumGovernanceSystem.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumGovernanceSystem.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumGovernanceSystem.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumGovernanceSystem.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKitCore/Models/EnhancedInfrastructure/EnhancedQuantumHealthcareSystem.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumHealthcareSystem.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumHealthcareSystem.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumHealthcareSystem.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumHealthcareSystem.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumHealthcareSystem.swiftdeps"
+  },
+  "/Users/danielstevens/github-projects/fleet/packages/shared-kit/Sources/SharedKitCore/Models/EnhancedInfrastructure/EnhancedQuantumSocialSystem.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumSocialSystem.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumSocialSystem.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumSocialSystem.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumSocialSystem.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/shared-kit.build/Debug/SharedKitCore-t.build/Objects-normal/arm64/EnhancedQuantumSocialSystem.swiftdeps"
+  }
+}

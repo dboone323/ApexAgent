@@ -1,0 +1,44 @@
+{
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/LocalOllamaLanguageModel.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/LocalOllamaLanguageModel.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/LocalOllamaLanguageModel.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/LocalOllamaLanguageModel.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/LocalOllamaLanguageModel.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/LocalOllamaLanguageModel.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/MCPClient.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MCPClient.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MCPClient.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MCPClient.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MCPClient.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MCPClient.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/MCPManager.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MCPManager.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MCPManager.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MCPManager.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MCPManager.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MCPManager.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/MemoryTools.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MemoryTools.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MemoryTools.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MemoryTools.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MemoryTools.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MemoryTools.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/NotificationTool.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/NotificationTool.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/NotificationTool.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/NotificationTool.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/NotificationTool.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/NotificationTool.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/ApexAgent/UI/MessageBubble.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MessageBubble.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MessageBubble.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MessageBubble.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MessageBubble.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/XcodeDebug/Build/Intermediates.noindex/ApexAgent.build/Debug/ApexAgent.build/Objects-normal/arm64/MessageBubble.swiftdeps"
+  }
+}

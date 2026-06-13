@@ -1,0 +1,4 @@
+Target dependency graph (2 targets)
+Target 'ApexAgent' in project 'ApexAgent'
+➜ Explicit dependency on target 'Sparkle-product' in project 'Sparkle'
+Target 'Sparkle-product' in project 'Sparkle' (no dependencies)

@@ -1,0 +1,37 @@
+{
+  "/Users/danielstevens/Developer/ApexAgent/.build/checkouts/swift-collections/Sources/DequeModule/RigidDeque/RigidDeque+Consumption.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Consumption.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Consumption.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Consumption.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Consumption.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Consumption.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/.build/checkouts/swift-collections/Sources/DequeModule/RigidDeque/RigidDeque+Container.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Container.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Container.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Container.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Container.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Container.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/.build/checkouts/swift-collections/Sources/DequeModule/RigidDeque/RigidDeque+Descriptions.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Descriptions.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Descriptions.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Descriptions.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Descriptions.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Descriptions.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/.build/checkouts/swift-collections/Sources/DequeModule/RigidDeque/RigidDeque+Equatable.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Equatable.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Equatable.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Equatable.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Equatable.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Equatable.swiftdeps"
+  },
+  "/Users/danielstevens/Developer/ApexAgent/.build/checkouts/swift-collections/Sources/DequeModule/RigidDeque/RigidDeque+Experimental.swift" : {
+    "const-values" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Experimental.swiftconstvalues",
+    "dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Experimental.d",
+    "diagnostics" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Experimental.dia",
+    "object" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Experimental.o",
+    "swift-dependencies" : "/Users/danielstevens/Developer/ApexAgent/.build/out/Intermediates.noindex/swift-collections.build/Debug/DequeModule-t.build/Objects-normal/arm64/RigidDeque+Experimental.swiftdeps"
+  }
+}

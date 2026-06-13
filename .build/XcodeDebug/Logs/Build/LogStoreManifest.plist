@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>logFormatVersion</key>
+	<integer>13</integer>
+	<key>logs</key>
+	<dict>
+		<key>D4920814-2A98-46A7-9B65-E03F054124C5</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>D4920814-2A98-46A7-9B65-E03F054124C5.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>ApexAgent project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>ApexAgent</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Testing project ApexAgent with scheme ApexAgent</string>
+			<key>timeStartedRecording</key>
+			<real>803002895.34864497</real>
+			<key>timeStoppedRecording</key>
+			<real>803002901.877056</real>
+			<key>title</key>
+			<string>Testing project ApexAgent with scheme ApexAgent</string>
+			<key>uniqueIdentifier</key>
+			<string>D4920814-2A98-46A7-9B65-E03F054124C5</string>
+		</dict>
+		<key>E45E20E9-DFE4-4708-8282-5462DB63665A</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>E45E20E9-DFE4-4708-8282-5462DB63665A.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>W</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>16</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>ApexAgent project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>ApexAgent</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project ApexAgent with scheme ApexAgent and configuration Debug</string>
+			<key>timeStartedRecording</key>
+			<real>803002846.04312503</real>
+			<key>timeStoppedRecording</key>
+			<real>803002884.22942698</real>
+			<key>title</key>
+			<string>Building project ApexAgent with scheme ApexAgent and configuration Debug</string>
+			<key>uniqueIdentifier</key>
+			<string>E45E20E9-DFE4-4708-8282-5462DB63665A</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

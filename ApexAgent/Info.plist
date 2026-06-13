@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Apex Agent</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Apex Agent — Local AI Assistant</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>NSAppleScriptEnabled</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Apex Agent uses Apple Events to control other applications on your behalf.</string>
+	<key>NSScreenCaptureDescription</key>
+	<string>Apex Agent can take screenshots to provide visual context to the AI agent.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Apex Agent sends notifications to alert you when tasks complete.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Apex Agent can read and write files to help you with tasks.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>Apex Agent can access your Desktop to save files and screenshots.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Apex Agent can access your Downloads folder to manage files.</string>
+	<key>SUFeedURL</key>
+	<string>https://apexagent.com/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>d35e5a519808d249f39bb7e7902d24268e39d5e3c79a9efabce5638c4b123456</string>
+</dict>
+</plist>
