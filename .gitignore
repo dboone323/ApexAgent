@@ -1,15 +1,23 @@
-# OS files
+# os files
 .DS_Store
 
-# Xcode
+# xcode
 build/
 *.xcuserstate
 *.xcuserdatad
 
-# Swift Package Manager
+# swift package manager
 .build/
 .swiftpm/
 
-# Local logs and outputs
+# local logs and outputs
 *.log
 *.txt
+
+# ide artifacts
+.antigravity/
+.antigravity2/
+*.antigravity
+.idea/
+mcp-config.json
+apex-agent-config.json

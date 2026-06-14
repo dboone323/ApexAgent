@@ -4,6 +4,25 @@ import Observation
 import SwiftData
 import AppKit
 
+// MARK: - Agent Trace Log
+
+public struct AgentTraceLog: Codable, Sendable, Identifiable {
+    public let id: UUID
+    public let timestamp: Date
+    public let sourceAgent: String
+    public let targetAgent: String
+    public let action: String
+    public let details: String
+    
+    public init(id: UUID = UUID(), timestamp: Date = Date(), sourceAgent: String, targetAgent: String, action: String, details: String) {
+        self.id = id
+        self.timestamp = timestamp
+        self.sourceAgent = sourceAgent
+        self.targetAgent = targetAgent
+        self.action = action
+        self.details = details
+    }
+}
 
 // MARK: - Confirmation Request
 
@@ -76,7 +95,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     
     /// Global test mode flag - set to true when running in test mode
     /// This allows tools to provide mock responses without needing environment variables
-    static var isTestMode: Bool = false
+    static nonisolated(unsafe) var isTestMode: Bool = false
 
     // MARK: Public State
     var messages: [ChatMessage] = []
@@ -94,6 +113,8 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     var activeTerminalOutput: String = ""
     var activePlan: [PlanStep] = []
     var multiAgentModeEnabled: Bool = UserDefaults.standard.bool(forKey: "apex.multiAgentModeEnabled")
+    var coordinationTraces: [AgentTraceLog] = []
+    var reasoningLogs: [String] = []
 
     // MARK: SwiftData Persistence
     var modelContext: ModelContext? {
@@ -327,7 +348,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     }
 
     private func rehydrateSession() {
-        let instructions = multiAgentModeEnabled ? SupervisorPrompt.system : agentInstructions
+    let instructions = multiAgentModeEnabled ? SupervisorPrompt.system : agentInstructions
         
         // Rehydrate model session history using Transcript.Entry
         var transcriptEntries: [Transcript.Entry] = []
@@ -467,10 +488,18 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     func startNewConversation() {
         messages = []
         toolEvents = []
+        coordinationTraces = []
+        reasoningLogs = []
         currentConversationTitle = "New Conversation"
         currentConversation = nil
         activeTerminalOutput = ""
         resetSession()
+    }
+
+    func logReasoning(_ thought: String) {
+        let timestamped = "[\(Date().formatted())] \(thought)"
+        reasoningLogs.append(timestamped)
+        print("[Reasoning] \(thought)")
     }
 
     func updateInstructions(_ newInstructions: String) {
@@ -509,7 +538,8 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             let profile = ApexAgentProfile(
                 instructions: instructions,
                 model: m,
-                toolCallingMode: .disallowed
+                toolCallingMode: .disallowed,
+                orchestrator: self
             )
             return LanguageModelSession(profile: profile, history: Transcript(entries: []))
         }
@@ -1083,6 +1113,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         newContent: String? = nil,
         filePath: String? = nil
     ) async -> Bool {
+        if AgentOrchestrator.isTestMode {
+            return true
+        }
         return await withCheckedContinuation { continuation in
             let request = ConfirmationRequest(
                 toolName: toolName,
@@ -1118,40 +1151,40 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
     let instructions: String
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
-    let orchestrator: OrchestratorProvider?
+    let orchestrator: OrchestratorProvider
     
-    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider? = nil) {
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider) {
         self.instructions = instructions
         self.model = model
         self.toolCallingMode = toolCallingMode
         self.orchestrator = orchestrator
     }
-    
-    private var shellTool: ShellTool { ShellTool(orchestrator: orchestrator!) }
-    private var fileReadTool: FileReadTool { FileReadTool(orchestrator: orchestrator!) }
-    private var fileWriteTool: FileWriteTool { FileWriteTool(orchestrator: orchestrator!) }
-    private var listDirectoryTool: ListDirectoryTool { ListDirectoryTool(orchestrator: orchestrator!) }
-    private var createDirectoryTool: CreateDirectoryTool { CreateDirectoryTool(orchestrator: orchestrator!) }
-    private var deleteFileTool: DeleteFileTool { DeleteFileTool(orchestrator: orchestrator!) }
-    private var moveFileTool: MoveFileTool { MoveFileTool(orchestrator: orchestrator!) }
-    private var webSearchTool: WebSearchTool { WebSearchTool(orchestrator: orchestrator!) }
-    private var appleScriptTool: AppleScriptTool { AppleScriptTool(orchestrator: orchestrator!) }
-    private var screenshotTool: ScreenshotTool { ScreenshotTool(orchestrator: orchestrator!) }
-    private var clipboardReadTool: ClipboardReadTool { ClipboardReadTool(orchestrator: orchestrator!) }
-    private var clipboardWriteTool: ClipboardWriteTool { ClipboardWriteTool(orchestrator: orchestrator!) }
-    private var notificationTool: NotificationTool { NotificationTool(orchestrator: orchestrator!) }
-    private var systemInfoTool: SystemInfoTool { SystemInfoTool(orchestrator: orchestrator!) }
-    private var processListTool: ProcessListTool { ProcessListTool(orchestrator: orchestrator!) }
-    private var getFrontmostAppTool: GetFrontmostAppTool { GetFrontmostAppTool(orchestrator: orchestrator!) }
-    private var storeMemoryTool: StoreMemoryTool { StoreMemoryTool(orchestrator: orchestrator!) }
-    private var searchMemoryTool: SearchMemoryTool { SearchMemoryTool(orchestrator: orchestrator!) }
-    private var applicationControlTool: ApplicationControlTool { ApplicationControlTool(orchestrator: orchestrator!) }
-    private var accessibilityControlTool: AccessibilityControlTool { AccessibilityControlTool(orchestrator: orchestrator!) }
-    private var browserAutomationTool: BrowserAutomationTool { BrowserAutomationTool(orchestrator: orchestrator!) }
-    private var updatePlanTool: UpdatePlanTool { UpdatePlanTool(orchestrator: orchestrator!) }
-    private var projectAuditTool: ProjectAuditTool { ProjectAuditTool(orchestrator: orchestrator!) }
-    private var createSkillTool: CreateSkillTool { CreateSkillTool(orchestrator: orchestrator!) }
-    private var dynamicToolCallTool: DynamicToolCallTool { DynamicToolCallTool(orchestrator: orchestrator!) }
+
+    private var shellTool: ShellTool { ShellTool(orchestrator: orchestrator) }
+    private var fileReadTool: FileReadTool { FileReadTool(orchestrator: orchestrator) }
+    private var fileWriteTool: FileWriteTool { FileWriteTool(orchestrator: orchestrator) }
+    private var listDirectoryTool: ListDirectoryTool { ListDirectoryTool(orchestrator: orchestrator) }
+    private var createDirectoryTool: CreateDirectoryTool { CreateDirectoryTool(orchestrator: orchestrator) }
+    private var deleteFileTool: DeleteFileTool { DeleteFileTool(orchestrator: orchestrator) }
+    private var moveFileTool: MoveFileTool { MoveFileTool(orchestrator: orchestrator) }
+    private var webSearchTool: WebSearchTool { WebSearchTool(orchestrator: orchestrator) }
+    private var appleScriptTool: AppleScriptTool { AppleScriptTool(orchestrator: orchestrator) }
+    private var screenshotTool: ScreenshotTool { ScreenshotTool(orchestrator: orchestrator) }
+    private var clipboardReadTool: ClipboardReadTool { ClipboardReadTool(orchestrator: orchestrator) }
+    private var clipboardWriteTool: ClipboardWriteTool { ClipboardWriteTool(orchestrator: orchestrator) }
+    private var notificationTool: NotificationTool { NotificationTool(orchestrator: orchestrator) }
+    private var systemInfoTool: SystemInfoTool { SystemInfoTool(orchestrator: orchestrator) }
+    private var processListTool: ProcessListTool { ProcessListTool(orchestrator: orchestrator) }
+    private var getFrontmostAppTool: GetFrontmostAppTool { GetFrontmostAppTool(orchestrator: orchestrator) }
+    private var storeMemoryTool: StoreMemoryTool { StoreMemoryTool(orchestrator: orchestrator) }
+    private var searchMemoryTool: SearchMemoryTool { SearchMemoryTool(orchestrator: orchestrator) }
+    private var applicationControlTool: ApplicationControlTool { ApplicationControlTool(orchestrator: orchestrator) }
+    private var accessibilityControlTool: AccessibilityControlTool { AccessibilityControlTool(orchestrator: orchestrator) }
+    private var browserAutomationTool: BrowserAutomationTool { BrowserAutomationTool(orchestrator: orchestrator) }
+    private var updatePlanTool: UpdatePlanTool { UpdatePlanTool(orchestrator: orchestrator) }
+    private var projectAuditTool: ProjectAuditTool { ProjectAuditTool(orchestrator: orchestrator) }
+    private var createSkillTool: CreateSkillTool { CreateSkillTool(orchestrator: orchestrator) }
+    private var dynamicToolCallTool: DynamicToolCallTool { DynamicToolCallTool(orchestrator: orchestrator) }
 
     var body: some LanguageModelSession.DynamicProfile {
         LanguageModelSession.Profile {

@@ -55,6 +55,9 @@ struct StoreMemoryTool: Tool {
         
         @Guide(description: "The detailed value/notes to remember")
         var value: String
+
+        @Guide(description: "The category/profile type for this memory (e.g., 'user_preference', 'codebase_insight', 'execution_history')")
+        var category: String?
     }
 
     func call(arguments: Arguments) async throws -> String {
@@ -74,17 +77,19 @@ struct StoreMemoryTool: Tool {
                     let vector = EmbeddingHelper.getVector(for: textToEmbed)
                     let embeddingData = vector.flatMap { EmbeddingHelper.serialize($0) }
                     
+                    let cat = arguments.category ?? "general"
                     if let memory = existing.first {
                         memory.val = arguments.value
+                        memory.category = cat
                         memory.timestamp = Date()
                         memory.embeddingData = embeddingData
                     } else {
-                        let newMemory = AgentMemory(key: keyToFind, val: arguments.value)
+                        let newMemory = AgentMemory(key: keyToFind, val: arguments.value, category: cat)
                         newMemory.embeddingData = embeddingData
                         context!.insert(newMemory)
                     }
                     try context!.save()
-                    return "✅ Successfully saved memory for key: '\(keyToFind)'"
+                    return "✅ Successfully saved memory for key: '\(keyToFind)' in category: '\(cat)'"
                 } catch {
                     return "ERROR: Failed to save to database: \(error.localizedDescription)"
                 }
@@ -108,6 +113,9 @@ struct SearchMemoryTool: Tool {
     struct Arguments: Decodable {
         @Guide(description: "Search keyword to match against keys or values. If empty, lists the most recent memories.")
         var query: String?
+
+        @Guide(description: "Optional category filter to search only memories under a specific profile type.")
+        var category: String?
     }
 
     func call(arguments: Arguments) async throws -> String {
@@ -122,13 +130,16 @@ struct SearchMemoryTool: Tool {
                 do {
                     let allMemories = try context!.fetch(descriptor)
                     
-                    let filtered: [AgentMemory]
+                    var filtered = allMemories
+                    if let category = arguments.category?.lowercased().trimTime(), !category.isEmpty {
+                        filtered = filtered.filter { $0.category.lowercased() == category }
+                    }
                     if let query = arguments.query?.lowercased().trimTime(), !query.isEmpty {
-                        filtered = allMemories.filter {
+                        filtered = filtered.filter {
                             $0.key.lowercased().contains(query) || $0.val.lowercased().contains(query)
                         }
-                    } else {
-                        filtered = Array(allMemories.prefix(20))
+                    } else if arguments.category == nil || arguments.category?.trimTime().isEmpty == true {
+                        filtered = Array(filtered.prefix(20))
                     }
                     
                     if filtered.isEmpty {
@@ -137,7 +148,7 @@ struct SearchMemoryTool: Tool {
                     
                     var output = "🧠 Found \(filtered.count) memory records:\n"
                     for memory in filtered {
-                        output += "\n--- \(memory.key) (\(memory.timestamp.formatted())) ---\n\(memory.val)\n"
+                        output += "\n--- \(memory.key) [Category: \(memory.category)] (\(memory.timestamp.formatted())) ---\n\(memory.val)\n"
                     }
                     return output
                 } catch {

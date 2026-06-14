@@ -26,6 +26,9 @@ struct AppleScriptTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Executing script controlling system applications") {
+            if AgentOrchestrator.isTestMode || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
+                return "Mock AppleScript execution success"
+            }
             return await withCheckedContinuation { continuation in
                 DispatchQueue.global(qos: .userInitiated).async {
                     var error: NSDictionary?

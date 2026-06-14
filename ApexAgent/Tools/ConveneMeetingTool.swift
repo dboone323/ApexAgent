@@ -32,7 +32,7 @@ struct ConveneMeetingTool: Tool {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let orchestrator = await self.orchestrator.orchestrator
             
-            if ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
+            if AgentOrchestrator.isTestMode || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
                 return "Debate Consensus Transcript:\n- Developer: Discussed topic \(arguments.topic) and agreed on a plan.\n- Planner: Agreed to prioritize concurrency fixes."
             }
 
@@ -175,75 +175,75 @@ struct ConveneMeetingTool: Tool {
             let model = SystemLanguageModel.default
             switch type {
             case .developer:
-                session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .executor:
-                session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .controller:
-                session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .researcher:
-                session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .linter:
-                session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .uiDesigner:
-                session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .planner:
-                session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             }
         case .privateCloud:
             let model = PrivateCloudComputeLanguageModel()
             switch type {
             case .developer:
-                session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .executor:
-                session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .controller:
-                session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .researcher:
-                session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .linter:
-                session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .uiDesigner:
-                session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .planner:
-                session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             }
         case .cloudGemini:
             let apiKey = KeychainManager.get(key: "geminiAPIKey") ?? ""
             let model = CloudGeminiLanguageModel(apiKey: apiKey)
             switch type {
             case .developer:
-                session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .executor:
-                session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .controller:
-                session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .researcher:
-                session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .linter:
-                session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .uiDesigner:
-                session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .planner:
-                session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             }
         case .localOllama:
             let hostURL = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434") ?? URL(string: "http://localhost:11434")!
             let model = LocalOllamaLanguageModel(hostURL: hostURL)
             switch type {
             case .developer:
-                session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .executor:
-                session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .controller:
-                session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .researcher:
-                session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .linter:
-                session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .uiDesigner:
-                session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             case .planner:
-                session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
             }
         case .hybrid:
             let usePCC = (type == .developer || type == .researcher)
@@ -251,27 +251,27 @@ struct ConveneMeetingTool: Tool {
                 let model = PrivateCloudComputeLanguageModel()
                 switch type {
                 case .developer:
-                    session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                    session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
                 case .researcher:
-                    session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                    session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
                 default:
-                    session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                    session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
                 }
             } else {
                 let model = SystemLanguageModel.default
                 switch type {
                 case .executor:
-                    session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                    session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
                 case .controller:
-                    session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                    session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
                 case .linter:
-                    session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                    session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
                 case .uiDesigner:
-                    session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                    session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
                 case .planner:
-                    session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                    session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
                 default:
-                    session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed), history: transcript)
+                    session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
                 }
             }
         }

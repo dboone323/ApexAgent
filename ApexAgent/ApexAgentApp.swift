@@ -1,6 +1,12 @@
-import SwiftUI
-import SwiftData
+import AppKit
 import Carbon
+import CoreSpotlight
+import Foundation
+import FoundationModels
+import Intents
+import SwiftData
+import SwiftUI
+import UniformTypeIdentifiers
 
 @main
 struct ApexAgentApp: App {
@@ -47,6 +53,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
         setupGlobalHotkey()
+        setupShortcuts()
+        setupSpotlight()
     }
     
     private func setupStatusItem() {
@@ -77,6 +85,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc func quitApp() {
         NSApplication.shared.terminate(nil)
+    }
+    
+    private func setupShortcuts() {
+        let intent = WriteTextIntent()
+        intent.suggestedInvocationPhrase = "Write with Apex Agent"
+        if #available(macOS 13.0, *) {
+            let appShortcut = INShortcut(immutableShortcut: intent)
+            INVoiceShortcutCenter.shared.setShortcutSuggestions([appShortcut])
+        }
+    }
+    
+    private func setupSpotlight() {
+        let activity = NSUserActivity(activityType: "com.dboone323.ApexAgent.query")
+        activity.title = "Ask Apex Agent"
+        activity.isEligibleForSearch = true
+        activity.userInfo = ["entry": "spotlight"]
+        activity.becomeCurrent()
     }
     
     private func setupGlobalHotkey() {

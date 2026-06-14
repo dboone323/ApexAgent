@@ -202,10 +202,12 @@ final class ApexAgentTests: XCTestCase {
     @MainActor
     func testApexAgentProfileInstantiation() {
         let transcript = Transcript(entries: [])
+        let orchestrator = AgentOrchestrator()
         let profile = ApexAgentProfile(
             instructions: "Test instructions",
             model: SystemLanguageModel.default,
-            toolCallingMode: .allowed
+            toolCallingMode: .allowed,
+            orchestrator: orchestrator
         )
         let session = LanguageModelSession(profile: profile, history: transcript)
         XCTAssertNotNil(session)
@@ -649,10 +651,11 @@ final class ApexAgentTests: XCTestCase {
     func testNewAgentProfiles() {
         let transcript = Transcript(entries: [])
         let model = SystemLanguageModel.default
+        let orchestrator = AgentOrchestrator()
         
-        let linterProfile = LinterAgentProfile(instructions: "Test", model: model, toolCallingMode: .allowed)
-        let uiDesignerProfile = UIDesignerAgentProfile(instructions: "Test", model: model, toolCallingMode: .allowed)
-        let plannerProfile = PlannerAgentProfile(instructions: "Test", model: model, toolCallingMode: .allowed)
+        let linterProfile = LinterAgentProfile(instructions: "Test", model: model, toolCallingMode: .allowed, orchestrator: orchestrator)
+        let uiDesignerProfile = UIDesignerAgentProfile(instructions: "Test", model: model, toolCallingMode: .allowed, orchestrator: orchestrator)
+        let plannerProfile = PlannerAgentProfile(instructions: "Test", model: model, toolCallingMode: .allowed, orchestrator: orchestrator)
         
         XCTAssertNotNil(LanguageModelSession(profile: linterProfile, history: transcript))
         XCTAssertNotNil(LanguageModelSession(profile: uiDesignerProfile, history: transcript))

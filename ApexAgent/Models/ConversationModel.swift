@@ -90,13 +90,15 @@ final class AgentMemory {
     var id: UUID
     var key: String
     var val: String
+    var category: String
     var timestamp: Date
     var embeddingData: Data?
 
-    init(key: String, val: String) {
+    init(key: String, val: String, category: String = "general") {
         self.id = UUID()
         self.key = key
         self.val = val
+        self.category = category
         self.timestamp = Date()
     }
 }
