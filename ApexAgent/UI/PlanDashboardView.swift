@@ -2,68 +2,30 @@ import SwiftUI
 
 struct PlanDashboardView: View {
     @Environment(AgentOrchestrator.self) private var orchestrator
+    @State private var selectedStep: PlanStep?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
-            HStack {
-                Image(systemName: "list.bullet.indent")
-                    .font(.headline)
-                    .foregroundStyle(.purple)
-                Text("Plan Execution")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                Spacer()
-                if !orchestrator.activePlan.isEmpty {
-                    Button("Clear") {
-                        withAnimation {
-                            orchestrator.activePlan = []
-                        }
-                    }
-                    .font(.caption)
-                    .buttonStyle(.borderless)
-                    .foregroundStyle(.secondary)
-                }
-            }
-            .padding()
-            .background(.ultraThinMaterial)
-            
-            Divider()
-            
+            header
+                .padding()
+                .background(AppTheme.Palette.windowBackground)
+
+            progressBar
+
             if orchestrator.activePlan.isEmpty {
-                VStack(spacing: 12) {
-                    Spacer()
-                    Image(systemName: "checklist.unchecked")
-                        .font(.system(size: 32))
-                        .foregroundStyle(.secondary)
-                    Text("No Active Plan")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("The agent will outline its plan here when executing complex goals.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                EmptyState(
+                    icon: "checklist.unchecked",
+                    title: "No Active Plan",
+                    message: "The agent will outline its plan here when executing complex goals.",
+                    actionTitle: nil,
+                    action: nil
+                )
             } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 14) {
                         ForEach(Array(orchestrator.activePlan.enumerated()), id: \.offset) { index, step in
-                            HStack(alignment: .top, spacing: 12) {
-                                statusIcon(for: step.status)
-                                    .padding(.top, 2)
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Step \(index + 1)")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .foregroundStyle(statusColor(for: step.status))
-                                    Text(step.title)
-                                        .font(.system(size: 12))
-                                        .foregroundStyle(step.status == "completed" ? .secondary : .primary)
-                                        .strikethrough(step.status == "completed")
-                                        .lineLimit(3)
-                                }
+                            PlanStepRow(step: step, index: index) {
+                                selectedStep = step
                             }
                             .padding(.horizontal)
                         }
@@ -72,37 +34,52 @@ struct PlanDashboardView: View {
                 }
             }
         }
-        .background(Color(NSColor.windowBackgroundColor))
-    }
-    
-    @ViewBuilder
-    private func statusIcon(for status: String) -> some View {
-        switch status.lowercased() {
-        case "running":
-            ProgressView()
-                .controlSize(.small)
-                .frame(width: 16, height: 16)
-        case "completed":
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-                .font(.system(size: 14))
-        case "failed":
-            Image(systemName: "xmark.circle.fill")
-                .foregroundStyle(.red)
-                .font(.system(size: 14))
-        default: // queued
-            Image(systemName: "circle")
-                .foregroundStyle(.secondary)
-                .font(.system(size: 14))
+        .frame(minWidth: 320, idealWidth: 340, maxWidth: 400)
+        .background(AppTheme.Palette.windowBackground)
+        .sheet(item: $selectedStep) { step in
+            NavigationStack {
+                PlanStepDetailView(step: step)
+                    .navigationTitle("Step Details")
+                    .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Close") { selectedStep = nil } } }
+            }
+            .frame(width: 420, height: 280)
         }
     }
-    
-    private func statusColor(for status: String) -> Color {
-        switch status.lowercased() {
-        case "running": return .purple
-        case "completed": return .green
-        case "failed": return .red
-        default: return .secondary
+
+    private var header: some View {
+        HStack {
+            Image(systemName: "list.bullet.indent")
+                .foregroundStyle(AppTheme.Palette.accent)
+            Text("Plan Execution")
+                .font(AppTheme.Font.headline())
+                .foregroundStyle(AppTheme.Palette.textPrimary)
+            Spacer()
+            if !orchestrator.activePlan.isEmpty {
+                Button("Clear") {
+                    withAnimation { orchestrator.activePlan = [] }
+                }
+                .font(AppTheme.Font.caption())
+                .foregroundStyle(AppTheme.Palette.textSecondary)
+            }
         }
+    }
+
+    private var progressBar: some View {
+        let total = orchestrator.activePlan.count
+        let completed = orchestrator.activePlan.filter { $0.status.lowercased() == "completed" }.count
+        let fraction: Double = total > 0 ? Double(completed) / Double(total) : 0
+        return GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(AppTheme.Palette.controlBackground)
+                Capsule()
+                    .fill(AppTheme.Palette.accent)
+                    .frame(width: proxy.size.width * fraction)
+            }
+            .frame(height: 4)
+            .padding(.horizontal)
+            .padding(.vertical, 6)
+        }
+        .frame(height: 16)
     }
 }

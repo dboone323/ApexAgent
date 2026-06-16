@@ -11,6 +11,27 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // Generation state banner
+            if orchestrator.isGenerating {
+                HStack(spacing: AppTheme.Spacing.sm) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Generating...")
+                        .font(AppTheme.Font.caption())
+                        .foregroundStyle(AppTheme.Palette.accent)
+                    Spacer()
+                }
+                .padding(.horizontal, AppTheme.Spacing.md)
+                .padding(.vertical, AppTheme.Spacing.sm)
+                .background(AppTheme.Palette.accent.opacity(0.06))
+                .overlay(
+                    Rectangle()
+                        .fill(AppTheme.Palette.accent.opacity(0.2))
+                        .frame(height: 0.5),
+                    alignment: .bottom
+                )
+            }
+
             // Messages area
             ScrollViewReader { proxy in
                 ScrollView {
@@ -18,10 +39,12 @@ struct ChatView: View {
                         if orchestrator.messages.isEmpty {
                             WelcomeView()
                                 .padding(.top, 80)
+                                .allowsHitTesting(!orchestrator.isGenerating)
                         } else {
                             ForEach(orchestrator.messages) { message in
                                 MessageBubble(message: message)
                                     .id(message.id)
+                                    .opacity(message.isStreaming ? 0.7 : 1.0)
                             }
                         }
 
@@ -32,6 +55,7 @@ struct ChatView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
+                    .allowsHitTesting(!orchestrator.isGenerating)
                 }
                 .onAppear { scrollProxy = proxy }
                 .onChange(of: orchestrator.messages.count) {
@@ -46,6 +70,16 @@ struct ChatView: View {
 
             // Input area
             ChatInputBar(inputText: $inputText, isInputFocused: $isInputFocused)
+                .allowsHitTesting(!orchestrator.isGenerating)
+                .overlay(
+                    Group {
+                        if orchestrator.isGenerating {
+                            Color.black.opacity(0.02)
+                        } else {
+                            Color.clear
+                        }
+                    }
+                )
         }
         .background(Color(nsColor: .controlBackgroundColor))
         .onAppear { isInputFocused = true }

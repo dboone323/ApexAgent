@@ -13,13 +13,13 @@ struct ProjectAuditTool: Tool {
 
     @Generable
     struct Arguments: Decodable {
-        @Guide(description: "The directory containing Xcode projects to audit. Defaults to '~/github-projects/fleet/apps'.")
+        @Guide(description: "The directory containing Xcode projects to audit. Defaults to '~/Developer/fleet'.")
         var directoryPath: String?
     }
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
-            let path = arguments.directoryPath ?? "~/github-projects/fleet/apps"
+            let path = arguments.directoryPath ?? "~/Developer/fleet"
             let auditor = await ProjectAuditor.shared
             let reports = await auditor.runWorkspaceAudit(at: path)
             

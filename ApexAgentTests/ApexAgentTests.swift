@@ -523,7 +523,7 @@ final class ApexAgentTests: XCTestCase {
     @MainActor
     func testProjectAuditorScanning() async {
         let auditor = ProjectAuditor.shared
-        let path = "/Users/danielstevens/github-projects/fleet/apps"
+        let path = "/Users/danielstevens/Developer/fleet"
         let reports = await auditor.runWorkspaceAudit(at: path)
         
         XCTAssertNotNil(reports)
@@ -543,7 +543,7 @@ final class ApexAgentTests: XCTestCase {
         AppDelegate.sharedOrchestrator = orchestrator
         
         let tool = ProjectAuditTool(orchestrator: orchestrator)
-        let result = try await tool.call(arguments: ProjectAuditTool.Arguments(directoryPath: "/Users/danielstevens/github-projects/fleet/apps"))
+        let result = try await tool.call(arguments: ProjectAuditTool.Arguments(directoryPath: "/Users/danielstevens/Developer/fleet"))
         
         XCTAssertTrue(result.contains("Workspace Audit Report") || result.contains("No Xcode projects found"))
     }

@@ -157,11 +157,11 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     
     private func startProactiveAudits() {
         Task {
-            _ = await ProjectAuditor.shared.runWorkspaceAudit(at: "~/github-projects/fleet/apps")
+            _ = await ProjectAuditor.shared.runWorkspaceAudit(at: "~/Developer/fleet")
             
             while true {
                 try? await Task.sleep(for: .seconds(300))
-                _ = await ProjectAuditor.shared.runWorkspaceAudit(at: "~/github-projects/fleet/apps")
+                _ = await ProjectAuditor.shared.runWorkspaceAudit(at: "~/Developer/fleet")
             }
         }
     }

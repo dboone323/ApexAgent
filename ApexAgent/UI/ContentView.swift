@@ -15,42 +15,12 @@ struct ContentView: View {
  
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            // Left sidebar: Conversation History
-            List {
-                if conversations.isEmpty {
-                    ContentUnavailableView(
-                        "No Chats Yet",
-                        systemImage: "bubble.left.and.bubble.right",
-                        description: Text("Start a new conversation to begin.")
-                    )
-                    .labelsHidden()
-                } else {
-                    ForEach(conversations) { conversation in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(conversation.title.isEmpty ? "New Conversation" : conversation.title)
-                                    .font(.system(size: 13, weight: orchestrator.currentConversation?.id == conversation.id ? .semibold : .regular))
-                                    .lineLimit(1)
-                                Text(conversation.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            if orchestrator.currentConversation?.id == conversation.id {
-                                Circle()
-                                    .fill(Color.purple)
-                                    .frame(width: 6, height: 6)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            orchestrator.loadConversation(conversation)
-                        }
-                    }
-                    .onDelete(perform: deleteSavedConversations)
-                }
-            }
+            SidebarView(
+                conversations: conversations,
+                selectedConversation: orchestrator.currentConversation,
+                onSelectConversation: { orchestrator.loadConversation($0) },
+                onDeleteConversations: deleteSavedConversations
+            )
             .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 300)
             .navigationTitle("Conversations")
         } detail: {

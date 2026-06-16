@@ -28,7 +28,7 @@ struct SettingsView: View {
                 // MARK: Model Status
                 Section("Model Configuration") {
                     @Bindable var orchestrator = orchestrator
-                    
+
                     Picker("Model Provider", selection: $orchestrator.modelPreference) {
                         ForEach(AgentModelPreference.allCases) { preference in
                             Text(preference.rawValue).tag(preference)
@@ -38,58 +38,59 @@ struct SettingsView: View {
                     .onChange(of: orchestrator.modelPreference) {
                         orchestrator.resetSession()
                     }
-                    
+
                     HStack {
                         Label("Availability Status", systemImage: "cpu")
+                            .foregroundStyle(AppTheme.Palette.textSecondary)
                         Spacer()
                         ModelStatusBadge()
                     }
-                    
+
                     HStack {
                         Label(modelPrivacyText, systemImage: modelPrivacyIcon)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppTheme.Palette.textSecondary)
                         Spacer()
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                        }
-                        .font(.system(size: 12))
+                            .foregroundStyle(AppTheme.Palette.success)
                     }
+                    .font(AppTheme.Font.body(12))
+                }
 
                 // MARK: API Keys
                 Section("API Credentials (Keychain)") {
                     SecureField("Brave Search API Key", text: $braveAPIKey)
-                        .font(.system(size: 13, design: .monospaced))
+                        .font(AppTheme.Font.mono(13))
                         .onChange(of: braveAPIKey) {
                             KeychainManager.save(key: "braveSearchAPIKey", value: braveAPIKey)
                         }
-                    
+
                     SecureField("Gemini API Key", text: $geminiAPIKey)
-                        .font(.system(size: 13, design: .monospaced))
+                        .font(AppTheme.Font.mono(13))
                         .onChange(of: geminiAPIKey) {
                             KeychainManager.save(key: "geminiAPIKey", value: geminiAPIKey)
                         }
 
-                    HStack(spacing: 6) {
+                    HStack(spacing: AppTheme.Spacing.sm) {
                         Image(systemName: "info.circle")
                             .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppTheme.Palette.textTertiary)
                         Text("API Keys are saved securely in your macOS Keychain.")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+                            .font(AppTheme.Font.caption(11))
+                            .foregroundStyle(AppTheme.Palette.textSecondary)
                     }
                 }
 
                 // MARK: Ollama Host
                 Section("Ollama Settings") {
                     TextField("Ollama Host URL", text: $ollamaHostURL)
-                        .font(.system(size: 13, design: .monospaced))
+                        .font(AppTheme.Font.mono(13))
                         .autocorrectionDisabled()
                         .onChange(of: ollamaHostURL) {
                             UserDefaults.standard.set(ollamaHostURL, forKey: "apex.ollamaHostURL")
                         }
-                    
+
                     TextField("Ollama Model Name", text: $ollamaModel)
-                        .font(.system(size: 13, design: .monospaced))
+                        .font(AppTheme.Font.mono(13))
                         .autocorrectionDisabled()
                         .onChange(of: ollamaModel) {
                             UserDefaults.standard.set(ollamaModel, forKey: "apex.ollamaModel")
@@ -102,8 +103,8 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Confirm all tool calls")
                             Text("Ask for approval before every tool execution (not just destructive ones)")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
+                                .font(AppTheme.Font.caption(11))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
                         }
                     }
                     .onChange(of: requireConfirmAll) {
@@ -114,8 +115,8 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Enable Multi-Agent Collaboration")
                             Text("Apex Prime coordinates specialized Codex, Nexus, Pilot, Oracle, Auditor, Aura, and Chronos agents")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
+                                .font(AppTheme.Font.caption(11))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
                         }
                     }
                     .onChange(of: multiAgentModeEnabled) {
@@ -130,8 +131,8 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Speak responses (Voice Mode)")
                             Text("Automatically speak the assistant's responses using system text-to-speech")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
+                                .font(AppTheme.Font.caption(11))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
                         }
                     }
                 }
@@ -142,26 +143,26 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Enable Docker Sandboxing")
                             Text("Executes all terminal/shell operations inside a secure Docker container")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
+                                .font(AppTheme.Font.caption(11))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
                         }
                     }
-                    
+
                     if dockerSandboxingEnabled {
                         TextField("Docker Image", text: $dockerImage)
-                            .font(.system(size: 13, design: .monospaced))
+                            .font(AppTheme.Font.mono(13))
                             .autocorrectionDisabled()
                     }
                 }
-                
+
                 // MARK: System & Folder Permissions
                 Section {
                     if let perms = orchestrator.permissions {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("System Access Checks")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(.secondary)
-                            
+                                .font(AppTheme.Font.headline(11, weight: .bold))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
+
                             Toggle(isOn: Binding(
                                 get: { perms.accessibilityAllowed },
                                 set: { perms.accessibilityAllowed = $0; try? orchestrator.modelContext?.save() }
@@ -169,11 +170,11 @@ struct SettingsView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Accessibility Entitlement Check")
                                     Text("Check and run GUI accessibility control tools.")
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(.secondary)
+                                        .font(AppTheme.Font.caption(11))
+                                        .foregroundStyle(AppTheme.Palette.textSecondary)
                                 }
                             }
-                            
+
                             Toggle(isOn: Binding(
                                 get: { perms.screenRecordingAllowed },
                                 set: { perms.screenRecordingAllowed = $0; try? orchestrator.modelContext?.save() }
@@ -181,11 +182,11 @@ struct SettingsView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Screen Recording Entitlement Check")
                                     Text("Check and allow screen capture capabilities.")
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(.secondary)
+                                        .font(AppTheme.Font.caption(11))
+                                        .foregroundStyle(AppTheme.Palette.textSecondary)
                                 }
                             }
-                            
+
                             Toggle(isOn: Binding(
                                 get: { perms.systemAudioRecordingAllowed },
                                 set: { perms.systemAudioRecordingAllowed = $0; try? orchestrator.modelContext?.save() }
@@ -193,62 +194,62 @@ struct SettingsView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("System Audio Recording")
                                     Text("Allow capturing microphone and system audio.")
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(.secondary)
+                                        .font(AppTheme.Font.caption(11))
+                                        .foregroundStyle(AppTheme.Palette.textSecondary)
                                 }
                             }
                         }
-                        .padding(.vertical, 4)
-                        
+                        .padding(.vertical, AppTheme.Spacing.xs)
+
                         VStack(alignment: .leading, spacing: 10) {
                             Text("User Folders Access")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(.secondary)
+                                .font(AppTheme.Font.headline(11, weight: .bold))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
                                 .padding(.top, 4)
-                            
+
                             Text("If any folder access is disabled, launched subprocesses will be sandboxed to prevent repeated OS TCC prompts.")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
+                                .font(AppTheme.Font.caption(11))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
                                 .padding(.bottom, 4)
-                            
+
                             Toggle("Music Folder (~/Music)", isOn: Binding(
                                 get: { perms.musicFolderAllowed },
                                 set: { perms.musicFolderAllowed = $0; try? orchestrator.modelContext?.save() }
                             ))
-                            
+
                             Toggle("Desktop Folder (~/Desktop)", isOn: Binding(
                                 get: { perms.desktopFolderAllowed },
                                 set: { perms.desktopFolderAllowed = $0; try? orchestrator.modelContext?.save() }
                             ))
-                            
+
                             Toggle("Documents Folder (~/Documents)", isOn: Binding(
                                 get: { perms.documentsFolderAllowed },
                                 set: { perms.documentsFolderAllowed = $0; try? orchestrator.modelContext?.save() }
                             ))
-                            
+
                             Toggle("Downloads Folder (~/Downloads)", isOn: Binding(
                                 get: { perms.downloadsFolderAllowed },
                                 set: { perms.downloadsFolderAllowed = $0; try? orchestrator.modelContext?.save() }
                             ))
                         }
-                        .padding(.vertical, 4)
+                        .padding(.vertical, AppTheme.Spacing.xs)
                     } else {
                         Text("Loading permissions...")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppTheme.Palette.textSecondary)
                     }
                 } header: {
                     Text("Permissions & Sandboxing")
                 }
-                
-                
+
+
                 // MARK: Collaborative Server
                 Section("Team Collaboration Server") {
                     Toggle(isOn: $collaborativeServerEnabled) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Enable Team Sharing Server")
                             Text("Broadcasts agent activity, plan status, and vision captures to local network")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
+                                .font(AppTheme.Font.caption(11))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
                         }
                     }
                     .onChange(of: collaborativeServerEnabled) {
@@ -258,7 +259,7 @@ struct SettingsView: View {
                             CollaborativeServer.shared.stop()
                         }
                     }
-                    
+
                     if collaborativeServerEnabled {
                         HStack {
                             Text("Sharing Port")
@@ -267,7 +268,7 @@ struct SettingsView: View {
                                 .frame(width: 80)
                                 .multilineTextAlignment(.trailing)
                         }
-                        
+
                         Link(destination: URL(string: "http://localhost:\(collaborativeServerPort)")!) {
                             HStack {
                                 Label("Open Collaboration Dashboard", systemImage: "safari")
@@ -278,7 +279,7 @@ struct SettingsView: View {
                         }
                     }
                 }
-                
+
                 // MARK: Model Context Protocol (MCP) Registry
                 Section("Model Context Protocol (MCP) Servers") {
                     ForEach(mcpManager.servers) { config in
@@ -287,8 +288,8 @@ struct SettingsView: View {
                                 Text(config.name)
                                     .fontWeight(.medium)
                                 Text("\(config.command) \(config.arguments.joined(separator: " "))")
-                                    .font(.system(size: 10, design: .monospaced))
-                                    .foregroundStyle(.secondary)
+                                    .font(AppTheme.Font.mono(10))
+                                    .foregroundStyle(AppTheme.Palette.textSecondary)
                             }
                             Spacer()
                             Button(role: .destructive) {
@@ -300,42 +301,42 @@ struct SettingsView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    
-                    VStack(alignment: .leading, spacing: 6) {
+
+                    VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                         Text("Add New MCP Server")
-                            .font(.system(size: 11))
+                            .font(AppTheme.Font.headline(11))
                             .bold()
                         TextField("Server Name (e.g. Postgres)", text: $newServerName)
                         TextField("Command (e.g. node, npx, python)", text: $newServerCommand)
                             .autocorrectionDisabled()
                         TextField("Arguments (space-separated)", text: $newServerArgs)
                             .autocorrectionDisabled()
-                        
+
                         Button("Add Server & Load Tools") {
                             let args = newServerArgs.split(separator: " ").map { String($0) }
                             let config = MCPServerConfig(name: newServerName, command: newServerCommand, arguments: args)
                             mcpManager.addServer(config)
-                            
+
                             newServerName = ""
                             newServerCommand = ""
                             newServerArgs = ""
-                            
+
                             DynamicToolbox.shared.loadTools()
                         }
                         .disabled(newServerName.isEmpty || newServerCommand.isEmpty)
                         .buttonStyle(.bordered)
-                        .padding(.top, 4)
+                        .padding(.top, AppTheme.Spacing.sm)
                     }
                 }
-                
+
                 // MARK: Sparkle Auto-Update
                 Section("Application Updates") {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Auto-Updates (Sparkle)")
                             Text("Check for the latest version of Apex Agent")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
+                                .font(AppTheme.Font.caption(11))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
                         }
                         Spacer()
                         Button("Check for Updates...") {
@@ -348,10 +349,10 @@ struct SettingsView: View {
                 // MARK: Agent Persona
                 Section {
                     TextEditor(text: $localInstructions)
-                        .font(.system(size: 12, design: .monospaced))
+                        .font(AppTheme.Font.mono(12))
                         .frame(minHeight: 180)
 
-                    HStack(spacing: 10) {
+                    HStack(spacing: AppTheme.Spacing.md) {
                         Button("Reset to Default") {
                             localInstructions = AgentSystemPrompt.default
                         }
@@ -368,7 +369,7 @@ struct SettingsView: View {
                     Text("Agent Instructions (System Prompt)")
                 } footer: {
                     Text("Changes take effect on the next new conversation.")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
                 }
 
                 // MARK: Agent Modes

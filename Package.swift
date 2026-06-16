@@ -10,7 +10,7 @@ let package = Package(
         .executable(name: "ApexAgent", targets: ["ApexAgent"])
     ],
     dependencies: [
-        .package(path: "/Users/danielstevens/github-projects/fleet/packages/shared-kit"),
+        .package(path: "../../packages/shared-kit"),
         .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0")
     ],
     targets: [
