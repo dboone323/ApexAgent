@@ -2,7 +2,6 @@ import Foundation
 import SwiftData
 import SharedKit
 
-@MainActor
 @Model
 public final class WeeklyReflection: Identifiable {
     @Attribute(.unique) public var id: UUID

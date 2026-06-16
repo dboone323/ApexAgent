@@ -21,10 +21,7 @@ public struct WeeklyReflectionTool {
         var descriptor = FetchDescriptor<WeeklyReflection>()
         descriptor.fetchLimit = max(limit, 1) * 4
         let all = (try? modelContext.fetch(descriptor)) ?? []
-        let sorted = await MainActor.run {
-            Array(all.sorted { $0.createdAt > $1.createdAt }.prefix(limit))
-        }
-        return sorted
+        return Array(all.sorted { $0.createdAt > $1.createdAt }.prefix(limit))
     }
 
     @available(macOS 15.0, *)

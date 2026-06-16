@@ -10,10 +10,10 @@ enum AppTheme {
     }
 
     enum Font {
-        static func body(_ size: CGFloat = 13) -> Font { .system(size: size) }
-        static func caption(_ size: CGFloat = 11) -> Font { .system(size: size) }
-        static func mono(_ size: CGFloat = 12) -> Font { .system(size: size, design: .monospaced) }
-        static func headline(_ size: CGFloat = 13, weight: Font.Weight = .semibold) -> Font { .system(size: size, weight: weight) }
+        static func body(_ size: CGFloat = 13) -> SwiftUI.Font { .system(size: size) }
+        static func caption(_ size: CGFloat = 11) -> SwiftUI.Font { .system(size: size) }
+        static func mono(_ size: CGFloat = 12) -> SwiftUI.Font { .system(size: size, design: .monospaced) }
+        static func headline(_ size: CGFloat = 13, weight: SwiftUI.Font.Weight = .semibold) -> SwiftUI.Font { .system(size: size, weight: weight) }
     }
 
     enum Palette {
@@ -26,7 +26,7 @@ enum AppTheme {
         static let controlBackground = Color(nsColor: .controlBackgroundColor)
         static let textPrimary = Color.primary
         static let textSecondary = Color.secondary
-        static let textTertiary = Color.tertiary
+        static let textTertiary = Color(nsColor: .tertiaryLabelColor)
     }
 
     enum CornerRadius {

@@ -7,10 +7,14 @@ struct PlanStep: Codable, Identifiable {
     var id = UUID()
     let title: String
     var status: String // "queued", "running", "completed", "failed"
+    var result: String? = nil
+    var error: String? = nil
     
     enum CodingKeys: String, CodingKey {
         case title
         case status
+        case result
+        case error
     }
 }
 
@@ -31,6 +35,8 @@ struct UpdatePlanTool: Tool {
         struct Step: Decodable {
             var title: String
             var status: String
+            var result: String?
+            var error: String?
         }
         @Guide(description: "The list of plan steps")
         var steps: [Step]
@@ -42,7 +48,7 @@ struct UpdatePlanTool: Tool {
                 let orchestrator = self.orchestrator.orchestrator
                 
                 let newSteps = arguments.steps.map { step in
-                    PlanStep(title: step.title, status: step.status)
+                    PlanStep(title: step.title, status: step.status, result: step.result, error: step.error)
                 }
                 
                 orchestrator.activePlan = newSteps

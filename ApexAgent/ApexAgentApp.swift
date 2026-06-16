@@ -91,8 +91,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let intent = WriteTextIntent()
         intent.suggestedInvocationPhrase = "Write with Apex Agent"
         if #available(macOS 13.0, *) {
-            let appShortcut = INShortcut(immutableShortcut: intent)
-            INVoiceShortcutCenter.shared.setShortcutSuggestions([appShortcut])
+            if let appShortcut = INShortcut(intent: intent) {
+                INVoiceShortcutCenter.shared.setShortcutSuggestions([appShortcut])
+            }
         }
     }
     
@@ -200,3 +201,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         exit(0)
     }
 }
+
+public class WriteTextIntent: INIntent {}
+

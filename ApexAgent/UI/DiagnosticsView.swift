@@ -55,8 +55,8 @@ struct DiagnosticsView: View {
             ProgressView()
             Text("Running system diagnostics self-check...")
                 .foregroundStyle(AppTheme.Palette.textSecondary)
-            if let startedAt {
-                Text("Started \(startedAt, style: .time)")
+            if let date = startedAt {
+                Text("Started \(date, style: .time)")
                     .font(AppTheme.Font.caption(10))
                     .foregroundStyle(AppTheme.Palette.textTertiary)
             }

@@ -58,3 +58,23 @@ struct TerminalStateView: View {
         }
     }
 }
+
+fileprivate struct BlinkModifier: ViewModifier {
+    let tag: String
+    @State private var isVisible = true
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isVisible ? 1.0 : 0.2)
+            .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: isVisible)
+            .onAppear {
+                isVisible = false
+            }
+    }
+}
+
+extension View {
+    fileprivate func blink(tag: String) -> some View {
+        self.modifier(BlinkModifier(tag: tag))
+    }
+}

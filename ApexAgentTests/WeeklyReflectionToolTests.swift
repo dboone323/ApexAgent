@@ -4,7 +4,7 @@ import SharedKit
 
 final class WeeklyReflectionToolTests: XCTestCase {
 
-    func testDailyBriefingUsesAppGroupBus() throws {
+    func testDailyBriefingUsesAppGroupBus() async throws {
         // Integration: existing tool keeps AppGroup-backed behavior
         let bus = AppGroupDataBus.shared
         let tool = DailyBriefingTool()

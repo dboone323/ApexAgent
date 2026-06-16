@@ -40,17 +40,17 @@ struct TerminalView: View {
                 }
                 .background(Color.black)
                 .onChange(of: orchestrator.activeTerminalOutput) {
-                    if let proxy, !isPaused { proxy.scrollTo("console_text_bottom", anchor: .bottom) }
+                    if !isPaused { proxy.scrollTo("console_text_bottom", anchor: .bottom) }
                 }
                 .onChange(of: isPaused) { _ in
-                    if !isPaused, let proxy { proxy.scrollTo("console_text_bottom", anchor: .bottom) }
+                    if !isPaused { proxy.scrollTo("console_text_bottom", anchor: .bottom) }
                 }
             }
         }
         .frame(minHeight: 220)
     }
 
-    private func formattedText(segments: [ANSIColorParser.StyledSegment]) -> Text {
+    private func formattedText(segments: [StyledSegment]) -> Text {
         var combined = Text("")
         for segment in segments {
             var color = segment.foregroundColor
