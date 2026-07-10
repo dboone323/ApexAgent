@@ -22,6 +22,10 @@ class PTYSession: @unchecked Sendable {
     init(workspacePath: String? = nil, orchestrator: OrchestratorProvider? = nil) async throws {
         let dockerEnabled = UserDefaults.standard.bool(forKey: "apex.dockerSandboxingEnabled")
         let dockerImage = UserDefaults.standard.string(forKey: "apex.dockerImage") ?? "swift:latest"
+        
+        let appleContainersEnabled = UserDefaults.standard.bool(forKey: "apex.appleContainersEnabled")
+        let appleContainerImage = UserDefaults.standard.string(forKey: "apex.appleContainerImage") ?? "swift:latest"
+        
         self.orchestrator = orchestrator
         
         let isRestricted = await MainActor.run { orchestrator?.orchestrator.isFolderAccessRestricted() ?? false }
@@ -30,14 +34,42 @@ class PTYSession: @unchecked Sendable {
         var shellArgs = [shellPath]
         var warningMessage: String? = nil
         
-        var isTestFallback = false
+        var isDockerTestFallback = false
+        var isAppleContainerTestFallback = false
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "apex.testDockerFallback") {
-            isTestFallback = true
+            isDockerTestFallback = true
+        }
+        if UserDefaults.standard.bool(forKey: "apex.testAppleContainerFallback") {
+            isAppleContainerTestFallback = true
         }
         #endif
         
-        if dockerEnabled && !isTestFallback {
+        if appleContainersEnabled && !isAppleContainerTestFallback {
+            let fm = FileManager.default
+            let containerPaths = [
+                "/usr/local/bin/container",
+                "/opt/homebrew/bin/container",
+                "/usr/bin/container"
+            ]
+            
+            if let foundContainer = containerPaths.first(where: { fm.fileExists(atPath: $0) }) {
+                let workspace = workspacePath ?? fm.currentDirectoryPath
+                shellPath = foundContainer
+                shellArgs = [
+                    shellPath,
+                    "run",
+                    "-it",
+                    "--rm",
+                    "-v", "\(workspace):\(workspace)",
+                    "-w", workspace,
+                    appleContainerImage,
+                    "/bin/sh"
+                ]
+            } else {
+                warningMessage = "\r\n⚠️  WARNING: Apple Container sandboxing is enabled, but the 'container' binary was not found in common paths.\r\n⚠️  Falling back to local shell.\r\n\r\n"
+            }
+        } else if dockerEnabled && !isDockerTestFallback {
             let fm = FileManager.default
             let dockerPaths = [
                 "/usr/local/bin/docker",
@@ -84,6 +116,10 @@ class PTYSession: @unchecked Sendable {
             let homeDir = fm.homeDirectoryForCurrentUser
             let sandboxDir = homeDir.appendingPathComponent(".apex/sandbox")
             try? fm.createDirectory(at: sandboxDir, withIntermediateDirectories: true)
+            let zshrc = sandboxDir.appendingPathComponent(".zshrc")
+            if !fm.fileExists(atPath: zshrc.path) {
+                try? "# Bypass zsh new user menu".write(to: zshrc, atomically: true, encoding: .utf8)
+            }
             env["HOME"] = sandboxDir.path
         }
         
@@ -123,7 +159,7 @@ class PTYSession: @unchecked Sendable {
             if let path = cShellPath {
                 execve(path, argv, envp)
             }
-            exit(1)
+            _exit(1)
         } else {
             // Parent Process (Success): Clean up parent's copy of allocated C strings
             if let cShellPath = cShellPath { free(cShellPath) }
@@ -222,7 +258,12 @@ class PTYSession: @unchecked Sendable {
         guard let data = command.data(using: .utf8) else { return }
         data.withUnsafeBytes { buffer in
             if let baseAddress = buffer.baseAddress {
-                _ = Darwin.write(masterFd, baseAddress, data.count)
+                var bytesWritten = 0
+                while bytesWritten < data.count {
+                    let result = Darwin.write(masterFd, baseAddress.advanced(by: bytesWritten), data.count - bytesWritten)
+                    if result <= 0 { break } // fd closed or error
+                    bytesWritten += result
+                }
             }
         }
     }
@@ -247,8 +288,8 @@ class PTYSession: @unchecked Sendable {
                 self.currentMarker = "____APEX_CMD_DONE_\(uniqueId)____"
                 self.pendingContinuation = continuation
                 
-                // Write command, print exit code, and trigger carriage return
-                let fullCommand = command + "; echo \"\\n\(self.currentMarker) $?\"\n"
+                // Write command wrapped in a block, print exit code, and trigger carriage return
+                let fullCommand = "\n{\n" + command + "\n}\necho \"\\n\(self.currentMarker) $?\"\n"
                 self.write(command: fullCommand)
             }
         }
