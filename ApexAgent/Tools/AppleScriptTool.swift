@@ -26,7 +26,14 @@ struct AppleScriptTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Executing script controlling system applications") {
-            if AgentOrchestrator.isTestMode || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
+            let orchestrator = await self.orchestrator.orchestrator
+            let isAllowed = await MainActor.run { orchestrator.isCommandOrScriptAllowed(arguments.script) }
+            if !isAllowed {
+                return "ERROR: Access to restricted directories (Desktop, Documents, Downloads, or Music) is disabled by system security settings."
+            }
+            
+            if (NSClassFromString("XCTest") != nil || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1") &&
+               !arguments.script.hasPrefix("return") {
                 return "Mock AppleScript execution success"
             }
             return await withCheckedContinuation { continuation in

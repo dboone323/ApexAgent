@@ -32,29 +32,29 @@ struct ConveneMeetingTool: Tool {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let orchestrator = await self.orchestrator.orchestrator
             
-            if AgentOrchestrator.isTestMode || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
+            if NSClassFromString("XCTest") != nil || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
                 return "Debate Consensus Transcript:\n- Developer: Discussed topic \(arguments.topic) and agreed on a plan.\n- Planner: Agreed to prioritize concurrency fixes."
             }
 
             // Parse participants
-            var validTypes: [AgentType] = []
+            var validAgents: [RegisteredAgent] = []
             for p in arguments.participants {
                 let cleaned = p.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-                if let type = AgentType(rawValue: cleaned) {
-                    validTypes.append(type)
+                if let agent = await AgentRegistry.shared.resolve(name: cleaned) {
+                    validAgents.append(agent)
                 }
             }
 
-            if validTypes.isEmpty {
-                return "ERROR: No valid participants provided. Must be subset of: developer, executor, controller, researcher, linter, uiDesigner, planner"
+            if validAgents.isEmpty {
+                return "ERROR: No valid participants found in registry."
             }
 
             // Add meeting discussion message in the chat
-            let startMessage = "👥 [Multi-Agent Panel Meeting]\nTopic: *\(arguments.topic)*\nParticipants: \(validTypes.map { $0.rawValue.capitalized }.joined(separator: ", "))\n\n---"
+            let startMessage = "👥 [Multi-Agent Panel Meeting]\nTopic: *\(arguments.topic)*\nParticipants: \(validAgents.map { $0.name.prefix(1).uppercased() + $0.name.dropFirst() }.joined(separator: ", "))\n\n---"
             
             let messageId = await MainActor.run {
                 let chatMsg = ChatMessage(role: .assistant, content: startMessage, isStreaming: true)
-                orchestrator.messages.append(chatMsg)
+                orchestrator.appendMessage(chatMsg)
                 return chatMsg.id
             }
 
@@ -65,26 +65,22 @@ struct ConveneMeetingTool: Tool {
             for round in 1...2 {
                 await MainActor.run {
                     accumulatedText += "\n\n**Round \(round) Discussion:**"
-                    if let idx = orchestrator.messages.firstIndex(where: { $0.id == messageId }) {
-                        orchestrator.messages[idx].content = accumulatedText
-                    }
+                    orchestrator.updateMessage(id: messageId, content: accumulatedText)
                 }
 
-                for type in validTypes {
-                    let agentName = type.displayName
-                    let turnHeader = "\n\n🤖 [\(agentName)] is thinking..."
+                for agent in validAgents {
+                    let displayName = agent.name.prefix(1).uppercased() + agent.name.dropFirst()
+                    let turnHeader = "\n\n🤖 [\(displayName)] is thinking..."
                     
                     await MainActor.run {
-                        if let idx = orchestrator.messages.firstIndex(where: { $0.id == messageId }) {
-                            orchestrator.messages[idx].content = accumulatedText + turnHeader
-                        }
+                        orchestrator.updateMessage(id: messageId, content: accumulatedText + turnHeader)
                     }
 
                     // Hydrate session with the conversation history so far
-                    let instructions = type.systemPrompt
+                    let instructions = agent.systemPrompt
                     let preference = await orchestrator.modelPreference
                     let session = await createVisualSession(
-                        type: type,
+                        agent: agent,
                         preference: preference,
                         instructions: instructions,
                         topic: arguments.topic,
@@ -98,24 +94,32 @@ struct ConveneMeetingTool: Tool {
                     for try await response in stream {
                         finalTurnContent = response.content
                         await MainActor.run {
-                            if let idx = orchestrator.messages.firstIndex(where: { $0.id == messageId }) {
-                                orchestrator.messages[idx].content = accumulatedText + "\n\n🤖 [\(agentName)]: \(finalTurnContent)"
-                            }
+                            orchestrator.updateMessage(id: messageId, content: accumulatedText + "\n\n🤖 [\(displayName)]: \(finalTurnContent)")
                         }
                     }
 
-                    debateHistory.append(MeetingTurn(agentName: agentName, statement: finalTurnContent))
-                    accumulatedText += "\n\n🤖 [\(agentName)]: \(finalTurnContent)"
+                    debateHistory.append(MeetingTurn(agentName: displayName, statement: finalTurnContent))
+                    accumulatedText += "\n\n🤖 [\(displayName)]: \(finalTurnContent)"
+                    
+                    // Log trace for this participant's turn in the meeting
+                    let turnDetails = finalTurnContent
+                    await MainActor.run {
+                        let trace = AgentTraceLog(
+                            sourceAgent: "Panel Meeting",
+                            targetAgent: displayName,
+                            action: "debate_turn",
+                            details: "Contributed statement: \(turnDetails.prefix(150))"
+                        )
+                        orchestrator.coordinationTraces.append(trace)
+                    }
                 }
             }
 
             // Complete the streaming
             await MainActor.run {
                 accumulatedText += "\n\n--- \nConsensus reached."
-                if let idx = orchestrator.messages.firstIndex(where: { $0.id == messageId }) {
-                    orchestrator.messages[idx].content = accumulatedText
-                    orchestrator.messages[idx].isStreaming = false
-                }
+                orchestrator.updateMessage(id: messageId, content: accumulatedText)
+                orchestrator.updateMessage(id: messageId, isStreaming: false)
             }
 
             // Return debate summary report to Supervisor
@@ -138,7 +142,7 @@ struct ConveneMeetingTool: Tool {
 
     @MainActor
     private func createVisualSession(
-        type: AgentType,
+        agent: RegisteredAgent,
         preference: AgentModelPreference,
         instructions: String,
         topic: String,
@@ -170,109 +174,42 @@ struct ConveneMeetingTool: Tool {
         let transcript = Transcript(entries: transcriptEntries)
 
         let session: LanguageModelSession
-        switch preference {
+        let resolvedPreference: AgentModelPreference
+        if let agentPrefStr = agent.modelPreference,
+           let agentPref = AgentModelPreference(rawValue: agentPrefStr) {
+            resolvedPreference = agentPref
+        } else {
+            resolvedPreference = preference
+        }
+        
+        switch resolvedPreference {
         case .localSystem:
             let model = SystemLanguageModel.default
-            switch type {
-            case .developer:
-                session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .executor:
-                session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .controller:
-                session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .researcher:
-                session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .linter:
-                session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .uiDesigner:
-                session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .planner:
-                session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            }
+            session = LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
         case .privateCloud:
-            let model = PrivateCloudComputeLanguageModel()
-            switch type {
-            case .developer:
-                session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .executor:
-                session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .controller:
-                session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .researcher:
-                session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .linter:
-                session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .uiDesigner:
-                session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .planner:
-                session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
+            if AgentOrchestrator.isPrivateCloudComputeAvailable() {
+                let model = PrivateCloudComputeLanguageModel()
+                session = LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
+            } else {
+                let model = SystemLanguageModel.default
+                session = LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
             }
         case .cloudGemini:
             let apiKey = KeychainManager.get(key: "geminiAPIKey") ?? ""
             let model = CloudGeminiLanguageModel(apiKey: apiKey)
-            switch type {
-            case .developer:
-                session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .executor:
-                session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .controller:
-                session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .researcher:
-                session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .linter:
-                session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .uiDesigner:
-                session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .planner:
-                session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            }
+            session = LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
         case .localOllama:
             let hostURL = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434") ?? URL(string: "http://localhost:11434")!
             let model = LocalOllamaLanguageModel(hostURL: hostURL)
-            switch type {
-            case .developer:
-                session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .executor:
-                session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .controller:
-                session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .researcher:
-                session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .linter:
-                session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .uiDesigner:
-                session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .planner:
-                session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            }
+            session = LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
         case .hybrid:
-            let usePCC = (type == .developer || type == .researcher)
-            if usePCC {
+            let usePCC = (agent.name == "developer" || agent.name == "researcher")
+            if usePCC && AgentOrchestrator.isPrivateCloudComputeAvailable() {
                 let model = PrivateCloudComputeLanguageModel()
-                switch type {
-                case .developer:
-                    session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                case .researcher:
-                    session = LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                default:
-                    session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                }
+                session = LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
             } else {
                 let model = SystemLanguageModel.default
-                switch type {
-                case .executor:
-                    session = LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                case .controller:
-                    session = LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                case .linter:
-                    session = LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                case .uiDesigner:
-                    session = LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                case .planner:
-                    session = LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                default:
-                    session = LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                }
+                session = LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
             }
         }
         

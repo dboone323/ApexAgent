@@ -11,19 +11,22 @@ final class WritingToolsSupport: NSObject {
         guard #available(macOS 15.0, *) else {
             return
         }
-        NSApp.servicesProvider = shared
+        guard let app = NSApplication.shared as NSApplication? else {
+            return
+        }
+        app.servicesProvider = shared
         let pasteboardType = NSPasteboard.PasteboardType.string
-        NSApp.registerServicesMenuSendTypes([pasteboardType], returnTypes: [pasteboardType])
+        app.registerServicesMenuSendTypes([pasteboardType], returnTypes: [pasteboardType])
     }
 }
 
 extension WritingToolsSupport {
     @objc
     func handleWritingToolsRequest(_ pasteboard: NSPasteboard, userData: String, error: AutoreleasingUnsafeMutablePointer<NSString?>) {
-        guard let text = pasteboard.string(forType: .string),
-              let orchestrator = AppDelegate.getSharedOrchestrator() else {
+        guard let text = pasteboard.string(forType: .string) else {
             return
         }
+        let orchestrator = MCPManager.shared.orchestrator
 
         guard APEXWritingToolsIntegration.shared.processText(text, using: orchestrator) else {
             error.pointee = "Failed to process Writing Tools request"
@@ -32,27 +35,21 @@ extension WritingToolsSupport {
     }
 }
 
-@MainActor
-final class APEXWritingToolsIntegration {
+struct APEXWritingToolsIntegration {
     static let shared = APEXWritingToolsIntegration()
-    private let processQueue = DispatchQueue(label: "com.dboone323.apex.writingtools")
-
     private init() {}
 
-    func processText(_ text: String, using orchestrator: AgentOrchestrator) -> Bool {
-        let success = true
-        processQueue.async {
-            let prompt = "Polish and refine the following text while preserving tone and meaning:\n\n\(text)"
-            Task { @MainActor in
-                orchestrator.sendMessage(prompt)
-            }
+    nonisolated func processText(_ text: String, using orchestrator: AgentOrchestrator) -> Bool {
+        guard !text.isEmpty else {
+            return false
         }
-        return success
+
+        Task { @MainActor in
+            orchestrator.sendMessage("Polish and refine the following text while preserving tone and meaning:\n\n\(text)")
+        }
+
+        return true
     }
 }
 
-extension AppDelegate {
-    static func configureWritingTools() {
-        WritingToolsSupport.register()
-    }
-}
+

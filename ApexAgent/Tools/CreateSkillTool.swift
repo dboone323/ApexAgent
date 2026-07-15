@@ -27,7 +27,11 @@ struct CreateSkillTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+        return try await executeWithLogging(
+            arguments: arguments,
+            orchestrator: orchestrator,
+            riskDescription: "Creates and loads a new executable shell script skill '\(arguments.skillName)' which can run arbitrary commands on the system."
+        ) {
             let fileManager = FileManager.default
             let homeDir = fileManager.homeDirectoryForCurrentUser
             let skillsDir = homeDir.appendingPathComponent(".apex/skills")
@@ -38,6 +42,13 @@ struct CreateSkillTool: Tool {
             let sanitizedName = arguments.skillName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
             guard !sanitizedName.isEmpty else {
                 return "ERROR: skillName cannot be empty"
+            }
+            
+            // Allowlist validation to prevent path traversal / shell escape
+            let allowedPattern = try? NSRegularExpression(pattern: "^[a-z0-9_-]+$")
+            let range = NSRange(sanitizedName.startIndex..., in: sanitizedName)
+            if allowedPattern?.firstMatch(in: sanitizedName, range: range) == nil {
+                return "ERROR: skillName must contain only lowercase letters, numbers, hyphens, and underscores"
             }
             
             let jsonPath = skillsDir.appendingPathComponent("\(sanitizedName).json")
@@ -61,15 +72,35 @@ struct CreateSkillTool: Tool {
                 return "ERROR: Failed to serialize skill manifest"
             }
             
-            try manifestData.write(to: jsonPath)
+            // Write both to temporary paths first
+            let tempManifestPath = skillsDir.appendingPathComponent(".tmp_\(sanitizedName).json")
+            let tempScriptPath = skillsDir.appendingPathComponent(".tmp_\(sanitizedName).sh")
             
-            // 4. Write script content
-            var finalScript = arguments.scriptContent
-            if !finalScript.hasPrefix("#!") {
-                finalScript = "#!/bin/zsh\n" + finalScript
+            do {
+                try manifestData.write(to: tempManifestPath)
+                
+                var finalScript = arguments.scriptContent
+                if !finalScript.hasPrefix("#!") {
+                    finalScript = "#!/bin/zsh\n" + finalScript
+                }
+                try finalScript.write(to: tempScriptPath, atomically: true, encoding: .utf8)
+                
+                // If both succeeded, move to final locations
+                if fileManager.fileExists(atPath: jsonPath.path) {
+                    try fileManager.removeItem(at: jsonPath)
+                }
+                if fileManager.fileExists(atPath: scriptPath.path) {
+                    try fileManager.removeItem(at: scriptPath)
+                }
+                
+                try fileManager.moveItem(at: tempManifestPath, to: jsonPath)
+                try fileManager.moveItem(at: tempScriptPath, to: scriptPath)
+            } catch {
+                // Clean up any remaining temp files on error
+                try? fileManager.removeItem(at: tempManifestPath)
+                try? fileManager.removeItem(at: tempScriptPath)
+                return "ERROR: Failed to write skill files: \(error.localizedDescription)"
             }
-            
-            try finalScript.write(to: scriptPath, atomically: true, encoding: .utf8)
             
             // 5. Make script executable
             let chmodProcess = Process()

@@ -1,4 +1,5 @@
 import SwiftUI
+import Accessibility
 
 struct PlanDashboardView: View {
     @Environment(AgentOrchestrator.self) private var orchestrator
@@ -44,6 +45,22 @@ struct PlanDashboardView: View {
             }
             .frame(width: 420, height: 280)
         }
+        .onChange(of: orchestrator.activePlan.map { "\($0.title):\($0.status.rawValue)" }) { oldValue, newValue in
+            if oldValue.count != newValue.count {
+                let message = "Plan updated. Now contains \(newValue.count) steps."
+                AccessibilityNotification.Announcement(message).post()
+            } else {
+                for (index, newStr) in newValue.enumerated() {
+                    guard index < oldValue.count else { break }
+                    let oldStr = oldValue[index]
+                    if oldStr != newStr {
+                        let step = orchestrator.activePlan[index]
+                        let message = "Step \(index + 1) \(step.status == .completed ? "completed" : step.status == .running ? "is now running" : step.status == .failed ? "failed" : "updated"): \(step.title)"
+                        AccessibilityNotification.Announcement(message).post()
+                    }
+                }
+            }
+        }
     }
 
     private var header: some View {
@@ -56,7 +73,7 @@ struct PlanDashboardView: View {
             Spacer()
             if !orchestrator.activePlan.isEmpty {
                 Button("Clear") {
-                    withAnimation { orchestrator.activePlan = [] }
+                    withAnimation { orchestrator.clearPlan() }
                 }
                 .font(AppTheme.Font.caption())
                 .foregroundStyle(AppTheme.Palette.textSecondary)
@@ -66,7 +83,7 @@ struct PlanDashboardView: View {
 
     private var progressBar: some View {
         let total = orchestrator.activePlan.count
-        let completed = orchestrator.activePlan.filter { $0.status.lowercased() == "completed" }.count
+        let completed = orchestrator.activePlan.filter { $0.status == .completed }.count
         let fraction: Double = total > 0 ? Double(completed) / Double(total) : 0
         return GeometryReader { proxy in
             ZStack(alignment: .leading) {
@@ -81,5 +98,8 @@ struct PlanDashboardView: View {
             .padding(.vertical, 6)
         }
         .frame(height: 16)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Execution progress")
+        .accessibilityValue("\(completed) of \(total) steps completed")
     }
 }

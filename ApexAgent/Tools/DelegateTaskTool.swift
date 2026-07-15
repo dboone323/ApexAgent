@@ -27,35 +27,40 @@ struct DelegateTaskTool: Tool {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let orchestrator = await self.orchestrator.orchestrator
             
-            if AgentOrchestrator.isTestMode || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
+            if NSClassFromString("XCTest") != nil || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
                 return "Mock delegation response for agent \(arguments.agentType): \(arguments.taskDescription)"
             }
             
-            guard let type = AgentType(rawValue: arguments.agentType.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)) else {
-                return "ERROR: Invalid agentType '\(arguments.agentType)'. Must be one of: developer, executor, controller, researcher, linter, uiDesigner, planner"
+            let agentName = arguments.agentType.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let agent = await AgentRegistry.shared.resolve(name: agentName) else {
+                return "ERROR: Invalid agentType '\(arguments.agentType)'."
             }
             
-            let indicatorPrefix = switch type {
-            case .developer: "💻 [Codex]"
-            case .executor: "⚙️ [Nexus]"
-            case .controller: "🎮 [Pilot]"
-            case .researcher: "🔍 [Oracle]"
-            case .linter: "🧹 [Auditor]"
-            case .uiDesigner: "🎨 [Aura]"
-            case .planner: "📅 [Chronos]"
+            let indicatorPrefix: String
+            switch agent.name.lowercased() {
+            case "developer": indicatorPrefix = "💻 [Codex]"
+            case "executor": indicatorPrefix = "⚙️ [Nexus]"
+            case "controller": indicatorPrefix = "🎮 [Pilot]"
+            case "researcher": indicatorPrefix = "🔍 [Oracle]"
+            case "linter": indicatorPrefix = "🧹 [Auditor]"
+            case "uidesigner": indicatorPrefix = "🎨 [Aura]"
+            case "planner": indicatorPrefix = "📅 [Chronos]"
+            default:
+                let displayName = agent.name.prefix(1).uppercased() + agent.name.dropFirst()
+                indicatorPrefix = "🤖 [\(displayName)]"
             }
             let startMessage = "\(indicatorPrefix) is starting task:\n> \(arguments.taskDescription)\n\n"
             
             // 1. Create the session and append the initial chat message on the MainActor
-            let (session, messageId) = try await MainActor.run {
+            let (session, messageId) = await MainActor.run {
                 let chatMsg = ChatMessage(role: .assistant, content: startMessage, isStreaming: true)
                 let msgId = chatMsg.id
-                orchestrator.messages.append(chatMsg)
+                orchestrator.appendMessage(chatMsg)
                 
                 let s = createSubAgentSession(
-                    type: type,
+                    agent: agent,
                     preference: orchestrator.modelPreference,
-                    instructions: type.systemPrompt
+                    instructions: agent.systemPrompt
                 )
                 s.prewarm()
                 return (s, msgId)
@@ -67,17 +72,21 @@ struct DelegateTaskTool: Tool {
             for try await response in stream {
                 finalContent = response.content
                 await MainActor.run {
-                    if let idx = orchestrator.messages.firstIndex(where: { $0.id == messageId }) {
-                        orchestrator.messages[idx].content = startMessage + finalContent
-                    }
+                    orchestrator.updateMessage(id: messageId, content: startMessage + finalContent)
                 }
             }
             
-            // 3. Mark the message as finished streaming on the MainActor
+            // 3. Mark the message as finished streaming on the MainActor and log coordination trace
             await MainActor.run {
-                if let idx = orchestrator.messages.firstIndex(where: { $0.id == messageId }) {
-                    orchestrator.messages[idx].isStreaming = false
-                }
+                orchestrator.updateMessage(id: messageId, isStreaming: false)
+                let displayName = agent.name.prefix(1).uppercased() + agent.name.dropFirst()
+                let trace = AgentTraceLog(
+                    sourceAgent: "Supervisor",
+                    targetAgent: displayName,
+                    action: "delegate_task",
+                    details: "Delegated sub-task: \(arguments.taskDescription.prefix(150))"
+                )
+                orchestrator.coordinationTraces.append(trace)
             }
             
             return finalContent
@@ -86,114 +95,48 @@ struct DelegateTaskTool: Tool {
 
     @MainActor
     private func createSubAgentSession(
-        type: AgentType,
+        agent: RegisteredAgent,
         preference: AgentModelPreference,
         instructions: String
     ) -> LanguageModelSession {
         let transcript = Transcript(entries: [])
-        switch preference {
+        
+        let resolvedPreference: AgentModelPreference
+        if let agentPrefStr = agent.modelPreference,
+           let agentPref = AgentModelPreference(rawValue: agentPrefStr) {
+            resolvedPreference = agentPref
+        } else {
+            resolvedPreference = preference
+        }
+        
+        switch resolvedPreference {
         case .localSystem:
             let model = SystemLanguageModel.default
-            switch type {
-            case .developer:
-                return LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .executor:
-                return LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .controller:
-                return LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .researcher:
-                return LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .linter:
-                return LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .uiDesigner:
-                return LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .planner:
-                return LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            }
+            return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
         case .privateCloud:
-            let model = PrivateCloudComputeLanguageModel()
-            switch type {
-            case .developer:
-                return LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .executor:
-                return LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .controller:
-                return LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .researcher:
-                return LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .linter:
-                return LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .uiDesigner:
-                return LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .planner:
-                return LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
+            if AgentOrchestrator.isPrivateCloudComputeAvailable() {
+                let model = PrivateCloudComputeLanguageModel()
+                return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
+            } else {
+                let model = SystemLanguageModel.default
+                return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
             }
         case .cloudGemini:
             let apiKey = KeychainManager.get(key: "geminiAPIKey") ?? ""
             let model = CloudGeminiLanguageModel(apiKey: apiKey)
-            switch type {
-            case .developer:
-                return LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .executor:
-                return LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .controller:
-                return LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .researcher:
-                return LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .linter:
-                return LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .uiDesigner:
-                return LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .planner:
-                return LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            }
+            return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
         case .localOllama:
             let hostURL = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434") ?? URL(string: "http://localhost:11434")!
             let model = LocalOllamaLanguageModel(hostURL: hostURL)
-            switch type {
-            case .developer:
-                return LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .executor:
-                return LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .controller:
-                return LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .researcher:
-                return LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .linter:
-                return LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .uiDesigner:
-                return LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            case .planner:
-                return LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-            }
+            return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
         case .hybrid:
-            let usePCC = (type == .developer || type == .researcher)
-            if usePCC {
+            let usePCC = (agent.name == "developer" || agent.name == "researcher")
+            if usePCC && AgentOrchestrator.isPrivateCloudComputeAvailable() {
                 let model = PrivateCloudComputeLanguageModel()
-                switch type {
-                case .developer:
-                    return LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                case .researcher:
-                    return LanguageModelSession(profile: ResearcherAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                default:
-                    return LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                }
+                return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
             } else {
                 let model = SystemLanguageModel.default
-                switch type {
-                case .executor:
-                    return LanguageModelSession(profile: ExecutorAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                case .controller:
-                    return LanguageModelSession(profile: ControllerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                case .linter:
-                    return LanguageModelSession(profile: LinterAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                case .uiDesigner:
-                    return LanguageModelSession(profile: UIDesignerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                case .planner:
-                    return LanguageModelSession(profile: PlannerAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                default:
-                    return LanguageModelSession(profile: DeveloperAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator), history: transcript)
-                }
+                return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
             }
         }
     }

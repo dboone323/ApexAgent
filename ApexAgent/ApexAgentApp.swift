@@ -7,20 +7,39 @@ import Intents
 import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
+import SharedKit
+import AI
 
 @main
+@MainActor
 struct ApexAgentApp: App {
-    @State private var orchestrator = AgentOrchestrator()
+    private let orchestrator = AppDelegate.sharedOrchestrator
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     init() {
-        AppDelegate.sharedOrchestrator = orchestrator
         let args = CommandLine.arguments
+        if args.contains("--daemon") {
+            let semaphore = DispatchSemaphore(value: 0)
+            Task {
+                await runDaemonMode()
+                semaphore.signal()
+            }
+            semaphore.wait()
+            exit(0)
+        }
+        
         if let cliIndex = args.firstIndex(of: "--cli"), cliIndex + 1 < args.count {
             let prompt = args[cliIndex + 1]
+            let semaphore = DispatchSemaphore(value: 0)
             Task {
                 await AppDelegate.runCLIMode(prompt: prompt)
+                semaphore.signal()
             }
+            semaphore.wait()
+            exit(0)
+        } else {
+            // Attempt to connect to background daemon gateway
+            ApexGatewayClient.shared.connect()
         }
     }
 
@@ -32,7 +51,7 @@ struct ApexAgentApp: App {
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
-        .modelContainer(for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self])
+        .modelContainer(for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self])
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Conversation") {
@@ -45,8 +64,17 @@ struct ApexAgentApp: App {
 }
 
 @MainActor
-class AppDelegate: NSObject, NSApplicationDelegate {
-    static var sharedOrchestrator: AgentOrchestrator?
+class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
+    static var sharedOrchestrator = AgentOrchestrator()
+    var orchestrator: AgentOrchestrator {
+        return AppDelegate.sharedOrchestrator
+    }
+    var dataBus: AppGroupDataBus {
+        return AppGroupDataBus.shared
+    }
+    var modelRouter: ModelRouter {
+        return ModelRouter.shared
+    }
     var statusItem: NSStatusItem?
     var quickPromptPanel: QuickPromptPanel?
     
@@ -80,7 +108,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc func showDiagnostics() {
         showMainWindow()
-        NotificationCenter.default.post(name: Notification.Name("showDiagnosticsSheet"), object: nil)
+        NotificationCenter.default.post(name: .showDiagnosticsSheet, object: nil)
     }
     
     @objc func quitApp() {
@@ -88,12 +116,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func setupShortcuts() {
+        #if DEBUG
+        let installHint = "You can define this in an Intent Definition File and wire it to Shortcuts."
+        #else
+        let installHint = "Shortcuts integration is not configured in release builds."
+        #endif
         let intent = WriteTextIntent()
         intent.suggestedInvocationPhrase = "Write with Apex Agent"
         if #available(macOS 13.0, *) {
-            if let appShortcut = INShortcut(intent: intent) {
-                INVoiceShortcutCenter.shared.setShortcutSuggestions([appShortcut])
+            guard let shortcut = INShortcut(intent: intent) else {
+                print("[Apex] Shortcut setup skipped: unable to initialize INShortcut. \(installHint)")
+                return
             }
+            INVoiceShortcutCenter.shared.setShortcutSuggestions([shortcut])
+        } else {
+            print("[Apex] Shortcut setup skipped: macOS 13+ required for this integration.")
         }
     }
     
@@ -130,9 +167,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func toggleQuickPrompt() {
         if quickPromptPanel == nil {
-            if let orchestrator = AppDelegate.getSharedOrchestrator() {
-                quickPromptPanel = QuickPromptPanel(orchestrator: orchestrator)
-            }
+            let orchestrator = self.orchestrator
+            quickPromptPanel = QuickPromptPanel(orchestrator: orchestrator)
         }
         
         guard let panel = quickPromptPanel else { return }
@@ -146,18 +182,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @MainActor
-    static func getSharedOrchestrator() -> AgentOrchestrator? {
-        return sharedOrchestrator
-    }
-
-    @MainActor
     fileprivate static func runCLIMode(prompt: String) async {
         print("=== RUNNING CLI TEST ===")
         print("Prompt: \(prompt)")
         
         let orchestrator = AgentOrchestrator()
         do {
-            let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self)
+            let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self)
             orchestrator.modelContext = ModelContext(container)
             if let url = container.configurations.first?.url {
                 print("🧠 SwiftData Store URL: \(url.path)")
@@ -199,6 +230,35 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         print("=======================")
         exit(0)
+    }
+}
+
+@MainActor
+private func runDaemonMode() async {
+    print("=== RUNNING DAEMON MODE ===")
+    let orchestrator = AgentOrchestrator()
+    do {
+        let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self)
+        orchestrator.modelContext = ModelContext(container)
+        if let url = container.configurations.first?.url {
+            print("🧠 SwiftData Store URL: \(url.path)")
+        }
+    } catch {
+        print("⚠️ Failed to initialize SwiftData model context: \(error)")
+    }
+    
+    let server = ApexGatewayServer(port: 1337, orchestrator: orchestrator)
+    do {
+        try server.start()
+        // Wait a brief moment to ensure SystemLanguageModel is ready/loaded
+        try? await Task.sleep(for: .seconds(2))
+        
+        while true {
+            try? await Task.sleep(for: .seconds(3600))
+        }
+    } catch {
+        print("⚠️ Failed to start daemon server: \(error)")
+        exit(1)
     }
 }
 

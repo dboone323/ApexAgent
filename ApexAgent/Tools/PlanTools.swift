@@ -1,12 +1,29 @@
 import Foundation
 import FoundationModels
 
+enum PlanStepStatus: String, Codable, Sendable, CaseIterable {
+    case queued
+    case running
+    case completed
+    case failed
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self).lowercased()
+        if let val = PlanStepStatus(rawValue: raw) {
+            self = val
+        } else {
+            self = .queued
+        }
+    }
+}
+
 // MARK: - Plan Step Model
 
 struct PlanStep: Codable, Identifiable {
     var id = UUID()
     let title: String
-    var status: String // "queued", "running", "completed", "failed"
+    var status: PlanStepStatus
     var result: String? = nil
     var error: String? = nil
     
@@ -48,10 +65,11 @@ struct UpdatePlanTool: Tool {
                 let orchestrator = self.orchestrator.orchestrator
                 
                 let newSteps = arguments.steps.map { step in
-                    PlanStep(title: step.title, status: step.status, result: step.result, error: step.error)
+                    let parsedStatus = PlanStepStatus(rawValue: step.status.lowercased()) ?? .queued
+                    return PlanStep(title: step.title, status: parsedStatus, result: step.result, error: step.error)
                 }
                 
-                orchestrator.activePlan = newSteps
+                orchestrator.updatePlan(steps: newSteps)
                 return "✅ Plan updated successfully with \(newSteps.count) steps."
             }
         }

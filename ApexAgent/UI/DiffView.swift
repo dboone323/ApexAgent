@@ -4,9 +4,7 @@ struct DiffView: View {
     let oldContent: String
     let newContent: String
     
-    private var diffLines: [DiffLine] {
-        DiffHelper.computeDiff(oldText: oldContent, newText: newContent)
-    }
+    @State private var diffLines: [DiffLine] = []
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -52,6 +50,8 @@ struct DiffView: View {
                         }
                         .frame(height: 20)
                         .background(rowBackgroundColor(for: line.kind))
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(accessibilityLabel(for: line))
                     }
                 }
                 .padding(.vertical, 8)
@@ -63,6 +63,27 @@ struct DiffView: View {
             RoundedRectangle(cornerRadius: 8)
                 .stroke(Color.primary.opacity(0.1), lineWidth: 1)
         )
+        .onAppear {
+            diffLines = DiffHelper.computeDiff(oldText: oldContent, newText: newContent)
+        }
+        .onChange(of: oldContent) {
+            diffLines = DiffHelper.computeDiff(oldText: oldContent, newText: newContent)
+        }
+        .onChange(of: newContent) {
+            diffLines = DiffHelper.computeDiff(oldText: oldContent, newText: newContent)
+        }
+    }
+    
+    private func accessibilityLabel(for line: DiffLine) -> String {
+        let linePrefix = line.lineNumber != nil ? "Line \(line.lineNumber!), " : ""
+        switch line.kind {
+        case .added:
+            return "\(linePrefix)Added: \(line.text)"
+        case .deleted:
+            return "\(linePrefix)Deleted: \(line.text)"
+        case .unchanged:
+            return "\(linePrefix)Unchanged: \(line.text)"
+        }
     }
     
     private func indicator(for kind: DiffLine.Kind) -> String {

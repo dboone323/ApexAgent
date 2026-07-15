@@ -132,13 +132,12 @@ struct ConfirmationOverlay: View {
                             .frame(width: 100)
                     }
 
-                    // Action buttons
                     HStack(spacing: 12) {
                         Button {
                             stopTimer()
                             orchestrator.resolveConfirmation(approved: false)
                         } label: {
-                            Text("Deny")
+                            Text("Deny (Esc)")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity)
@@ -146,13 +145,13 @@ struct ConfirmationOverlay: View {
                                 .background(Color(nsColor: .quaternaryLabelColor).opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
                         }
                         .buttonStyle(.plain)
-                        .keyboardShortcut(.escape)
+                        .keyboardShortcut(.escape, modifiers: [])
 
                         Button {
                             stopTimer()
                             orchestrator.resolveConfirmation(approved: true)
                         } label: {
-                            Text("Approve")
+                            Text("Approve (⌘↩)")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
@@ -163,7 +162,7 @@ struct ConfirmationOverlay: View {
                                 )
                         }
                         .buttonStyle(.plain)
-                        .keyboardShortcut(.return)
+                        .keyboardShortcut(.return, modifiers: .command)
                     }
                 }
                 .padding(20)

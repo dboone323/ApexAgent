@@ -35,7 +35,8 @@ struct SystemInfoTool: Tool {
                 sysctlbyname(name, nil, &size, nil, 0)
                 var value = [CChar](repeating: 0, count: size)
                 sysctlbyname(name, &value, &size, nil, 0)
-                return String(cString: value)
+                let bytes = value.prefix(while: { $0 != 0 }).map { UInt8($0) }
+                return String(decoding: bytes, as: UTF8.self)
             }
 
             func sysctlInt64(_ name: String) -> Int64 {

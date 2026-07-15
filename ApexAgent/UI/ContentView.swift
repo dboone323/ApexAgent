@@ -9,9 +9,9 @@ struct ContentView: View {
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     @State private var showSettings = false
     @State private var showDiagnostics = false
-    @State private var showActivityLog = true
-    @State private var showTerminal = false
-    @State private var showPlanDashboard = false
+    @AppStorage("apex.showActivityLog") private var showActivityLog = true
+    @AppStorage("apex.showTerminal") private var showTerminal = false
+    @AppStorage("apex.showPlanDashboard") private var showPlanDashboard = false
  
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -60,7 +60,7 @@ struct ContentView: View {
             ToolbarItemGroup(placement: .navigation) {
                 HStack(spacing: 8) {
                     Image(systemName: "bolt.fill")
-                        .foregroundStyle(.purple)
+                        .foregroundStyle(AppTheme.Palette.accent)
                         .font(.system(size: 14, weight: .semibold))
                     Text("Apex")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
@@ -87,10 +87,22 @@ struct ContentView: View {
                 .help("New Conversation (⌘N)")
  
                 Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
+                    }
+                } label: {
+                    Image(systemName: "sidebar.leading")
+                        .foregroundStyle(columnVisibility == .all ? AppTheme.Palette.accent : .primary)
+                }
+                .focusable()
+                .help("Toggle Sidebar")
+
+                Button {
                     showSettings.toggle()
                 } label: {
                     Image(systemName: "gearshape")
                 }
+                .focusable()
                 .help("Settings")
                 
                 Button {
@@ -98,6 +110,7 @@ struct ContentView: View {
                 } label: {
                     Image(systemName: "checklist")
                 }
+                .focusable()
                 .help("System Diagnostics Self-Check")
                 
                 Button {
@@ -106,8 +119,9 @@ struct ContentView: View {
                     }
                 } label: {
                     Image(systemName: "terminal")
-                        .foregroundStyle(showTerminal ? .purple : .primary)
+                        .foregroundStyle(showTerminal ? AppTheme.Palette.accent : .primary)
                 }
+                .focusable()
                 .help("Toggle Terminal Console")
                 
                 Button {
@@ -116,8 +130,9 @@ struct ContentView: View {
                     }
                 } label: {
                     Image(systemName: "list.bullet.indent")
-                        .foregroundStyle(showPlanDashboard ? .purple : .primary)
+                        .foregroundStyle(showPlanDashboard ? AppTheme.Palette.accent : .primary)
                 }
+                .focusable()
                 .help("Toggle Plan Dashboard")
                 
                 Button {
@@ -126,7 +141,9 @@ struct ContentView: View {
                     }
                 } label: {
                     Image(systemName: "sidebar.trailing")
+                        .foregroundStyle(showActivityLog ? AppTheme.Palette.accent : .primary)
                 }
+                .focusable()
                 .help("Toggle Activity Log")
             }
         }
@@ -144,7 +161,7 @@ struct ContentView: View {
         .onAppear {
             orchestrator.modelContext = modelContext
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("showDiagnosticsSheet"))) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .showDiagnosticsSheet)) { _ in
             showDiagnostics = true
         }
     }
@@ -199,3 +216,8 @@ struct ModelStatusBadge: View {
         }
     }
 }
+
+extension Notification.Name {
+    static let showDiagnosticsSheet = Notification.Name("showDiagnosticsSheet")
+}
+

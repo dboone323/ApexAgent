@@ -32,7 +32,7 @@ public struct ParsedToolCall {
     }
 }
 
-public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor {
+public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor, DynamicToolRouting {
     public typealias Model = LocalOllamaLanguageModel
     
     public struct Configuration: Hashable, Sendable {
@@ -101,7 +101,7 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor {
             case .toolCalls(let toolCalls):
                 var callsArray: [[String: Any]] = []
                 for call in toolCalls {
-                    let args = jsonObject(from: call.arguments)
+                    let args = call.arguments.toJSONObject()
                     callsArray.append([
                         "id": call.id,
                         "type": "function",
@@ -221,32 +221,13 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor {
             }
             
             if !detectedToolCalls.isEmpty {
-                var dynamicToolCalls: [ParsedToolCall] = []
-                var staticToolCalls: [ParsedToolCall] = []
-                
                 let enabledNames = Set(request.enabledToolDefinitions.map { $0.name })
+                let routed = await classifyAndRouteToolCalls(detectedToolCalls, enabledToolNames: enabledNames, channel: channel)
                 
-                for tc in detectedToolCalls {
-                    let toolName = tc.name
-                    let isDynamic = await MainActor.run {
-                        return DynamicToolbox.shared.dynamicTools[toolName] != nil
-                    }
-                    if isDynamic && !enabledNames.contains(tc.name) {
-                        dynamicToolCalls.append(tc)
-                    } else {
-                        staticToolCalls.append(tc)
-                    }
-                }
-                
-                if !staticToolCalls.isEmpty {
-                    for tc in staticToolCalls {
-                        let toolCallAction = LanguageModelExecutorGenerationChannel.ToolCalls.ToolCall.Action.appendArguments(tc.argumentsString, tokenCount: 0)
-                        let action = LanguageModelExecutorGenerationChannel.ToolCalls.Action.toolCall(id: tc.id, name: tc.name, action: toolCallAction)
-                        let event = LanguageModelExecutorGenerationChannel.ToolCalls.toolCalls(action: action)
-                        await channel.send(event)
-                    }
+                if !routed.staticCalls.isEmpty {
                     return
                 } else {
+                    let dynamicToolCalls = routed.dynamicCalls
                     var toolCallsArray: [[String: Any]] = []
                     for tc in dynamicToolCalls {
                         toolCallsArray.append([
@@ -266,12 +247,7 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor {
                     ])
                     
                     for tc in dynamicToolCalls {
-                        let output: String
-                        do {
-                            output = try await DynamicToolbox.shared.executeTool(name: tc.name, jsonArguments: tc.argumentsString)
-                        } catch {
-                            output = "ERROR: \(error.localizedDescription)"
-                        }
+                        let output = await executeDynamicTool(name: tc.name, argumentsString: tc.argumentsString)
                         currentMessages.append([
                             "role": "tool",
                             "content": output,
@@ -285,29 +261,5 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor {
             }
             loopCount += 1
         }
-    }
-}
-
-// Helpers
-private func jsonObject(from content: GeneratedContent) -> Any {
-    switch content.kind {
-    case .null:
-        return NSNull()
-    case .bool(let value):
-        return value
-    case .number(let value):
-        return value
-    case .string(let value):
-        return value
-    case .array(let array):
-        return array.map { jsonObject(from: $0) }
-    case .structure(let properties, _):
-        var dict: [String: Any] = [:]
-        for (k, v) in properties {
-            dict[k] = jsonObject(from: v)
-        }
-        return dict
-    @unknown default:
-        return NSNull()
     }
 }

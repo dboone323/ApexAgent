@@ -21,3 +21,6 @@ build/
 .idea/
 mcp-config.json
 apex-agent-config.json
+
+# hermes agent internals (desktop attachments, skills)
+.hermes/

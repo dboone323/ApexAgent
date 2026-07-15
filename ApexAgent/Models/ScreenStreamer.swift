@@ -11,9 +11,15 @@ class ScreenStreamer: NSObject, SCStreamDelegate, SCStreamOutput {
     private(set) var circularBuffer: [NSImage] = []
     private let maxBufferCount = 5
     private let captureQueue = DispatchQueue(label: "com.apexagent.screen.capture")
+    private nonisolated let ciContext = CIContext(options: [.useSoftwareRenderer: false])
     
     func startCapture() async {
         guard stream == nil else { return }
+        
+        if NSClassFromString("XCTest") != nil || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
+            print("ScreenStreamer: startCapture bypassed in test mode.")
+            return
+        }
         
         do {
             // 1. Get shareable content
@@ -61,15 +67,14 @@ class ScreenStreamer: NSObject, SCStreamDelegate, SCStreamOutput {
         
         guard let imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
         let ciImage = CIImage(cvImageBuffer: imageBuffer)
-        let context = CIContext(options: nil)
         
-        guard let cgImage = context.createCGImage(ciImage, from: CGRect(x: 0, y: 0, width: CVPixelBufferGetWidth(imageBuffer), height: CVPixelBufferGetHeight(imageBuffer))) else {
+        guard let cgImage = self.ciContext.createCGImage(ciImage, from: CGRect(x: 0, y: 0, width: CVPixelBufferGetWidth(imageBuffer), height: CVPixelBufferGetHeight(imageBuffer))) else {
             return
         }
         
         let nsImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
         
-        DispatchQueue.main.async {
+        Task { @MainActor in
             let streamer = ScreenStreamer.shared
             streamer.circularBuffer.append(nsImage)
             if streamer.circularBuffer.count > streamer.maxBufferCount {
@@ -82,7 +87,7 @@ class ScreenStreamer: NSObject, SCStreamDelegate, SCStreamOutput {
     
     nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
         print("ScreenCaptureKit stream stopped with error: \(error.localizedDescription)")
-        DispatchQueue.main.async {
+        Task { @MainActor in
             ScreenStreamer.shared.stream = nil
         }
     }

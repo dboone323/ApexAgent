@@ -29,11 +29,35 @@ struct ShellTool: Tool {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Executing command in your terminal") {
             let orchestrator = await self.orchestrator.orchestrator
             
+            // Security Check 1: Verify command path safety properties
+            let isCmdAllowed = await MainActor.run { orchestrator.isCommandOrScriptAllowed(arguments.command) }
+            if !isCmdAllowed {
+                return "ERROR: Access to restricted directories (Desktop, Documents, Downloads, or Music) is disabled by system security settings."
+            }
+            
+            // Working Directory resolution and check
+            var finalCommand = arguments.command
+            if let workingDir = arguments.workingDirectory, !workingDir.isEmpty {
+                let expandedDir = NSString(string: workingDir).expandingTildeInPath
+                let standardizedDir = URL(fileURLWithPath: expandedDir).standardized.path
+                
+                let isDirAllowed = await MainActor.run { orchestrator.isPathAllowed(standardizedDir) }
+                if !isDirAllowed {
+                    return "ERROR: Working directory '\(workingDir)' is restricted by system security settings."
+                }
+                
+                // Securely transition to target directory using single-quote escaping to prevent command injection
+                let escapedDir = "'" + expandedDir.replacingOccurrences(of: "'", with: "'\\''") + "'"
+                finalCommand = "cd \(escapedDir) && \(finalCommand)"
+            }
+            
             let conversationId = await MainActor.run {
                 orchestrator.currentConversation?.id ?? UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
             }
             
-            let pty = await orchestrator.ptySession(for: conversationId)
+            guard let pty = await orchestrator.ptySession(for: conversationId) else {
+                return "ERROR: Failed to allocate or initialize a terminal session (PTY allocation failed)."
+            }
             
             // Log the command run in the TerminalView
             await MainActor.run {
@@ -45,10 +69,11 @@ struct ShellTool: Tool {
             let buildCommands = ["build", "compile", "make", "gcc", "clang", "cargo", "xcodebuild", "tsc"]
             let isBuildCommand = buildCommands.contains { arguments.command.lowercased().contains($0) }
             
+            let cmdToExecute = finalCommand
             do {
                 let result = try await withThrowingTaskGroup(of: String.self) { group in
                     group.addTask {
-                        try await pty.runCommand(arguments.command)
+                        try await pty.runCommand(cmdToExecute)
                     }
                     group.addTask {
                         try await Task.sleep(for: .seconds(timeout))

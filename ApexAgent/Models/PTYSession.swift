@@ -4,6 +4,32 @@ import Darwin
 @_silgen_name("forkpty")
 func sys_forkpty(_ amaster: UnsafeMutablePointer<Int32>, _ name: UnsafeMutablePointer<CChar>?, _ termp: UnsafeRawPointer?, _ winp: UnsafeRawPointer?) -> pid_t
 
+public protocol ContainerInteractiveSession: Sendable {
+    func write(_ text: String)
+    func kill() async
+}
+
+public protocol ContainerManagerProtocol: Sendable {
+    var stateDescription: String { get async }
+    var containerCPUs: Int { get async }
+    var containerMemoryMB: Int { get async }
+    var appleContainerImage: String { get async }
+
+    func startContainer() async throws
+    func stopContainer() async throws
+
+    func startInteractiveShell(
+        onOutput: @escaping @Sendable (String) -> Void,
+        onExit: @escaping @Sendable (Int32) -> Void
+    ) async throws -> any ContainerInteractiveSession
+    
+    func exec(_ command: String) async throws -> (output: String, exitCode: Int32)
+}
+
+public final class ContainerBridge: @unchecked Sendable {
+    @MainActor public static var shared: (any ContainerManagerProtocol)?
+}
+
 class PTYSession: @unchecked Sendable {
     private var masterFd: Int32 = -1
     private var childPid: pid_t = -1
@@ -19,12 +45,47 @@ class PTYSession: @unchecked Sendable {
     private var accumulatedOutput = ""
     private var currentMarker = ""
     
+    // Native Container Sandbox Session
+    private var activeContainerSession: (any ContainerInteractiveSession)?
+    private var isContainerMode: Bool = false
+    
+    private func processContinuationOutput(_ str: String) {
+        if self.pendingContinuation != nil {
+            self.accumulatedOutput += str
+            
+            if let range = self.accumulatedOutput.range(of: self.currentMarker) {
+                let outputBeforeMarker = String(self.accumulatedOutput[..<range.lowerBound])
+                let outputAfterMarker = String(self.accumulatedOutput[range.upperBound...])
+                
+                // Extract the exit code following the marker
+                let cleanAfter = outputAfterMarker.trimmingCharacters(in: .whitespacesAndNewlines)
+                let exitCodeStr = cleanAfter.components(separatedBy: .whitespacesAndNewlines).first ?? "0"
+                let exitCode = Int32(exitCodeStr) ?? 0
+                
+                let finalOutput = outputBeforeMarker.trimmingCharacters(in: .whitespacesAndNewlines)
+                let continuation = self.pendingContinuation
+                
+                self.pendingContinuation = nil
+                self.currentMarker = ""
+                self.accumulatedOutput = ""
+                
+                if exitCode == 0 {
+                    continuation?.resume(returning: finalOutput)
+                } else {
+                    continuation?.resume(throwing: NSError(domain: "PTYSession", code: Int(exitCode), userInfo: [
+                        NSLocalizedDescriptionKey: "Command failed with exit code \(exitCode)",
+                        "output": finalOutput
+                    ]))
+                }
+            }
+        }
+    }
+    
     init(workspacePath: String? = nil, orchestrator: OrchestratorProvider? = nil) async throws {
         let dockerEnabled = UserDefaults.standard.bool(forKey: "apex.dockerSandboxingEnabled")
         let dockerImage = UserDefaults.standard.string(forKey: "apex.dockerImage") ?? "swift:latest"
         
         let appleContainersEnabled = UserDefaults.standard.bool(forKey: "apex.appleContainersEnabled")
-        let appleContainerImage = UserDefaults.standard.string(forKey: "apex.appleContainerImage") ?? "swift:latest"
         
         self.orchestrator = orchestrator
         
@@ -32,7 +93,6 @@ class PTYSession: @unchecked Sendable {
         
         var shellPath = "/bin/zsh"
         var shellArgs = [shellPath]
-        var warningMessage: String? = nil
         
         var isDockerTestFallback = false
         var isAppleContainerTestFallback = false
@@ -46,28 +106,33 @@ class PTYSession: @unchecked Sendable {
         #endif
         
         if appleContainersEnabled && !isAppleContainerTestFallback {
-            let fm = FileManager.default
-            let containerPaths = [
-                "/usr/local/bin/container",
-                "/opt/homebrew/bin/container",
-                "/usr/bin/container"
-            ]
-            
-            if let foundContainer = containerPaths.first(where: { fm.fileExists(atPath: $0) }) {
-                let workspace = workspacePath ?? fm.currentDirectoryPath
-                shellPath = foundContainer
-                shellArgs = [
-                    shellPath,
-                    "run",
-                    "-it",
-                    "--rm",
-                    "-v", "\(workspace):\(workspace)",
-                    "-w", workspace,
-                    appleContainerImage,
-                    "/bin/sh"
-                ]
-            } else {
-                warningMessage = "\r\n⚠️  WARNING: Apple Container sandboxing is enabled, but the 'container' binary was not found in common paths.\r\n⚠️  Falling back to local shell.\r\n\r\n"
+            do {
+                guard let manager = await ContainerBridge.shared else {
+                    throw NSError(domain: "PTYSession", code: -5, userInfo: [NSLocalizedDescriptionKey: "Apple Container Sandbox is not supported in this target"])
+                }
+                // Initialize via native ContainerManager
+                let session = try await manager.startInteractiveShell(
+                    onOutput: { [weak self] text in
+                        guard let self = self else { return }
+                        self.onOutput?(text)
+                        self.outputQueue.async {
+                            self.processContinuationOutput(text)
+                        }
+                    },
+                    onExit: { [weak self] code in
+                        guard let self = self else { return }
+                        self.cleanup()
+                        self.onExit?(code)
+                    }
+                )
+                self.activeContainerSession = session
+                self.isContainerMode = true
+                self.masterFd = -999 // indicator flag
+                return
+            } catch {
+                throw NSError(domain: "PTYSession", code: -5, userInfo: [
+                    NSLocalizedDescriptionKey: "Failed to start native Apple Container sandbox: \(error.localizedDescription)"
+                ])
             }
         } else if dockerEnabled && !isDockerTestFallback {
             let fm = FileManager.default
@@ -91,7 +156,9 @@ class PTYSession: @unchecked Sendable {
                     "/bin/sh"
                 ]
             } else {
-                warningMessage = "\r\n⚠️  WARNING: Docker Sandboxing is enabled, but the 'docker' binary was not found in common paths.\r\n⚠️  Falling back to local shell.\r\n\r\n"
+                throw NSError(domain: "PTYSession", code: -6, userInfo: [
+                    NSLocalizedDescriptionKey: "Docker Sandboxing is enabled, but the 'docker' binary was not found in common paths."
+                ])
             }
         }
         
@@ -180,12 +247,6 @@ class PTYSession: @unchecked Sendable {
             _ = fcntl(masterFd, F_SETFL, flags | O_NONBLOCK)
             
             setupReadSource()
-            
-            if let warning = warningMessage {
-                DispatchQueue.main.async {
-                    self.onOutput?(warning)
-                }
-            }
         }
     }
     
@@ -205,35 +266,7 @@ class PTYSession: @unchecked Sendable {
                     self.onOutput?(str)
                     
                     // 2. Process active command continuation
-                    if self.pendingContinuation != nil {
-                        self.accumulatedOutput += str
-                        
-                        if let range = self.accumulatedOutput.range(of: self.currentMarker) {
-                            let outputBeforeMarker = String(self.accumulatedOutput[..<range.lowerBound])
-                            let outputAfterMarker = String(self.accumulatedOutput[range.upperBound...])
-                            
-                            // Extract the exit code following the marker
-                            let cleanAfter = outputAfterMarker.trimmingCharacters(in: .whitespacesAndNewlines)
-                            let exitCodeStr = cleanAfter.components(separatedBy: .whitespacesAndNewlines).first ?? "0"
-                            let exitCode = Int32(exitCodeStr) ?? 0
-                            
-                            let finalOutput = outputBeforeMarker.trimmingCharacters(in: .whitespacesAndNewlines)
-                            let continuation = self.pendingContinuation
-                            
-                            self.pendingContinuation = nil
-                            self.currentMarker = ""
-                            self.accumulatedOutput = ""
-                            
-                            if exitCode == 0 {
-                                continuation?.resume(returning: finalOutput)
-                            } else {
-                                continuation?.resume(throwing: NSError(domain: "PTYSession", code: Int(exitCode), userInfo: [
-                                    NSLocalizedDescriptionKey: "Command failed with exit code \(exitCode)",
-                                    "output": finalOutput
-                                ]))
-                            }
-                        }
-                    }
+                    self.processContinuationOutput(str)
                 }
             } else if bytesRead == 0 || (bytesRead < 0 && errno != EAGAIN) {
                 self.cleanup()
@@ -254,6 +287,10 @@ class PTYSession: @unchecked Sendable {
     }
     
     func write(command: String) {
+        if isContainerMode, let session = activeContainerSession {
+            session.write(command)
+            return
+        }
         guard masterFd >= 0 else { return }
         guard let data = command.data(using: .utf8) else { return }
         data.withUnsafeBytes { buffer in
@@ -269,12 +306,26 @@ class PTYSession: @unchecked Sendable {
     }
     
     func runCommand(_ command: String) async throws -> String {
+        if isContainerMode {
+            guard let manager = await ContainerBridge.shared else {
+                throw NSError(domain: "PTYSession", code: -5, userInfo: [NSLocalizedDescriptionKey: "Apple Container Sandbox is not supported in this target"])
+            }
+            let (output, exitCode) = try await manager.exec(command)
+            if exitCode != 0 {
+                throw NSError(domain: "PTYSession", code: Int(exitCode), userInfo: [
+                    NSLocalizedDescriptionKey: output.isEmpty ? "Process exited with code \(exitCode)" : output,
+                    "output": output
+                ])
+            }
+            return output
+        }
+        
         guard masterFd >= 0 else {
             throw NSError(domain: "PTYSession", code: -4, userInfo: [NSLocalizedDescriptionKey: "Shell session is not running"])
         }
         return try await withCheckedThrowingContinuation { continuation in
             outputQueue.async {
-                guard self.masterFd >= 0 else {
+                guard self.isContainerMode || self.masterFd >= 0 else {
                     continuation.resume(throwing: NSError(domain: "PTYSession", code: -4, userInfo: [NSLocalizedDescriptionKey: "Shell session was terminated"]))
                     return
                 }
@@ -296,6 +347,15 @@ class PTYSession: @unchecked Sendable {
     }
     
     func cleanup() {
+        if isContainerMode {
+            isContainerMode = false
+            let session = activeContainerSession
+            activeContainerSession = nil
+            Task {
+                await session?.kill()
+            }
+        }
+        
         readSource?.cancel()
         readSource = nil
         

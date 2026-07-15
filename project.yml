@@ -16,7 +16,7 @@ packages:
 
 settings:
   base:
-    SWIFT_VERSION: 6.0
+    SWIFT_VERSION: 6.4
     MACOSX_DEPLOYMENT_TARGET: 27.0
     PRODUCT_NAME: ApexAgent
     PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgent

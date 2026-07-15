@@ -21,11 +21,19 @@ struct DiagnosticManager {
     static func runSelfCheck(provider: OrchestratorProvider? = nil) async -> [DiagnosticItem] {
         var items: [DiagnosticItem] = []
         
-        let sharedOrchestrator = await AppDelegate.getSharedOrchestrator()
-        let orchestrator = provider?.orchestrator ?? sharedOrchestrator
+        let orchestrator = provider?.orchestrator ?? MCPManager.shared.orchestrator
+        let isRestricted = orchestrator.isFolderAccessRestricted()
         
-        // 1. Check Xcode CLI Tools
-        let hasXcodeSelect = checkCommandExists("xcode-select -p", orchestrator: orchestrator)
+        // Check CLI tools concurrently in background tasks to prevent main actor deadlock/freeze
+        async let xcodeCheck = checkCommandExists("xcode-select -p", isFolderAccessRestricted: isRestricted)
+        async let brewCheck = checkCommandExists("which brew", isFolderAccessRestricted: isRestricted)
+        async let nodeCheck = checkCommandExists("which node", isFolderAccessRestricted: isRestricted)
+        async let pythonCheck = checkCommandExists("which python3", isFolderAccessRestricted: isRestricted)
+        async let gitCheck = checkCommandExists("which git", isFolderAccessRestricted: isRestricted)
+        
+        let (hasXcodeSelect, hasBrew, hasNode, hasPython, hasGit) = await (xcodeCheck, brewCheck, nodeCheck, pythonCheck, gitCheck)
+        
+        // 1. Xcode CLI Tools
         items.append(DiagnosticItem(
             name: "Xcode Command Line Tools",
             category: "CLI Tools",
@@ -33,8 +41,7 @@ struct DiagnosticManager {
             message: hasXcodeSelect ? "Installed successfully." : "Missing. Run 'xcode-select --install' in Terminal."
         ))
         
-        // 2. Check Homebrew
-        let hasBrew = checkCommandExists("which brew", orchestrator: orchestrator)
+        // 2. Homebrew
         items.append(DiagnosticItem(
             name: "Homebrew",
             category: "CLI Tools",
@@ -42,8 +49,7 @@ struct DiagnosticManager {
             message: hasBrew ? "Homebrew is available." : "Missing. Install from brew.sh to easily manage dependencies."
         ))
         
-        // 3. Check Node.js
-        let hasNode = checkCommandExists("which node", orchestrator: orchestrator)
+        // 3. Node.js
         items.append(DiagnosticItem(
             name: "Node.js",
             category: "CLI Tools",
@@ -51,8 +57,7 @@ struct DiagnosticManager {
             message: hasNode ? "Node.js is available." : "Missing. Required for running JavaScript tasks or packages."
         ))
         
-        // 4. Check Python 3
-        let hasPython = checkCommandExists("which python3", orchestrator: orchestrator)
+        // 4. Python 3
         items.append(DiagnosticItem(
             name: "Python 3",
             category: "CLI Tools",
@@ -61,7 +66,6 @@ struct DiagnosticManager {
         ))
         
         // 5. Check Git
-        let hasGit = checkCommandExists("which git", orchestrator: orchestrator)
         items.append(DiagnosticItem(
             name: "Git",
             category: "CLI Tools",
@@ -71,7 +75,7 @@ struct DiagnosticManager {
         
         // 6. Check Accessibility Permissions
         let isAccessibilityTrusted = AXIsProcessTrusted()
-        let isAccessibilityAllowedInSettings = orchestrator?.permissions?.accessibilityAllowed ?? false
+        let isAccessibilityAllowedInSettings = orchestrator.permissions?.accessibilityAllowed ?? false
         items.append(DiagnosticItem(
             name: "Accessibility Entitlement",
             category: "System Permissions",
@@ -83,7 +87,7 @@ struct DiagnosticManager {
         
         // 7. Check Screen Recording Permissions
         let screenAccess = checkScreenRecordingAccess()
-        let isScreenAllowedInSettings = orchestrator?.permissions?.screenRecordingAllowed ?? false
+        let isScreenAllowedInSettings = orchestrator.permissions?.screenRecordingAllowed ?? false
         items.append(DiagnosticItem(
             name: "Screen Recording Entitlement",
             category: "System Permissions",
@@ -131,36 +135,39 @@ struct DiagnosticManager {
         
         return items
     }
-    private static func checkCommandExists(_ command: String, orchestrator: AgentOrchestrator?) -> Bool {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-c", command]
-        
-        var env = ProcessInfo.processInfo.environment
-        let currentPath = env["PATH"] ?? ""
-        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + currentPath
-        
-        if orchestrator?.isFolderAccessRestricted() ?? false {
-            let fm = FileManager.default
-            let homeDir = fm.homeDirectoryForCurrentUser
-            let sandboxDir = homeDir.appendingPathComponent(".apex/sandbox")
-            try? fm.createDirectory(at: sandboxDir, withIntermediateDirectories: true)
-            env["HOME"] = sandboxDir.path
-        }
-        
-        process.environment = env
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        
-        do {
-            try process.run()
-            process.waitUntilExit()
-            return process.terminationStatus == 0
-        } catch {
-            return false
-        }
+    
+    private static func checkCommandExists(_ command: String, isFolderAccessRestricted: Bool) async -> Bool {
+        return await Task.detached(priority: .background) {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            process.arguments = ["-c", command]
+            
+            var env = ProcessInfo.processInfo.environment
+            let currentPath = env["PATH"] ?? ""
+            env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + currentPath
+            
+            if isFolderAccessRestricted {
+                let fm = FileManager.default
+                let homeDir = fm.homeDirectoryForCurrentUser
+                let sandboxDir = homeDir.appendingPathComponent(".apex/sandbox")
+                try? fm.createDirectory(at: sandboxDir, withIntermediateDirectories: true)
+                env["HOME"] = sandboxDir.path
+            }
+            
+            process.environment = env
+            
+            let pipe = Pipe()
+            process.standardOutput = pipe
+            process.standardError = pipe
+            
+            do {
+                try process.run()
+                process.waitUntilExit()
+                return process.terminationStatus == 0
+            } catch {
+                return false
+            }
+        }.value
     }
     
     private static func checkScreenRecordingAccess() -> Bool {

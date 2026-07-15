@@ -1,13 +1,13 @@
 import SwiftUI
 
 struct TerminalStateView: View {
-    enum State {
+    enum TerminalSessionState {
         case idle
         case running
         case error
     }
 
-    let state: State
+    let state: TerminalSessionState
     let message: String?
 
     var body: some View {
@@ -38,7 +38,7 @@ struct TerminalStateView: View {
             Circle()
                 .fill(AppTheme.Palette.textTertiary)
                 .frame(width: 6, height: 6)
-                .blink(tag: "terminal_idle")
+                .blink()
         case .running:
             ProgressView()
                 .controlSize(.small)
@@ -60,7 +60,6 @@ struct TerminalStateView: View {
 }
 
 fileprivate struct BlinkModifier: ViewModifier {
-    let tag: String
     @State private var isVisible = true
 
     func body(content: Content) -> some View {
@@ -74,7 +73,7 @@ fileprivate struct BlinkModifier: ViewModifier {
 }
 
 extension View {
-    fileprivate func blink(tag: String) -> some View {
-        self.modifier(BlinkModifier(tag: tag))
+    fileprivate func blink() -> some View {
+        self.modifier(BlinkModifier())
     }
 }

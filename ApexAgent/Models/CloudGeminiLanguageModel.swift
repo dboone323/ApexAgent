@@ -19,7 +19,7 @@ public struct CloudGeminiLanguageModel: LanguageModel {
     }
 }
 
-public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor {
+public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicToolRouting {
     public typealias Model = CloudGeminiLanguageModel
     
     public struct Configuration: Hashable, Sendable {
@@ -112,7 +112,7 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor {
             case .toolCalls(let toolCalls):
                 var parts: [[String: Any]] = []
                 for call in toolCalls {
-                    let args = jsonObject(from: call.arguments)
+                    let args = call.arguments.toJSONObject()
                     parts.append([
                         "functionCall": [
                             "name": call.toolName,
@@ -204,7 +204,8 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor {
                 throw NSError(domain: "CloudGeminiLanguageModel", code: -2, userInfo: [NSLocalizedDescriptionKey: "Failed to serialize Gemini request payload."])
             }
             
-            let urlStr = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=\(configuration.apiKey)"
+            let modelName = UserDefaults.standard.string(forKey: "apex.geminiModel") ?? "gemini-2.0-flash"
+            let urlStr = "https://generativelanguage.googleapis.com/v1beta/models/\(modelName):streamGenerateContent?alt=sse"
             guard let url = URL(string: urlStr) else {
                 throw NSError(domain: "CloudGeminiLanguageModel", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid Gemini URL configuration."])
             }
@@ -212,6 +213,7 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor {
             var urlRequest = URLRequest(url: url)
             urlRequest.httpMethod = "POST"
             urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            urlRequest.setValue(configuration.apiKey, forHTTPHeaderField: "x-goog-api-key")
             urlRequest.httpBody = jsonData
             urlRequest.timeoutInterval = 60
             
@@ -268,32 +270,13 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor {
             }
             
             if !detectedToolCalls.isEmpty {
-                var dynamicToolCalls: [ParsedToolCall] = []
-                var staticToolCalls: [ParsedToolCall] = []
-                
                 let enabledNames = Set(request.enabledToolDefinitions.map { $0.name })
+                let routed = await classifyAndRouteToolCalls(detectedToolCalls, enabledToolNames: enabledNames, channel: channel)
                 
-                for tc in detectedToolCalls {
-                    let toolName = tc.name
-                    let isDynamic = await MainActor.run {
-                        return DynamicToolbox.shared.dynamicTools[toolName] != nil
-                    }
-                    if isDynamic && !enabledNames.contains(tc.name) {
-                        dynamicToolCalls.append(tc)
-                    } else {
-                        staticToolCalls.append(tc)
-                    }
-                }
-                
-                if !staticToolCalls.isEmpty {
-                    for tc in staticToolCalls {
-                        let toolCallAction = LanguageModelExecutorGenerationChannel.ToolCalls.ToolCall.Action.appendArguments(tc.argumentsString, tokenCount: 0)
-                        let action = LanguageModelExecutorGenerationChannel.ToolCalls.Action.toolCall(id: tc.id, name: tc.name, action: toolCallAction)
-                        let event = LanguageModelExecutorGenerationChannel.ToolCalls.toolCalls(action: action)
-                        await channel.send(event)
-                    }
+                if !routed.staticCalls.isEmpty {
                     return
                 } else {
+                    let dynamicToolCalls = routed.dynamicCalls
                     var parts: [[String: Any]] = []
                     if !accumulatedText.isEmpty {
                         parts.append(["text": accumulatedText])
@@ -313,12 +296,7 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor {
                     ])
                     
                     for tc in dynamicToolCalls {
-                        let output: String
-                        do {
-                            output = try await DynamicToolbox.shared.executeTool(name: tc.name, jsonArguments: tc.argumentsString)
-                        } catch {
-                            output = "ERROR: \(error.localizedDescription)"
-                        }
+                        let output = await executeDynamicTool(name: tc.name, argumentsString: tc.argumentsString)
                         
                         var respObj: [String: Any] = ["content": output]
                         if let data = output.data(using: .utf8),
@@ -342,29 +320,5 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor {
             }
             loopCount += 1
         }
-    }
-}
-
-// Helpers
-private func jsonObject(from content: GeneratedContent) -> Any {
-    switch content.kind {
-    case .null:
-        return NSNull()
-    case .bool(let value):
-        return value
-    case .number(let value):
-        return value
-    case .string(let value):
-        return value
-    case .array(let array):
-        return array.map { jsonObject(from: $0) }
-    case .structure(let properties, _):
-        var dict: [String: Any] = [:]
-        for (k, v) in properties {
-            dict[k] = jsonObject(from: v)
-        }
-        return dict
-    @unknown default:
-        return NSNull()
     }
 }

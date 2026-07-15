@@ -1,6 +1,7 @@
 import Foundation
 import FoundationModels
 import AppKit
+import Darwin
 
 // MARK: - Multimodal Reader Profile
 
@@ -58,6 +59,10 @@ struct AnalyzeImageTool: Tool {
                 let s = createVisualSession(preference: preference, instructions: instructions)
                 s.prewarm()
                 return s
+            }
+            
+            guard isMultimodalAttachmentSupported() else {
+                return "ERROR: On-device multimodal vision is not supported on this macOS build."
             }
             
             var finalContent = ""

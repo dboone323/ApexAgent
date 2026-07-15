@@ -16,6 +16,11 @@ class UIRegistry {
         nextIdByConversation[conversationId] = 1
     }
     
+    func clearAll() {
+        elementsByConversation.removeAll()
+        nextIdByConversation.removeAll()
+    }
+    
     func register(_ element: AXUIElement, for conversationId: UUID) -> String {
         let nextId = nextIdByConversation[conversationId] ?? 1
         let id = "elem_\(nextId)"
@@ -69,7 +74,7 @@ struct AccessibilityControlTool: Tool {
                 orchestrator.currentConversation?.id ?? UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
             }
             
-            return try await MainActor.run {
+            return await MainActor.run {
                 switch arguments.action {
                 case "list_elements":
                     UIRegistry.shared.clear(for: conversationId)
@@ -85,6 +90,9 @@ struct AccessibilityControlTool: Tool {
                         return "ERROR: Could not fetch active window of application \(frontmostApp.localizedName ?? "")."
                     }
                     
+                    guard CFGetTypeID(windowElement) == AXUIElementGetTypeID() else {
+                        return "ERROR: Active window element is not of type AXUIElement."
+                    }
                     let axWindow = windowElement as! AXUIElement
                     var output = "UI Elements in active window of \(frontmostApp.localizedName ?? ""):\n"
                     output += traverse(element: axWindow, depth: 0, maxDepth: 15, conversationId: conversationId)

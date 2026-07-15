@@ -11,6 +11,11 @@ class BrowserManager: NSObject, WKNavigationDelegate {
     private var webView: WKWebView?
     private var navigationContinuation: CheckedContinuation<String, Error>?
     
+    func cleanup() {
+        webView = nil
+        navigationContinuation = nil
+    }
+    
     func initializeWebView() {
         if webView == nil {
             let config = WKWebViewConfiguration()
@@ -40,9 +45,30 @@ class BrowserManager: NSObject, WKNavigationDelegate {
             oldContinuation.resume(throwing: NSError(domain: "BrowserManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Navigation cancelled by subsequent load"]))
         }
         
-        return try await withCheckedThrowingContinuation { continuation in
-            self.navigationContinuation = continuation
-            webView.load(URLRequest(url: url))
+        let navigateTask = Task {
+            try await withCheckedThrowingContinuation { continuation in
+                self.navigationContinuation = continuation
+                webView.load(URLRequest(url: url))
+            }
+        }
+        
+        let timeoutTask = Task {
+            try await Task.sleep(for: .seconds(10))
+            navigateTask.cancel()
+            if self.navigationContinuation != nil {
+                let cont = self.navigationContinuation
+                self.navigationContinuation = nil
+                cont?.resume(throwing: NSError(domain: "BrowserManager", code: -4, userInfo: [NSLocalizedDescriptionKey: "Navigation timed out after 10 seconds"]))
+            }
+        }
+        
+        do {
+            let res = try await navigateTask.value
+            timeoutTask.cancel()
+            return res
+        } catch {
+            timeoutTask.cancel()
+            throw error
         }
     }
     

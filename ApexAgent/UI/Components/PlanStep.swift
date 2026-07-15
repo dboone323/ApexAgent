@@ -16,8 +16,8 @@ struct PlanStepRow: View {
                         .foregroundStyle(statusColor)
                     Text(step.title)
                         .font(AppTheme.Font.body(12))
-                        .foregroundStyle(step.status.lowercased() == "completed" ? AppTheme.Palette.textSecondary : AppTheme.Palette.textPrimary)
-                        .strikethrough(step.status.lowercased() == "completed")
+                        .foregroundStyle(step.status == .completed ? AppTheme.Palette.textSecondary : AppTheme.Palette.textPrimary)
+                        .strikethrough(step.status == .completed)
                         .lineLimit(3)
                 }
             }
@@ -38,20 +38,20 @@ struct PlanStepRow: View {
 
     @ViewBuilder
     private var statusIcon: some View {
-        switch step.status.lowercased() {
-        case "running":
+        switch step.status {
+        case .running:
             ProgressView()
                 .controlSize(.small)
                 .frame(width: 16, height: 16)
-        case "completed":
+        case .completed:
             Image(systemName: "checkmark.circle.fill")
                 .foregroundStyle(AppTheme.Palette.success)
                 .font(.system(size: 14))
-        case "failed":
+        case .failed:
             Image(systemName: "xmark.circle.fill")
                 .foregroundStyle(AppTheme.Palette.critical)
                 .font(.system(size: 14))
-        default:
+        case .queued:
             Image(systemName: "circle")
                 .foregroundStyle(AppTheme.Palette.textSecondary)
                 .font(.system(size: 14))
@@ -59,11 +59,11 @@ struct PlanStepRow: View {
     }
 
     private var statusColor: Color {
-        switch step.status.lowercased() {
-        case "running": return AppTheme.Palette.accent
-        case "completed": return AppTheme.Palette.success
-        case "failed": return AppTheme.Palette.critical
-        default: return AppTheme.Palette.textSecondary
+        switch step.status {
+        case .running: return AppTheme.Palette.accent
+        case .completed: return AppTheme.Palette.success
+        case .failed: return AppTheme.Palette.critical
+        case .queued: return AppTheme.Palette.textSecondary
         }
     }
 }
@@ -78,7 +78,7 @@ struct PlanStepDetailView: View {
                     .font(AppTheme.Font.headline())
                 Text(step.title)
                     .font(AppTheme.Font.body())
-                Text("Status: \(step.status)")
+                Text("Status: \(step.status.rawValue)")
                     .font(AppTheme.Font.caption())
                     .foregroundStyle(AppTheme.Palette.textSecondary)
             }

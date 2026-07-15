@@ -18,13 +18,12 @@ extension Tool {
         // Log starting of the tool
         await orchestrator.orchestrator.logToolStart(name: toolName, arguments: argsString)
 
-        // Check if we exceeded the tool call limit for this active turn (safety throttle)
         let overLimit = await MainActor.run {
-            let limit = orchestrator.orchestrator.multiAgentModeEnabled ? 20 : 4
+            let limit = 20
             return orchestrator.orchestrator.activeTurnToolCallCount > limit
         }
         if overLimit {
-            let limit = await MainActor.run { orchestrator.orchestrator.multiAgentModeEnabled == true ? 20 : 4 }
+            let limit = 20
             let limitMsg = "ERROR: Maximum tool calls (\(limit)) reached for this turn to prevent context window overflow."
             await MainActor.run {
                 orchestrator.orchestrator.logToolEnd(name: toolName, result: limitMsg, status: .failed("Tool call limit reached"))
@@ -58,7 +57,7 @@ extension Tool {
             var result = try await body()
 
             // Centralized Tool Output Truncation to optimize token usage
-            let maxLength = 1000
+            let maxLength = 8000
             if result.count > maxLength {
                 result = String(result.prefix(maxLength)) + "\n\n[... output truncated at \(maxLength) characters to optimize token usage ...]"
             }
@@ -70,5 +69,47 @@ extension Tool {
             await orchestrator.orchestrator.logToolEnd(name: toolName, result: errorMsg, status: .failed(error.localizedDescription))
             return errorMsg
         }
+    }
+}
+
+struct AnyExecutableTool: Sendable {
+    let name: String
+    let schemaJSON: String?
+    private let _execute: @Sendable (String) async throws -> String
+
+    init<T: Tool>(_ tool: T) where T.Arguments: Decodable, T.Output == String, T: Sendable {
+        self.name = tool.name
+        self._execute = { jsonArguments in
+            let decoder = JSONDecoder()
+            guard let data = jsonArguments.data(using: .utf8) else {
+                throw NSError(domain: "Tool", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON arguments"])
+            }
+            let args = try decoder.decode(T.Arguments.self, from: data)
+            return try await tool.call(arguments: args)
+        }
+        
+        let encoder = JSONEncoder()
+        if let data = try? encoder.encode(tool.parameters),
+           let jsonStr = String(data: data, encoding: .utf8) {
+            // Reconstruct tool schema JSON with name/description
+            let dict: [String: Any] = [
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": (try? JSONSerialization.jsonObject(with: data)) ?? [:]
+            ]
+            if let finalData = try? JSONSerialization.data(withJSONObject: dict),
+               let finalStr = String(data: finalData, encoding: .utf8) {
+                self.schemaJSON = finalStr
+            } else {
+                self.schemaJSON = jsonStr
+            }
+        } else {
+            self.schemaJSON = nil
+        }
+    }
+
+    @ToolActor
+    func execute(jsonArguments: String) async throws -> String {
+        return try await _execute(jsonArguments)
     }
 }

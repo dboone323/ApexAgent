@@ -18,6 +18,7 @@ class DynamicToolbox {
     
     private var dirDescriptor: Int32 = -1
     private var watcherSource: DispatchSourceFileSystemObject?
+    private var loadMCPToolsTask: Task<Void, Never>?
     
     func loadTools() {
         dynamicTools.removeAll()
@@ -41,7 +42,8 @@ class DynamicToolbox {
         loadScriptsFromDir(skillsDir)
         
         // 3. Load MCP tools asynchronously
-        Task {
+        loadMCPToolsTask?.cancel()
+        loadMCPToolsTask = Task {
             await loadMCPTools()
         }
     }
@@ -97,10 +99,13 @@ class DynamicToolbox {
         dynamicTools = dynamicTools.filter { $0.value.mcpServerId == nil }
         
         for config in MCPManager.shared.servers {
+            if Task.isCancelled { return }
             let client = MCPManager.shared.getClient(for: config)
             do {
                 try await client.start()
+                if Task.isCancelled { return }
                 let toolsList = try await client.listTools()
+                if Task.isCancelled { return }
                 for tool in toolsList {
                     var properties: [String: Any] = [:]
                     if let props = tool.inputSchema.properties {
@@ -206,7 +211,7 @@ class DynamicToolbox {
         }
         
         guard let scriptPath = tool.scriptPath else {
-            throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Tool \\(name) missing execution path"])
+            throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Tool \(name) missing execution path"])
         }
         
         let isRestricted = orchestrator?.orchestrator.isFolderAccessRestricted() ?? false
@@ -353,4 +358,13 @@ class DynamicToolbox {
         
         return dict
     }
+    
+    #if DEBUG
+    func registerToolForTesting(name: String, entry: DynamicToolEntry) {
+        dynamicTools[name] = entry
+    }
+    func removeToolForTesting(name: String) {
+        dynamicTools.removeValue(forKey: name)
+    }
+    #endif
 }

@@ -37,6 +37,10 @@ class QuickPromptPanel: NSPanel {
     override var canBecomeKey: Bool {
         return true
     }
+
+    override func cancelOperation(_ sender: Any?) {
+        self.orderOut(nil)
+    }
 }
 
 struct QuickPromptView: View {
@@ -49,7 +53,7 @@ struct QuickPromptView: View {
         HStack(spacing: 12) {
             Image(systemName: "bolt.fill")
                 .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.purple)
+                .foregroundStyle(AppTheme.Palette.accent)
             
             TextField("Ask Apex anything...", text: $text)
                 .textFieldStyle(.plain)

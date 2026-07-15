@@ -89,6 +89,156 @@ enum SupervisorPrompt {
     """
 }
 
+// MARK: - AgentProfile Protocol & Generic Profile Struct
+
+protocol AgentProfile: LanguageModelSession.DynamicProfile {
+    associatedtype ModelType: LanguageModel
+    var agentType: AgentType { get }
+    var instructions: String { get }
+    var model: ModelType { get }
+    var toolCallingMode: GenerationOptions.ToolCallingMode { get }
+    var orchestrator: OrchestratorProvider { get }
+}
+
+struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
+    typealias ModelType = Model
+    let agentType: AgentType
+    let instructions: String
+    let model: Model
+    let toolCallingMode: GenerationOptions.ToolCallingMode
+    let orchestrator: OrchestratorProvider
+    let allowedTools: [String]
+    
+    init(agentType: AgentType, instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider) {
+        self.agentType = agentType
+        self.instructions = instructions
+        self.model = model
+        self.toolCallingMode = toolCallingMode
+        self.orchestrator = orchestrator
+        self.allowedTools = AgentRegistry.builtInDefaults[agentType.rawValue]?.allowedTools ?? []
+    }
+    
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider, allowedTools: [String]) {
+        self.agentType = .developer
+        self.instructions = instructions
+        self.model = model
+        self.toolCallingMode = toolCallingMode
+        self.orchestrator = orchestrator
+        self.allowedTools = allowedTools
+    }
+    
+    var body: some LanguageModelSession.DynamicProfile {
+        LanguageModelSession.Profile {
+            Instructions(instructions)
+            
+            if allowedTools.contains("read_file") {
+                FileReadTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("write_file") {
+                FileWriteTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("list_directory") {
+                ListDirectoryTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("create_directory") {
+                CreateDirectoryTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("delete_file") {
+                DeleteFileTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("move_file") {
+                MoveFileTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("web_search") {
+                WebSearchTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("run_applescript") {
+                AppleScriptTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("take_screenshot") {
+                ScreenshotTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("read_clipboard") {
+                ClipboardReadTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("write_clipboard") {
+                ClipboardWriteTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("send_notification") {
+                NotificationTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("get_system_info") {
+                SystemInfoTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("get_running_processes") {
+                ProcessListTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("get_frontmost_app") {
+                GetFrontmostAppTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("store_memory") {
+                StoreMemoryTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("search_memory") {
+                SearchMemoryTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("control_app") {
+                ApplicationControlTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("control_accessibility") {
+                AccessibilityControlTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("control_browser") {
+                BrowserAutomationTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("update_plan") {
+                UpdatePlanTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("audit_projects") {
+                ProjectAuditTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("delegate_task") {
+                DelegateTaskTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("analyze_image") {
+                AnalyzeImageTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("detect_image_text") {
+                DetectImageTextTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("convene_meeting") {
+                ConveneMeetingTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("create_skill") {
+                CreateSkillTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("run_workflow") {
+                RunWorkflowTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("file_search") {
+                FileSearchTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("execute_dynamic_tool") {
+                DynamicToolCallTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("confirm_completion") {
+                ConfirmCompletionTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("save_review_session") {
+                SaveReviewSessionTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("list_review_sessions") {
+                ListReviewSessionsTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("run_shell_command") {
+                ShellTool(orchestrator: orchestrator)
+            }
+        }
+        .model(model)
+        .toolCallingMode(toolCallingMode)
+    }
+}
+
 // MARK: - Supervisor Agent Profile
 
 struct SupervisorAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile {
@@ -135,7 +285,9 @@ struct SupervisorAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynami
 
 // MARK: - Developer Agent Profile
 
-struct DeveloperAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile {
+struct DeveloperAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
+    typealias ModelType = Model
+    let agentType: AgentType = .developer
     let instructions: String
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
@@ -148,36 +300,16 @@ struct DeveloperAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynamic
         self.orchestrator = orchestrator
     }
 
-    private var fileReadTool: FileReadTool { FileReadTool(orchestrator: orchestrator) }
-    private var fileWriteTool: FileWriteTool { FileWriteTool(orchestrator: orchestrator) }
-    private var listDirectoryTool: ListDirectoryTool { ListDirectoryTool(orchestrator: orchestrator) }
-    private var createDirectoryTool: CreateDirectoryTool { CreateDirectoryTool(orchestrator: orchestrator) }
-    private var deleteFileTool: DeleteFileTool { DeleteFileTool(orchestrator: orchestrator) }
-    private var moveFileTool: MoveFileTool { MoveFileTool(orchestrator: orchestrator) }
-    private var projectAuditTool: ProjectAuditTool { ProjectAuditTool(orchestrator: orchestrator) }
-    private var createSkillTool: CreateSkillTool { CreateSkillTool(orchestrator: orchestrator) }
-
     var body: some LanguageModelSession.DynamicProfile {
-        LanguageModelSession.Profile {
-            Instructions(instructions)
-            
-            fileReadTool
-            fileWriteTool
-            listDirectoryTool
-            createDirectoryTool
-            deleteFileTool
-            moveFileTool
-            projectAuditTool
-            createSkillTool
-        }
-        .model(model)
-        .toolCallingMode(toolCallingMode)
+        SpecializedAgentProfile(agentType: .developer, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
     }
 }
 
 // MARK: - Executor Agent Profile
 
-struct ExecutorAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile {
+struct ExecutorAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
+    typealias ModelType = Model
+    let agentType: AgentType = .executor
     let instructions: String
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
@@ -190,28 +322,16 @@ struct ExecutorAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicP
         self.orchestrator = orchestrator
     }
 
-    private var shellTool: ShellTool { ShellTool(orchestrator: orchestrator) }
-    private var appleScriptTool: AppleScriptTool { AppleScriptTool(orchestrator: orchestrator) }
-    private var applicationControlTool: ApplicationControlTool { ApplicationControlTool(orchestrator: orchestrator) }
-    private var accessibilityControlTool: AccessibilityControlTool { AccessibilityControlTool(orchestrator: orchestrator) }
-
     var body: some LanguageModelSession.DynamicProfile {
-        LanguageModelSession.Profile {
-            Instructions(instructions)
-            
-            shellTool
-            appleScriptTool
-            applicationControlTool
-            accessibilityControlTool
-        }
-        .model(model)
-        .toolCallingMode(toolCallingMode)
+        SpecializedAgentProfile(agentType: .executor, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
     }
 }
 
 // MARK: - Controller Agent Profile
 
-struct ControllerAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile {
+struct ControllerAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
+    typealias ModelType = Model
+    let agentType: AgentType = .controller
     let instructions: String
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
@@ -223,39 +343,17 @@ struct ControllerAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynami
         self.toolCallingMode = toolCallingMode
         self.orchestrator = orchestrator
     }
-    
-    private var getFrontmostAppTool: GetFrontmostAppTool { GetFrontmostAppTool(orchestrator: orchestrator) }
-    private var processListTool: ProcessListTool { ProcessListTool(orchestrator: orchestrator) }
-    private var clipboardReadTool: ClipboardReadTool { ClipboardReadTool(orchestrator: orchestrator) }
-    private var clipboardWriteTool: ClipboardWriteTool { ClipboardWriteTool(orchestrator: orchestrator) }
-    private var notificationTool: NotificationTool { NotificationTool(orchestrator: orchestrator) }
-    private var systemInfoTool: SystemInfoTool { SystemInfoTool(orchestrator: orchestrator) }
-    private var accessibilityControlTool: AccessibilityControlTool { AccessibilityControlTool(orchestrator: orchestrator) }
-    private var applicationControlTool: ApplicationControlTool { ApplicationControlTool(orchestrator: orchestrator) }
-    private var browserAutomationTool: BrowserAutomationTool { BrowserAutomationTool(orchestrator: orchestrator) }
 
     var body: some LanguageModelSession.DynamicProfile {
-        LanguageModelSession.Profile {
-            Instructions(instructions)
-            
-            getFrontmostAppTool
-            processListTool
-            clipboardReadTool
-            clipboardWriteTool
-            notificationTool
-            systemInfoTool
-            accessibilityControlTool
-            applicationControlTool
-            browserAutomationTool
-        }
-        .model(model)
-        .toolCallingMode(toolCallingMode)
+        SpecializedAgentProfile(agentType: .controller, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
     }
 }
 
 // MARK: - Researcher Agent Profile
 
-struct ResearcherAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile {
+struct ResearcherAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
+    typealias ModelType = Model
+    let agentType: AgentType = .researcher
     let instructions: String
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
@@ -267,33 +365,17 @@ struct ResearcherAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynami
         self.toolCallingMode = toolCallingMode
         self.orchestrator = orchestrator
     }
-    
-    private var webSearchTool: WebSearchTool { WebSearchTool(orchestrator: orchestrator) }
-    private var clipboardReadTool: ClipboardReadTool { ClipboardReadTool(orchestrator: orchestrator) }
-    private var clipboardWriteTool: ClipboardWriteTool { ClipboardWriteTool(orchestrator: orchestrator) }
-    private var fileReadTool: FileReadTool { FileReadTool(orchestrator: orchestrator) }
-    private var listDirectoryTool: ListDirectoryTool { ListDirectoryTool(orchestrator: orchestrator) }
-    private var screenshotTool: ScreenshotTool { ScreenshotTool(orchestrator: orchestrator) }
 
     var body: some LanguageModelSession.DynamicProfile {
-        LanguageModelSession.Profile {
-            Instructions(instructions)
-            
-            webSearchTool
-            clipboardReadTool
-            clipboardWriteTool
-            fileReadTool
-            listDirectoryTool
-            screenshotTool
-        }
-        .model(model)
-        .toolCallingMode(toolCallingMode)
+        SpecializedAgentProfile(agentType: .researcher, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
     }
 }
 
 // MARK: - Linter Agent Profile
 
-struct LinterAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile {
+struct LinterAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
+    typealias ModelType = Model
+    let agentType: AgentType = .linter
     let instructions: String
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
@@ -305,31 +387,17 @@ struct LinterAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicPro
         self.toolCallingMode = toolCallingMode
         self.orchestrator = orchestrator
     }
-    
-    private var fileReadTool: FileReadTool { FileReadTool(orchestrator: orchestrator) }
-    private var fileWriteTool: FileWriteTool { FileWriteTool(orchestrator: orchestrator) }
-    private var listDirectoryTool: ListDirectoryTool { ListDirectoryTool(orchestrator: orchestrator) }
-    private var shellTool: ShellTool { ShellTool(orchestrator: orchestrator) }
-    private var projectAuditTool: ProjectAuditTool { ProjectAuditTool(orchestrator: orchestrator) }
 
     var body: some LanguageModelSession.DynamicProfile {
-        LanguageModelSession.Profile {
-            Instructions(instructions)
-            
-            fileReadTool
-            fileWriteTool
-            listDirectoryTool
-            shellTool
-            projectAuditTool
-        }
-        .model(model)
-        .toolCallingMode(toolCallingMode)
+        SpecializedAgentProfile(agentType: .linter, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
     }
 }
 
 // MARK: - UI Designer Agent Profile
 
-struct UIDesignerAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile {
+struct UIDesignerAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
+    typealias ModelType = Model
+    let agentType: AgentType = .uiDesigner
     let instructions: String
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
@@ -341,33 +409,17 @@ struct UIDesignerAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynami
         self.toolCallingMode = toolCallingMode
         self.orchestrator = orchestrator
     }
-    
-    private var fileReadTool: FileReadTool { FileReadTool(orchestrator: orchestrator) }
-    private var fileWriteTool: FileWriteTool { FileWriteTool(orchestrator: orchestrator) }
-    private var screenshotTool: ScreenshotTool { ScreenshotTool(orchestrator: orchestrator) }
-    private var shellTool: ShellTool { ShellTool(orchestrator: orchestrator) }
-    private var appleScriptTool: AppleScriptTool { AppleScriptTool(orchestrator: orchestrator) }
-    private var applicationControlTool: ApplicationControlTool { ApplicationControlTool(orchestrator: orchestrator) }
 
     var body: some LanguageModelSession.DynamicProfile {
-        LanguageModelSession.Profile {
-            Instructions(instructions)
-            
-            fileReadTool
-            fileWriteTool
-            screenshotTool
-            shellTool
-            appleScriptTool
-            applicationControlTool
-        }
-        .model(model)
-        .toolCallingMode(toolCallingMode)
+        SpecializedAgentProfile(agentType: .uiDesigner, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
     }
 }
 
 // MARK: - Planner Agent Profile
 
-struct PlannerAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile {
+struct PlannerAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
+    typealias ModelType = Model
+    let agentType: AgentType = .planner
     let instructions: String
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
@@ -379,26 +431,8 @@ struct PlannerAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicPr
         self.toolCallingMode = toolCallingMode
         self.orchestrator = orchestrator
     }
-    
-    private var fileReadTool: FileReadTool { FileReadTool(orchestrator: orchestrator) }
-    private var fileWriteTool: FileWriteTool { FileWriteTool(orchestrator: orchestrator) }
-    private var listDirectoryTool: ListDirectoryTool { ListDirectoryTool(orchestrator: orchestrator) }
-    private var updatePlanTool: UpdatePlanTool { UpdatePlanTool(orchestrator: orchestrator) }
-    private var storeMemoryTool: StoreMemoryTool { StoreMemoryTool(orchestrator: orchestrator) }
-    private var searchMemoryTool: SearchMemoryTool { SearchMemoryTool(orchestrator: orchestrator) }
 
     var body: some LanguageModelSession.DynamicProfile {
-        LanguageModelSession.Profile {
-            Instructions(instructions)
-            
-            fileReadTool
-            fileWriteTool
-            listDirectoryTool
-            updatePlanTool
-            storeMemoryTool
-            searchMemoryTool
-        }
-        .model(model)
-        .toolCallingMode(toolCallingMode)
+        SpecializedAgentProfile(agentType: .planner, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
     }
 }

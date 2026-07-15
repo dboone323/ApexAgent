@@ -8,16 +8,24 @@ struct KeychainManager {
     static func save(key: String, value: String) -> Bool {
         guard let data = value.data(using: .utf8) else { return false }
         
-        // Prepare query
+        // Prepare delete query first (excluding the value data)
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: serviceName,
+            kSecAttrAccount as String: key
+        ]
+        
+        // Delete existing item if it exists
+        SecItemDelete(deleteQuery as CFDictionary)
+        
+        // Prepare add query with strict accessibility constraints (after unlock, local device only)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: serviceName,
             kSecAttrAccount as String: key,
-            kSecValueData as String: data
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         ]
-        
-        // Delete existing item if it exists
-        SecItemDelete(query as CFDictionary)
         
         // Add new item
         let status = SecItemAdd(query as CFDictionary, nil)

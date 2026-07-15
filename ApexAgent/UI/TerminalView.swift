@@ -3,8 +3,8 @@ import SwiftUI
 struct TerminalView: View {
     @Environment(AgentOrchestrator.self) private var orchestrator
     @State private var isPaused = false
-    @State private var selectedEventID: UUID?
-    @State private var scrollProxy: ScrollViewProxy?
+    @FocusState private var isTextFocused: Bool
+    @State private var terminalSegments: [StyledSegment] = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -19,8 +19,7 @@ struct TerminalView: View {
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    let segments = ANSIColorParser.parse(orchestrator.activeTerminalOutput)
-                    if segments.isEmpty {
+                    if terminalSegments.isEmpty {
                         EmptyState(
                             icon: "terminal",
                             title: "Terminal Session Idle",
@@ -29,20 +28,31 @@ struct TerminalView: View {
                             action: nil
                         )
                     } else {
-                        formattedText(segments: segments)
+                        formattedText(segments: terminalSegments)
                             .font(AppTheme.Font.mono(11))
                             .lineSpacing(3)
                             .textSelection(.enabled)
                             .padding(12)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .id("console_text_bottom")
+                            .focusable()
+                            .focused($isTextFocused)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(isTextFocused ? AppTheme.Palette.accent : Color.clear, lineWidth: 1.5)
+                            )
+                            .accessibilityLabel("Terminal console output")
                     }
                 }
                 .background(Color.black)
-                .onChange(of: orchestrator.activeTerminalOutput) {
+                .onAppear {
+                    terminalSegments = ANSIColorParser.parse(orchestrator.activeTerminalOutput)
+                }
+                .onChange(of: orchestrator.activeTerminalOutput) { oldValue, newValue in
+                    terminalSegments = ANSIColorParser.parse(newValue)
                     if !isPaused { proxy.scrollTo("console_text_bottom", anchor: .bottom) }
                 }
-                .onChange(of: isPaused) { _ in
+                .onChange(of: isPaused) {
                     if !isPaused { proxy.scrollTo("console_text_bottom", anchor: .bottom) }
                 }
             }
@@ -58,7 +68,7 @@ struct TerminalView: View {
             else if color == .primary { color = .white }
             var text = Text(segment.text).foregroundColor(color)
             if segment.isBold { text = text.bold() }
-            combined = combined + text
+            combined = Text("\(combined)\(text)")
         }
         return combined
     }

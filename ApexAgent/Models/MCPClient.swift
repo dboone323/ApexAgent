@@ -1,6 +1,22 @@
 import Foundation
 import Observation
 
+enum MCPError: Error, LocalizedError {
+    case connectionFailed(String)
+    case timeout(String)
+    case protocolError(String)
+    case circuitOpen
+    
+    var errorDescription: String? {
+        switch self {
+        case .connectionFailed(let msg): return "MCP Connection Failed: \(msg)"
+        case .timeout(let msg): return "MCP Timeout: \(msg)"
+        case .protocolError(let msg): return "MCP Protocol Error: \(msg)"
+        case .circuitOpen: return "MCP Circuit Breaker Open (too many failures)"
+        }
+    }
+}
+
 struct MCPToolDefinition: Codable {
     let name: String
     let description: String?
@@ -14,7 +30,7 @@ struct MCPInputSchema: Codable {
 }
 
 struct MCPProperty: Codable {
-    let type: String
+    let type: String?
     let description: String?
 }
 
@@ -30,10 +46,17 @@ struct MCPContentBlock: Codable {
 
 // JSON-RPC structs
 struct JSONRPCRequest<T: Codable>: Codable {
-    let jsonrpc = "2.0"
+    let jsonrpc: String
     let id: Int
     let method: String
     let params: T
+
+    init(id: Int, method: String, params: T) {
+        self.jsonrpc = "2.0"
+        self.id = id
+        self.method = method
+        self.params = params
+    }
 
     enum CodingKeys: String, CodingKey {
         case jsonrpc, id, method, params
@@ -53,6 +76,16 @@ struct JSONRPCError: Codable {
     let data: String?
 }
 
+struct JSONRPCNotification: Codable {
+    let jsonrpc: String
+    let method: String
+
+    init(method: String) {
+        self.jsonrpc = "2.0"
+        self.method = method
+    }
+}
+
 actor MCPClient {
     nonisolated let serverName: String
     let command: String
@@ -64,9 +97,18 @@ actor MCPClient {
     private var stdinPipe: Pipe?
     private var stdoutPipe: Pipe?
     private var stderrPipe: Pipe?
+    private var stdoutSource: DispatchSourceRead?
+    private var stderrSource: DispatchSourceRead?
     
     private var nextRequestId = 1
     private var pendingRequests: [Int: CheckedContinuation<Data, Error>] = [:]
+    
+    // Hardening configurations
+    private let maxRetries = 5
+    private var failureCount = 0
+    private var circuitOpen = false
+    private var lastRestartTime = Date.distantPast
+    private var restartCountInWindow = 0
     
     init(serverName: String, command: String, arguments: [String] = [], logger: ToolEventLogger, orchestrator: OrchestratorProvider? = nil) {
         self.serverName = serverName
@@ -86,12 +128,13 @@ actor MCPClient {
         proc.executableURL = URL(fileURLWithPath: "/bin/zsh")
         
         // Wrap command in zsh shell execution to support environment loading and paths
-        let shellArgs = ["-c", "\(command) " + arguments.joined(separator: " ")]
+        // Use exec to replace the shell process image with the child process, so signals propagate correctly.
+        let shellArgs = ["-c", "exec \(command) " + arguments.joined(separator: " ")]
         proc.arguments = shellArgs
         
         var env = ProcessInfo.processInfo.environment
         let currentPath = env["PATH"] ?? ""
-        env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + currentPath
+        env["PATH"] = "/Users/danielstevens/.local/bin:/opt/homebrew/bin:/usr/local/bin:" + currentPath
         
         if isRestricted {
             let fm = FileManager.default
@@ -110,6 +153,14 @@ actor MCPClient {
         proc.standardInput = stdin
         proc.standardOutput = stdout
         proc.standardError = stderr
+        
+        // Supervision - monitor exit code
+        proc.terminationHandler = { [weak self] process in
+            guard let self = self else { return }
+            Task {
+                await self.handleTermination(status: process.terminationStatus)
+            }
+        }
 
         self.process = proc
         self.stdinPipe = stdin
@@ -118,72 +169,148 @@ actor MCPClient {
 
         try proc.run()
 
-        // Listen to stdout stream in background
-        let outPipe = self.stdoutPipe
-        let serverNameForStdout = self.serverName
-        Task.detached { [weak self] in
-            guard let self = self, let pipe = outPipe else { return }
-            let handle = pipe.fileHandleForReading
-            var buffer = Data()
-            while true {
-                do {
-                    guard let data = try handle.read(upToCount: 4096), !data.isEmpty else {
-                        break
-                    }
-                    buffer.append(data)
-
-                    // Process lines separated by newlines (standard stdio JSON-RPC pattern)
-                    while let newlineIndex = buffer.firstIndex(of: 10) { // 10 is '\n'
-                        let lineData = buffer.subdata(in: 0..<newlineIndex)
-                        buffer.removeSubrange(0...newlineIndex)
-
+        // Listen to stdout stream in background using DispatchSourceRead
+        let stdoutFd = stdout.fileHandleForReading.fileDescriptor
+        _ = fcntl(stdoutFd, F_SETFL, O_NONBLOCK)
+        let stdoutSrc = DispatchSource.makeReadSource(fileDescriptor: stdoutFd, queue: DispatchQueue.global())
+        
+        var stdoutBuffer = Data()
+        stdoutSrc.setEventHandler { [weak self, weak stdoutSrc] in
+            guard let self = self, let stdoutSrc = stdoutSrc else { return }
+            let available = stdoutSrc.data
+            guard available > 0 else {
+                stdoutSrc.cancel()
+                return
+            }
+            
+            do {
+                if let data = try? stdout.fileHandleForReading.read(upToCount: Int(available)), !data.isEmpty {
+                    stdoutBuffer.append(data)
+                    while let newlineIndex = stdoutBuffer.firstIndex(of: 10) {
+                        let lineData = stdoutBuffer.subdata(in: 0..<newlineIndex)
+                        stdoutBuffer.removeSubrange(0...newlineIndex)
                         if !lineData.isEmpty {
-                            await self.handleIncomingMessage(lineData)
+                            Task {
+                                await self.handleIncomingMessage(lineData)
+                            }
                         }
                     }
-                } catch {
-                    await self.logger.logToolEnd(
-                        name: "mcp:\(serverNameForStdout)",
-                        result: "MCPClient stdout read error: \(error)",
-                        status: .failed("MCPClient stdout read error")
-                    )
-                    break
+                } else {
+                    stdoutSrc.cancel()
                 }
             }
         }
+        stdoutSrc.resume()
+        self.stdoutSource = stdoutSrc
 
-        // Listen to stderr stream in background
-        let errPipe = self.stderrPipe
+        // Listen to stderr stream in background using DispatchSourceRead
+        let stderrFd = stderr.fileHandleForReading.fileDescriptor
+        _ = fcntl(stderrFd, F_SETFL, O_NONBLOCK)
+        let stderrSrc = DispatchSource.makeReadSource(fileDescriptor: stderrFd, queue: DispatchQueue.global())
         let serverNameForLogs = self.serverName
-        Task.detached { [weak self] in
-            guard let self = self, let pipe = errPipe else { return }
-            let handle = pipe.fileHandleForReading
-            while true {
-                do {
-                    guard let data = try handle.read(upToCount: 4096), !data.isEmpty else {
-                        break
-                    }
-                    let chunk = String(data: data, encoding: .utf8) ?? ""
-                    if !chunk.isEmpty {
-                        await self.logger.logToolEnd(
-                            name: "mcp:\(serverNameForLogs)",
-                            result: "stderr: \(chunk)",
-                            status: .failed("MCP stderr output")
-                        )
-                    }
-                } catch {
-                    break
+        
+        stderrSrc.setEventHandler { [weak stderrSrc] in
+            guard let stderrSrc = stderrSrc else { return }
+            let available = stderrSrc.data
+            guard available > 0 else {
+                stderrSrc.cancel()
+                return
+            }
+            if let data = try? stderr.fileHandleForReading.read(upToCount: Int(available)), !data.isEmpty {
+                if let logStr = String(data: data, encoding: .utf8) {
+                    print("📡 [MCP Server - \(serverNameForLogs) Stderr]: \(logStr)")
+                }
+            } else {
+                stderrSrc.cancel()
+            }
+        }
+        stderrSrc.resume()
+        self.stderrSource = stderrSrc
+        
+        try await performInitializeHandshake()
+    }
+    
+    private struct InitializeParams: Codable {
+        struct ClientInfo: Codable {
+            let name: String
+            let version: String
+        }
+        struct Capabilities: Codable {
+            var sampling: [String: AnyCodable]? = nil
+            var roots: [String: AnyCodable]? = nil
+        }
+        let protocolVersion: String
+        let capabilities: Capabilities
+        let clientInfo: ClientInfo
+    }
+    
+    private struct InitializeResult: Codable {
+        let protocolVersion: String
+        let capabilities: [String: AnyCodable]
+        let serverInfo: [String: AnyCodable]
+    }
+    
+    private func performInitializeHandshake() async throws {
+        let params = InitializeParams(
+            protocolVersion: "2024-11-05",
+            capabilities: InitializeParams.Capabilities(),
+            clientInfo: InitializeParams.ClientInfo(name: "ApexAgent", version: "1.0.0")
+        )
+        
+        let _: InitializeResult = try await sendRequestInternal(method: "initialize", params: params)
+        
+        let notification = JSONRPCNotification(method: "notifications/initialized")
+        let encoder = JSONEncoder()
+        let notifData = try encoder.encode(notification)
+        
+        guard let stdin = stdinPipe else {
+            throw MCPError.connectionFailed("Stdin pipe not available for initialized notification.")
+        }
+        
+        var fullData = notifData
+        fullData.append(10) // '\n'
+        
+        try stdin.fileHandleForWriting.write(contentsOf: fullData)
+    }
+    
+    private func startWithRetry() async throws {
+        var lastError: Error?
+        let delayBase = 0.5
+        for attempt in 0..<maxRetries {
+            do {
+                try await start()
+                let healthy = await ping()
+                if healthy {
+                    failureCount = 0
+                    circuitOpen = false
+                    return
+                } else {
+                    throw MCPError.connectionFailed("Ping health check failed.")
+                }
+            } catch {
+                lastError = error
+                stop()
+                if attempt < maxRetries - 1 {
+                    let delay = delayBase * pow(2.0, Double(attempt))
+                    try? await Task.sleep(for: .seconds(delay))
                 }
             }
         }
+        circuitOpen = true
+        throw lastError ?? MCPError.connectionFailed("Failed to connect after \(maxRetries) attempts.")
     }
 
     func stop() {
+        process?.terminationHandler = nil
         process?.terminate()
         process = nil
         stdinPipe = nil
         stdoutPipe = nil
         stderrPipe = nil
+        stdoutSource?.cancel()
+        stdoutSource = nil
+        stderrSource?.cancel()
+        stderrSource = nil
         for (_, continuation) in pendingRequests {
             continuation.resume(throwing: NSError(domain: "MCPClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Client stopped."]))
         }
@@ -195,7 +322,6 @@ actor MCPClient {
     }
 
     private func handleIncomingMessage(_ data: Data) {
-        // Parse incoming message. In JSON-RPC 2.0, standard responses have an `id` matching our request
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let id = json["id"] as? Int else {
             return
@@ -205,12 +331,97 @@ actor MCPClient {
             continuation.resume(returning: data)
         }
     }
+    
+    private func handleTermination(status: Int32) async {
+        guard status != 0 else { return } // normal exit
+        
+        let now = Date()
+        if now.timeIntervalSince(lastRestartTime) > 60 {
+            lastRestartTime = now
+            restartCountInWindow = 1
+        } else {
+            restartCountInWindow += 1
+        }
+        
+        if restartCountInWindow <= 3 {
+            await logger.logToolEnd(
+                name: "mcp:\(serverName)",
+                result: "MCP Server crashed (status \(status)). Attempting automatic restart...",
+                status: .failed("MCP Server crashed")
+            )
+            stop()
+            try? await startWithRetry()
+        } else {
+            await logger.logToolEnd(
+                name: "mcp:\(serverName)",
+                result: "MCP Server crashed (status \(status)) repeatedly. Supervision rate limit reached. Circuit opened.",
+                status: .failed("MCP Server repeatedly crashed")
+            )
+            circuitOpen = true
+            stop()
+        }
+    }
+    
+    private func registerAndWrite(id: Int, data: Data, stdin: Pipe) async throws -> Data {
+        return try await withCheckedThrowingContinuation { continuation in
+            self.pendingRequests[id] = continuation
+            do {
+                try stdin.fileHandleForWriting.write(contentsOf: data)
+            } catch {
+                self.pendingRequests.removeValue(forKey: id)
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+    
+    func ping() async -> Bool {
+        do {
+            let id = self.nextRequestId
+            self.nextRequestId += 1
+            let request = JSONRPCRequest(id: id, method: "tools/list", params: EmptyParams())
+            let encoder = JSONEncoder()
+            let requestData = try encoder.encode(request)
+            guard let stdin = self.stdinPipe else { return false }
+            var fullData = requestData
+            fullData.append(10)
+            
+            let dataToShare = fullData
+            let stdinToShare = stdin
+            let responseData = try await withThrowingTaskGroup(of: Data.self) { group in
+                group.addTask { [id, dataToShare, stdinToShare] in
+                    try await self.registerAndWrite(id: id, data: dataToShare, stdin: stdinToShare)
+                }
+                group.addTask {
+                    try await Task.sleep(for: .seconds(3))
+                    throw MCPError.timeout("Ping timeout")
+                }
+                guard let result = try await group.next() else {
+                    throw MCPError.timeout("Ping timeout")
+                }
+                group.cancelAll()
+                return result
+            }
+            let decoder = JSONDecoder()
+            let response = try decoder.decode(JSONRPCResponse<ToolsListResponse>.self, from: responseData)
+            return response.result != nil
+        } catch {
+            return false
+        }
+    }
 
     func sendRequest<Params: Codable, Result: Codable>(method: String, params: Params) async throws -> Result {
+        if circuitOpen {
+            throw MCPError.circuitOpen
+        }
+        
         if !isRunning() {
-            try await start()
+            try await startWithRetry()
         }
 
+        return try await sendRequestInternal(method: method, params: params)
+    }
+
+    private func sendRequestInternal<Params: Codable, Result: Codable>(method: String, params: Params) async throws -> Result {
         let id = nextRequestId
         nextRequestId += 1
 
@@ -219,32 +430,49 @@ actor MCPClient {
         let requestData = try encoder.encode(request)
 
         guard let stdin = stdinPipe else {
-            throw NSError(domain: "MCPClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Stdin pipe not available."])
+            throw MCPError.connectionFailed("Stdin pipe not available.")
         }
 
-        // Write the request data followed by newline
         var fullData = requestData
         fullData.append(10) // '\n'
-
-        let responseData: Data = try await withCheckedThrowingContinuation { continuation in
-            pendingRequests[id] = continuation
-
-            do {
-                try stdin.fileHandleForWriting.write(contentsOf: fullData)
-            } catch {
-                pendingRequests.removeValue(forKey: id)
-                continuation.resume(throwing: error)
+        let dataToShare = fullData
+        let stdinToShare = stdin
+        let responseData: Data = try await withThrowingTaskGroup(of: Data.self) { group in
+            group.addTask { [id, dataToShare, stdinToShare] in
+                try await self.registerAndWrite(id: id, data: dataToShare, stdin: stdinToShare)
             }
+            
+            group.addTask {
+                try await Task.sleep(for: .seconds(60))
+                throw MCPError.timeout("Request timed out after 60 seconds.")
+            }
+            
+            guard let resultData = try await group.next() else {
+                throw MCPError.timeout("Request timed out")
+            }
+            group.cancelAll()
+            return resultData
         }
 
         let decoder = JSONDecoder()
         let response = try decoder.decode(JSONRPCResponse<Result>.self, from: responseData)
         if let error = response.error {
-            throw NSError(domain: "MCPClient", code: error.code, userInfo: [NSLocalizedDescriptionKey: error.message])
+            failureCount += 1
+            if failureCount >= 3 {
+                circuitOpen = true
+            }
+            throw MCPError.protocolError(error.message)
         }
         guard let result = response.result else {
-            throw NSError(domain: "MCPClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Empty result from MCP server."])
+            failureCount += 1
+            if failureCount >= 3 {
+                circuitOpen = true
+            }
+            throw MCPError.protocolError("Empty result from MCP server.")
         }
+        
+        failureCount = 0
+        circuitOpen = false
         return result
     }
 

@@ -2,16 +2,17 @@ import AppKit
 import Foundation
 import SharedKit
 
+@MainActor
 /// Generates a real daily briefing from the Momentum Ecosystem AppGroup data bus.
 struct DailyBriefingTool {
     func run() async throws -> DailyBriefing {
-        let bus = AppGroupDataBus.shared
-        let taskData = try? JSONEncoder().encode(bus.sharedTasks)
+        let bus = await AppGroupDataBus.shared
+        let taskData = try await JSONEncoder().encode(await bus.sharedTasks)
         let briefing = DailyBriefing(
-            mood: bus.todayMood,
-            budgetAlertStatus: bus.budgetAlertStatus,
-            habitCompletionCount: bus.habitCompletionCount,
-            activePowerUp: bus.activePowerUp,
+            mood: await bus.todayMood,
+            budgetAlertStatus: await bus.budgetAlertStatus,
+            habitCompletionCount: await bus.habitCompletionCount,
+            activePowerUp: await bus.activePowerUp,
             taskTitlesData: taskData
         )
         return briefing

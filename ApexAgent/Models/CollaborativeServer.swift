@@ -12,13 +12,48 @@ class CollaborativeServer: NSObject, ObservableObject {
     @Published private(set) var isRunning = false
     @Published private(set) var port: UInt16 = 1337
     
+    // Token Bucket Rate Limiter
+    private struct TokenBucket {
+        var tokens: Double
+        var lastRefill: Date
+    }
+    private var rateLimiters: [String: TokenBucket] = [:]
+    private let rateLimiterLock = NSLock()
+    
+    // RBAC Policy
+    public struct PolicyRule: Codable, Sendable {
+        public var endpoint: String
+        public var requiredPermission: String
+    }
+    public struct Policy: Codable, Sendable {
+        public var rules: [PolicyRule]
+    }
+    public var policy = Policy(rules: [
+        PolicyRule(endpoint: "/api/state", requiredPermission: "read:state"),
+        PolicyRule(endpoint: "/api/screen", requiredPermission: "read:screen"),
+        PolicyRule(endpoint: "/", requiredPermission: "read:dashboard"),
+        PolicyRule(endpoint: "/index.html", requiredPermission: "read:dashboard")
+    ])
+    
+    override init() {
+        super.init()
+        let token = UserDefaults.standard.string(forKey: "apex.collabToken")
+        if token == nil || token?.isEmpty == true {
+            let newToken = UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(16).lowercased()
+            UserDefaults.standard.set(newToken, forKey: "apex.collabToken")
+        }
+    }
+    
     func start(port: UInt16 = 1337) {
         guard !isRunning else { return }
         self.port = port
         
         do {
+            let lanModeEnabled = UserDefaults.standard.bool(forKey: "apex.lanModeEnabled")
+            let bindHost = lanModeEnabled ? "0.0.0.0" : "127.0.0.1"
+            
             let parameters = NWParameters.tcp
-            parameters.requiredLocalEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host("127.0.0.1"), port: NWEndpoint.Port(rawValue: port)!)
+            parameters.requiredLocalEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(bindHost), port: NWEndpoint.Port(rawValue: port)!)
             let listener = try NWListener(using: parameters)
             self.listener = listener
             
@@ -63,7 +98,7 @@ class CollaborativeServer: NSObject, ObservableObject {
     }
     
     private func readRequest(connection: NWConnection) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 8192) { [weak self] data, context, isComplete, error in
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 1048576) { [weak self] data, context, isComplete, error in
             guard let self = self else { return }
             Task { @MainActor in
                 if let error = error {
@@ -74,6 +109,11 @@ class CollaborativeServer: NSObject, ObservableObject {
                 
                 guard let data = data, !data.isEmpty else {
                     connection.cancel()
+                    return
+                }
+                
+                if data.count > 1048576 {
+                    self.sendHTTPResponse(html: "Payload Too Large", status: "413 Payload Too Large", contentType: "text/plain", connection: connection)
                     return
                 }
                 
@@ -96,19 +136,93 @@ class CollaborativeServer: NSObject, ObservableObject {
             return
         }
         
-        let path = parts[1]
+        // Parse HTTP headers
+        var headers: [String: String] = [:]
+        for line in lines.dropFirst() {
+            if line.isEmpty { break }
+            let headerParts = line.split(separator: ":", maxSplits: 1).map { String($0).trimmingCharacters(in: .whitespaces) }
+            if headerParts.count == 2 {
+                headers[headerParts[0].lowercased()] = headerParts[1]
+            }
+        }
         
-        if path == "/" || path == "/index.html" {
+        let clientIP = getClientIP(connection: connection)
+        let path = parts[1]
+        let plainPath = path.split(separator: "?").first.map(String.init) ?? path
+        
+        // 1. Rate Limiting Check
+        if isRateLimited(clientIP: clientIP) {
+            logAccess(clientIP: clientIP, endpoint: plainPath, isAuthorized: false, decision: "Rate Limited (429)")
+            sendHTTPResponse(html: "Too Many Requests", status: "429 Too Many Requests", contentType: "text/plain", connection: connection)
+            return
+        }
+        
+        // Security Controls: Prevent DNS Rebinding and Cross-Site Request Forgery (CSRF) for non-LAN
+        let lanModeEnabled = UserDefaults.standard.bool(forKey: "apex.lanModeEnabled")
+        if !lanModeEnabled {
+            if let host = headers["host"] {
+                let allowedHosts = ["localhost:\(port)", "127.0.0.1:\(port)", "localhost", "127.0.0.1"]
+                let cleanHost = host.split(separator: "@").last.map(String.init) ?? host
+                if !allowedHosts.contains(cleanHost) {
+                    logAccess(clientIP: clientIP, endpoint: plainPath, isAuthorized: false, decision: "Forbidden Host Header (403)")
+                    sendHTTPResponse(html: "Forbidden: Unauthorized Host Header", status: "403 Forbidden", contentType: "text/plain", connection: connection)
+                    return
+                }
+            }
+            
+            if let origin = headers["origin"] {
+                let allowedOrigins = ["http://localhost:\(port)", "http://127.0.0.1:\(port)", "http://localhost", "http://127.0.0.1"]
+                if !allowedOrigins.contains(origin) {
+                    logAccess(clientIP: clientIP, endpoint: plainPath, isAuthorized: false, decision: "Forbidden Origin (403)")
+                    sendHTTPResponse(html: "Forbidden: Unauthorized Cross-Origin Request", status: "403 Forbidden", contentType: "text/plain", connection: connection)
+                    return
+                }
+            }
+        }
+        
+        // 2. Token Auth Extraction (from query params or header)
+        var queryToken: String? = nil
+        if let url = URL(string: "http://localhost" + path),
+           let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let tokenQuery = components.queryItems?.first(where: { $0.name == "token" }) {
+            queryToken = tokenQuery.value
+        }
+        
+        // 3. Authorization Check
+        let authorized = isAuthorized(headers: headers, queryToken: queryToken, connection: connection)
+        guard authorized else {
+            logAccess(clientIP: clientIP, endpoint: plainPath, isAuthorized: false, decision: "Unauthorized (401)")
+            sendHTTPResponse(html: "Unauthorized: Invalid or missing token", status: "401 Unauthorized", contentType: "text/plain", connection: connection)
+            return
+        }
+        
+        // 4. RBAC Policy Check
+        let rule = policy.rules.first(where: { $0.endpoint == plainPath })
+        let requiredPermission = rule?.requiredPermission
+        
+        if let requiredPerm = requiredPermission {
+            let requestToken = queryToken ?? headers["authorization"]?.dropFirst(7).trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if !hasPermission(token: requestToken, requiredPermission: requiredPerm) {
+                logAccess(clientIP: clientIP, endpoint: plainPath, isAuthorized: true, decision: "Forbidden (403): Missing permission \(requiredPerm)")
+                sendHTTPResponse(html: "Forbidden: Missing required permission \(requiredPerm)", status: "403 Forbidden", contentType: "text/plain", connection: connection)
+                return
+            }
+        }
+        
+        logAccess(clientIP: clientIP, endpoint: plainPath, isAuthorized: true, decision: "Allowed (200)")
+        
+        // Serve Endpoints
+        if plainPath == "/" || plainPath == "/index.html" {
             // Serve Dashboard HTML
             let html = getDashboardHTML()
             sendHTTPResponse(html: html, status: "200 OK", contentType: "text/html", connection: connection)
-        } else if path == "/api/state" {
+        } else if plainPath == "/api/state" {
             // Serve JSON State
             Task { @MainActor in
                 let json = await getJSONState()
                 sendHTTPResponse(html: json, status: "200 OK", contentType: "application/json", connection: connection)
             }
-        } else if path.starts(with: "/api/screen") {
+        } else if plainPath.starts(with: "/api/screen") {
             // Serve Screen Capture
             Task { @MainActor in
                 if let screenshot = ScreenStreamer.shared.getLatestFrame(),
@@ -122,6 +236,116 @@ class CollaborativeServer: NSObject, ObservableObject {
             }
         } else {
             sendHTTPResponse(html: "Not Found", status: "404 Not Found", contentType: "text/plain", connection: connection)
+        }
+    }
+    
+    func getClientIP(connection: NWConnection) -> String {
+        if case .hostPort(let host, _) = connection.endpoint {
+            let hostStr = "\(host)"
+            let cleanHost = hostStr.split(separator: "%").first.map(String.init) ?? hostStr
+            return cleanHost
+        }
+        return "unknown"
+    }
+
+    func isRateLimited(clientIP: String) -> Bool {
+        rateLimiterLock.lock()
+        defer { rateLimiterLock.unlock() }
+        
+        let now = Date()
+        let refillRate: Double = 10.0
+        let capacity: Double = 20.0
+        
+        var bucket = rateLimiters[clientIP] ?? TokenBucket(tokens: capacity, lastRefill: now)
+        let elapsed = now.timeIntervalSince(bucket.lastRefill)
+        bucket.tokens = min(capacity, bucket.tokens + elapsed * refillRate)
+        bucket.lastRefill = now
+        
+        if bucket.tokens >= 1.0 {
+            bucket.tokens -= 1.0
+            rateLimiters[clientIP] = bucket
+            return false
+        } else {
+            rateLimiters[clientIP] = bucket
+            return true
+        }
+    }
+
+    func isAuthorized(headers: [String: String], queryToken: String?, connection: NWConnection) -> Bool {
+        let lanModeEnabled = UserDefaults.standard.bool(forKey: "apex.lanModeEnabled")
+        let clientIP = getClientIP(connection: connection)
+        
+        if clientIP == "127.0.0.1" || clientIP == "::1" || clientIP == "localhost" || clientIP == "unknown" {
+            return true
+        }
+        
+        guard lanModeEnabled else {
+            return false
+        }
+        
+        let token = UserDefaults.standard.string(forKey: "apex.collabToken") ?? ""
+        guard !token.isEmpty else {
+            return false
+        }
+        
+        if let authHeader = headers["authorization"],
+           authHeader.lowercased().starts(with: "bearer ") {
+            let requestToken = authHeader.dropFirst(7).trimmingCharacters(in: .whitespacesAndNewlines)
+            return requestToken == token
+        }
+        
+        if let qToken = queryToken {
+            return qToken == token
+        }
+        
+        return false
+    }
+
+    private func hasPermission(token: String, requiredPermission: String) -> Bool {
+        let mainToken = UserDefaults.standard.string(forKey: "apex.collabToken") ?? ""
+        if !mainToken.isEmpty && token == mainToken {
+            return true
+        }
+        // Localhost/default bypass
+        if token.isEmpty {
+            return true
+        }
+        return false
+    }
+
+    private func logAccess(clientIP: String, endpoint: String, isAuthorized: Bool, decision: String) {
+        let fm = FileManager.default
+        let homeDir = fm.homeDirectoryForCurrentUser
+        let logsDir = homeDir.appendingPathComponent("Library/Logs/ApexAgent")
+        try? fm.createDirectory(at: logsDir, withIntermediateDirectories: true)
+        
+        let logFileURL = logsDir.appendingPathComponent("collab-access.log")
+        
+        let isoDate = ISO8601DateFormatter().string(from: Date())
+        let logEntry: [String: Any] = [
+            "timestamp": isoDate,
+            "clientIP": clientIP,
+            "endpoint": endpoint,
+            "isAuthorized": isAuthorized,
+            "decision": decision
+        ]
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: logEntry),
+              var jsonString = String(data: jsonData, encoding: .utf8) else {
+            return
+        }
+        jsonString.append("\n")
+        
+        if let data = jsonString.data(using: .utf8) {
+            if fm.fileExists(atPath: logFileURL.path) {
+                if let fileHandle = try? FileHandle(forWritingTo: logFileURL) {
+                    defer { try? fileHandle.close() }
+                    _ = try? fileHandle.seekToEnd()
+                    try? fileHandle.write(contentsOf: data)
+                }
+            } else {
+                try? data.write(to: logFileURL, options: .atomic)
+            }
         }
     }
     
@@ -605,9 +829,7 @@ class CollaborativeServer: NSObject, ObservableObject {
     // MARK: - JSON State Fetch
     
     private func getJSONState() async -> String {
-        guard let orchestrator = await AppDelegate.getSharedOrchestrator() else {
-            return "{}"
-        }
+        let orchestrator = MCPManager.shared.orchestrator
         
         let messages = orchestrator.messages.map { msg -> [String: Any] in
             let roleStr = switch msg.role {
@@ -655,7 +877,7 @@ class CollaborativeServer: NSObject, ObservableObject {
             return [
                 "name": name,
                 "description": entry.description,
-                "scriptPath": entry.scriptPath
+                "scriptPath": entry.scriptPath ?? ""
             ]
         }
         

@@ -34,7 +34,10 @@ final class ToolEventLoggerImpl: ToolEventLogger {
         oldContent: String?,
         newContent: String?,
         filePath: String?
-    ) async -> Bool { true }
+    ) async -> Bool {
+        // Default: deny dangerous actions when no orchestrator is wired for user confirmation
+        return false
+    }
     public func resolveConfirmation(approved: Bool) {}
 }
 

@@ -14,7 +14,7 @@ struct ToolActivityView: View {
                 Spacer()
                 if !orchestrator.toolEvents.isEmpty {
                     Button {
-                        orchestrator.toolEvents.removeAll()
+                        orchestrator.clearToolEvents()
                     } label: {
                         Image(systemName: "trash")
                             .font(.system(size: 11))
@@ -139,22 +139,27 @@ struct StatusIcon: View {
                 ProgressView()
                     .scaleEffect(0.5)
                     .frame(width: 14, height: 14)
+                    .accessibilityLabel("Running")
             case .success:
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 14))
                     .foregroundStyle(.green)
+                    .accessibilityLabel("Success")
             case .failed:
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 14))
                     .foregroundStyle(.red)
+                    .accessibilityLabel("Failed")
             case .awaitingConfirmation:
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 14))
                     .foregroundStyle(.orange)
+                    .accessibilityLabel("Awaiting confirmation")
             case .denied:
                 Image(systemName: "minus.circle.fill")
                     .font(.system(size: 14))
                     .foregroundStyle(.secondary)
+                    .accessibilityLabel("Denied")
             }
         }
         .frame(width: 14, height: 14)

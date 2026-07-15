@@ -39,8 +39,6 @@ struct MessageBubble: View {
 
 struct BubbleContent: View {
     let message: ChatMessage
-    @State private var isExpanded = true
-
     var isUser: Bool { message.role == .user }
 
     var body: some View {
@@ -74,7 +72,7 @@ struct BubbleContent: View {
                             .padding(.vertical, 10)
                             .background(
                                 LinearGradient(
-                                    colors: [Color.purple, Color.blue],
+                                    colors: [AppTheme.Palette.accent, Color.blue],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
@@ -143,21 +141,44 @@ struct MarkdownText: View {
         let type: BlockType
     }
 
-    func parseBlocks(_ content: String) -> [ContentBlock] {
-        var blocks: [ContentBlock] = []
-        let pattern = "```(\\w*)\\n([\\s\\S]*?)```"
+    private static let markdownRegex: NSRegularExpression = {
+        do {
+            return try NSRegularExpression(pattern: "```(\\w*)\n([\\s\\S]*?)```")
+        } catch {
+            // This pattern is static and known-good; if it somehow becomes invalid,
+            // fall back to an empty regex so parsing degrades gracefully instead of crashing.
+            return NSRegularExpression()
+        }
+    }()
+    private static let parseCache = NSCache<NSString, CachedBlocks>()
 
-        guard let regex = try? NSRegularExpression(pattern: pattern) else {
-            return [ContentBlock(type: .text(content))]
+    class CachedBlocks: NSObject {
+        let blocks: [ContentBlock]
+        init(_ blocks: [ContentBlock]) {
+            self.blocks = blocks
+        }
+    }
+
+    func parseBlocks(_ content: String) -> [ContentBlock] {
+        let cacheKey = content as NSString
+        if let cached = Self.parseCache.object(forKey: cacheKey) {
+            return cached.blocks
         }
 
-        let matches = regex.matches(in: content, range: NSRange(content.startIndex..., in: content))
+        var blocks: [ContentBlock] = []
+        let matches = Self.markdownRegex.matches(in: content, range: NSRange(content.startIndex..., in: content))
 
         var lastEnd = content.startIndex
 
         for match in matches {
+            guard let matchRange = Range(match.range, in: content),
+                  let langRange = Range(match.range(at: 1), in: content),
+                  let codeRange = Range(match.range(at: 2), in: content) else {
+                continue
+            }
+
             // Text before code block
-            let matchStart = Range(match.range, in: content)!.lowerBound
+            let matchStart = matchRange.lowerBound
             if lastEnd < matchStart {
                 let textSegment = String(content[lastEnd..<matchStart])
                 if !textSegment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -166,13 +187,11 @@ struct MarkdownText: View {
             }
 
             // Code block
-            let langRange = Range(match.range(at: 1), in: content)!
-            let codeRange = Range(match.range(at: 2), in: content)!
             let lang = String(content[langRange])
             let code = String(content[codeRange])
             blocks.append(ContentBlock(type: .code(lang, code)))
 
-            lastEnd = Range(match.range, in: content)!.upperBound
+            lastEnd = matchRange.upperBound
         }
 
         // Remaining text
@@ -187,6 +206,7 @@ struct MarkdownText: View {
             blocks.append(ContentBlock(type: .text(content)))
         }
 
+        Self.parseCache.setObject(CachedBlocks(blocks), forKey: cacheKey)
         return blocks
     }
 
@@ -206,6 +226,7 @@ struct CodeBlock: View {
     let code: String
     @State private var isCopied = false
     @State private var isHovered = false
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -229,6 +250,7 @@ struct CodeBlock: View {
                     HStack(spacing: 4) {
                         Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
                             .font(.system(size: 10))
+                            .accessibilityHidden(true)
                         Text(isCopied ? "Copied!" : "Copy")
                             .font(.system(size: 10, weight: .medium))
                     }
@@ -252,9 +274,11 @@ struct CodeBlock: View {
         }
         .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
         .clipShape(RoundedRectangle(cornerRadius: 8))
+        .focusable()
+        .focused($isFocused)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                .stroke(isFocused ? AppTheme.Palette.accent : Color(nsColor: .separatorColor), lineWidth: isFocused ? 2 : 0.5)
         )
     }
 }
@@ -266,9 +290,33 @@ struct BubbleShape: Shape {
     let radius: CGFloat = 18
 
     func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.addRoundedRect(in: rect, cornerSize: CGSize(width: radius, height: radius))
-        return path
+        let path = CGMutablePath()
+        
+        let minX = rect.minX
+        let minY = rect.minY
+        let maxX = rect.maxX
+        let maxY = rect.maxY
+        
+        let topLeft = radius
+        let topRight = radius
+        let bottomLeft = isUser ? radius : 4
+        let bottomRight = isUser ? 4 : radius
+        
+        path.move(to: CGPoint(x: minX + topLeft, y: minY))
+        
+        path.addLine(to: CGPoint(x: maxX - topRight, y: minY))
+        path.addArc(tangent1End: CGPoint(x: maxX, y: minY), tangent2End: CGPoint(x: maxX, y: minY + topRight), radius: topRight)
+        
+        path.addLine(to: CGPoint(x: maxX, y: maxY - bottomRight))
+        path.addArc(tangent1End: CGPoint(x: maxX, y: maxY), tangent2End: CGPoint(x: maxX - bottomRight, y: maxY), radius: bottomRight)
+        
+        path.addLine(to: CGPoint(x: minX + bottomLeft, y: maxY))
+        path.addArc(tangent1End: CGPoint(x: minX, y: maxY), tangent2End: CGPoint(x: minX, y: maxY - bottomLeft), radius: bottomLeft)
+        
+        path.addLine(to: CGPoint(x: minX, y: minY + topLeft))
+        path.addArc(tangent1End: CGPoint(x: minX, y: minY), tangent2End: CGPoint(x: minX + topLeft, y: minY), radius: topLeft)
+        
+        return Path(path)
     }
 }
 
@@ -281,7 +329,7 @@ struct TypingIndicator: View {
         HStack(spacing: 5) {
             ForEach(0..<3, id: \.self) { index in
                 Circle()
-                    .fill(Color.purple.opacity(0.6))
+                    .fill(AppTheme.Palette.accent.opacity(0.6))
                     .frame(width: 7, height: 7)
                     .scaleEffect(animating ? 1.0 : 0.5)
                     .animation(
@@ -305,7 +353,7 @@ struct AgentAvatar: View {
             Circle()
                 .fill(
                     LinearGradient(
-                        colors: [.purple, .blue],
+                        colors: [AppTheme.Palette.accent, .blue],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -314,6 +362,7 @@ struct AgentAvatar: View {
             Image(systemName: "bolt.fill")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.white)
+                .accessibilityHidden(true)
         }
     }
 }
@@ -329,6 +378,7 @@ struct UserAvatar: View {
             Image(systemName: "person.fill")
                 .font(.system(size: 13))
                 .foregroundStyle(.secondary)
+                .accessibilityHidden(true)
         }
     }
 }

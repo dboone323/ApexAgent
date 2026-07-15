@@ -1,4 +1,5 @@
 import SwiftUI
+import Accessibility
 
 struct DiagnosticsView: View {
     @Environment(\.dismiss) private var dismiss
@@ -71,6 +72,13 @@ struct DiagnosticsView: View {
             let items = await DiagnosticManager.runSelfCheck()
             self.results = items
             self.isRunning = false
+            
+            let failures = items.filter { $0.status == .fail }
+            if !failures.isEmpty {
+                let failureNames = failures.map { $0.name }.joined(separator: ", ")
+                let message = "Diagnostics completed. \(failures.count) check\(failures.count == 1 ? "" : "s") failed: \(failureNames)"
+                AccessibilityNotification.Announcement(message).post()
+            }
         }
     }
 }

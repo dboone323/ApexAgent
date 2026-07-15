@@ -33,8 +33,17 @@ struct SidebarView: View {
                     )
                     .contentShape(Rectangle())
                     .onTapGesture { onSelectConversation(conversation) }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            if let index = conversations.firstIndex(where: { $0.id == conversation.id }) {
+                                onDeleteConversations(IndexSet(integer: index))
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                        .accessibilityLabel("Delete conversation \(conversation.title.isEmpty ? "New Conversation" : conversation.title)")
+                    }
                 }
-                .onDelete(perform: onDeleteConversations)
             }
         }
         .listStyle(.plain)

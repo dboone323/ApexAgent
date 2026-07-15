@@ -17,10 +17,13 @@ enum AppTheme {
     }
 
     enum Palette {
-        static let accent = Color.purple
+        static let accent = Color.accentColor
         static let success = Color.green
         static let warning = Color.orange
         static let critical = Color.red
+        static let destructive = Color.red
+        static let info = Color.blue
+        static let disabled = Color.gray
         static let separator = Color(nsColor: .separatorColor)
         static let windowBackground = Color(nsColor: .windowBackgroundColor)
         static let controlBackground = Color(nsColor: .controlBackgroundColor)

@@ -123,7 +123,7 @@ struct SearchMemoryTool: Tool {
             return await MainActor.run {
                 let context = orchestrator.orchestrator.modelContext
 
-                var descriptor = FetchDescriptor<AgentMemory>(
+                let descriptor = FetchDescriptor<AgentMemory>(
                     sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
                 )
                 

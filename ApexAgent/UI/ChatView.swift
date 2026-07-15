@@ -6,13 +6,59 @@ import Foundation
 struct ChatView: View {
     @Environment(AgentOrchestrator.self) private var orchestrator
     @State private var inputText = ""
-    @State private var scrollProxy: ScrollViewProxy?
     @FocusState private var isInputFocused: Bool
+    
+    private var gatewayClient: ApexGatewayClient { ApexGatewayClient.shared }
+    
+    private var displayMessages: [ChatMessage] {
+        if gatewayClient.isConnected {
+            return gatewayClient.messages.map { msg in
+                let role: MessageRole
+                switch msg.role {
+                case .user: role = .user
+                case .assistant: role = .assistant
+                case .system: role = .system
+                }
+                let tools = msg.toolEvents.map { ev in
+                    var t = ToolEvent(toolName: ev.toolName, arguments: ev.arguments)
+                    t.result = ev.result
+                    t.status = {
+                        if ev.status.contains("running") { return .running }
+                        if ev.status.contains("failed") { return .failed(ev.result ?? "") }
+                        if ev.status.contains("denied") { return .denied }
+                        if ev.status.contains("awaitingConfirmation") { return .awaitingConfirmation }
+                        return .success
+                    }()
+                    return t
+                }
+                let images = msg.attachmentPNGs.compactMap { NSImage(data: $0) }
+                return ChatMessage(
+                    id: msg.id,
+                    role: role,
+                    content: msg.content,
+                    toolEvents: tools,
+                    timestamp: msg.timestamp,
+                    isStreaming: msg.isStreaming,
+                    attachments: images
+                )
+            }
+        } else {
+            return orchestrator.messages
+        }
+    }
+    
+    private var displayIsGenerating: Bool {
+        if gatewayClient.isConnected {
+            return gatewayClient.isGenerating
+        } else {
+            return orchestrator.isGenerating
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             // Generation state banner
-            if orchestrator.isGenerating {
+            if displayIsGenerating {
                 HStack(spacing: AppTheme.Spacing.sm) {
                     ProgressView()
                         .controlSize(.small)
@@ -36,12 +82,12 @@ struct ChatView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 16) {
-                        if orchestrator.messages.isEmpty {
+                        if displayMessages.isEmpty {
                             WelcomeView()
                                 .padding(.top, 80)
-                                .allowsHitTesting(!orchestrator.isGenerating)
+                                .allowsHitTesting(!displayIsGenerating)
                         } else {
-                            ForEach(orchestrator.messages) { message in
+                            ForEach(displayMessages) { message in
                                 MessageBubble(message: message)
                                     .id(message.id)
                                     .opacity(message.isStreaming ? 0.7 : 1.0)
@@ -55,13 +101,13 @@ struct ChatView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
-                    .allowsHitTesting(!orchestrator.isGenerating)
+                    .allowsHitTesting(!displayIsGenerating)
                 }
-                .onAppear { scrollProxy = proxy }
-                .onChange(of: orchestrator.messages.count) {
+                .accessibilityLabel("Conversation messages list")
+                .onChange(of: displayMessages.count) {
                     scrollToBottom(proxy: proxy)
                 }
-                .onChange(of: orchestrator.messages.last?.content) {
+                .onChange(of: displayMessages.last?.content) {
                     scrollToBottom(proxy: proxy)
                 }
             }
@@ -86,8 +132,11 @@ struct ChatView: View {
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy) {
-        withAnimation(.easeOut(duration: 0.2)) {
-            proxy.scrollTo("bottom", anchor: .bottom)
+        // Defer scrolling to avoid layout recursion when the view is already being laid out.
+        DispatchQueue.main.async {
+            withAnimation(.easeOut(duration: 0.2)) {
+                proxy.scrollTo("bottom", anchor: .bottom)
+            }
         }
     }
 }
@@ -98,7 +147,7 @@ struct WelcomeView: View {
     @Environment(AgentOrchestrator.self) private var orchestrator
 
     let suggestions: [(String, String, Color)] = [
-        ("terminal.fill", "What's using the most disk space?", .purple),
+        ("terminal.fill", "What's using the most disk space?", AppTheme.Palette.accent),
         ("safari.fill", "Search the web for WWDC 2026 highlights", .blue),
         ("folder.fill", "List my Downloads folder", .orange),
         ("applescript.fill", "Open the Calculator app", .green),
@@ -112,7 +161,7 @@ struct WelcomeView: View {
                     Circle()
                         .fill(
                             LinearGradient(
-                                colors: [.purple, .blue, .cyan],
+                                colors: [AppTheme.Palette.accent, .blue, .cyan],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -123,7 +172,7 @@ struct WelcomeView: View {
                         .font(.system(size: 32, weight: .bold))
                         .foregroundStyle(.white)
                 }
-                .shadow(color: .purple.opacity(0.4), radius: 16, y: 8)
+                .shadow(color: AppTheme.Palette.accent.opacity(0.4), radius: 16, y: 8)
 
                 VStack(spacing: 4) {
                     Text("Apex Agent")
@@ -199,7 +248,17 @@ struct ChatInputBar: View {
     @Binding var inputText: String
     @FocusState.Binding var isInputFocused: Bool
     @State private var isHovered = false
-    @StateObject private var voiceController = VoiceController.shared
+    @ObservedObject private var voiceController = VoiceController.shared
+    
+    private var gatewayClient: ApexGatewayClient { ApexGatewayClient.shared }
+    
+    private var displayIsGenerating: Bool {
+        if gatewayClient.isConnected {
+            return gatewayClient.isGenerating
+        } else {
+            return orchestrator.isGenerating
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -317,9 +376,9 @@ struct ChatInputBar: View {
                         .fill(Color(nsColor: .windowBackgroundColor))
                         .overlay(
                             RoundedRectangle(cornerRadius: 14)
-                                .stroke(isInputFocused ? Color.purple.opacity(0.6) : Color(nsColor: .separatorColor), lineWidth: 1)
+                                .stroke(isInputFocused ? AppTheme.Palette.accent.opacity(0.6) : Color(nsColor: .separatorColor), lineWidth: 1)
                         )
-                        .shadow(color: isInputFocused ? .purple.opacity(0.1) : .clear, radius: 6)
+                        .shadow(color: isInputFocused ? AppTheme.Palette.accent.opacity(0.1) : .clear, radius: 6)
                 )
                 // Drop Destination for Drag & Drop support
                 .onDrop(of: [.image, .fileURL], isTargeted: nil) { providers in
@@ -353,8 +412,14 @@ struct ChatInputBar: View {
                 }
 
                 // Send / Cancel button
-                if orchestrator.isGenerating {
-                    Button(action: { orchestrator.cancelGeneration() }) {
+                if displayIsGenerating {
+                    Button(action: {
+                        if gatewayClient.isConnected {
+                            gatewayClient.cancelGeneration()
+                        } else {
+                            orchestrator.cancelGeneration()
+                        }
+                    }) {
                         ZStack {
                             Circle()
                                 .fill(Color.red.opacity(0.15))
@@ -373,7 +438,7 @@ struct ChatInputBar: View {
                                 .fill(
                                     (inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && orchestrator.pendingAttachments.isEmpty)
                                     ? AnyShapeStyle(Color(nsColor: .tertiaryLabelColor).opacity(0.3))
-                                    : AnyShapeStyle(LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                    : AnyShapeStyle(LinearGradient(colors: [AppTheme.Palette.accent, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
                                 )
                                 .frame(width: 38, height: 38)
                             Image(systemName: "arrow.up")
@@ -395,9 +460,20 @@ struct ChatInputBar: View {
     private func send() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || !orchestrator.pendingAttachments.isEmpty else { return }
-        guard !orchestrator.isGenerating else { return }
+        guard !displayIsGenerating else { return }
         inputText = ""
-        orchestrator.sendMessage(text)
+        
+        if gatewayClient.isConnected {
+            let pngs = orchestrator.pendingAttachments.compactMap { img -> Data? in
+                guard let tiff = img.tiffRepresentation,
+                      let bitmap = NSBitmapImageRep(data: tiff) else { return nil }
+                return bitmap.representation(using: .png, properties: [:])
+            }
+            orchestrator.pendingAttachments = []
+            gatewayClient.sendMessage(text, attachments: pngs)
+        } else {
+            orchestrator.sendMessage(text)
+        }
     }
 
     private func attachImageFile() {

@@ -1,5 +1,7 @@
 import Foundation
 import Observation
+import SharedKit
+import AI
 
 struct MCPServerConfig: Codable, Identifiable, Equatable {
     var id = UUID()
@@ -13,11 +15,27 @@ struct MCPServerConfig: Codable, Identifiable, Equatable {
 final class MCPManager: OrchestratorProvider {
     static let shared = MCPManager()
     
+    var dataBus: AppGroupDataBus { AppGroupDataBus.shared }
+    var modelRouter: ModelRouter { ModelRouter.shared }
+    
     var servers: [MCPServerConfig] = []
     private var clients: [UUID: MCPClient] = [:]
     private var eventLogger: ToolEventLogger?
     
-    var orchestrator: AgentOrchestrator { AppDelegate.getSharedOrchestrator()! }
+    private var _orchestrator: AgentOrchestrator?
+    var orchestrator: AgentOrchestrator {
+        get {
+            if let o = _orchestrator {
+                return o
+            }
+            let fallback = AgentOrchestrator()
+            _orchestrator = fallback
+            return fallback
+        }
+        set {
+            _orchestrator = newValue
+        }
+    }
     
     private init() {
         loadConfigs()
@@ -28,20 +46,36 @@ final class MCPManager: OrchestratorProvider {
     }
     
     func loadConfigs() {
+        var loadedServers: [MCPServerConfig] = []
         if let data = UserDefaults.standard.data(forKey: "apex.mcpServers"),
            let decoded = try? JSONDecoder().decode([MCPServerConfig].self, from: data) {
-            self.servers = decoded
-        } else {
-            // Seed a default mock/filesystem server config if empty
-            self.servers = [
-                MCPServerConfig(
-                    name: "Filesystem MCP",
-                    command: "npx",
-                    arguments: ["-y", "@modelcontextprotocol/server-filesystem", "/Users/danielstevens/Developer/ApexAgent"]
-                )
-            ]
-            saveConfigs()
+            loadedServers = decoded
         }
+        
+        let defaultPath = "/Users/danielstevens/Developer/ApexAgent"
+        let finalPath = FileManager.default.fileExists(atPath: defaultPath) ? defaultPath : FileManager.default.currentDirectoryPath
+        
+        if !loadedServers.contains(where: { $0.name == "Filesystem MCP" }) {
+            loadedServers.append(MCPServerConfig(
+                name: "Filesystem MCP",
+                command: "npx",
+                arguments: ["-y", "@modelcontextprotocol/server-filesystem", finalPath]
+            ))
+        }
+        
+        // Clean up legacy npx-based Git MCP config
+        loadedServers.removeAll(where: { $0.name == "Git MCP" && $0.command == "npx" })
+        
+        if !loadedServers.contains(where: { $0.name == "Git MCP" }) {
+            loadedServers.append(MCPServerConfig(
+                name: "Git MCP",
+                command: "/Users/danielstevens/.local/bin/python3.11",
+                arguments: ["-m", "mcp_server_git", "--repository", finalPath]
+            ))
+        }
+        
+        self.servers = loadedServers
+        saveConfigs()
     }
     
     func saveConfigs() {
@@ -70,7 +104,7 @@ final class MCPManager: OrchestratorProvider {
         if let client = clients[config.id] {
             return client
         }
-        let logger = eventLogger ?? AppDelegate.getSharedOrchestrator() ?? ToolEventLoggerImpl()
+        let logger = eventLogger ?? self.orchestrator
         let client = MCPClient(serverName: config.name, command: config.command, arguments: config.arguments, logger: logger, orchestrator: self)
         clients[config.id] = client
         return client
