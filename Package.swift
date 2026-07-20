@@ -70,7 +70,6 @@ let package = Package(
             name: "ApexAgent",
             dependencies: [
                 "ApexAgentCore",
-                .product(name: "SharedKit", package: "shared-kit"),
                 .product(name: "AI", package: "shared-kit"),
                 .product(name: "MCPKit", package: "shared-kit"),
                 .product(name: "Containerization", package: "containerization"),
@@ -93,7 +92,6 @@ let package = Package(
             name: "ApexAgentTests",
             dependencies: [
                 "ApexAgentCore",
-                .product(name: "Sparkle", package: "Sparkle"),
             ],
             path: "ApexAgentTests",
             linkerSettings: [
@@ -120,7 +118,6 @@ let package = Package(
                 "ApexAgentCore",
                 .product(name: "Containerization", package: "containerization"),
                 .product(name: "ContainerizationOCI", package: "containerization"),
-                .product(name: "Sparkle", package: "Sparkle"),
             ],
             path: "ApexAgentContainerTests",
             linkerSettings: [
@@ -148,7 +145,6 @@ let package = Package(
             name: "ApexAgentIntelligenceTests",
             dependencies: [
                 "ApexAgentCore",
-                .product(name: "Sparkle", package: "Sparkle"),
             ],
             path: "ApexAgentIntelligenceTests",
             linkerSettings: [

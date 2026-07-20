@@ -16,7 +16,7 @@ public struct AgentTraceLog: Codable, Sendable, Identifiable {
     public let targetAgent: String
     public let action: String
     public let details: String
-    
+
     public init(id: UUID = UUID(), timestamp: Date = Date(), sourceAgent: String, targetAgent: String, action: String, details: String) {
         self.id = id
         self.timestamp = timestamp
@@ -74,7 +74,7 @@ enum AgentToolCallingMode: String, CaseIterable, Identifiable, Codable {
     case auto = "Auto"
     case required = "Required"
     case disabled = "Chat Only"
-    
+
     var id: String { self.rawValue }
 }
 
@@ -86,7 +86,7 @@ enum AgentModelPreference: String, CaseIterable, Identifiable, Codable {
     case cloudGemini = "Cloud Gemini"
     case localOllama = "Local Ollama"
     case hybrid = "Hybrid (On-Device + PCC Fallback)"
-    
+
     var id: String { self.rawValue }
 }
 
@@ -95,7 +95,7 @@ enum AgentModelPreference: String, CaseIterable, Identifiable, Codable {
 @Observable
 @MainActor
 public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
-    
+
 
     /// Check if Private Cloud Compute is available by verifying the process has the required entitlement.
     /// Returns false when running in CLI/test environments without code signing.
@@ -160,7 +160,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     // MARK: Private State
     public var onStateChanged: (() -> Void)?
     public var confirmationGateway: ((String, String, String) async -> Bool)?
-    
+
     private(set) var session: LanguageModelSession?
     @ObservationIgnored private nonisolated(unsafe) var currentTask: Task<Void, Never>?
     @ObservationIgnored private nonisolated(unsafe) var auditTask: Task<Void, Never>?
@@ -174,17 +174,25 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     init() {
         MCPManager.shared.orchestrator = self
         DynamicToolbox.shared.orchestrator = self
-        
+
         checkModelAvailability()
         resetSession()
-        
+
         // Initialize dynamic tool system
         DynamicToolbox.shared.loadTools()
+
+        #if DEBUG
+        // In tests, skip the long-lived FS watcher + proactive audit loop so the
+        // test helper process can exit. Only enabled when APEX_ENABLE_FS_WATCHER=1.
+        if getenv("APEX_ENABLE_FS_WATCHER").flatMap({ String(cString: $0) }) == "1" {
+            DynamicToolbox.shared.startWatcher()
+            startProactiveAudits()
+        }
+        #else
         DynamicToolbox.shared.startWatcher()
-        
-        // Start proactive workspace and project audits
         startProactiveAudits()
-        
+        #endif
+
         // Start collaborative server if enabled
         if UserDefaults.standard.bool(forKey: "apex.collaborativeServerEnabled") {
             let port = UserDefaults.standard.integer(forKey: "apex.collaborativeServerPort")
@@ -192,17 +200,22 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             CollaborativeServer.shared.start(port: portVal)
         }
     }
-    
+
     deinit {
         auditTask?.cancel()
         currentTask?.cancel()
         confirmationTimeoutTask?.cancel()
     }
-    
+
     private func startProactiveAudits() {
-        Task {
+        #if DEBUG
+        if getenv("APEX_ENABLE_FS_WATCHER").flatMap({ String(cString: $0) }) == "1" {
+            return
+        }
+        #endif
+        auditTask = Task {
             _ = await ProjectAuditor.shared.runWorkspaceAudit(at: "~/Developer/fleet")
-            
+
             while true {
                 guard !Task.isCancelled else { break }
                 try? await Task.sleep(for: .seconds(300))
@@ -296,19 +309,19 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         guard let permissions = self.permissions else {
             throw .pathViolation(path)
         }
-        
+
         let expanded = NSString(string: path).expandingTildeInPath
         let resolvedURL = URL(fileURLWithPath: expanded).resolvingSymlinksInPath()
         let standardized = resolvedURL.path
-        
+
         let fm = FileManager.default
         let homeDir = fm.homeDirectoryForCurrentUser.standardized.path
-        
+
         let desktopPath = (homeDir as NSString).appendingPathComponent("Desktop")
         let documentsPath = (homeDir as NSString).appendingPathComponent("Documents")
         let downloadsPath = (homeDir as NSString).appendingPathComponent("Downloads")
         let musicPath = (homeDir as NSString).appendingPathComponent("Music")
-        
+
         if !permissions.desktopFolderAllowed && (standardized == desktopPath || standardized.hasPrefix(desktopPath + "/")) {
             throw .desktopFolderRestricted
         }
@@ -324,19 +337,19 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         if accessSandboxBookmark(for: standardized) != nil {
             return
         }
-        
+
         // STRENGTHENED SANDBOX: Enforce workspace boundary checks
         let resolvedWorkspace = URL(fileURLWithPath: wsPath).resolvingSymlinksInPath().path
-        
+
         let isInWorkspace = standardized == resolvedWorkspace || standardized.hasPrefix(resolvedWorkspace + "/")
-        
+
         let tempDir = NSTemporaryDirectory()
         let resolvedTemp = URL(fileURLWithPath: tempDir).resolvingSymlinksInPath().path
         let isInTemp = standardized == resolvedTemp || standardized.hasPrefix(resolvedTemp + "/")
-        
+
         let skillsDir = (homeDir as NSString).appendingPathComponent(".apex/skills")
         let isInSkills = standardized == skillsDir || standardized.hasPrefix(skillsDir + "/")
-        
+
         if !isInWorkspace && !isInTemp && !isInSkills {
             throw .pathViolation(path)
         }
@@ -357,15 +370,15 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         guard let permissions = self.permissions else {
             return false
         }
-        
+
         let fm = FileManager.default
         let homeDir = fm.homeDirectoryForCurrentUser.standardized.path
-        
+
         let desktopPath = (homeDir as NSString).appendingPathComponent("Desktop")
         let documentsPath = (homeDir as NSString).appendingPathComponent("Documents")
         let downloadsPath = (homeDir as NSString).appendingPathComponent("Downloads")
         let musicPath = (homeDir as NSString).appendingPathComponent("Music")
-        
+
         if !permissions.desktopFolderAllowed && input.contains(desktopPath) {
             return false
         }
@@ -378,7 +391,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         if !permissions.musicFolderAllowed && input.contains(musicPath) {
             return false
         }
-        
+
         return true
     }
 
@@ -401,7 +414,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             print("🔍 RAG: Failed to generate query vector")
             return ""
         }
-        
+
         let descriptor = FetchDescriptor<AgentMemory>()
         guard let allMemories = try? context.fetch(descriptor) else {
             print("🔍 RAG: Failed to fetch memories")
@@ -411,7 +424,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         if allMemories.isEmpty {
             return ""
         }
-        
+
         var scoredMemories: [(AgentMemory, Double)] = []
         for memory in allMemories {
             guard let data = memory.embeddingData,
@@ -425,14 +438,14 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 scoredMemories.append((memory, score))
             }
         }
-        
+
         scoredMemories.sort { $0.1 > $1.1 }
-        
+
         let topMatches = scoredMemories.prefix(AgentOrchestrator.ragTopK)
         if topMatches.isEmpty {
             return ""
         }
-        
+
         var contextStr = "\n\n🧠 Related Long-term Memories:\n"
         for (memory, score) in topMatches {
             contextStr += "- [Memory topic: '\(memory.key)' (relevance: \(String(format: "%.2f", score)))]: \(memory.val)\n"
@@ -501,7 +514,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     private func rehydrateSession() {
     let instructions = multiAgentModeEnabled ? SupervisorPrompt.system : agentInstructions
-        
+
         // Rehydrate model session history using Transcript.Entry
         var transcriptEntries: [Transcript.Entry] = []
         let systemInstructions = Transcript.Instructions(
@@ -544,7 +557,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
         let model = resolveModelForSession()
         session = createSession(model: model, instructions: instructions, mode: mode, transcript: transcript)
-        
+
         session?.prewarm()
     }
 
@@ -675,11 +688,11 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             // 1. Asynchronously check and compact context if needed
             await compactContextIfNeeded()
             guard !Task.isCancelled else { return }
-            
+
             // 2. Hydrate/reset the model session with the compacted state
             resetSession()
             guard !Task.isCancelled else { return }
-            
+
             // 3. Launch the main response generation
             await runMessageGeneration(text: trimmedText)
         }
@@ -704,57 +717,62 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         let totalChars = messages.reduce(0) { $0 + $1.content.count }
         guard totalChars > AgentOrchestrator.contextCompactionThreshold else { return }
         guard messages.count > 5 else { return }
-        
+
+        print("[DIAG] compactContextIfNeeded start; totalChars=\(totalChars) count=\(messages.count)")
+
         let messagesToCompact = messages.dropLast(4)
         let remainingMessages = messages.suffix(4)
-        
+
         var compactionText = "Summarize the following chat history details and results concisely to preserve context:\n"
         for msg in messagesToCompact {
             let roleName = msg.role == .user ? "User" : "Assistant"
             compactionText += "[\(roleName)]: \(msg.content)\n\n"
         }
-        
+
         let model = createModelInstance()
         let session = createCompactionSession(model: model, instructions: "Summarize chat logs concisely. Focus on facts, status, file paths, and results.")
-        
+
         do {
             let stream = session.streamResponse(to: compactionText)
+            print("[DIAG] compaction stream started")
             var summary = ""
             for try await response in stream {
                 summary = response.content
             }
-            
+            print("[DIAG] compaction stream ended; summary.isEmpty=\(summary.isEmpty)")
+
             if !summary.isEmpty {
                 let summaryMsg = ChatMessage(role: .system, content: "Summary of earlier conversation:\n\(summary)")
                 var newMessages = [summaryMsg]
                 newMessages.append(contentsOf: remainingMessages)
                 self.messages = newMessages
-                
+
                 // Sync to SwiftData
                 if let conv = self.currentConversation, let context = self.modelContext {
                     let remainingIds = remainingMessages.map { $0.id }
-                    
+
                     // Filter the database messages to remove compacted ones
                     for dbMsg in conv.messages {
                         if !remainingIds.contains(dbMsg.id) {
                             context.delete(dbMsg)
                         }
                     }
-                    
+
                     // Add summary message to DB
                     let dbSummaryMsg = Message(role: .system, content: "Summary of earlier conversation:\n\(summary)")
                     dbSummaryMsg.conversation = conv
                     context.insert(dbSummaryMsg)
-                    
+
                     conv.updatedAt = Date()
                     saveContext(context)
                 }
-                
+
                 print("Context compacted successfully! Reduced message history size.")
             }
         } catch {
-            print("Failed to run background context compaction: \(error)")
+            print("[DIAG] compactContextIfNeeded error: \(error)")
         }
+        print("[DIAG] compactContextIfNeeded complete")
     }
 
     @MainActor
@@ -816,7 +834,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 if !self.proactiveAuditResult.isEmpty {
                     finalInstructions += "\n\n\(self.proactiveAuditResult)\nUse the above proactive audit report to suggest improvements, tasks, and fixes (e.g. missing tests or TODOs) when requested or appropriate."
                 }
-                
+
                 try await engine.streamResponse(
                     prompt: text,
                     attachments: userMsg.attachments,
@@ -885,10 +903,10 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     func cancelGeneration() {
         currentTask?.cancel()
         currentTask = nil
-        
+
         // Stop any active speech playback
         VoiceController.shared.stopSpeaking()
-        
+
         if let id = activeAssistantMessageId, let idx = messages.firstIndex(where: { $0.id == id }), messages[idx].isStreaming {
             messages[idx].isStreaming = false
             // Save partially generated message to SwiftData
@@ -929,12 +947,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         ptySessions[conversation.id]?.cleanup()
         ptySessions[conversation.id] = nil
         terminalOutputs[conversation.id] = nil
-        
+
         if let context = modelContext {
             context.delete(conversation)
             saveContext(context)
         }
-        
+
         if currentConversation?.id == conversation.id {
             startNewConversation()
         }
@@ -949,7 +967,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     }
 
     // MARK: - PTY Management
-    
+
     func ptySession(for conversationId: UUID) async -> PTYSession? {
         if let session = ptySessions[conversationId] {
             return session
@@ -1021,11 +1039,11 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
         throw NSError(domain: "AgentOrchestrator", code: -2, userInfo: [NSLocalizedDescriptionKey: "Unknown tool: \(name)"])
     }
-    
+
     @MainActor
     func runExplicitCodingWorkflow(topic: String) async throws -> String {
         let graph = StateGraph(name: "Explicit Coding & Review Pipeline")
-        
+
         // Add Codex (Developer) node
         graph.addNode(name: "Codex") { state in
             let developerTool = DelegateTaskTool(orchestrator: self)
@@ -1039,7 +1057,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 return .failure(error: error.localizedDescription, nextState: state)
             }
         }
-        
+
         // Add Auditor (Linter) node
         graph.addNode(name: "Auditor") { state in
             let linterTool = DelegateTaskTool(orchestrator: self)
@@ -1056,7 +1074,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 return .failure(error: error.localizedDescription, nextState: state)
             }
         }
-        
+
         // Add Nexus (Executor) node
         graph.addNode(name: "Nexus") { state in
             let executorTool = DelegateTaskTool(orchestrator: self)
@@ -1073,14 +1091,14 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 return .failure(error: error.localizedDescription, nextState: state)
             }
         }
-        
+
         graph.entryNode = "Codex"
-        
+
         // Codex passes -> go to Auditor to lint check
         graph.addEdge(from: "Codex") { output, isSuccess, state in
             return (isSuccess ? "Auditor" : nil, state)
         }
-        
+
         // Auditor passes -> go to Nexus to build; fails -> return to Codex to fix lint issues (limit loops to prevent infinite)
         graph.addEdge(from: "Auditor") { output, isSuccess, state in
             let loopCount = state.values["audit_loops"] as? Int ?? 0
@@ -1091,7 +1109,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             }
             return ("Nexus", nextState)
         }
-        
+
         // Nexus fails -> go back to Codex to fix build errors; passes -> terminate (success)
         graph.addEdge(from: "Nexus") { output, isSuccess, state in
             let loopCount = state.values["build_loops"] as? Int ?? 0
@@ -1102,16 +1120,16 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             }
             return (nil, nextState)
         }
-        
+
         // Append entry workflow announcement
         let startMsg = "🏁 Starting Explicit State-Graph Workflow: [Codex ➡️ Auditor ➡️ Nexus]"
         let chatMsg = ChatMessage(role: .assistant, content: startMsg)
         self.messages.append(chatMsg)
-        
+
         let finalState = try await graph.execute(initialState: StateGraphState()) { nodeName in
             print("StateGraph Transitioning to node: \(nodeName)")
         }
-        
+
         let finalLogs = finalState.values["logs"] as? String ?? "No logs generated."
         return finalLogs
     }
@@ -1119,15 +1137,15 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     public var orchestrator: AgentOrchestrator { self }
     public var dataBus: AppGroupDataBus { AppGroupDataBus.shared }
     public var modelRouter: ModelRouter { ModelRouter.shared }
-    
+
     // MARK: - ToolEventLogger Conformance
-    
+
     public func logToolStart(name: String, arguments: String) {
         activeTurnToolCallCount += 1
         let event = ToolEvent(toolName: name, arguments: arguments)
         logToolEvent(event)
     }
-    
+
     public func logToolEvent(_ event: ToolEvent) {
         toolEvents.insert(event, at: 0) // Most recent first
         // Limit to maxToolEventCount events
@@ -1135,25 +1153,25 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             toolEvents = Array(toolEvents.prefix(AgentOrchestrator.maxToolEventCount))
         }
     }
-    
+
     public func logToolEnd(name: String, result: String, status: ToolStatus) {
         if let index = toolEvents.firstIndex(where: { $0.toolName == name && $0.result == nil }) {
             toolEvents[index].result = result
             toolEvents[index].status = status
         }
     }
-    
+
     public func updateToolStatus(name: String, status: ToolStatus) {
         if let index = toolEvents.firstIndex(where: { $0.toolName == name && $0.result == nil }) {
             toolEvents[index].status = status
         }
     }
-    
+
     public func shouldConfirmTool(name: String) -> Bool {
         if requireConfirmationForAll { return true }
         return AgentOrchestrator.dangerousToolNames.contains(name)
     }
-    
+
     public func requestConfirmation(
         toolName: String,
         arguments: String,
@@ -1180,7 +1198,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 continuation: continuation
             )
             pendingConfirmation = request
-            
+
             // Auto-deny after timeout
             confirmationTimeoutTask = Task { [weak self] in
                 guard let self else { return }
@@ -1191,7 +1209,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             }
         }
     }
-    
+
     public func resolveConfirmation(approved: Bool) {
         confirmationTimeoutTask?.cancel()
         confirmationTimeoutTask = nil
@@ -1208,7 +1226,7 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
     let orchestrator: OrchestratorProvider
-    
+
     init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider) {
         self.instructions = instructions
         self.model = model
@@ -1245,7 +1263,7 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
     var body: some LanguageModelSession.DynamicProfile {
         LanguageModelSession.Profile {
             Instructions(instructions)
-            
+
             shellTool
             fileReadTool
             fileWriteTool

@@ -62,10 +62,14 @@ struct NativeAppleEngine: AgentEngine {
                 onUpdate(partialResponse.content)
             }
         } else {
+            print("[DIAG] NativeAppleEngine streamResponse start")
             let stream = session.streamResponse(to: promptWithContext, options: options)
+            var lastLogged = ""
             for try await partialResponse in stream {
+                lastLogged = partialResponse.content
                 onUpdate(partialResponse.content)
             }
+            print("[DIAG] NativeAppleEngine streamResponse end; lastCount=\(lastLogged.count)")
         }
     }
 }
@@ -85,7 +89,7 @@ func base64String(from image: NSImage) -> String? {
 @MainActor
 func getParsedSchemas() -> [[String: Any]] {
     var array: [[String: Any]] = []
-    
+
     // Extract dynamic schemas from all active tools
     let orchestrator = MCPManager.shared.orchestrator
     for tool in orchestrator.allTools {
@@ -95,7 +99,7 @@ func getParsedSchemas() -> [[String: Any]] {
             array.append(dict)
         }
     }
-    
+
     // Fall back to the bundled static schemas if dynamic extraction is empty
     if array.isEmpty {
         if let url = Bundle.module.url(forResource: "ToolSchemas.json", withExtension: nil),
@@ -104,7 +108,7 @@ func getParsedSchemas() -> [[String: Any]] {
             array = staticList
         }
     }
-    
+
     // Inject dynamic tools from toolbox
     let dynamicSchemas = DynamicToolbox.shared.dynamicTools.values.map { $0.schema }
     array.append(contentsOf: dynamicSchemas)
@@ -114,7 +118,7 @@ func getParsedSchemas() -> [[String: Any]] {
 @MainActor
 func getParsedGeminiFunctionDeclarations() -> [[String: Any]] {
     let schemas = getParsedSchemas()
-    
+
     // Gemini wants uppercase types for properties, e.g. "STRING", "INTEGER", "BOOLEAN", "OBJECT"
     func convertTypesUppercase(_ dict: [String: Any]) -> [String: Any] {
         var copy = dict

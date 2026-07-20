@@ -39,7 +39,7 @@ struct ScreenshotTool: Tool {
             guard isScreenAllowed else {
                 return "ERROR: Screen Recording check is disabled in Settings."
             }
-            
+
             let isDesktopAllowed = DispatchQueue.main.sync {
                 self.orchestrator.orchestrator.permissions?.desktopFolderAllowed ?? false
             }
@@ -95,7 +95,12 @@ struct ScreenshotTool: Tool {
 
             do {
                 try process.run()
+                let screenshotWatchdog = Task {
+                    try? await Task.sleep(nanoseconds: 10_000_000_000)
+                    if process.isRunning { process.terminate() }
+                }
                 process.waitUntilExit()
+                screenshotWatchdog.cancel()
             } catch {
                 return "ERROR: Could not run screencapture: \(error.localizedDescription)"
             }

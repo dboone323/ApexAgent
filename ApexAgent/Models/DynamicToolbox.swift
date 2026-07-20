@@ -3,9 +3,9 @@ import Foundation
 @MainActor
 class DynamicToolbox {
     static let shared = DynamicToolbox()
-    
+
     var orchestrator: OrchestratorProvider?
-    
+
     struct DynamicToolEntry {
         let name: String
         let description: String
@@ -13,56 +13,61 @@ class DynamicToolbox {
         let schema: [String: Any]
         let mcpServerId: UUID? // nil for script-based tools
     }
-    
+
     private(set) var dynamicTools: [String: DynamicToolEntry] = [:]
-    
+
     private var dirDescriptor: Int32 = -1
     private var watcherSource: DispatchSourceFileSystemObject?
     private var loadMCPToolsTask: Task<Void, Never>?
-    
+
     func loadTools() {
         dynamicTools.removeAll()
-        
+
         let fileManager = FileManager.default
         let homeDir = fileManager.homeDirectoryForCurrentUser
         let toolsDir = homeDir.appendingPathComponent(".apex/tools")
         let skillsDir = homeDir.appendingPathComponent(".apex/skills")
-        
+
         // Ensure directories exist
         for dir in [toolsDir, skillsDir] {
             if !fileManager.fileExists(atPath: dir.path) {
                 try? fileManager.createDirectory(at: dir, withIntermediateDirectories: true, attributes: nil)
             }
         }
-        
+
         // 1. Load custom tools
         loadScriptsFromDir(toolsDir)
-        
+
         // 2. Load dynamically created skills
         loadScriptsFromDir(skillsDir)
-        
-        // 3. Load MCP tools asynchronously
+
+        // 3. Load MCP tools asynchronously (skipped in test mode so MCP child
+        // processes don't keep the test helper resident; driven by APEX_DISABLE_FS_WATCHER=1)
         loadMCPToolsTask?.cancel()
-        loadMCPToolsTask = Task {
-            await loadMCPTools()
+        #if DEBUG
+        if getenv("APEX_ENABLE_FS_WATCHER").flatMap({ String(cString: $0) }) != "1" {
+            loadMCPToolsTask = Task { await loadMCPTools() }
         }
+        #else
+        loadMCPToolsTask = Task { await loadMCPTools() }
+        #endif
     }
-    
+
     private func loadScriptsFromDir(_ dir: URL) {
         let fileManager = FileManager.default
         guard let files = try? fileManager.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else {
             return
         }
-        
+
         for file in files {
             guard file.pathExtension == "json" || file.pathExtension == "yaml" || file.pathExtension == "yml" else {
                 continue
             }
-            
+
             guard let content = try? String(contentsOf: file, encoding: .utf8) else {
                 continue
             }
-            
+
             var manifest: [String: Any]?
             if file.pathExtension == "json" {
                 if let data = content.data(using: .utf8) {
@@ -71,17 +76,17 @@ class DynamicToolbox {
             } else {
                 manifest = parseYAML(content)
             }
-            
+
             guard let parsed = manifest,
                   let name = parsed["name"] as? String,
                   let scriptPath = parsed["script_path"] as? String else {
                 continue
             }
-            
+
             // Clean schema for LLM (removing script_path)
             var llmSchema = parsed
             llmSchema.removeValue(forKey: "script_path")
-            
+
             let entry = DynamicToolEntry(
                 name: name,
                 description: parsed["description"] as? String ?? "",
@@ -93,11 +98,11 @@ class DynamicToolbox {
             print("Loaded dynamic script tool: \(name) -> \(scriptPath)")
         }
     }
-    
+
     func loadMCPTools() async {
         // Filter out existing MCP tools from registry before reloading
         dynamicTools = dynamicTools.filter { $0.value.mcpServerId == nil }
-        
+
         for config in MCPManager.shared.servers {
             if Task.isCancelled { return }
             let client = MCPManager.shared.getClient(for: config)
@@ -116,7 +121,7 @@ class DynamicToolbox {
                             ]
                         }
                     }
-                    
+
                     let schema: [String: Any] = [
                         "name": tool.name,
                         "description": tool.description ?? "",
@@ -126,7 +131,7 @@ class DynamicToolbox {
                             "required": tool.inputSchema.required ?? []
                         ]
                     ]
-                    
+
                     let entry = DynamicToolEntry(
                         name: tool.name,
                         description: tool.description ?? "",
@@ -142,33 +147,33 @@ class DynamicToolbox {
             }
         }
     }
-    
+
     func startWatcher() {
         stopWatcher()
-        
+
         let fileManager = FileManager.default
         let homeDir = fileManager.homeDirectoryForCurrentUser
         let toolsDir = homeDir.appendingPathComponent(".apex/tools")
-        
+
         if !fileManager.fileExists(atPath: toolsDir.path) {
             try? fileManager.createDirectory(at: toolsDir, withIntermediateDirectories: true, attributes: nil)
         }
-        
+
         dirDescriptor = open(toolsDir.path, O_EVTONLY)
         guard dirDescriptor >= 0 else { return }
-        
+
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: dirDescriptor,
             eventMask: .write,
             queue: DispatchQueue.main
         )
-        
+
         source.setEventHandler { [weak self] in
             guard let self = self else { return }
             print("Directory watcher triggered for ~/.apex/tools - reloading dynamic tools.")
             self.loadTools()
         }
-        
+
         source.setCancelHandler { [weak self] in
             guard let self = self else { return }
             if self.dirDescriptor >= 0 {
@@ -176,32 +181,32 @@ class DynamicToolbox {
                 self.dirDescriptor = -1
             }
         }
-        
+
         self.watcherSource = source
         source.resume()
     }
-    
+
     func stopWatcher() {
         watcherSource?.cancel()
         watcherSource = nil
     }
-    
+
     func executeTool(name: String, jsonArguments: String) async throws -> String {
         guard let tool = dynamicTools[name] else {
             throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Tool \(name) not found in dynamic tools"])
         }
-        
+
         if let mcpServerId = tool.mcpServerId {
             guard let config = MCPManager.shared.servers.first(where: { $0.id == mcpServerId }) else {
                 throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "MCP Server config not found"])
             }
             let client = MCPManager.shared.getClient(for: config)
-            
+
             guard let data = jsonArguments.data(using: .utf8),
                   let argsDict = try? JSONDecoder().decode([String: AnyCodable].self, from: data) else {
                 throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON arguments for tool \(name)"])
             }
-            
+
             let result = try await client.callTool(name: name, arguments: argsDict)
             let texts = result.content.compactMap { $0.text }
             if result.isError == true {
@@ -209,23 +214,23 @@ class DynamicToolbox {
             }
             return texts.joined(separator: "\n")
         }
-        
+
         guard let scriptPath = tool.scriptPath else {
             throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Tool \(name) missing execution path"])
         }
-        
+
         let isRestricted = orchestrator?.orchestrator.isFolderAccessRestricted() ?? false
-        
+
         return try await Task.detached(priority: .userInitiated) {
             let resolvedPath = (scriptPath as NSString).expandingTildeInPath
-            
+
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/zsh")
             process.arguments = ["-c", "\(resolvedPath)"]
-            
+
             var env = ProcessInfo.processInfo.environment
             env["APEX_ARGS"] = jsonArguments
-            
+
             if isRestricted {
                 let fm = FileManager.default
                 let homeDir = fm.homeDirectoryForCurrentUser
@@ -233,32 +238,32 @@ class DynamicToolbox {
                 try? fm.createDirectory(at: sandboxDir, withIntermediateDirectories: true)
                 env["HOME"] = sandboxDir.path
             }
-            
+
             process.environment = env
-            
+
             let outputPipe = Pipe()
             let errorPipe = Pipe()
             process.standardOutput = outputPipe
             process.standardError = errorPipe
-            
+
             let inputPipe = Pipe()
             process.standardInput = inputPipe
-            
+
             try process.run()
-            
+
             if let data = jsonArguments.data(using: .utf8) {
                 try? inputPipe.fileHandleForWriting.write(contentsOf: data)
             }
             try? inputPipe.fileHandleForWriting.close()
-            
+
             let outputData = try outputPipe.fileHandleForReading.readToEnd() ?? Data()
             let errorData = try errorPipe.fileHandleForReading.readToEnd() ?? Data()
-            
+
             process.waitUntilExit()
-            
+
             let outputStr = String(data: outputData, encoding: .utf8) ?? ""
             let errorStr = String(data: errorData, encoding: .utf8) ?? ""
-            
+
             if process.terminationStatus == 0 {
                 return outputStr
             } else {
@@ -266,21 +271,21 @@ class DynamicToolbox {
             }
         }.value
     }
-    
+
     private func parseYAML(_ text: String) -> [String: Any]? {
         var dict: [String: Any] = [:]
         let lines = text.components(separatedBy: .newlines)
-        
+
         var parameterLines: [String] = []
         var inParameters = false
-        
+
         for line in lines {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
-            
+
             let nsLine = line as NSString
             let leadingSpaces = nsLine.range(of: "^\\s*", options: .regularExpression).length
-            
+
             if leadingSpaces == 0 {
                 inParameters = false
                 let parts = trimmed.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: true)
@@ -301,21 +306,21 @@ class DynamicToolbox {
                 parameterLines.append(line)
             }
         }
-        
+
         if !parameterLines.isEmpty {
             var parametersDict: [String: Any] = ["type": "object", "properties": [String: Any]()]
             var properties: [String: Any] = [:]
             var required: [String] = []
-            
+
             var currentProp: String? = nil
             var propDict: [String: Any] = [:]
-            
+
             for pLine in parameterLines {
                 let pTrimmed = pLine.trimmingCharacters(in: .whitespaces)
                 let parts = pTrimmed.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: true)
                 guard parts.count >= 1 else { continue }
                 let key = parts[0].trimmingCharacters(in: .whitespaces)
-                
+
                 if key == "properties" { continue }
                 if key == "required" {
                     if parts.count == 2 {
@@ -328,10 +333,10 @@ class DynamicToolbox {
                     }
                     continue
                 }
-                
+
                 let nsPLine = pLine as NSString
                 let spaces = nsPLine.range(of: "^\\s*", options: .regularExpression).length
-                
+
                 if spaces == 4 { // Property name
                     if let prevProp = currentProp {
                         properties[prevProp] = propDict
@@ -355,10 +360,10 @@ class DynamicToolbox {
             }
             dict["parameters"] = parametersDict
         }
-        
+
         return dict
     }
-    
+
     #if DEBUG
     func registerToolForTesting(name: String, entry: DynamicToolEntry) {
         dynamicTools[name] = entry
