@@ -1,0 +1,47 @@
+name: Swift CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: swift-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test (Xcode 27)
+    runs-on: xcode-27
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Install Git LFS
+        # shared-kit is an LFS-backed repo; the dependency fetch fails without it.
+        run: |
+          if ! command -v git-lfs >/dev/null 2>&1; then
+            brew install git-lfs || true
+          fi
+          git lfs install
+
+      - name: Select Xcode 27
+        run: sudo xcode-select -s /Applications/Xcode_27.app || true
+
+      - name: Toolchain info
+        run: xcodebuild -version && swift --version
+
+      - name: Build (release)
+        run: swift build -c release
+
+      - name: Test (release)
+        # Skip tests that hang on headless CI:
+        #  - testBrowserAutomation: requires a live WebView (WebKit)
+        #  - testRealToolsGrepAndGitMCP: spawns a git MCP subprocess that never terminates under CI
+        run: swift test -c release --skip testBrowserAutomation --skip testRealToolsGrepAndGitMCP --parallel

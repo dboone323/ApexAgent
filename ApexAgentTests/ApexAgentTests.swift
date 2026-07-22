@@ -384,8 +384,12 @@ class MockToolEventLogger: ToolEventLogger {
     @Test func testVoiceControllerPlayback() {
         let voiceController = VoiceController.shared
         #expect(voiceController != nil)
-        
+
+        // Real-path assertion: speak() must synchronously enqueue an utterance and
+        // flip isSpeaking to true. A no-op implementation would leave it false.
         voiceController.speak("Testing voice playback setup.")
+        #expect(voiceController.isSpeaking, "speak() should mark the controller as speaking immediately")
+
         voiceController.stopSpeaking()
         #expect(!(voiceController.isSpeaking))
     }
@@ -427,7 +431,7 @@ class MockToolEventLogger: ToolEventLogger {
     }
 
     @MainActor
-    @Test func testCollaborativeServerEndpoints() async throws {
+    @Test func testCollaborativeServerHTTPEndpoints() async throws {
         let server = CollaborativeServer()
         server.start(port: 1338)
         #expect(server.port == 1338)
@@ -627,11 +631,21 @@ class MockToolEventLogger: ToolEventLogger {
         await compactTask.value
         timeoutTask.cancel()
         
-        // If compaction succeeds (decreases count), verify SwiftData database is in sync
-        if orchestrator.messages.count < 10 {
-            #expect(conv.messages.count == orchestrator.messages.count)
-            #expect(orchestrator.messages.contains(where: { $0.role == .system }))
-            #expect(conv.messages.contains(where: { $0.role == .system }))
+        // The compaction must complete without throwing and leave a consistent state.
+        // If compaction actually ran (count dropped), the SwiftData DB must stay in sync
+        // and a system message must be present. If the model was not resident and
+        // compaction was a no-op, the message count must remain exactly what we inserted
+        // (10) — a silent partial state is a failure, not a pass.
+        let finalCount = orchestrator.messages.count
+        #expect(finalCount >= 1 && finalCount <= 10, "Message count must be sane after compaction, got \(finalCount)")
+        
+        if finalCount < 10 {
+            #expect(conv.messages.count == finalCount, "SwiftData must mirror in-memory message count after compaction")
+            #expect(orchestrator.messages.contains(where: { $0.role == .system }), "Compaction should inject a system summary message")
+            #expect(conv.messages.contains(where: { $0.role == .system }), "SwiftData must mirror the system summary message")
+        } else {
+            #expect(finalCount == 10, "When compaction is a no-op, the original 10 messages must be preserved exactly")
+            #expect(conv.messages.count == 10, "SwiftData must preserve all 10 messages when compaction is a no-op")
         }
         
         print("Completed compactContextIfNeeded test execution.")
@@ -731,7 +745,11 @@ class MockToolEventLogger: ToolEventLogger {
             subtitle: "Test Subtitle"
         )
         let result = try await tool.call(arguments: args)
-        #expect(result.contains("Notification sent") || result.contains("ERROR"))
+        // The tool either delivers (real path) or is bypassed in test mode. It must
+        // NEVER report ERROR (permission failure / crash) and still pass — that would
+        // be a false green.
+        #expect(result.contains("Notification sent"), "Expected delivery or test-mode bypass, got: \(result)")
+        #expect(!(result.contains("ERROR")), "Notification tool reported an error but the test still passed: \(result)")
     }
     
     @MainActor
