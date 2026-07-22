@@ -10,7 +10,11 @@ let package = Package(
         .executable(name: "ApexAgent", targets: ["ApexAgent"])
     ],
     dependencies: [
-        .package(url: "https://github.com/dboone323/shared-kit.git", branch: "main"),
+        // shared-kit modules are now INLINED as local targets under Modules/
+        // (see SharedLogging/SharedModels/Utilities/AI/MCPKit/SharedKit below).
+        // The external github.com/dboone323/shared-kit dependency was removed to
+        // make ApexAgent fully self-contained (no cross-repo coupling, no LFS,
+        // no separate CI). shared-kit was pure-Foundation, so this is a clean lift.
         .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0"),
         // Container runtime — pinned to 1.0 stable (June 2026 release)
         .package(url: "https://github.com/apple/containerization.git", branch: "main"),
@@ -22,6 +26,49 @@ let package = Package(
     ],
     targets: [
         // ─────────────────────────────────────────────────────────────────────
+        // INLINED shared-kit modules (formerly github.com/dboone323/shared-kit).
+        // Pure-Foundation, ~1,800 LOC. Kept as separate local targets so the
+        // existing `import SharedKit / AI / MCPKit / SharedModels` statements in
+        // app + test sources compile unchanged. Dependency graph mirrors the
+        // original package exactly. SharedUI was unused and intentionally dropped.
+        // ─────────────────────────────────────────────────────────────────────
+        .target(
+            name: "SharedLogging",
+            path: "Modules/SharedLogging",
+            swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
+        ),
+        .target(
+            name: "SharedModels",
+            dependencies: ["SharedLogging"],
+            path: "Modules/SharedModels",
+            swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
+        ),
+        .target(
+            name: "Utilities",
+            dependencies: ["SharedLogging", "SharedModels"],
+            path: "Modules/Utilities",
+            swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
+        ),
+        .target(
+            name: "AI",
+            dependencies: ["SharedLogging", "SharedModels"],
+            path: "Modules/AI",
+            swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
+        ),
+        .target(
+            name: "MCPKit",
+            dependencies: ["SharedLogging", "AI"],
+            path: "Modules/MCPKit",
+            swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
+        ),
+        .target(
+            name: "SharedKit",
+            dependencies: ["SharedModels", "SharedLogging", "Utilities"],
+            path: "Modules/SharedKit",
+            swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
+        ),
+
+        // ─────────────────────────────────────────────────────────────────────
         // ApexAgentCore: All app logic EXCEPT the container runtime itself.
         //
         // Deliberately does NOT depend on Containerization so that the
@@ -32,9 +79,9 @@ let package = Package(
         .target(
             name: "ApexAgentCore",
             dependencies: [
-                .product(name: "SharedKit", package: "shared-kit"),
-                .product(name: "AI", package: "shared-kit"),
-                .product(name: "MCPKit", package: "shared-kit"),
+                "SharedKit",
+                "AI",
+                "MCPKit",
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
@@ -70,8 +117,8 @@ let package = Package(
             name: "ApexAgent",
             dependencies: [
                 "ApexAgentCore",
-                .product(name: "AI", package: "shared-kit"),
-                .product(name: "MCPKit", package: "shared-kit"),
+                "AI",
+                "MCPKit",
                 .product(name: "Containerization", package: "containerization"),
                 .product(name: "ContainerizationOCI", package: "containerization"),
             ],
