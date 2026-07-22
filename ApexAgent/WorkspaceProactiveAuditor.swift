@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import SharedKit
+import os
 
 public actor WorkspaceProactiveAuditor {
     public static let shared = WorkspaceProactiveAuditor()
@@ -34,6 +35,11 @@ public actor WorkspaceProactiveAuditor {
         // Fall back to home directory Developer folder
         let devPath = NSHomeDirectory() + "/Developer"
         if FileManager.default.fileExists(atPath: devPath) {
+            // Explicit warning: relying on the implicit ~/Developer fallback means the
+            // workspace was not explicitly configured. Set apex.workspacePath or APEX_WORKSPACE
+            // to make the audited scope unambiguous.
+            let logger = Logger(subsystem: "com.apex.agent", category: "WorkspaceProactiveAuditor")
+            logger.warning("WorkspaceProactiveAuditor falling back to implicit path \(devPath). Set apex.workspacePath (UserDefaults) or APEX_WORKSPACE to pin the audited workspace explicitly.")
             return devPath
         }
         // Last resort: process working directory
