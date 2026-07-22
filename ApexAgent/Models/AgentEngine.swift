@@ -102,7 +102,7 @@ func getParsedSchemas() -> [[String: Any]] {
 
     // Fall back to the bundled static schemas if dynamic extraction is empty
     if array.isEmpty {
-        if let url = Bundle.module.url(forResource: "ToolSchemas.json", withExtension: nil),
+        if let url = Bundle.main.url(forResource: "ToolSchemas", withExtension: "json"),
            let data = try? Data(contentsOf: url),
            let staticList = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
             array = staticList
