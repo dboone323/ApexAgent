@@ -10,7 +10,7 @@ let package = Package(
         .executable(name: "ApexAgent", targets: ["ApexAgent"])
     ],
     dependencies: [
-        .package(path: "../packages/shared-kit"),
+        .package(url: "https://github.com/dboone323/shared-kit.git", branch: "main"),
         .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0"),
         // Container runtime — pinned to 1.0 stable (June 2026 release)
         .package(url: "https://github.com/apple/containerization.git", branch: "main"),
