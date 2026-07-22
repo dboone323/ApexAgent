@@ -8,7 +8,6 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 import SharedKit
-import AI
 
 @main
 @MainActor
@@ -71,9 +70,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
     }
     var dataBus: AppGroupDataBus {
         return AppGroupDataBus.shared
-    }
-    var modelRouter: ModelRouter {
-        return ModelRouter.shared
     }
     var statusItem: NSStatusItem?
     var quickPromptPanel: QuickPromptPanel?

@@ -20,17 +20,16 @@ let package = Package(
         .package(url: "https://github.com/apple/containerization.git", branch: "main"),
         // Explicitly declare transitive Apple infrastructure packages
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.0"),
-        .package(url: "https://github.com/apple/swift-async-algorithms.git", from: "1.0.0"),
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.4.0"),
-        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.0.0"),
     ],
     targets: [
         // ─────────────────────────────────────────────────────────────────────
         // INLINED shared-kit modules (formerly github.com/dboone323/shared-kit).
         // Pure-Foundation, ~1,800 LOC. Kept as separate local targets so the
-        // existing `import SharedKit / AI / MCPKit / SharedModels` statements in
+        // existing `import SharedKit / MCPKit / SharedModels` statements in
         // app + test sources compile unchanged. Dependency graph mirrors the
-        // original package exactly. SharedUI was unused and intentionally dropped.
+        // original package exactly. SharedUI was unused and intentionally
+        // dropped. The `AI` routing module was removed as dead code (its
+        // ModelRouter singleton was stored but never invoked).
         // ─────────────────────────────────────────────────────────────────────
         .target(
             name: "SharedLogging",
@@ -50,14 +49,8 @@ let package = Package(
             swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
         ),
         .target(
-            name: "AI",
-            dependencies: ["SharedLogging", "SharedModels"],
-            path: "Modules/AI",
-            swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
-        ),
-        .target(
             name: "MCPKit",
-            dependencies: ["SharedLogging", "AI"],
+            dependencies: ["SharedLogging"],
             path: "Modules/MCPKit",
             swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
         ),
@@ -80,13 +73,9 @@ let package = Package(
             name: "ApexAgentCore",
             dependencies: [
                 "SharedKit",
-                "AI",
                 "MCPKit",
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "Logging", package: "swift-log"),
-                .product(name: "AsyncAlgorithms", package: "swift-async-algorithms"),
-                .product(name: "Collections", package: "swift-collections"),
-                .product(name: "ServiceLifecycle", package: "swift-service-lifecycle"),
             ],
             path: "ApexAgent",
             // Exclude the container runtime file — it imports Containerization and
@@ -117,7 +106,6 @@ let package = Package(
             name: "ApexAgent",
             dependencies: [
                 "ApexAgentCore",
-                "AI",
                 "MCPKit",
                 .product(name: "Containerization", package: "containerization"),
                 .product(name: "ContainerizationOCI", package: "containerization"),

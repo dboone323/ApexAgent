@@ -5,7 +5,6 @@ import Observation
 import SwiftData
 import AppKit
 import SharedKit
-import AI
 
 // MARK: - Agent Trace Log
 
@@ -1136,7 +1135,6 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     public var orchestrator: AgentOrchestrator { self }
     public var dataBus: AppGroupDataBus { AppGroupDataBus.shared }
-    public var modelRouter: ModelRouter { ModelRouter.shared }
 
     // MARK: - ToolEventLogger Conformance
 
