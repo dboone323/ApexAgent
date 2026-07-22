@@ -56,12 +56,15 @@ let package = Package(
         ),
 
         // ─────────────────────────────────────────────────────────────────────
-        // ApexAgentCore: All app logic EXCEPT the container runtime itself.
+        // ApexAgentCore: All app logic, INCLUDING the container runtime
+        // (ContainerManager) and the @main app entry point (ApexAgentApp).
         //
-        // Deliberately does NOT depend on Containerization so that the
-        // ApexAgentIntelligenceTests target can link it without pulling in
-        // CoreDevice.framework (which bundles a conflicting UniversalHID copy
-        // that segfaults Vision/FoundationModels tests when loaded twice).
+        // ContainerManager is kept here (not a separate target) so the app entry
+        // point can reach it without `@testable import ApexAgentCore` — which
+        // previously broke `swift build -c release`. The container test target
+        // links ApexAgentCore directly, so no `-testable` executable variant is
+        // forced. CoreDevice double-load in FoundationModels tests is avoided by
+        // NOT depending on FoundationModels here (it is weak-linked by the app).
         // ─────────────────────────────────────────────────────────────────────
         .target(
             name: "ApexAgentCore",
@@ -70,17 +73,13 @@ let package = Package(
                 "MCPKit",
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "Logging", package: "swift-log"),
+                .product(name: "Containerization", package: "containerization"),
+                .product(name: "ContainerizationOCI", package: "containerization"),
             ],
             path: "ApexAgent",
-            // Exclude the container runtime file — it imports Containerization and
-            // lives in the ApexAgentContainer target (kept separate so the
-            // container test target can link it WITHOUT pulling the executable
-            // target, which forces a -testable app variant and breaks release).
             exclude: [
                 "ApexAgent.entitlements",
                 "Info.plist",
-                // Lives in ApexAgentRuntime — @main entry point + AppDelegate
-                "ApexAgentApp.swift",
             ],
             resources: [
                 .process("Resources")
@@ -91,37 +90,13 @@ let package = Package(
         ),
 
         // ─────────────────────────────────────────────────────────────────────
-        // ApexAgentContainer: the Containerization-backed sandbox runtime.
-        //
-        // Kept as its OWN target (separate from ApexAgentCore and the
-        // executable) so ApexAgentContainerTests can link it directly without
-        // depending on the executable target — that dependency previously
-        // forced a -testable variant of the app and broke `swift build -c
-        // release`. ContainerManager lives here (single canonical copy).
-        // ─────────────────────────────────────────────────────────────────────
-        .target(
-            name: "ApexAgentContainer",
-            dependencies: [
-                "ApexAgentCore",
-                .product(name: "Containerization", package: "containerization"),
-                .product(name: "ContainerizationOCI", package: "containerization"),
-                .product(name: "ContainerizationArchive", package: "containerization"),
-                .product(name: "ContainerizationOS", package: "containerization"),
-            ],
-            path: "ApexAgentContainer",
-            swiftSettings: [
-                .enableExperimentalFeature("StrictConcurrency")
-            ]
-        ),
-
-        // ─────────────────────────────────────────────────────────────────────
-        // ApexAgent: Thin executable that wires ApexAgentCore + ApexAgentContainer.
+        // ApexAgent: Thin executable entry point. ApexAgentApp (the @main App)
+        // lives in ApexAgentCore; this target just calls ApexAgentApp.main().
         // ─────────────────────────────────────────────────────────────────────
         .executableTarget(
             name: "ApexAgent",
             dependencies: [
                 "ApexAgentCore",
-                "ApexAgentContainer",
                 "MCPKit",
                 .product(name: "Containerization", package: "containerization"),
                 .product(name: "ContainerizationOCI", package: "containerization"),
@@ -145,13 +120,20 @@ let package = Package(
                 "ApexAgentCore",
             ],
             path: "ApexAgentTests",
+            resources: [
+                .copy("mock_mcp_server.sh"),
+            ],
             linkerSettings: [
                 .unsafeFlags([
                     "-Xlinker", "-weak_framework", "-Xlinker", "FoundationModels",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_AppKit",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_SwiftUI",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
-                    "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels"
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels",
+                    // SwiftPM does not add the build-products dir to the test bundle's
+                    // @rpath, so Sparkle.framework (linked transitively via ApexAgentCore)
+                    // fails to dlopen at test launch. Add the rpath explicitly.
+                    "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../../.."
                 ])
             ]
         ),
@@ -165,7 +147,6 @@ let package = Package(
         .testTarget(
             name: "ApexAgentContainerTests",
             dependencies: [
-                "ApexAgentContainer",
                 "ApexAgentCore",
                 .product(name: "Containerization", package: "containerization"),
                 .product(name: "ContainerizationOCI", package: "containerization"),
@@ -177,7 +158,8 @@ let package = Package(
                     "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_AppKit",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_SwiftUI",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
-                    "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels"
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels",
+                    "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../../.."
                 ])
             ]
         ),
@@ -204,7 +186,8 @@ let package = Package(
                     "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_AppKit",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_SwiftUI",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
-                    "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels"
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels",
+                    "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../../.."
                 ])
             ]
         ),

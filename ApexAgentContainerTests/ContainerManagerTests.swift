@@ -1,7 +1,6 @@
 import Testing
 import Foundation
 @testable import ApexAgentCore
-@testable import ApexAgent
 
 @Suite("ContainerManagerTests") final class ContainerManagerTests {
     

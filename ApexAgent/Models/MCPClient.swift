@@ -373,6 +373,16 @@ actor MCPClient {
             }
         }
     }
+
+    /// Resume a pending request continuation with a timeout error if it is
+    /// still outstanding. Called from the request watchdog so an unresponsive
+    /// MCP server cannot hang the caller forever. Safe against double-resume:
+    /// `removeValue` atomically claims the continuation.
+    private func resumeOnTimeout(id: Int) {
+        if let continuation = pendingRequests.removeValue(forKey: id) {
+            continuation.resume(throwing: MCPError.timeout("Request timed out after 60 seconds."))
+        }
+    }
     
     func ping() async -> Bool {
         do {
@@ -444,6 +454,11 @@ actor MCPClient {
             
             group.addTask {
                 try await Task.sleep(for: .seconds(60))
+                // Force-resume the suspended continuation so an unresponsive
+                // server cannot hang the caller forever. removeValue is atomic,
+                // so the real response path and this timeout path cannot both
+                // resume the same continuation (which would crash).
+                await self.resumeOnTimeout(id: id)
                 throw MCPError.timeout("Request timed out after 60 seconds.")
             }
             

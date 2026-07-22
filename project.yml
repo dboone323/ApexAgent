@@ -94,30 +94,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_STRICT_CONCURRENCY: complete
 
-  # ── Containerization sandbox runtime (own target, not the app) ──
-  ApexAgentContainer:
-    type: framework
-    platform: macOS
-    sources:
-      - path: ApexAgentContainer
-    dependencies:
-      - target: ApexAgentCore
-      - package: Containerization
-        product: Containerization
-      - package: Containerization
-        product: ContainerizationOCI
-      - package: Containerization
-        product: ContainerizationArchive
-      - package: Containerization
-        product: ContainerizationOS
-    settings:
-      base:
-        PRODUCT_NAME: ApexAgentContainer
-        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgentContainer
-        GENERATE_INFOPLIST_FILE: YES
-        SWIFT_STRICT_CONCURRENCY: complete
-
-  # ── Core app logic (the testable framework) ──
+  # ── Core app logic (the framework, now includes @main app entry) ──
   ApexAgentCore:
     type: framework
     platform: macOS
@@ -126,7 +103,6 @@ targets:
         excludes:
           - "**/*.entitlements"
           - "**/Info.plist"
-          - "ApexAgentApp.swift"        # @main lives in the app target
     resources:
       - path: ApexAgent/Resources
         optional: true
@@ -135,6 +111,10 @@ targets:
       - target: MCPKit
       - package: Sparkle
         product: Sparkle
+      - package: Containerization
+        product: Containerization
+      - package: Containerization
+        product: ContainerizationOCI
     settings:
       base:
         PRODUCT_NAME: ApexAgentCore
@@ -163,7 +143,6 @@ targets:
         ENABLE_PREVIEWS: YES
     dependencies:
       - target: ApexAgentCore
-      - target: ApexAgentContainer
       - target: SharedKit
       - target: MCPKit
       - package: Sparkle
@@ -191,6 +170,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgentTests
         ENABLE_TESTABILITY: YES
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) $(BUILD_DIR)/Products/Debug
     dependencies:
       - target: ApexAgentCore
 
@@ -204,6 +184,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgentIntelligenceTests
         ENABLE_TESTABILITY: YES
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) $(BUILD_DIR)/Products/Debug
     dependencies:
       - target: ApexAgentCore
 
@@ -217,8 +198,8 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgentContainerTests
         ENABLE_TESTABILITY: YES
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) $(BUILD_DIR)/Products/Debug
     dependencies:
-      - target: ApexAgentContainer
       - target: ApexAgentCore
       - package: Containerization
         product: Containerization

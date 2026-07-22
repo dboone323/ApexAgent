@@ -568,8 +568,15 @@ class MockToolEventLogger: ToolEventLogger {
         let orchestrator = AgentOrchestrator()
         ApexAgentTests.sharedOrchestrator = orchestrator
         
-        // Use a simple zsh mock command that reads stdin and echos a JSON-RPC response, including the new initialize handshake
-        let mockCommand = "read line1; echo '{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"serverInfo\":{\"name\":\"MockServer\",\"version\":\"1.0.0\"}}}'; read line2; read line3; echo '{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"tools\":[{\"name\":\"mock_tool\",\"description\":\"A mock tool\",\"inputSchema\":{\"type\":\"object\",\"properties\":{},\"required\":[]}}]}}'"
+        // Mock MCP server: a real executable script (mock_mcp_server.sh, copied
+        // into the test bundle as a resource) that echoes a valid JSON-RPC
+        // response for every request it receives, echoing back the exact id the
+        // client sent. Run via `exec` by MCPClient.start(), so it must be an
+        // executable file, not an inline shell snippet.
+        let mockScript = Bundle.module.resourceURL!
+            .appendingPathComponent("mock_mcp_server.sh")
+            .path
+        let mockCommand = mockScript
         let client = MCPClient(serverName: "Mock Server", command: mockCommand, logger: orchestrator, orchestrator: orchestrator)
         
         try await client.start()
