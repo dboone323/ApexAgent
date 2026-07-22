@@ -43,12 +43,6 @@ let package = Package(
             swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
         ),
         .target(
-            name: "Utilities",
-            dependencies: ["SharedLogging", "SharedModels"],
-            path: "Modules/Utilities",
-            swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
-        ),
-        .target(
             name: "MCPKit",
             dependencies: ["SharedLogging"],
             path: "Modules/MCPKit",
@@ -56,7 +50,7 @@ let package = Package(
         ),
         .target(
             name: "SharedKit",
-            dependencies: ["SharedModels", "SharedLogging", "Utilities"],
+            dependencies: ["SharedModels", "SharedLogging"],
             path: "Modules/SharedKit",
             swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
         ),
@@ -79,14 +73,14 @@ let package = Package(
             ],
             path: "ApexAgent",
             // Exclude the container runtime file — it imports Containerization and
-            // must remain in the ApexAgent executable target only.
+            // lives in the ApexAgentContainer target (kept separate so the
+            // container test target can link it WITHOUT pulling the executable
+            // target, which forces a -testable app variant and breaks release).
             exclude: [
                 "ApexAgent.entitlements",
                 "Info.plist",
                 // Lives in ApexAgentRuntime — @main entry point + AppDelegate
                 "ApexAgentApp.swift",
-                // Lives in ApexAgentRuntime — imports Containerization package
-                "Models/ContainerManager.swift",
             ],
             resources: [
                 .process("Resources")
@@ -97,15 +91,37 @@ let package = Package(
         ),
 
         // ─────────────────────────────────────────────────────────────────────
-        // ApexAgent: Thin executable that wires ApexAgentCore + Containerization.
+        // ApexAgentContainer: the Containerization-backed sandbox runtime.
         //
-        // Only ContainerManager.swift lives here, as it is the single file that
-        // imports the Containerization/ContainerizationOCI packages.
+        // Kept as its OWN target (separate from ApexAgentCore and the
+        // executable) so ApexAgentContainerTests can link it directly without
+        // depending on the executable target — that dependency previously
+        // forced a -testable variant of the app and broke `swift build -c
+        // release`. ContainerManager lives here (single canonical copy).
+        // ─────────────────────────────────────────────────────────────────────
+        .target(
+            name: "ApexAgentContainer",
+            dependencies: [
+                "ApexAgentCore",
+                .product(name: "Containerization", package: "containerization"),
+                .product(name: "ContainerizationOCI", package: "containerization"),
+                .product(name: "ContainerizationArchive", package: "containerization"),
+                .product(name: "ContainerizationOS", package: "containerization"),
+            ],
+            path: "ApexAgentContainer",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
+            ]
+        ),
+
+        // ─────────────────────────────────────────────────────────────────────
+        // ApexAgent: Thin executable that wires ApexAgentCore + ApexAgentContainer.
         // ─────────────────────────────────────────────────────────────────────
         .executableTarget(
             name: "ApexAgent",
             dependencies: [
                 "ApexAgentCore",
+                "ApexAgentContainer",
                 "MCPKit",
                 .product(name: "Containerization", package: "containerization"),
                 .product(name: "ContainerizationOCI", package: "containerization"),
@@ -149,7 +165,7 @@ let package = Package(
         .testTarget(
             name: "ApexAgentContainerTests",
             dependencies: [
-                "ApexAgent",
+                "ApexAgentContainer",
                 "ApexAgentCore",
                 .product(name: "Containerization", package: "containerization"),
                 .product(name: "ContainerizationOCI", package: "containerization"),

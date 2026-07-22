@@ -5,7 +5,7 @@ import ContainerizationOCI
 import ContainerizationArchive
 import ContainerizationOS
 import Logging
-@testable import ApexAgentCore
+import ApexAgentCore
 
 extension InteractiveSession: ContainerInteractiveSession {}
 
