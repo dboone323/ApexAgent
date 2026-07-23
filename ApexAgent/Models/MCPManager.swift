@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 import SharedKit
-import AI
 
 struct MCPServerConfig: Codable, Identifiable, Equatable {
     var id = UUID()
@@ -16,7 +15,6 @@ final class MCPManager: OrchestratorProvider {
     static let shared = MCPManager()
     
     var dataBus: AppGroupDataBus { AppGroupDataBus.shared }
-    var modelRouter: ModelRouter { ModelRouter.shared }
     
     var servers: [MCPServerConfig] = []
     private var clients: [UUID: MCPClient] = [:]

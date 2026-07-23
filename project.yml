@@ -11,85 +11,200 @@ packages:
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     from: 2.6.0
-  shared-kit:
-    path: ../../packages/shared-kit
+  Containerization:
+    url: https://github.com/apple/containerization
+    branch: main
 
 settings:
   base:
     SWIFT_VERSION: 6.4
     MACOSX_DEPLOYMENT_TARGET: 27.0
-    PRODUCT_NAME: ApexAgent
-    PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgent
-    CODE_SIGN_STYLE: Automatic
-    DEVELOPMENT_TEAM: ""
-    ENABLE_HARDENED_RUNTIME: YES
-    CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent.entitlements
     SWIFT_STRICT_CONCURRENCY: complete
-    OTHER_SWIFT_FLAGS: ""
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    # Local dev builds should not require a paid cert / manual signing.
+    CODE_SIGNING_ALLOWED: NO
+    # FoundationModels is weak-linked so the app launches on builds that lack
+    # the symbols (AgentEngine.swift dlsym-checks availability).
+    OTHER_LDFLAGS: "-weak_framework FoundationModels -weak_framework _FoundationModels_AppKit -weak_framework _FoundationModels_SwiftUI -weak_framework _Vision_FoundationModels -weak_framework _CoreSpotlight_FoundationModels"
   configs:
     Debug:
       DEBUG_INFORMATION_FORMAT: dwarf
       SWIFT_OPTIMIZATION_LEVEL: "-Onone"
       SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+      ENABLE_TESTABILITY: YES
     Release:
       DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
       SWIFT_OPTIMIZATION_LEVEL: "-O"
 
 targets:
+  # ── Inlined shared-kit modules (frameworks) ──
+  SharedLogging:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Modules/SharedLogging
+    settings:
+      base:
+        PRODUCT_NAME: SharedLogging
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.SharedLogging
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_STRICT_CONCURRENCY: complete
+
+  SharedModels:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Modules/SharedModels
+    settings:
+      base:
+        PRODUCT_NAME: SharedModels
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.SharedModels
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_STRICT_CONCURRENCY: complete
+    dependencies:
+      - target: SharedLogging
+
+  SharedKit:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Modules/SharedKit
+    dependencies:
+      - target: SharedModels
+      - target: SharedLogging
+    settings:
+      base:
+        PRODUCT_NAME: SharedKit
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.SharedKit
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_STRICT_CONCURRENCY: complete
+
+  MCPKit:
+    type: framework
+    platform: macOS
+    sources:
+      - path: Modules/MCPKit
+    dependencies:
+      - target: SharedLogging
+    settings:
+      base:
+        PRODUCT_NAME: MCPKit
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.MCPKit
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_STRICT_CONCURRENCY: complete
+
+  # ── Core app logic (the framework, now includes @main app entry) ──
+  ApexAgentCore:
+    type: framework
+    platform: macOS
+    sources:
+      - path: ApexAgent
+        excludes:
+          - "**/*.entitlements"
+          - "**/Info.plist"
+    resources:
+      - path: ApexAgent/Resources
+        optional: true
+    dependencies:
+      - target: SharedKit
+      - target: MCPKit
+      - package: Sparkle
+        product: Sparkle
+      - package: Containerization
+        product: Containerization
+      - package: Containerization
+        product: ContainerizationOCI
+    settings:
+      base:
+        PRODUCT_NAME: ApexAgentCore
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgentCore
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_STRICT_CONCURRENCY: complete
+
+  # ── Application executable ──
   ApexAgent:
     type: application
     platform: macOS
     deploymentTarget: "27.0"
     sources:
-      - path: ApexAgent
-        excludes:
-          - "**/*.entitlements"
+      - path: ApexAgentRuntime
     resources:
       - path: ApexAgent/Resources
         optional: true
     settings:
       base:
+        PRODUCT_NAME: ApexAgent
+        PRODUCT_MODULE_NAME: ApexAgent
         PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgent
         INFOPLIST_FILE: ApexAgent/Info.plist
         CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent.entitlements
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks
         ENABLE_PREVIEWS: YES
     dependencies:
-      - framework: FoundationModels.framework
-        embed: false
-      - framework: SwiftUI.framework
-        embed: false
-      - framework: SwiftData.framework
-        embed: false
+      - target: ApexAgentCore
+      - target: SharedKit
+      - target: MCPKit
       - package: Sparkle
         product: Sparkle
-      - package: shared-kit
-        product: SharedKit
+      - package: Containerization
+        product: Containerization
+      - package: Containerization
+        product: ContainerizationOCI
     scheme:
       testTargets:
         - ApexAgentTests
+        - ApexAgentIntelligenceTests
+        - ApexAgentContainerTests
       environmentVariables:
         APEX_DEBUG: "1"
 
+  # ── Tests ──
   ApexAgentTests:
     type: bundle.unit-test
     platform: macOS
-    deploymentTarget: "27.0"
     sources:
       - path: ApexAgentTests
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_NAME: ApexAgentTests
         PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgentTests
+        ENABLE_TESTABILITY: YES
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) $(BUILD_DIR)/Products/Debug
     dependencies:
-      - target: ApexAgent
-      - framework: FoundationModels.framework
-        embed: false
-      - framework: SwiftData.framework
-        embed: false
+      - target: ApexAgentCore
+
+  ApexAgentIntelligenceTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: ApexAgentIntelligenceTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgentIntelligenceTests
+        ENABLE_TESTABILITY: YES
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) $(BUILD_DIR)/Products/Debug
+    dependencies:
+      - target: ApexAgentCore
+
+  ApexAgentContainerTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: ApexAgentContainerTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgentContainerTests
+        ENABLE_TESTABILITY: YES
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) $(BUILD_DIR)/Products/Debug
+    dependencies:
+      - target: ApexAgentCore
+      - package: Containerization
+        product: Containerization
+      - package: Containerization
+        product: ContainerizationOCI
 
 schemes:
   ApexAgent:
@@ -97,10 +212,10 @@ schemes:
       targets:
         ApexAgent: all
         ApexAgentTests: [test]
+        ApexAgentIntelligenceTests: [test]
+        ApexAgentContainerTests: [test]
     run:
       config: Debug
-      commandLineArguments:
-        "--debug": false
     test:
       config: Debug
     archive:
