@@ -63,7 +63,9 @@ struct StoreMemoryTool: Tool {
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             return await MainActor.run {
-                let context = orchestrator.orchestrator.modelContext
+                guard let context = orchestrator.orchestrator.modelContext else {
+                    return "Memory unavailable: model context is not initialized."
+                }
 
                 let keyToFind = arguments.key.trimmingCharacters(in: .whitespacesAndNewlines)
                 var descriptor = FetchDescriptor<AgentMemory>(
@@ -72,7 +74,7 @@ struct StoreMemoryTool: Tool {
                 descriptor.fetchLimit = 1
                 
                 do {
-                    let existing = try context!.fetch(descriptor)
+                    let existing = try context.fetch(descriptor)
                     let textToEmbed = "\(keyToFind): \(arguments.value)"
                     let vector = EmbeddingHelper.getVector(for: textToEmbed)
                     let embeddingData = vector.flatMap { EmbeddingHelper.serialize($0) }
@@ -86,9 +88,9 @@ struct StoreMemoryTool: Tool {
                     } else {
                         let newMemory = AgentMemory(key: keyToFind, val: arguments.value, category: cat)
                         newMemory.embeddingData = embeddingData
-                        context!.insert(newMemory)
+                        context.insert(newMemory)
                     }
-                    try context!.save()
+                    try context.save()
                     return "✅ Successfully saved memory for key: '\(keyToFind)' in category: '\(cat)'"
                 } catch {
                     return "ERROR: Failed to save to database: \(error.localizedDescription)"
@@ -121,14 +123,16 @@ struct SearchMemoryTool: Tool {
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             return await MainActor.run {
-                let context = orchestrator.orchestrator.modelContext
+                guard let context = orchestrator.orchestrator.modelContext else {
+                    return "Memory unavailable: model context is not initialized."
+                }
 
                 let descriptor = FetchDescriptor<AgentMemory>(
                     sortBy: [SortDescriptor(\.timestamp, order: .reverse)]
                 )
                 
                 do {
-                    let allMemories = try context!.fetch(descriptor)
+                    let allMemories = try context.fetch(descriptor)
                     
                     var filtered = allMemories
                     if let category = arguments.category?.lowercased().trimTime(), !category.isEmpty {

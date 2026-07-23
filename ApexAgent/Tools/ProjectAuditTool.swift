@@ -13,13 +13,18 @@ struct ProjectAuditTool: Tool {
 
     @Generable
     struct Arguments: Decodable {
-        @Guide(description: "The directory containing Xcode projects to audit. Defaults to '~/Developer/fleet'.")
+        @Guide(description: "The directory containing Xcode projects to audit. Defaults to the configured workspace (apex.workspacePath), else the user's ~/Developer folder or home directory.")
         var directoryPath: String?
     }
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
-            let path = arguments.directoryPath ?? "~/Developer/fleet"
+            let path: String
+            if let provided = arguments.directoryPath, !provided.isEmpty {
+                path = provided
+            } else {
+                path = AgentOrchestrator.proactiveAuditWorkspacePath()
+            }
             let auditor = await ProjectAuditor.shared
             let reports = await auditor.runWorkspaceAudit(at: path)
             

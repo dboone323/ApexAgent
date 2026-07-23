@@ -9,8 +9,8 @@ import SharedKit
     @MainActor
     @Test func testDailyBriefingUsesAppGroupBus() async throws {
         // Integration: existing tool keeps AppGroup-backed behavior
-        let bus = AppGroupDataBus.shared
-        let tool = DailyBriefingTool()
+        let orchestrator = AgentOrchestrator()
+        let tool = DailyBriefingTool(orchestrator: orchestrator)
         let briefing = try await tool.run()
         #expect(briefing != nil)
     }

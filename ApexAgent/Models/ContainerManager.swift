@@ -108,6 +108,9 @@ public final class ContainerManager: Sendable, ContainerManagerProtocol {
         try FileManager.default.createDirectory(at: kernelDir, withIntermediateDirectories: true)
         
         let tarballURL = kernelDir.appendingPathComponent("kata.tar.xz")
+        // NOTE: Containerization is Apple-Silicon (arm64) only. This kernel asset
+        // is a pinned arm64 build (Kata Containers 3.17.0). If bumping the version,
+        // update both this URL and the extracted path below, and keep it arm64.
         let defaultKernelURL = "https://github.com/kata-containers/kata-containers/releases/download/3.17.0/kata-static-3.17.0-arm64.tar.xz"
         
         do {
@@ -202,7 +205,10 @@ public final class ContainerManager: Sendable, ContainerManagerProtocol {
                 }
             }
             
-            // Initialize the Apple ContainerManager library wrapper
+            // Initialize the Apple ContainerManager library wrapper.
+            // NOTE: Containerization is Apple-Silicon (arm64) only. This initfs is a
+            // pinned Apple vminit asset (0.30.0); keep this reference in sync with the
+            // Containerization package version when upgrading.
             let initfsRef = "ghcr.io/apple/containerization/vminit:0.30.0"
             
             // Pull the initfs if not present

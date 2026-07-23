@@ -192,7 +192,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
         } catch {
             print("⚠️ Failed to initialize SwiftData model context: \(error)")
         }
-        ProcessInfo.processInfo.setValue("1", forKey: "APEX_TEST_MODE")
 
         // Wait a brief moment to ensure SystemLanguageModel is ready/loaded
         try? await Task.sleep(for: .seconds(2))

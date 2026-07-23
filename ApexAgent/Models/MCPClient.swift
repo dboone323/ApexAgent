@@ -133,8 +133,22 @@ actor MCPClient {
         proc.arguments = shellArgs
         
         var env = ProcessInfo.processInfo.environment
+        // Build PATH from the current process environment plus standard Homebrew /
+        // local install locations. Do NOT hardcode any developer home directory.
+        // Prepend the user's ~/.local/bin (resolved at runtime) and the common
+        // brew/system locations so tools like python3 / npx resolve on any Mac.
         let currentPath = env["PATH"] ?? ""
-        env["PATH"] = "/Users/danielstevens/.local/bin:/opt/homebrew/bin:/usr/local/bin:" + currentPath
+        let userLocalBin = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".local/bin").path
+        let standardPaths = [userLocalBin, "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"]
+        let existing = currentPath.split(separator: ":").map(String.init)
+        // De-duplicate while preserving order: standard prefixes first, then inherited PATH.
+        var seen = Set<String>()
+        var merged: [String] = []
+        for p in standardPaths + existing where !p.isEmpty && seen.insert(p).inserted {
+            merged.append(p)
+        }
+        env["PATH"] = merged.joined(separator: ":")
         
         if isRestricted {
             let fm = FileManager.default

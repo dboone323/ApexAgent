@@ -213,14 +213,36 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
         #endif
         auditTask = Task {
-            _ = await ProjectAuditor.shared.runWorkspaceAudit(at: "~/Developer/fleet")
+            let workspace = Self.proactiveAuditWorkspacePath()
+            _ = await ProjectAuditor.shared.runWorkspaceAudit(at: workspace)
 
             while true {
                 guard !Task.isCancelled else { break }
                 try? await Task.sleep(for: .seconds(300))
-                _ = await ProjectAuditor.shared.runWorkspaceAudit(at: "~/Developer/fleet")
+                _ = await ProjectAuditor.shared.runWorkspaceAudit(at: Self.proactiveAuditWorkspacePath())
             }
         }
+    }
+
+    /// Resolves the workspace directory that the proactive audit loop scans.
+    /// No hardcoded developer paths: user-configured setting → APEX_WORKSPACE →
+    /// ~/Developer (if present) → the user's home directory.
+    nonisolated static func proactiveAuditWorkspacePath() -> String {
+        if let configured = UserDefaults.standard.string(forKey: "apex.workspacePath"),
+           !configured.isEmpty,
+           FileManager.default.fileExists(atPath: configured) {
+            return configured
+        }
+        if let envPath = ProcessInfo.processInfo.environment["APEX_WORKSPACE"],
+           !envPath.isEmpty {
+            return envPath
+        }
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let devPath = home.appendingPathComponent("Developer").path
+        if FileManager.default.fileExists(atPath: devPath) {
+            return devPath
+        }
+        return home.path
     }
 
     // MARK: - App Permissions Handling
@@ -461,12 +483,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     func createModelInstance() -> any LanguageModel {
         switch modelPreference {
         case .localSystem:
-            return SystemLanguageModel.default
+            return localSystemModel()
         case .privateCloud:
             if Self.isPrivateCloudComputeAvailable() {
                 return PrivateCloudComputeLanguageModel()
             } else {
-                return SystemLanguageModel.default
+                return localSystemModel()
             }
         case .cloudGemini:
             let apiKey = KeychainManager.get(key: "geminiAPIKey") ?? ""
@@ -476,8 +498,15 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             return LocalOllamaLanguageModel(hostURL: host)
         case .hybrid:
             // Hybrid defaults to local system model for general orchestrator tasks
-            return SystemLanguageModel.default
+            return localSystemModel()
         }
+    }
+
+    /// Returns the on-device system language model. Callers are responsible for
+    /// surfacing unavailability (e.g. Apple Intelligence not enabled) through the
+    /// existing engine error paths rather than crashing on an unavailable model.
+    private func localSystemModel() -> SystemLanguageModel {
+        SystemLanguageModel.default
     }
 
     private func resolveModelForSession() -> any LanguageModel {
@@ -486,7 +515,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             if Self.isPrivateCloudComputeAvailable() {
                 return PrivateCloudComputeLanguageModel()
             } else {
-                return SystemLanguageModel.default
+                return localSystemModel()
             }
         }
         return createModelInstance()
@@ -596,7 +625,8 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             AnyExecutableTool(RunWorkflowTool(orchestrator: self)),
             AnyExecutableTool(FileSearchTool(orchestrator: self)),
             AnyExecutableTool(DynamicToolCallTool(orchestrator: self)),
-            AnyExecutableTool(ContainerStatusTool(orchestrator: self))
+            AnyExecutableTool(ContainerStatusTool(orchestrator: self)),
+            AnyExecutableTool(DailyBriefingTool(orchestrator: self))
         ]
         _allTools = tools
         return tools

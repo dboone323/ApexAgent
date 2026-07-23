@@ -32,10 +32,6 @@ struct ConveneMeetingTool: Tool {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let orchestrator = await self.orchestrator.orchestrator
             
-            if NSClassFromString("XCTest") != nil || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
-                return "Debate Consensus Transcript:\n- Developer: Discussed topic \(arguments.topic) and agreed on a plan.\n- Planner: Agreed to prioritize concurrency fixes."
-            }
-
             // Parse participants
             var validAgents: [RegisteredAgent] = []
             for p in arguments.participants {

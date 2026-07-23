@@ -27,10 +27,6 @@ struct DelegateTaskTool: Tool {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let orchestrator = await self.orchestrator.orchestrator
             
-            if NSClassFromString("XCTest") != nil || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
-                return "Mock delegation response for agent \(arguments.agentType): \(arguments.taskDescription)"
-            }
-            
             let agentName = arguments.agentType.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
             guard let agent = await AgentRegistry.shared.resolve(name: agentName) else {
                 return "ERROR: Invalid agentType '\(arguments.agentType)'."

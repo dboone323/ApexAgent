@@ -104,6 +104,18 @@ let package = Package(
             path: "ApexAgentRuntime",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency")
+            ],
+            linkerSettings: [
+                .unsafeFlags([
+                    "-Xlinker", "-weak_framework", "-Xlinker", "FoundationModels",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_AppKit",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_SwiftUI",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels",
+                    // Sparkle.framework is linked transitively via ApexAgentCore;
+                    // add the rpath so it dlopen's at app launch.
+                    "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../Frameworks"
+                ])
             ]
         ),
 
