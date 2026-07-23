@@ -145,6 +145,7 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor, DynamicTo
         }
         
         var currentMessages = ollamaMessages
+        let entryID = UUID().uuidString
         var loopCount = 0
         let maxLoops = 8
         
@@ -200,7 +201,7 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                 if let message = json["message"] as? [String: Any] {
                     if let content = message["content"] as? String, !content.isEmpty {
                         accumulatedText += content
-                        await channel.send(LanguageModelExecutorGenerationChannel.Response.response(action: .appendText(content, tokenCount: 0)))
+                        await channel.send(LanguageModelExecutorGenerationChannel.Response.response(entryID: entryID, action: .appendText(content, tokenCount: 0)))
                     }
                     if let toolCalls = message["tool_calls"] as? [[String: Any]] {
                         for toolCall in toolCalls {
@@ -222,7 +223,7 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor, DynamicTo
             
             if !detectedToolCalls.isEmpty {
                 let enabledNames = Set(request.enabledToolDefinitions.map { $0.name })
-                let routed = await classifyAndRouteToolCalls(detectedToolCalls, enabledToolNames: enabledNames, channel: channel)
+                let routed = await classifyAndRouteToolCalls(detectedToolCalls, enabledToolNames: enabledNames, channel: channel, entryID: entryID)
                 
                 if !routed.staticCalls.isEmpty {
                     return

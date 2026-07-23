@@ -6,6 +6,8 @@
 // These tests were previously skipped in ApexAgentTests with a processName
 // guard because LanguageModelExecutorGenerationChannel initialisation triggers
 // the CoreDevice/UniversalHID duplicate-class crash in that target.
+
+import Foundation
 //
 // This target has no Containerization dependency, so CoreDevice is never
 // loaded. No guards needed.
@@ -101,7 +103,8 @@ struct DynamicToolRoutingTests {
         let result = await router.classifyAndRouteToolCalls(
             calls,
             enabledToolNames: [],
-            channel: channel
+            channel: channel,
+            entryID: UUID().uuidString
         )
 
         #expect(result.staticCalls.count == 0, "Expected 0 static calls")

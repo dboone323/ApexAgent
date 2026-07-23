@@ -14,7 +14,8 @@ protocol DynamicToolRouting {
     func classifyAndRouteToolCalls(
         _ detectedToolCalls: [ParsedToolCall],
         enabledToolNames: Set<String>,
-        channel: LanguageModelExecutorGenerationChannel
+        channel: LanguageModelExecutorGenerationChannel,
+        entryID: String
     ) async -> (staticCalls: [ParsedToolCall], dynamicCalls: [ParsedToolCall])
     
     func executeDynamicTool(name: String, argumentsString: String) async -> String
@@ -24,7 +25,8 @@ extension DynamicToolRouting {
     func classifyAndRouteToolCalls(
         _ detectedToolCalls: [ParsedToolCall],
         enabledToolNames: Set<String>,
-        channel: LanguageModelExecutorGenerationChannel
+        channel: LanguageModelExecutorGenerationChannel,
+        entryID: String
     ) async -> (staticCalls: [ParsedToolCall], dynamicCalls: [ParsedToolCall]) {
         var dynamicToolCalls: [ParsedToolCall] = []
         var staticToolCalls: [ParsedToolCall] = []
@@ -48,7 +50,7 @@ extension DynamicToolRouting {
             for tc in staticToolCalls {
                 let toolCallAction = LanguageModelExecutorGenerationChannel.ToolCalls.ToolCall.Action.appendArguments(tc.argumentsString, tokenCount: 0)
                 let action = LanguageModelExecutorGenerationChannel.ToolCalls.Action.toolCall(id: tc.id, name: tc.name, action: toolCallAction)
-                let event = LanguageModelExecutorGenerationChannel.ToolCalls.toolCalls(action: action)
+                let event = LanguageModelExecutorGenerationChannel.ToolCalls.toolCalls(entryID: entryID, action: action)
                 await channel.send(event)
             }
         }

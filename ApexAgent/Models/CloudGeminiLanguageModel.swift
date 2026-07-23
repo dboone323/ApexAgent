@@ -232,6 +232,7 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
             
             var accumulatedText = ""
             var detectedToolCalls: [ParsedToolCall] = []
+            let entryID = UUID().uuidString
             
             for try await line in bytes.lines {
                 if line.hasPrefix("data: ") {
@@ -251,7 +252,7 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                         for part in parts {
                             if let text = part["text"] as? String {
                                 accumulatedText += text
-                                await channel.send(LanguageModelExecutorGenerationChannel.Response.response(action: .appendText(text, tokenCount: 0)))
+                                await channel.send(LanguageModelExecutorGenerationChannel.Response.response(entryID: entryID, action: .appendText(text, tokenCount: 0)))
                             }
                             if let functionCall = part["functionCall"] as? [String: Any],
                                let name = functionCall["name"] as? String,
@@ -271,7 +272,7 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
             
             if !detectedToolCalls.isEmpty {
                 let enabledNames = Set(request.enabledToolDefinitions.map { $0.name })
-                let routed = await classifyAndRouteToolCalls(detectedToolCalls, enabledToolNames: enabledNames, channel: channel)
+                let routed = await classifyAndRouteToolCalls(detectedToolCalls, enabledToolNames: enabledNames, channel: channel, entryID: entryID)
                 
                 if !routed.staticCalls.isEmpty {
                     return
