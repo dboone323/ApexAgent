@@ -70,6 +70,14 @@ struct NativeAppleEngine: AgentEngine {
                 onUpdate(partialResponse.content)
             }
             print("[DIAG] NativeAppleEngine streamResponse end; lastCount=\(lastLogged.count)")
+            // The on-device model can report `availability = available` yet still
+            // produce zero tokens (e.g. its multi-GB weights haven't finished
+            // downloading, or the inference backend has no model to run). A silent
+            // empty response makes the app look hung/broken. Surface it clearly and
+            // point at the working fallback instead of returning nothing.
+            if lastLogged.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                onUpdate("⚠️ The on-device model returned no output. This usually means its model asset is still downloading (enable Apple Intelligence in Settings → Siri and wait), or isn't available on this macOS build. Switch Model Provider to “Local Ollama” (if Ollama is running) or “Cloud Gemini” to continue.")
+            }
         }
     }
 }
