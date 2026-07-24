@@ -112,21 +112,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
     }
 
     private func setupShortcuts() {
-        #if DEBUG
-        let installHint = "You can define this in an Intent Definition File and wire it to Shortcuts."
-        #else
-        let installHint = "Shortcuts integration is not configured in release builds."
-        #endif
-        let intent = WriteTextIntent()
-        intent.suggestedInvocationPhrase = "Write with Apex Agent"
         if #available(macOS 13.0, *) {
-            guard let shortcut = INShortcut(intent: intent) else {
-                print("[Apex] Shortcut setup skipped: unable to initialize INShortcut. \(installHint)")
-                return
-            }
-            INVoiceShortcutCenter.shared.setShortcutSuggestions([shortcut])
+            // Donate the ApexAgent App Intents to Siri / Shortcuts.
+            ApexAgentShortcuts.updateAppShortcutParameters()
         } else {
-            print("[Apex] Shortcut setup skipped: macOS 13+ required for this integration.")
+            print("[Apex] Shortcut setup skipped: macOS 13+ required for App Intents integration.")
         }
     }
 
@@ -257,9 +247,8 @@ private func runDaemonMode() async {
     }
 }
 
-public class WriteTextIntent: INIntent {}
-
-extension AppDelegate {
+public class WritingToolsSupportLoader: NSObject {
+    @MainActor
     static func configureWritingTools() {
         WritingToolsSupport.register()
     }

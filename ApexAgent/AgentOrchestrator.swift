@@ -5,6 +5,7 @@ import Observation
 import SwiftData
 import AppKit
 import SharedKit
+import os
 
 // MARK: - Agent Trace Log
 
@@ -84,6 +85,7 @@ enum AgentModelPreference: String, CaseIterable, Identifiable, Codable {
     case privateCloud = "Private Cloud Compute"
     case cloudGemini = "Cloud Gemini"
     case localOllama = "Local Ollama"
+    case localMLX = "Local MLX"
     case hybrid = "Hybrid (On-Device + PCC Fallback)"
 
     var id: String { self.rawValue }
@@ -496,6 +498,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         case .localOllama:
             let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? AgentOrchestrator.defaultOllamaURLString) ?? URL(string: AgentOrchestrator.defaultOllamaURLString)!
             return LocalOllamaLanguageModel(hostURL: host)
+        case .localMLX:
+            let host = URL(string: UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString) ?? URL(string: LocalMLXLanguageModel.defaultHostURLString)!
+            return LocalMLXLanguageModel(hostURL: host)
         case .hybrid:
             // Hybrid defaults to local system model for general orchestrator tasks
             return localSystemModel()
@@ -624,6 +629,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             AnyExecutableTool(CreateSkillTool(orchestrator: self)),
             AnyExecutableTool(RunWorkflowTool(orchestrator: self)),
             AnyExecutableTool(FileSearchTool(orchestrator: self)),
+            AnyExecutableTool(SpotlightSearchTool(orchestrator: self)),
             AnyExecutableTool(DynamicToolCallTool(orchestrator: self)),
             AnyExecutableTool(ContainerStatusTool(orchestrator: self)),
             AnyExecutableTool(DailyBriefingTool(orchestrator: self))
@@ -853,7 +859,17 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             }
             let engine: any AgentEngine
             switch self.modelPreference {
-            case .localSystem, .privateCloud, .cloudGemini, .localOllama, .hybrid:
+            case .localOllama:
+                // Direct-HTTP Ollama path: the FoundationModels
+                // LanguageModelExecutorGenerationChannel pump crashes on
+                // macOS 27.0 26A5388g, so we stream from Ollama's local
+                // /api/chat directly and run tools through allTools.
+                engine = OllamaAgentEngine(orchestrator: self)
+            case .localMLX:
+                // Direct-HTTP MLX-LM path (OpenAI-compatible SSE) — same
+                // FoundationModels channel bypass rationale as Ollama.
+                engine = MLXAgentEngine(orchestrator: self)
+            case .localSystem, .privateCloud, .cloudGemini, .hybrid:
                 engine = NativeAppleEngine(orchestrator: self)
             }
 
@@ -863,6 +879,10 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 if !self.proactiveAuditResult.isEmpty {
                     finalInstructions += "\n\n\(self.proactiveAuditResult)\nUse the above proactive audit report to suggest improvements, tasks, and fixes (e.g. missing tests or TODOs) when requested or appropriate."
                 }
+
+                Logger.agent.info("Generation started (provider: \(self.modelPreference.rawValue, privacy: .public))")
+                let generationSpan = AgentSignpost.begin("Generate", detail: self.modelPreference.rawValue)
+                defer { AgentSignpost.end("Generate", generationSpan) }
 
                 try await engine.streamResponse(
                     prompt: text,
@@ -888,6 +908,16 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                         context.insert(dbAssistantMsg)
                         conv.updatedAt = Date()
                         saveContext(context)
+
+                        // Phase 7: index the updated session into Core Spotlight
+                        // so past agent sessions are retrievable (system search
+                        // + SpotlightSearchTool RAG).
+                        SpotlightIndexer.indexConversation(
+                            id: conv.id,
+                            title: conv.title,
+                            messages: self.messages.map { (role: $0.role == .user ? "user" : "assistant", content: $0.content) },
+                            updatedAt: conv.updatedAt
+                        )
                     }
                 }
 
@@ -1197,7 +1227,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     public func shouldConfirmTool(name: String) -> Bool {
         if requireConfirmationForAll { return true }
-        return AgentOrchestrator.dangerousToolNames.contains(name)
+        // Union of the legacy dangerous-tool set and the central risk map
+        // (AgentSecurity) so every high-risk tool is confirmation-gated.
+        return AgentOrchestrator.dangerousToolNames.contains(name) || AgentSecurity.requiresConfirmation(name)
     }
 
     public func requestConfirmation(

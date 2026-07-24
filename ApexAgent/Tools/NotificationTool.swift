@@ -32,6 +32,14 @@ struct NotificationTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+            // UNUserNotificationCenter.current() raises an uncatchable ObjC
+            // NSInternalInconsistencyException ("bundleProxyForCurrentProcess
+            // is nil") in any process that is not a bundled app — e.g. the
+            // SwiftPM test runner or a bare executable. Guard the real
+            // constraint instead of crashing the process.
+            guard Bundle.main.bundleIdentifier != nil else {
+                return "ERROR: User notifications require a bundled app host (no bundle identifier in this process)."
+            }
             let center = UNUserNotificationCenter.current()
 
             // Request permission if needed

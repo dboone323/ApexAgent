@@ -752,11 +752,18 @@ class MockToolEventLogger: ToolEventLogger {
             subtitle: "Test Subtitle"
         )
         let result = try await tool.call(arguments: args)
-        // The tool either delivers (real path) or is bypassed in test mode. It must
-        // NEVER report ERROR (permission failure / crash) and still pass — that would
-        // be a false green.
-        #expect(result.contains("Notification sent"), "Expected delivery or test-mode bypass, got: \(result)")
-        #expect(!(result.contains("ERROR")), "Notification tool reported an error but the test still passed: \(result)")
+        // The tool either delivers (bundled app host) or reports the one real
+        // environmental limitation: UNUserNotificationCenter.current() throws
+        // an uncatchable ObjC exception in unbundled processes (SwiftPM test
+        // runner has no bundle identifier). Permission failures must still
+        // fail this test — only the unbundled-host message is acceptable.
+        let unbundledHost = Bundle.main.bundleIdentifier == nil
+        if unbundledHost {
+            #expect(result.contains("bundled app host"), "Expected unbundled-host guard message, got: \(result)")
+        } else {
+            #expect(result.contains("Notification sent"), "Expected delivery, got: \(result)")
+            #expect(!(result.contains("ERROR")), "Notification tool reported an error but the test still passed: \(result)")
+        }
     }
     
     @MainActor

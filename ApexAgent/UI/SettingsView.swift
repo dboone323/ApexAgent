@@ -574,6 +574,7 @@ struct SettingsView: View {
         case .privateCloud: return "Apple Private Cloud Compute (encrypted)"
         case .cloudGemini: return "Google Gemini Cloud Service"
         case .localOllama: return "Local Ollama Service"
+        case .localMLX: return "Local MLX-LM Server"
         case .hybrid: return "Hybrid (On-device & PCC fallback)"
         }
     }
@@ -584,6 +585,7 @@ struct SettingsView: View {
         case .privateCloud: return "cloud.shield"
         case .cloudGemini: return "icloud"
         case .localOllama: return "cpu"
+        case .localMLX: return "memorychip"
         case .hybrid: return "lock.icloud"
         }
     }

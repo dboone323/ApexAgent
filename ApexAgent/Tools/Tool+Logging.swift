@@ -1,5 +1,6 @@
 import Foundation
 import FoundationModels
+import os
 
 extension Tool {
     /// Executes the tool logic with built-in start/end event logging and safety confirmation gates.
@@ -14,6 +15,9 @@ extension Tool {
     ) async throws -> String {
         let toolName = self.name
         let argsString = String(describing: arguments)
+        let signpostID = AgentSignpost.begin("ToolCall", detail: toolName)
+        defer { AgentSignpost.end("ToolCall", signpostID, detail: toolName) }
+        Logger.tools.debug("Tool called: \(toolName, privacy: .public)")
 
         // Log starting of the tool
         await orchestrator.orchestrator.logToolStart(name: toolName, arguments: argsString)
@@ -34,6 +38,7 @@ extension Tool {
         // Check if user confirmation is required (safety gate)
         let needsConfirm = await orchestrator.orchestrator.shouldConfirmTool(name: toolName)
         if needsConfirm {
+            Logger.security.warning("High-risk tool requested: \(toolName, privacy: .public)")
             await orchestrator.orchestrator.updateToolStatus(name: toolName, status: .awaitingConfirmation)
             let approved = await orchestrator.orchestrator.requestConfirmation(
                 toolName: toolName,
@@ -46,6 +51,7 @@ extension Tool {
 
             if !approved {
                 await orchestrator.orchestrator.logToolEnd(name: toolName, result: "Operation denied by user.", status: .denied)
+                await AgentAuditLog.shared.record(toolName: toolName, arguments: argsString, wasConfirmed: false, status: "denied")
                 return "ERROR: Operation denied by user."
             }
         }
@@ -62,11 +68,21 @@ extension Tool {
                 result = String(result.prefix(maxLength)) + "\n\n[... output truncated at \(maxLength) characters to optimize token usage ...]"
             }
 
+            // Indirect prompt-injection defense: tool results are untrusted
+            // content (web pages, files, command output) that can contain
+            // instructions aimed at the model ("ignore previous instructions",
+            // "you are now...", embedded system-prompt text). Strip directive
+            // phrasing before the result re-enters the transcript so a tool
+            // cannot hijack the agent loop.
+            result = sanitizeForPromptInjection(result)
+
             await orchestrator.orchestrator.logToolEnd(name: toolName, result: result, status: .success)
+            await AgentAuditLog.shared.record(toolName: toolName, arguments: argsString, wasConfirmed: needsConfirm, status: "success")
             return result
         } catch {
             let errorMsg = "ERROR: \(error.localizedDescription)"
             await orchestrator.orchestrator.logToolEnd(name: toolName, result: errorMsg, status: .failed(error.localizedDescription))
+            await AgentAuditLog.shared.record(toolName: toolName, arguments: argsString, wasConfirmed: needsConfirm, status: "failed")
             return errorMsg
         }
     }
@@ -112,4 +128,36 @@ struct AnyExecutableTool: Sendable {
     func execute(jsonArguments: String) async throws -> String {
         return try await _execute(jsonArguments)
     }
+}
+
+// MARK: - Indirect prompt-injection defense
+
+/// Tool results (web pages, files, shell output) are untrusted. A malicious or
+/// careless source can embed directive text ("ignore previous instructions",
+/// "you are now…", fenced system prompts) intended to hijack the agent loop.
+/// This neutralizes the most common patterns before the result re-enters the
+/// model transcript. It does not destroy content — it wraps/marks directive
+/// phrasing so the model treats it as data, not as instructions.
+func sanitizeForPromptInjection(_ text: String) -> String {
+    var out = text
+    let patterns: [(NSRegularExpression, String)] = [
+        // "ignore previous/all instructions" / "disregard the above"
+        (try! NSRegularExpression(pattern: #"(?i)\b(ignore|disregard|forget)\b.{0,40}\b(previous|prior|above|all|earlier)\b.{0,20}\b(instructions?|prompt|context|rules?)\b"#, options: []), "[PROMPT-INJECTION-FLAGGED: instruction-override attempt removed]"),
+        // "you are now / you are an" role hijack
+        (try! NSRegularExpression(pattern: #"(?i)\byou (are|are now|will be) now\b.{0,60}\b(ai|assistant|model|agent|bot|helpful|harmless)\b"#, options: []), "[PROMPT-INJECTION-FLAGGED: role-redefinition attempt removed]"),
+        // "system prompt" / "new system message" injection
+        (try! NSRegularExpression(pattern: #"(?i)\b(new |updated )?system (prompt|message|instruction)\b"#, options: []), "[PROMPT-INJECTION-FLAGGED: system-prompt injection attempt removed]"),
+        // direct command to the assistant
+        (try! NSRegularExpression(pattern: #"(?i)\b(please |now )?(respond|reply|act|pretend|reveal|output|print) (as|with|only|exactly)\b"#, options: []), "[PROMPT-INJECTION-FLAGGED: directive attempt removed]")
+    ]
+    for (regex, replacement) in patterns {
+        let range = NSRange(out.startIndex..., in: out)
+        out = regex.stringByReplacingMatches(in: out, range: range, withTemplate: replacement)
+    }
+    // Neutralize fenced system-prompt blocks that try to masquerade as instructions.
+    if out.contains("```system") || out.contains("``` System") {
+        out = out.replacingOccurrences(of: "```system", with: "```[flagged-system-block]")
+                     .replacingOccurrences(of: "``` System", with: "```[flagged-system-block]")
+    }
+    return out
 }

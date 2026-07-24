@@ -211,6 +211,8 @@ struct ModelStatusBadge: View {
             return "Gemini Cloud"
         case .localOllama:
             return "Ollama Local"
+        case .localMLX:
+            return "MLX Local"
         case .hybrid:
             return "AFM 3 + PCC"
         }

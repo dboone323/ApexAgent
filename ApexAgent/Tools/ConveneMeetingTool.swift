@@ -198,6 +198,10 @@ struct ConveneMeetingTool: Tool {
             let hostURL = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434") ?? URL(string: "http://localhost:11434")!
             let model = LocalOllamaLanguageModel(hostURL: hostURL)
             session = LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
+        case .localMLX:
+            let hostURL = URL(string: UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString) ?? URL(string: LocalMLXLanguageModel.defaultHostURLString)!
+            let model = LocalMLXLanguageModel(hostURL: hostURL)
+            session = LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
         case .hybrid:
             let usePCC = (agent.name == "developer" || agent.name == "researcher")
             if usePCC && AgentOrchestrator.isPrivateCloudComputeAvailable() {
