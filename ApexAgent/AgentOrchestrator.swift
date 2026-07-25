@@ -121,15 +121,16 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     private static let iso8601Formatter = ISO8601DateFormatter()
 
     // MARK: Public State
-    private(set) var messages: [ChatMessage] = [] {
-        didSet { onStateChanged?() }
-    }
-    private(set) var toolEvents: [ToolEvent] = [] {
-        didSet { onStateChanged?() }
-    }
-    private(set) var isGenerating: Bool = false {
-        didSet { onStateChanged?() }
-    }
+    // NOTE: these MUST NOT carry a `didSet`/`willSet`. The @Observable macro
+    // opts a property OUT of observation when it has a custom accessor, which
+    // silently breaks SwiftUI tracking — the chat would then show the agent's
+    // reply in the logs but never re-render the bubble (stuck on "thinking").
+    // The legacy onStateChanged push (used only by ApexGatewayServer for the
+    // remote/collaborative bridge) is fired explicitly in sendMessage's defer
+    // instead of via didSet.
+    private(set) var messages: [ChatMessage] = []
+    private(set) var toolEvents: [ToolEvent] = []
+    private(set) var isGenerating: Bool = false
     private(set) var pendingConfirmation: ConfirmationRequest?
     var modelAvailability: SystemLanguageModel.Availability = .available
     var currentConversationTitle: String = "New Conversation"
@@ -884,6 +885,10 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             defer {
                 isGenerating = false
                 activeAssistantMessageId = nil
+                // Legacy remote-gateway bridge: push final state. (Replaces the
+                // former didSet on isGenerating/messages, which defeated
+                // @Observable tracking and froze the chat UI on "thinking".)
+                onStateChanged?()
             }
             let engine: any AgentEngine
             switch self.modelPreference {
