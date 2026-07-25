@@ -1,5 +1,6 @@
 import Foundation
 import FoundationModels
+import os
 
 // MARK: - Agent Type Enum
 
@@ -108,23 +109,31 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
     let toolCallingMode: GenerationOptions.ToolCallingMode
     let orchestrator: OrchestratorProvider
     let allowedTools: [String]
-    
-    init(agentType: AgentType, instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider) {
+    /// Optional reasoning budget; nil leaves the model default.
+    let reasoningLevel: ContextOptions.ReasoningLevel?
+    /// Optional cap on generated tokens; nil leaves the model default.
+    let maxResponseTokens: Int?
+
+    init(agentType: AgentType, instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider, reasoningLevel: ContextOptions.ReasoningLevel? = nil, maxResponseTokens: Int? = nil) {
         self.agentType = agentType
         self.instructions = instructions
         self.model = model
         self.toolCallingMode = toolCallingMode
         self.orchestrator = orchestrator
         self.allowedTools = AgentRegistry.builtInDefaults[agentType.rawValue]?.allowedTools ?? []
+        self.reasoningLevel = reasoningLevel
+        self.maxResponseTokens = maxResponseTokens
     }
-    
-    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider, allowedTools: [String]) {
+
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider, allowedTools: [String], reasoningLevel: ContextOptions.ReasoningLevel? = nil, maxResponseTokens: Int? = nil) {
         self.agentType = .developer
         self.instructions = instructions
         self.model = model
         self.toolCallingMode = toolCallingMode
         self.orchestrator = orchestrator
         self.allowedTools = allowedTools
+        self.reasoningLevel = reasoningLevel
+        self.maxResponseTokens = maxResponseTokens
     }
     
     var body: some LanguageModelSession.DynamicProfile {
@@ -234,8 +243,11 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
                 ShellTool(orchestrator: orchestrator)
             }
         }
+        .apexAuditHooks()
         .model(model)
         .toolCallingMode(toolCallingMode)
+        .reasoningLevel(reasoningLevel)
+        .maximumResponseTokens(maxResponseTokens)
     }
 }
 
@@ -246,12 +258,16 @@ struct SupervisorAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynami
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
     let orchestrator: OrchestratorProvider
-    
-    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider) {
+    let reasoningLevel: ContextOptions.ReasoningLevel?
+    let maxResponseTokens: Int?
+
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider, reasoningLevel: ContextOptions.ReasoningLevel? = nil, maxResponseTokens: Int? = nil) {
         self.instructions = instructions
         self.model = model
         self.toolCallingMode = toolCallingMode
         self.orchestrator = orchestrator
+        self.reasoningLevel = reasoningLevel
+        self.maxResponseTokens = maxResponseTokens
     }
     
     private var delegateTaskTool: DelegateTaskTool { DelegateTaskTool(orchestrator: orchestrator) }
@@ -278,161 +294,129 @@ struct SupervisorAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynami
             runWorkflowTool
             dynamicToolCallTool
         }
+        .apexAuditHooks()
         .model(model)
         .toolCallingMode(toolCallingMode)
+        .reasoningLevel(reasoningLevel)
+        .maximumResponseTokens(maxResponseTokens)
     }
 }
 
-// MARK: - Developer Agent Profile
+// MARK: - Native DynamicProfile observability + safety hooks
+//
+// Wires the beta-4 `DynamicProfile` lifecycle hooks (`onActivate`,
+// `onDeactivate`, `onPrompt`, `onToolCall`, `onToolOutput`, `onResponse`) into
+// ApexAgent's audit log + signposts so every native-Foundation-Models session
+// action is captured — the same trail `Tool+Logging.executeWithLogging` writes
+// for the direct-HTTP (Ollama/MLX) path. Also applies a `.historyTransform`
+// that scrubs indirect-prompt-injection patterns from the transcript before it
+// re-enters context. This is the native-API expression of the guide's
+// instrumented-agent + injection-defense intent.
 
-struct DeveloperAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
-    typealias ModelType = Model
-    let agentType: AgentType = .developer
-    let instructions: String
-    let model: Model
-    let toolCallingMode: GenerationOptions.ToolCallingMode
-    let orchestrator: OrchestratorProvider
-    
-    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider) {
-        self.instructions = instructions
-        self.model = model
-        self.toolCallingMode = toolCallingMode
-        self.orchestrator = orchestrator
-    }
+// Patterns that, when present in tool/output/response text, indicate an
+// attempted indirect prompt injection. The native `.historyTransform` drops
+// any entry whose recoverable text contains one of these.
+fileprivate let apexInjectionPatterns: [String] = [
+    "ignore previous instructions",
+    "ignore all previous",
+    "disregard the system prompt",
+    "system prompt:",
+    "you are now",
+    "new instructions:",
+    "developer mode"
+]
 
-    var body: some LanguageModelSession.DynamicProfile {
-        SpecializedAgentProfile(agentType: .developer, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
-    }
-}
-
-// MARK: - Executor Agent Profile
-
-struct ExecutorAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
-    typealias ModelType = Model
-    let agentType: AgentType = .executor
-    let instructions: String
-    let model: Model
-    let toolCallingMode: GenerationOptions.ToolCallingMode
-    let orchestrator: OrchestratorProvider
-    
-    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider) {
-        self.instructions = instructions
-        self.model = model
-        self.toolCallingMode = toolCallingMode
-        self.orchestrator = orchestrator
-    }
-
-    var body: some LanguageModelSession.DynamicProfile {
-        SpecializedAgentProfile(agentType: .executor, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
-    }
-}
-
-// MARK: - Controller Agent Profile
-
-struct ControllerAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
-    typealias ModelType = Model
-    let agentType: AgentType = .controller
-    let instructions: String
-    let model: Model
-    let toolCallingMode: GenerationOptions.ToolCallingMode
-    let orchestrator: OrchestratorProvider
-    
-    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider) {
-        self.instructions = instructions
-        self.model = model
-        self.toolCallingMode = toolCallingMode
-        self.orchestrator = orchestrator
-    }
-
-    var body: some LanguageModelSession.DynamicProfile {
-        SpecializedAgentProfile(agentType: .controller, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
+/// Extracts human-readable text from a transcript entry for inspection.
+fileprivate func apexEntryText(_ entry: Transcript.Entry) -> String {
+    switch entry {
+    case .prompt(let prompt):
+        return prompt.segments.compactMap { seg in
+            if case .text(let t) = seg { t.content } else { nil }
+        }.joined(separator: "\n")
+    case .response(let response):
+        return response.segments.compactMap { seg in
+            if case .text(let t) = seg { t.content } else { nil }
+        }.joined(separator: "\n")
+    case .toolOutput(let output):
+        return output.segments.compactMap { seg in
+            if case .text(let t) = seg { t.content } else { nil }
+        }.joined(separator: "\n")
+    default:
+        return ""
     }
 }
 
-// MARK: - Researcher Agent Profile
-
-struct ResearcherAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
-    typealias ModelType = Model
-    let agentType: AgentType = .researcher
-    let instructions: String
-    let model: Model
-    let toolCallingMode: GenerationOptions.ToolCallingMode
-    let orchestrator: OrchestratorProvider
-    
-    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider) {
-        self.instructions = instructions
-        self.model = model
-        self.toolCallingMode = toolCallingMode
-        self.orchestrator = orchestrator
-    }
-
-    var body: some LanguageModelSession.DynamicProfile {
-        SpecializedAgentProfile(agentType: .researcher, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
+/// Maps the user's `apex.reasoningBudget` setting to the native
+/// `ContextOptions.ReasoningLevel`. "off" (or unknown) yields nil (model default).
+func apexConfiguredReasoningLevel() -> ContextOptions.ReasoningLevel? {
+    switch UserDefaults.standard.string(forKey: "apex.reasoningBudget") {
+    case "light":    return .light
+    case "moderate": return .moderate
+    case "deep":     return .deep
+    default:         return nil
     }
 }
 
-// MARK: - Linter Agent Profile
+/// Reads the `apex.maxResponseTokens` setting; nil means "no cap".
+func apexConfiguredMaxResponseTokens() -> Int? {
+    let v = UserDefaults.standard.integer(forKey: "apex.maxResponseTokens")
+    return v > 0 ? v : nil
+}
 
-struct LinterAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
-    typealias ModelType = Model
-    let agentType: AgentType = .linter
-    let instructions: String
-    let model: Model
-    let toolCallingMode: GenerationOptions.ToolCallingMode
-    let orchestrator: OrchestratorProvider
-    
-    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider) {
-        self.instructions = instructions
-        self.model = model
-        self.toolCallingMode = toolCallingMode
-        self.orchestrator = orchestrator
-    }
-
-    var body: some LanguageModelSession.DynamicProfile {
-        SpecializedAgentProfile(agentType: .linter, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
+/// Trims history to the most recent turns and drops entries that look like
+/// indirect prompt-injection attempts. Pure function — safe for `.historyTransform`.
+func apexScrubHistory(_ history: [Transcript.Entry]) -> [Transcript.Entry] {
+    let trimmed = Array(history.suffix(20))
+    return trimmed.filter { entry in
+        let lc = apexEntryText(entry).lowercased()
+        return !apexInjectionPatterns.contains(where: { lc.contains($0) })
     }
 }
 
-// MARK: - UI Designer Agent Profile
-
-struct UIDesignerAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
-    typealias ModelType = Model
-    let agentType: AgentType = .uiDesigner
-    let instructions: String
-    let model: Model
-    let toolCallingMode: GenerationOptions.ToolCallingMode
-    let orchestrator: OrchestratorProvider
-    
-    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider) {
-        self.instructions = instructions
-        self.model = model
-        self.toolCallingMode = toolCallingMode
-        self.orchestrator = orchestrator
-    }
-
-    var body: some LanguageModelSession.DynamicProfile {
-        SpecializedAgentProfile(agentType: .uiDesigner, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
-    }
-}
-
-// MARK: - Planner Agent Profile
-
-struct PlannerAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile, AgentProfile {
-    typealias ModelType = Model
-    let agentType: AgentType = .planner
-    let instructions: String
-    let model: Model
-    let toolCallingMode: GenerationOptions.ToolCallingMode
-    let orchestrator: OrchestratorProvider
-    
-    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider) {
-        self.instructions = instructions
-        self.model = model
-        self.toolCallingMode = toolCallingMode
-        self.orchestrator = orchestrator
-    }
-
-    var body: some LanguageModelSession.DynamicProfile {
-        SpecializedAgentProfile(agentType: .planner, instructions: instructions, model: model, toolCallingMode: toolCallingMode, orchestrator: orchestrator)
+extension LanguageModelSession.DynamicProfile {
+    /// Adds observability (audit log + signposts) and injection defense around
+    /// a profile. The hooks only record — they never mutate the generation.
+    /// Returns a concrete `AnyDynamicProfile` (type-erased) so the result can
+    /// be passed as a `sending` parameter to `LanguageModelSession(profile:)`
+    /// under Swift 6 region isolation — an opaque `some DynamicProfile` cannot.
+    func apexAuditHooks() -> LanguageModelSession.AnyDynamicProfile {
+        LanguageModelSession.AnyDynamicProfile(erasing: self
+            .historyTransform { apexScrubHistory($0) }
+            .onActivate {
+                Logger.agent.info("Native profile activated")
+                AgentSignpost.event("NativeProfileActivate")
+            }
+            .onDeactivate {
+                Logger.agent.info("Native profile deactivated")
+                AgentSignpost.event("NativeProfileDeactivate")
+            }
+            .onPrompt { (prompt: Transcript.Prompt) in
+                let text = prompt.segments.compactMap { seg in
+                    if case .text(let t) = seg { t.content } else { nil }
+                }.joined(separator: "\n")
+                Logger.agent.debug("Native onPrompt: \(text.prefix(120), privacy: .public)")
+            }
+            .onToolCall { (call: Transcript.ToolCall) in
+                let argsString = call.arguments.jsonString
+                Logger.security.info("Native onToolCall: \(call.toolName, privacy: .public)")
+                let signpostID = AgentSignpost.begin("NativeToolCall", detail: call.toolName)
+                await AgentAuditLog.shared.record(toolName: call.toolName, arguments: argsString, status: "started")
+                AgentSignpost.end("NativeToolCall", signpostID)
+            }
+            .onToolOutput { (call: Transcript.ToolCall, output: Transcript.ToolOutput) in
+                let resultText = output.segments.compactMap { segment in
+                    if case .text(let textSeg) = segment { textSeg.content } else { nil }
+                }.joined(separator: "\n")
+                Logger.tools.debug("Native onToolOutput: \(call.toolName, privacy: .public)")
+                await AgentAuditLog.shared.record(toolName: call.toolName, arguments: "", status: "success")
+                _ = resultText // output consumed by the framework; recorded for completeness
+            }
+            .onResponse { (response: Transcript.Response) in
+                let text = response.segments.compactMap { segment in
+                    if case .text(let textSeg) = segment { textSeg.content } else { nil }
+                }.joined(separator: "\n")
+                Logger.agent.debug("Native onResponse: \(text.prefix(120), privacy: .public)")
+            }
+        )
     }
 }

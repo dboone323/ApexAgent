@@ -514,6 +514,20 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         SystemLanguageModel.default
     }
 
+    // MARK: Reasoning / output budget (read from Settings AppStorage)
+
+    /// Maps the user's `apex.reasoningBudget` setting to the native
+    /// `ContextOptions.ReasoningLevel`. "off" yields nil (model default).
+    private var configuredReasoningLevel: ContextOptions.ReasoningLevel? {
+        apexConfiguredReasoningLevel()
+    }
+
+    /// Reads the `apex.maxResponseTokens` setting; returns nil when it is 0
+    /// (meaning "no cap").
+    private var configuredMaxResponseTokens: Int? {
+        apexConfiguredMaxResponseTokens()
+    }
+
     private func resolveModelForSession() -> any LanguageModel {
         if modelPreference == .hybrid && !multiAgentModeEnabled {
             // Single-agent hybrid mode uses PCC for deep reasoning, falling back to local system if unavailable
@@ -527,11 +541,13 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     }
 
     private func createSession<M: LanguageModel>(model: M, instructions: String, mode: GenerationOptions.ToolCallingMode, transcript: Transcript) -> LanguageModelSession {
+        let reasoning = configuredReasoningLevel
+        let maxTokens = configuredMaxResponseTokens
         if multiAgentModeEnabled {
-            let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self)
+            let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self, reasoningLevel: reasoning, maxResponseTokens: maxTokens)
             return LanguageModelSession(profile: profile, history: transcript)
         } else {
-            let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self)
+            let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self, reasoningLevel: reasoning, maxResponseTokens: maxTokens)
             return LanguageModelSession(profile: profile, history: transcript)
         }
     }
@@ -591,7 +607,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         let model = resolveModelForSession()
         session = createSession(model: model, instructions: instructions, mode: mode, transcript: transcript)
 
-        session?.prewarm()
+        // Warm the KV cache with a likely first-prompt prefix to cut
+        // first-token latency (native session.prewarm(promptPrefix:)).
+        session?.prewarm(promptPrefix: Prompt("Analyze the following"))
     }
 
     var allTools: [AnyExecutableTool] {
@@ -740,7 +758,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 instructions: instructions,
                 model: m,
                 toolCallingMode: .disallowed,
-                orchestrator: self
+                orchestrator: self,
+                reasoningLevel: configuredReasoningLevel,
+                maxResponseTokens: configuredMaxResponseTokens
             )
             return LanguageModelSession(profile: profile, history: Transcript(entries: []))
         }
@@ -849,7 +869,15 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         activeAssistantMessageId = assistantMsg.id
 
         Task {
-            await ScreenStreamer.shared.startCapture()
+            // Only capture the screen when the collaborative/sharing server is
+            // active — ScreenCaptureKit streams (1024x768 @1fps) are RAM-heavy
+            // and were being started on EVERY generation, pushing an already
+            // memory-pressured system into CriticalMemoryPressure (which makes
+            // on-device FM inference fail or thrash). Screen frames are only
+            // consumed by CollaborativeServer, so don't capture for plain chat.
+            if UserDefaults.standard.bool(forKey: "apex.collaborativeServerEnabled") {
+                await ScreenStreamer.shared.startCapture()
+            }
         }
 
         currentTask = Task {
@@ -893,7 +921,17 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                     onUpdate: { @MainActor partialContent in
                         guard let id = self.activeAssistantMessageId else { return }
                         if let idx = self.messages.firstIndex(where: { $0.id == id }) {
-                            self.messages[idx].content = partialContent
+                            // Reassign the whole array (not just a nested
+                            // `messages[idx].content =`) so @Observable tracks
+                            // the change and SwiftUI re-renders the streaming
+                            // bubble. A nested struct mutation does NOT trigger
+                            // @Observable, which left the UI stuck on "thinking".
+                            var copy = self.messages
+                            copy[idx].content = partialContent
+                            self.messages = copy
+                            Logger.agent.info("[DIAG-onUpdate] id=\(id) chars=\(partialContent.count) messages.count=\(self.messages.count)")
+                        } else {
+                            Logger.agent.info("[DIAG-onUpdate] active id not found in messages (idx miss)")
                         }
                     }
                 )
@@ -933,7 +971,10 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 }
             } catch {
                 if let id = self.activeAssistantMessageId, let idx = self.messages.firstIndex(where: { $0.id == id }) {
-                    self.messages[idx].content = "⚠️ Error: \(error.localizedDescription)"
+                    // Reassign (not nested mutation) so @Observable publishes the error.
+                    var copy = self.messages
+                    copy[idx].content = "⚠️ Error: \(error.localizedDescription)"
+                    self.messages = copy
                 }
 
                 // Save error message to SwiftData
@@ -951,7 +992,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             }
 
             if let id = self.activeAssistantMessageId, let idx = self.messages.firstIndex(where: { $0.id == id }) {
-                self.messages[idx].isStreaming = false
+                // Reassign (not nested mutation) so @Observable publishes the
+                // isStreaming=false flip — otherwise the view keeps showing the
+                // "thinking"/typing indicator forever even after content arrives.
+                var copy = self.messages
+                copy[idx].isStreaming = false
+                self.messages = copy
             }
             self.activeAssistantMessageId = nil
             self.isGenerating = false
@@ -967,7 +1013,10 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         VoiceController.shared.stopSpeaking()
 
         if let id = activeAssistantMessageId, let idx = messages.firstIndex(where: { $0.id == id }), messages[idx].isStreaming {
-            messages[idx].isStreaming = false
+            // Reassign so @Observable publishes isStreaming=false (not nested mutation).
+            var copy = messages
+            copy[idx].isStreaming = false
+            messages = copy
             // Save partially generated message to SwiftData
             if let conv = currentConversation, let context = modelContext {
                 let dbAssistantMsg = Message(role: .assistant, content: messages[idx].content)
@@ -1286,12 +1335,16 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
     let orchestrator: OrchestratorProvider
+    let reasoningLevel: ContextOptions.ReasoningLevel?
+    let maxResponseTokens: Int?
 
-    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider) {
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider, reasoningLevel: ContextOptions.ReasoningLevel? = nil, maxResponseTokens: Int? = nil) {
         self.instructions = instructions
         self.model = model
         self.toolCallingMode = toolCallingMode
         self.orchestrator = orchestrator
+        self.reasoningLevel = reasoningLevel
+        self.maxResponseTokens = maxResponseTokens
     }
 
     private var shellTool: ShellTool { ShellTool(orchestrator: orchestrator) }
@@ -1350,7 +1403,10 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
             createSkillTool
             dynamicToolCallTool
         }
+        .apexAuditHooks()
         .model(model)
         .toolCallingMode(toolCallingMode)
+        .reasoningLevel(reasoningLevel)
+        .maximumResponseTokens(maxResponseTokens)
     }
 }

@@ -8,13 +8,25 @@ import Darwin
 struct MultimodalReaderProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile {
     let instructions: String
     let model: Model
-    
+    let reasoningLevel: ContextOptions.ReasoningLevel?
+    let maxResponseTokens: Int?
+
+    init(instructions: String, model: Model, reasoningLevel: ContextOptions.ReasoningLevel? = nil, maxResponseTokens: Int? = nil) {
+        self.instructions = instructions
+        self.model = model
+        self.reasoningLevel = reasoningLevel
+        self.maxResponseTokens = maxResponseTokens
+    }
+
     var body: some LanguageModelSession.DynamicProfile {
         LanguageModelSession.Profile {
             Instructions(instructions)
         }
+        .apexAuditHooks()
         .model(model)
         .toolCallingMode(.disallowed)
+        .reasoningLevel(reasoningLevel)
+        .maximumResponseTokens(maxResponseTokens)
     }
 }
 
@@ -83,25 +95,25 @@ struct AnalyzeImageTool: Tool {
         switch preference {
         case .localSystem:
             let model = SystemLanguageModel.default
-            return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model), history: transcript)
+            return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
         case .privateCloud:
             let model = PrivateCloudComputeLanguageModel()
-            return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model), history: transcript)
+            return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
         case .cloudGemini:
             let apiKey = KeychainManager.get(key: "geminiAPIKey") ?? ""
             let model = CloudGeminiLanguageModel(apiKey: apiKey)
-            return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model), history: transcript)
+            return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
         case .localOllama:
             let hostURL = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434") ?? URL(string: "http://localhost:11434")!
             let model = LocalOllamaLanguageModel(hostURL: hostURL)
-            return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model), history: transcript)
+            return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
         case .localMLX:
             let hostURL = URL(string: UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString) ?? URL(string: LocalMLXLanguageModel.defaultHostURLString)!
             let model = LocalMLXLanguageModel(hostURL: hostURL)
-            return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model), history: transcript)
+            return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
         case .hybrid:
             let model = PrivateCloudComputeLanguageModel()
-            return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model), history: transcript)
+            return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
         }
     }
 }

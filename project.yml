@@ -142,15 +142,15 @@ targets:
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks
         ENABLE_PREVIEWS: YES
     dependencies:
+      # Only link ApexAgentCore (+ its local helper frameworks). The SPM
+      # packages (Sparkle, Containerization, ContainerizationOCI) are already
+      # linked by ApexAgentCore. Re-linking them here statically embeds a
+      # second copy of every ObjC class (Containerization, NIO, GRPC, Crypto,
+      # Logging, …) into ApexAgent.debug.dylib → "duplicate class" warnings at
+      # launch. ApexAgentRuntime imports none of those packages directly.
       - target: ApexAgentCore
       - target: SharedKit
       - target: MCPKit
-      - package: Sparkle
-        product: Sparkle
-      - package: Containerization
-        product: Containerization
-      - package: Containerization
-        product: ContainerizationOCI
     scheme:
       testTargets:
         - ApexAgentTests

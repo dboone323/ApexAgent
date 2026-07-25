@@ -206,7 +206,9 @@ final class ReflectionManager {
             instructions: systemPrompt,
             model: model,
             toolCallingMode: .disallowed,
-            orchestrator: orchestrator
+            orchestrator: orchestrator,
+            reasoningLevel: apexConfiguredReasoningLevel(),
+            maxResponseTokens: apexConfiguredMaxResponseTokens()
         )
         return LanguageModelSession(profile: profile, history: Transcript(entries: []))
     }

@@ -1,4 +1,4 @@
-import Foundation
+@preconcurrency import Foundation
 import FoundationModels
 
 // MARK: - Spotlight Search Tool (Core Spotlight RAG)
@@ -58,7 +58,12 @@ struct SpotlightSearchTool: Tool {
     /// results; safe to call from any context (synchronously waits on the main
     /// actor for the query to finish, with a 3s watchdog so it cannot hang if
     /// Spotlight is unavailable).
-    static func runSpotlightQuery(query: String, maxResults: Int, contentType: String?) -> [SpotlightHit] {
+    /// Runs a Core Spotlight query using NSMetadataQuery.
+    /// Implemented as a proper async function (withCheckedContinuation) so it
+    /// never blocks a thread and is Swift 6 concurrency-safe: all query state
+    /// is local to the notification closure, and results are returned via the
+    /// continuation rather than a shared mutable `var`.
+    static func runSpotlightQuery(query: String, maxResults: Int, contentType: String?) async -> [SpotlightHit] {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
 
         let queryString: String
@@ -68,23 +73,21 @@ struct SpotlightSearchTool: Tool {
             queryString = "kMDItemTextContent == '*\(query)*'c"
         }
 
-        let gate = SpotlightQueryGate()
-        var hits: [SpotlightHit] = []
-
-        let work = {
+        return await withCheckedContinuation { continuation in
             let metadataQuery = NSMetadataQuery()
             metadataQuery.predicate = NSPredicate(fromMetadataQueryString: queryString)
             metadataQuery.sortDescriptors = [NSSortDescriptor(key: kMDItemFSCreationDate as String, ascending: false)]
             metadataQuery.valueListAttributes = [kMDItemTitle as String, kMDItemPath as String, kMDItemTextContent as String]
 
-            var observation: NSObjectProtocol?
-            observation = NotificationCenter.default.addObserver(
+            let obsBox = UncheckedSendableBox<NSObjectProtocol?>(nil)
+            obsBox.value = NotificationCenter.default.addObserver(
                 forName: .NSMetadataQueryDidFinishGathering,
                 object: metadataQuery,
                 queue: .main
             ) { _ in
                 metadataQuery.disableUpdates()
                 let count = min(metadataQuery.resultCount, maxResults)
+                var hits: [SpotlightHit] = []
                 for i in 0..<count {
                     guard let item = metadataQuery.result(at: i) as? NSMetadataItem else { continue }
                     let title = (item.value(forAttribute: kMDItemTitle as String) as? String)
@@ -96,39 +99,23 @@ struct SpotlightSearchTool: Tool {
                     hits.append(SpotlightHit(title: title, path: path, snippet: snippet))
                 }
                 metadataQuery.stop()
-                if let obs = observation { NotificationCenter.default.removeObserver(obs) }
-                gate.leave()
+                if let obs = obsBox.value { NotificationCenter.default.removeObserver(obs) }
+                continuation.resume(returning: hits)
+            }
+
+            // Watchdog: if the gather never completes (Spotlight unavailable),
+            // resume with an empty result so the caller is never stranded.
+            let queryBox = UncheckedSendableBox(metadataQuery)
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 3) {
+                DispatchQueue.main.async {
+                    queryBox.value.stop()
+                    if let obs = obsBox.value { NotificationCenter.default.removeObserver(obs) }
+                    continuation.resume(returning: [])
+                }
             }
 
             metadataQuery.start()
-
-            // Watchdog (global queue — never main): if the gather never
-            // completes (Spotlight disabled/unavailable), stop the query and
-            // unblock the wait. Must not be on main: callers may block main
-            // in gate.wait(), which would deadlock a main-queue watchdog.
-            // The query is boxed to cross queues without a Swift 6
-            // RegionIsolation error; it is only touched back on main.
-            let queryBox = UncheckedSendableBox(metadataQuery)
-            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 3) {
-                DispatchQueue.main.async { queryBox.value.stop() }
-                gate.leave()
-            }
         }
-
-        if Thread.isMainThread {
-            gate.enter()
-            work()
-        } else {
-            gate.enter()
-            DispatchQueue.main.sync(execute: work)
-        }
-        // Bounded wait: when the caller IS the main thread, the main runloop
-        // cannot spin while we block here, so the gather notification can
-        // never arrive — the timeout guarantees we return (empty) instead of
-        // deadlocking the process.
-        gate.wait(timeout: 4)
-
-        return hits
     }
 }
 
@@ -167,6 +154,6 @@ struct SpotlightHit: Sendable {
 /// Minimal box to move a non-Sendable reference across queues when the usage
 /// pattern is known-safe (here: NSMetadataQuery is only ever touched on main).
 final class UncheckedSendableBox<T>: @unchecked Sendable {
-    let value: T
+    var value: T
     init(_ value: T) { self.value = value }
 }

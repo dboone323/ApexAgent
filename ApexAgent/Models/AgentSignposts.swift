@@ -10,6 +10,11 @@ import os.signpost
 // experiences with Instruments". Categories: Agent, Tools, Security, Provider.
 
 let agentSignpostLog = OSLog(subsystem: "com.apexagent.app", category: "AgentPerformance")
+/// Points-of-Interest log: renders in Instruments' Time Profiler "Points of Interest"
+/// lane automatically (no manual os_signpost instrument needed). Used to mark
+/// generation boundaries so a profile always shows *something* even if the
+/// dedicated os_signpost instrument isn't added.
+let agentPointsOfInterestLog = OSLog(subsystem: "com.apexagent.app", category: "points-of-interest")
 
 extension Logger {
     static let agent    = Logger(subsystem: "com.apexagent.app", category: "Agent")
@@ -31,6 +36,11 @@ enum AgentSignpost {
 
     static func end(_ name: StaticString, _ id: OSSignpostID, detail: String = "") {
         os_signpost(.end, log: agentSignpostLog, name: name, signpostID: id, "%{public}s", detail)
+    }
+
+    /// Emit a single-point (event) signpost — no duration span.
+    static func event(_ name: StaticString, detail: String = "") {
+        os_signpost(.event, log: agentSignpostLog, name: name, "%{public}s", detail)
     }
 
     /// Convenience: run an async body inside a signposted span. Inherits the

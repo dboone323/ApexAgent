@@ -235,7 +235,7 @@ class ProjectAuditor {
     nonisolated private func extractValue(from line: String) -> String? {
         let parts = line.components(separatedBy: "=")
         guard parts.count == 2 else { return nil }
-        var val = parts[1].trimmingCharacters(in: CharacterSet(charactersIn: " ;\"'"))
+        let val = parts[1].trimmingCharacters(in: CharacterSet(charactersIn: " ;\"'"))
         return val.isEmpty ? nil : val
     }
 

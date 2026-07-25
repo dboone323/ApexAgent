@@ -69,6 +69,8 @@ struct SettingsView: View {
     @AppStorage("apex.multiAgentModeEnabled") private var multiAgentModeEnabled: Bool = false
     @AppStorage("apex.voiceLocale") private var voiceLocale: String = "en-US"
     @AppStorage("apex.voiceSpeechRate") private var voiceSpeechRate: Double = 0.52
+    @AppStorage("apex.reasoningBudget") private var reasoningBudget: String = "moderate"
+    @AppStorage("apex.maxResponseTokens") private var maxResponseTokens: Int = 4096
 
     var body: some View {
         NavigationStack {
@@ -103,6 +105,21 @@ struct SettingsView: View {
                             .foregroundStyle(AppTheme.Palette.success)
                     }
                     .font(AppTheme.Font.body(12))
+                }
+
+                // MARK: Reasoning & Output Budget
+                Section("Reasoning & Output") {
+                    Picker("Reasoning Budget", selection: $reasoningBudget) {
+                        Text("Off").tag("off")
+                        Text("Light").tag("light")
+                        Text("Moderate").tag("moderate")
+                        Text("Deep").tag("deep")
+                    }
+                    .pickerStyle(.menu)
+                    .help("Controls on-device/PCC reasoning effort via the native DynamicProfile .reasoningLevel modifier.")
+
+                    Stepper("Max Response Tokens: \(maxResponseTokens)", value: $maxResponseTokens, in: 256...32768, step: 256)
+                        .help("Caps generated tokens via the native DynamicProfile .maximumResponseTokens modifier.")
                 }
 
                 // MARK: API Keys

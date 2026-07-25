@@ -49,7 +49,7 @@ struct OllamaAgentEngine: AgentEngine {
         var tools: [[String: Any]] = []
         if useTools {
             for schema in getParsedSchemas() {
-                guard let name = schema["name"] as? String else { continue }
+                guard schema["name"] is String else { continue }
                 tools.append(["type": "function", "function": schema])
             }
         }

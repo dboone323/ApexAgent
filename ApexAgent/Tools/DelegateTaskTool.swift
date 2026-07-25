@@ -58,7 +58,7 @@ struct DelegateTaskTool: Tool {
                     preference: orchestrator.modelPreference,
                     instructions: agent.systemPrompt
                 )
-                s.prewarm()
+                s.prewarm(promptPrefix: Prompt("Execute the following task"))
                 return (s, msgId)
             }
             
@@ -108,35 +108,35 @@ struct DelegateTaskTool: Tool {
         switch resolvedPreference {
         case .localSystem:
             let model = SystemLanguageModel.default
-            return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
+            return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
         case .privateCloud:
             if AgentOrchestrator.isPrivateCloudComputeAvailable() {
                 let model = PrivateCloudComputeLanguageModel()
-                return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
+                return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
             } else {
                 let model = SystemLanguageModel.default
-                return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
+                return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
             }
         case .cloudGemini:
             let apiKey = KeychainManager.get(key: "geminiAPIKey") ?? ""
             let model = CloudGeminiLanguageModel(apiKey: apiKey)
-            return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
+            return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
         case .localOllama:
             let hostURL = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434") ?? URL(string: "http://localhost:11434")!
             let model = LocalOllamaLanguageModel(hostURL: hostURL)
-            return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
+            return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
         case .localMLX:
             let hostURL = URL(string: UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString) ?? URL(string: LocalMLXLanguageModel.defaultHostURLString)!
             let model = LocalMLXLanguageModel(hostURL: hostURL)
-            return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
+            return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
         case .hybrid:
             let usePCC = (agent.name == "developer" || agent.name == "researcher")
             if usePCC && AgentOrchestrator.isPrivateCloudComputeAvailable() {
                 let model = PrivateCloudComputeLanguageModel()
-                return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
+                return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
             } else {
                 let model = SystemLanguageModel.default
-                return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools), history: transcript)
+                return LanguageModelSession(profile: SpecializedAgentProfile(instructions: instructions, model: model, toolCallingMode: .allowed, orchestrator: orchestrator, allowedTools: agent.allowedTools, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
             }
         }
     }

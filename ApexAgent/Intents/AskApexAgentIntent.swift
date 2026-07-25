@@ -61,8 +61,8 @@ struct ApexAgentShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: AskApexAgentIntent(),
             phrases: [
-                "Ask Apex Agent \(\.$prompt)",
-                "Tell Apex Agent \(\.$prompt)"
+                "Ask ${applicationName} \\.$prompt",
+                "Tell ${applicationName} \\.$prompt"
             ],
             shortTitle: "Ask Apex Agent",
             systemImageName: "bolt.fill"
