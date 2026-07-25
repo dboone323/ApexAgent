@@ -179,15 +179,13 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         if speechSynthesizer.isSpeaking {
             speechSynthesizer.stopSpeaking(at: .immediate)
         }
-        // Publish off the current transaction. Calling this from within a
-        // SwiftUI view update (e.g. via cancelGeneration() triggered by a
-        // conversation switch .onChange) would otherwise hit
-        // "Publishing changes from within view updates" and corrupt the
-        // ongoing transaction — which silently dropped the orchestrator's
-        // messages update and left the chat stuck on "thinking".
-        Task { @MainActor in
-            isSpeaking = false
-        }
+        // Set synchronously (we're already on the MainActor). The earlier
+        // `Task { @MainActor in ... }` wrapper deferred this past the caller,
+        // which broke synchronous callers (test asserted !isSpeaking before
+        // the task ran) and raced with message reassignments in cancelGeneration().
+        // Delegate callbacks (didCancel/didFinish) still clear isSpeaking off
+        // the transaction, so there's no double-publish.
+        isSpeaking = false
     }
     
     // MARK: - AVSpeechSynthesizerDelegate

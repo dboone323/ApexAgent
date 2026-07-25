@@ -50,7 +50,7 @@ extension DynamicToolRouting {
             for tc in staticToolCalls {
                 let toolCallAction = LanguageModelExecutorGenerationChannel.ToolCalls.ToolCall.Action.appendArguments(tc.argumentsString, tokenCount: 0)
                 let action = LanguageModelExecutorGenerationChannel.ToolCalls.Action.toolCall(id: tc.id, name: tc.name, action: toolCallAction)
-                let event = LanguageModelExecutorGenerationChannel.ToolCalls.toolCalls(entryID: entryID, action: action)
+                let event = LanguageModelExecutorGenerationChannel.Event.toolCalls(entryID: entryID, action: action)
                 await channel.send(event)
             }
         }

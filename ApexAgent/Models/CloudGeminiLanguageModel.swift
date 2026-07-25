@@ -7,7 +7,7 @@ public struct CloudGeminiLanguageModel: LanguageModel {
     public let apiKey: String
     
     public var capabilities: LanguageModelCapabilities {
-        LanguageModelCapabilities(capabilities: [.toolCalling, .reasoning])
+        LanguageModelCapabilities([.toolCalling, .reasoning])
     }
     
     public var executorConfiguration: CloudGeminiLanguageModelExecutor.Configuration {
@@ -185,11 +185,12 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                 if !tools.isEmpty {
                     requestBody["tools"] = tools
                     
-                    let mode: String = switch request.generationOptions.toolCallingMode {
-                    case .allowed?: "AUTO"
-                    case .required?: "ANY"
-                    case .disallowed?, .none: "OFF"
-                    @unknown default: "AUTO"
+                    let mode: String
+                    switch request.generationOptions.toolCallingMode {
+                    case .allowed?: mode = "AUTO"
+                    case .required?: mode = "ANY"
+                    case .disallowed?, .none: mode = "OFF"
+                    @unknown default: mode = "AUTO"
                     }
                     
                     requestBody["toolConfig"] = [
@@ -252,7 +253,7 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                         for part in parts {
                             if let text = part["text"] as? String {
                                 accumulatedText += text
-                                await channel.send(LanguageModelExecutorGenerationChannel.Response.response(entryID: entryID, action: .appendText(text, tokenCount: 0)))
+                                await channel.send(LanguageModelExecutorGenerationChannel.Event.response(entryID: entryID, action: .appendText(text, segmentID: nil, tokenCount: 0)))
                             }
                             if let functionCall = part["functionCall"] as? [String: Any],
                                let name = functionCall["name"] as? String,

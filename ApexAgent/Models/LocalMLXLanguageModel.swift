@@ -20,7 +20,7 @@ public struct LocalMLXLanguageModel: LanguageModel {
     public let hostURL: URL
 
     public var capabilities: LanguageModelCapabilities {
-        LanguageModelCapabilities(capabilities: [.toolCalling, .reasoning])
+        LanguageModelCapabilities([.toolCalling, .reasoning])
     }
 
     public var executorConfiguration: LocalMLXLanguageModelExecutor.Configuration {
@@ -191,7 +191,7 @@ public struct LocalMLXLanguageModelExecutor: LanguageModelExecutor, DynamicToolR
                       let delta = choices.first?["delta"] as? [String: Any] else { continue }
 
                 if let content = delta["content"] as? String, !content.isEmpty {
-                    await channel.send(LanguageModelExecutorGenerationChannel.Response.response(entryID: entryID, action: .appendText(content, tokenCount: 0)))
+                    await channel.send(LanguageModelExecutorGenerationChannel.Event.response(entryID: entryID, action: .appendText(content, segmentID: nil, tokenCount: 0)))
                 }
                 if let toolCalls = delta["tool_calls"] as? [[String: Any]] {
                     for toolCall in toolCalls {
