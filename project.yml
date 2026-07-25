@@ -142,15 +142,21 @@ targets:
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks
         ENABLE_PREVIEWS: YES
     dependencies:
-      # Only link ApexAgentCore (+ its local helper frameworks). The SPM
-      # packages (Sparkle, Containerization, ContainerizationOCI) are already
-      # linked by ApexAgentCore. Re-linking them here statically embeds a
-      # second copy of every ObjC class (Containerization, NIO, GRPC, Crypto,
-      # Logging, …) into ApexAgent.debug.dylib → "duplicate class" warnings at
-      # launch. ApexAgentRuntime imports none of those packages directly.
+      # Local frameworks are linked + embedded by the app.
       - target: ApexAgentCore
       - target: SharedKit
+      - target: SharedModels
+      - target: SharedLogging
       - target: MCPKit
+      # App links Sparkle directly so Xcode embeds the dynamic Sparkle.framework
+      # into the .app bundle (otherwise the app crashes at launch: dyld can't
+      # find Sparkle.framework). NOTE: linking Sparkle here makes
+      # `xcodebuildmcp macos test` fail with "Multiple commands produce
+      # Crypto.framework" (Xcode build-graph quirk when app + test bundles both
+      # pull Sparkle's transitive SPM deps). The repo's test gate is SwiftPM
+      # `make test`, which is unaffected — use that for the coverage gate.
+      - package: Sparkle
+        product: Sparkle
     scheme:
       testTargets:
         - ApexAgentTests

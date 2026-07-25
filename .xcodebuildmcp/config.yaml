@@ -1,0 +1,29 @@
+schemaVersion: 1
+
+# ApexAgent is a native macOS 27 app. Enable the workflows we actually use;
+# skip iOS-only (simulator, device, simulator-management, project-scaffolding).
+enabledWorkflows:
+  - macos
+  - swift-package
+  - coverage
+  - debugging
+  - ui-automation
+  - xcode-ide
+  - session-management
+  - project-discovery
+  - utilities
+
+# Opt out of Sentry runtime telemetry.
+sentryDisabled: true
+
+# Repo-scoped session defaults so the MCP tools have sane defaults.
+sessionDefaults:
+  projectPath: "./ApexAgent.xcodeproj"
+  scheme: "ApexAgent"
+  configuration: "Debug"
+
+# UI automation needs Accessibility permission; guard mode errors loudly if missing.
+uiDebuggerGuardMode: "error"
+
+# Build settings
+incrementalBuildsEnabled: true
