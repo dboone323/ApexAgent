@@ -131,7 +131,10 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     private(set) var messages: [ChatMessage] = []
     private(set) var toolEvents: [ToolEvent] = []
     private(set) var isGenerating: Bool = false
-    private(set) var pendingConfirmation: ConfirmationRequest?
+    // Internal (not private) setter: ViewHostingTests seeds a pending request
+    // to drive ConfirmationOverlay's populated branch — requestConfirmation()
+    // short-circuits under APEX_TEST_MODE so tests can't reach it otherwise.
+    var pendingConfirmation: ConfirmationRequest?
     var modelAvailability: SystemLanguageModel.Availability = .available
     var currentConversationTitle: String = "New Conversation"
     var requireConfirmationForAll: Bool = false
