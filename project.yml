@@ -10,7 +10,7 @@ options:
 packages:
   Containerization:
     url: https://github.com/apple/containerization
-    branch: main
+    exactVersion: 0.38.0
 
 settings:
   base:
@@ -19,8 +19,13 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-    # Local dev builds should not require a paid cert / manual signing.
-    CODE_SIGNING_ALLOWED: NO
+    # Local dev builds: ad-hoc sign (no paid cert) so entitlements actually
+    # embed. CODE_SIGNING_ALLOWED:NO produced a linker-signed binary with ZERO
+    # entitlements — Virtualization.framework then refuses to create VMs, so
+    # the Apple Container sandbox could never start. Ad-hoc identity "-" signs
+    # locally and embeds ApexAgent.entitlements.
+    CODE_SIGNING_ALLOWED: YES
+    CODE_SIGN_IDENTITY: "-"
     # FoundationModels is weak-linked so the app launches on builds that lack
     # the symbols (AgentEngine.swift dlsym-checks availability).
     OTHER_LDFLAGS: "-weak_framework FoundationModels -weak_framework _FoundationModels_AppKit -weak_framework _FoundationModels_SwiftUI -weak_framework _Vision_FoundationModels -weak_framework _CoreSpotlight_FoundationModels"

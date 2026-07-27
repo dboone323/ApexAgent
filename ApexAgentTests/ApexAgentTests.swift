@@ -1030,5 +1030,28 @@ class MockToolEventLogger: ToolEventLogger {
             print("⚠️ Git MCP 'git_status' tool not loaded.")
         }
     }
+
+    // MARK: - ContainerManager image reference normalization
+
+    @MainActor
+    @Test func testNormalizeImageReference() async throws {
+        // Bare Docker-Hub official image → docker.io/library/
+        #expect(ContainerManager.normalizeImageReference("swift:latest") == "docker.io/library/swift:latest")
+        #expect(ContainerManager.normalizeImageReference("alpine:3.20") == "docker.io/library/alpine:3.20")
+        #expect(ContainerManager.normalizeImageReference("ubuntu") == "docker.io/library/ubuntu")
+        // User/org path → docker.io/
+        #expect(ContainerManager.normalizeImageReference("user/repo:tag") == "docker.io/user/repo:tag")
+        // Fully-qualified references pass through untouched
+        #expect(ContainerManager.normalizeImageReference("ghcr.io/apple/containerization/vminit:0.38.0") == "ghcr.io/apple/containerization/vminit:0.38.0")
+        #expect(ContainerManager.normalizeImageReference("docker.io/library/swift:latest") == "docker.io/library/swift:latest")
+        #expect(ContainerManager.normalizeImageReference("localhost/test:1") == "localhost/test:1")
+        #expect(ContainerManager.normalizeImageReference("registry.example.com:5000/img:v1") == "registry.example.com:5000/img:v1")
+        // Whitespace trimmed; empty stays empty
+        #expect(ContainerManager.normalizeImageReference("  swift:latest  ") == "docker.io/library/swift:latest")
+        #expect(ContainerManager.normalizeImageReference("") == "")
+        // Default image property is normalized
+        let manager = ContainerManager.shared
+        #expect(manager.appleContainerImage.hasPrefix("docker.io/") || manager.appleContainerImage.contains("."))
+    }
 }
 

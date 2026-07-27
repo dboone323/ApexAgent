@@ -24,7 +24,9 @@ import Foundation
         
         #expect(manager.containerCPUs == 2)
         #expect(manager.containerMemoryMB == 2048)
-        #expect(manager.appleContainerImage == "alpine:latest")
+        // The getter normalizes bare Docker-Hub names to fully-qualified
+        // references (Containerization's ImageStore rejects bare names).
+        #expect(manager.appleContainerImage == "docker.io/library/alpine:latest")
         
         // Restore defaults
         manager.containerCPUs = originalCPUs
