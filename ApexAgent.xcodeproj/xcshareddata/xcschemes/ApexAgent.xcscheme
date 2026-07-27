@@ -73,6 +73,17 @@
                ReferencedContainer = "container:ApexAgent.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "D25CDE11C75690193CF44814"
+               BuildableName = "ApexAgentUITests.xctest"
+               BlueprintName = "ApexAgentUITests"
+               ReferencedContainer = "container:ApexAgent.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>

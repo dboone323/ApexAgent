@@ -154,6 +154,7 @@ targets:
         - ApexAgentTests
         - ApexAgentIntelligenceTests
         - ApexAgentContainerTests
+        - ApexAgentUITests
       environmentVariables:
         APEX_DEBUG: "1"
 
@@ -206,6 +207,19 @@ targets:
       # emit duplicate build commands for PackageFrameworks/Crypto.framework
       # ("Multiple commands produce ... Crypto.framework").
 
+  ApexAgentUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: ApexAgentUITests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgentUITests
+        TEST_TARGET_NAME: ApexAgent
+    dependencies:
+      - target: ApexAgent
+
 schemes:
   ApexAgent:
     build:
@@ -214,10 +228,16 @@ schemes:
         ApexAgentTests: [test]
         ApexAgentIntelligenceTests: [test]
         ApexAgentContainerTests: [test]
+        ApexAgentUITests: [test]
     run:
       config: Debug
     test:
       config: Debug
       gatherCoverageData: true
+      targets:
+        - ApexAgentTests
+        - ApexAgentIntelligenceTests
+        - ApexAgentContainerTests
+        - ApexAgentUITests
     archive:
       config: Release

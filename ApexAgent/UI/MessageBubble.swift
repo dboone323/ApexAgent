@@ -17,6 +17,7 @@ struct MessageBubble: View {
             VStack(alignment: isUser ? .trailing : .leading, spacing: 6) {
                 // Bubble
                 BubbleContent(message: message)
+                    .accessibilityIdentifier(isUser ? "UserMessage" : "AgentResponse")
 
                 // Timestamp
                 Text(message.timestamp.formatted(date: .omitted, time: .shortened))

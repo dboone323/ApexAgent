@@ -85,6 +85,7 @@ struct ContentView: View {
                     Image(systemName: "square.and.pencil")
                 }
                 .help("New Conversation (⌘N)")
+                .accessibilityIdentifier("newConversationButton")
  
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -96,6 +97,8 @@ struct ContentView: View {
                 }
                 .focusable()
                 .help("Toggle Sidebar")
+                .accessibilityIdentifier("toggleSidebarButton")
+                .accessibilityLabel("Toggle sidebar")
 
                 Button {
                     showSettings.toggle()
@@ -104,7 +107,9 @@ struct ContentView: View {
                 }
                 .focusable()
                 .help("Settings")
-                
+                .accessibilityIdentifier("settingsButton")
+                .accessibilityLabel("Settings")
+
                 Button {
                     showDiagnostics.toggle()
                 } label: {
@@ -112,7 +117,9 @@ struct ContentView: View {
                 }
                 .focusable()
                 .help("System Diagnostics Self-Check")
-                
+                .accessibilityIdentifier("diagnosticsButton")
+                .accessibilityLabel("System diagnostics")
+
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         showTerminal.toggle()
@@ -123,6 +130,8 @@ struct ContentView: View {
                 }
                 .focusable()
                 .help("Toggle Terminal Console")
+                .accessibilityIdentifier("toggleTerminalButton")
+                .accessibilityLabel("Toggle terminal console")
                 
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -134,6 +143,8 @@ struct ContentView: View {
                 }
                 .focusable()
                 .help("Toggle Plan Dashboard")
+                .accessibilityIdentifier("togglePlanDashboardButton")
+                .accessibilityLabel("Toggle plan dashboard")
                 
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -145,6 +156,8 @@ struct ContentView: View {
                 }
                 .focusable()
                 .help("Toggle Activity Log")
+                .accessibilityIdentifier("toggleActivityLogButton")
+                .accessibilityLabel("Toggle activity log")
             }
         }
         .sheet(isPresented: $showSettings) {

@@ -75,7 +75,6 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-
                 // MARK: Model Status
                 Section("Model Configuration") {
                     @Bindable var orchestrator = orchestrator
@@ -566,6 +565,7 @@ struct SettingsView: View {
                 Text("This will overwrite the current system prompt instructions and reset the model session.")
             }
         }
+        .accessibilityIdentifier("settingsForm")
     }
     
     private var modelPrivacyText: String {
@@ -733,7 +733,7 @@ struct CollaborativeServerSettingsSection: View {
                     }
                 }
             }
-            
+
             Button(action: openAccessAuditLog) {
                 HStack {
                     Label("View Access Audit Log", systemImage: "doc.text.magnifyingglass")
