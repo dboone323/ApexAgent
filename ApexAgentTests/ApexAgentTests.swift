@@ -573,7 +573,16 @@ class MockToolEventLogger: ToolEventLogger {
         // response for every request it receives, echoing back the exact id the
         // client sent. Run via `exec` by MCPClient.start(), so it must be an
         // executable file, not an inline shell snippet.
-        let mockScript = Bundle.module.resourceURL!
+        // Bundle.module only exists when built by SwiftPM (`make test`). Under
+        // the XcodeGen-generated test target the script is copied into the
+        // .xctest bundle's Resources, addressed via Bundle(for:).
+        #if SWIFT_PACKAGE
+        let testResourceURL = Bundle.module.resourceURL!
+        #else
+        final class BundleToken {}
+        let testResourceURL = Bundle(for: BundleToken.self).resourceURL!
+        #endif
+        let mockScript = testResourceURL
             .appendingPathComponent("mock_mcp_server.sh")
             .path
         let mockCommand = mockScript
@@ -754,10 +763,11 @@ class MockToolEventLogger: ToolEventLogger {
         let result = try await tool.call(arguments: args)
         // The tool either delivers (bundled app host) or reports the one real
         // environmental limitation: UNUserNotificationCenter.current() throws
-        // an uncatchable ObjC exception in unbundled processes (SwiftPM test
-        // runner has no bundle identifier). Permission failures must still
+        // an uncatchable ObjC exception in non-.app processes (SwiftPM test
+        // runner and the Xcode xctest agent). Permission failures must still
         // fail this test — only the unbundled-host message is acceptable.
         let unbundledHost = Bundle.main.bundleIdentifier == nil
+            || Bundle.main.bundleURL.pathExtension != "app"
         if unbundledHost {
             #expect(result.contains("bundled app host"), "Expected unbundled-host guard message, got: \(result)")
         } else {

@@ -8,9 +8,6 @@ options:
   createIntermediateGroups: true
 
 packages:
-  Sparkle:
-    url: https://github.com/sparkle-project/Sparkle
-    from: 2.6.0
   Containerization:
     url: https://github.com/apple/containerization
     branch: main
@@ -109,8 +106,6 @@ targets:
     dependencies:
       - target: SharedKit
       - target: MCPKit
-      - package: Sparkle
-        product: Sparkle
       - package: Containerization
         product: Containerization
       - package: Containerization
@@ -148,16 +143,8 @@ targets:
       - target: SharedModels
       - target: SharedLogging
       - target: MCPKit
-      # App links Sparkle directly so Xcode embeds the dynamic Sparkle.framework
-      # into the .app bundle (otherwise the app crashes at launch: dyld can't
-      # find Sparkle.framework). NOTE: linking Sparkle here makes
-      # `xcodebuildmcp macos test` fail with "Multiple commands produce
-      # Crypto.framework" (Xcode build-graph quirk when app + test bundles both
-      # pull Sparkle's transitive SPM deps). The repo's test gate is SwiftPM
-      # `make test`, which is unaffected — use that for the coverage gate.
-      - package: Sparkle
-        product: Sparkle
     scheme:
+      gatherCoverageData: true
       testTargets:
         - ApexAgentTests
         - ApexAgentIntelligenceTests
@@ -207,10 +194,11 @@ targets:
         LD_RUNPATH_SEARCH_PATHS: $(inherited) $(BUILD_DIR)/Products/Debug
     dependencies:
       - target: ApexAgentCore
-      - package: Containerization
-        product: Containerization
-      - package: Containerization
-        product: ContainerizationOCI
+      # NOTE: do NOT link Containerization products here directly. The tests only
+      # use `@testable import ApexAgentCore` (which already links them). Linking
+      # the same dynamic SPM products from two targets makes `xcodebuild test`
+      # emit duplicate build commands for PackageFrameworks/Crypto.framework
+      # ("Multiple commands produce ... Crypto.framework").
 
 schemes:
   ApexAgent:
@@ -224,5 +212,6 @@ schemes:
       config: Debug
     test:
       config: Debug
+      gatherCoverageData: true
     archive:
       config: Release

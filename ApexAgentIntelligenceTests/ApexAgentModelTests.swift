@@ -34,18 +34,6 @@ import SwiftData
     }
 
     @MainActor
-    @Test func testUpdaterControllerSharedInstance() {
-        let _ = UpdaterController.shared
-        #expect(Bool(true), "UpdaterController.shared is initialized successfully")
-    }
-    
-    @MainActor
-    @Test func testUpdaterControllerCheckForUpdatesDoesNotThrow() {
-        UpdaterController.shared.checkForUpdates()
-        #expect(Bool(true), "UpdaterController.checkForUpdates does not throw")
-    }
-
-    @MainActor
     @Test func testScreenStreamer() async {
         let streamer = ScreenStreamer.shared
         // Let compile validation pass, startCapture requires TCC permissions in CI

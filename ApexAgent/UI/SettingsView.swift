@@ -472,23 +472,6 @@ struct SettingsView: View {
                     }
                 }
 
-                // MARK: Sparkle Auto-Update
-                Section("Application Updates") {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Auto-Updates (Sparkle)")
-                            Text("Check for the latest version of Apex Agent")
-                                .font(AppTheme.Font.caption(11))
-                                .foregroundStyle(AppTheme.Palette.textSecondary)
-                        }
-                        Spacer()
-                        Button("Check for Updates...") {
-                            UpdaterController.shared.checkForUpdates()
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                }
-
                 // MARK: Agent Persona
                 Section {
                     TextEditor(text: $localInstructions)

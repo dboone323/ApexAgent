@@ -15,7 +15,6 @@ let package = Package(
         // The external github.com/dboone323/shared-kit dependency was removed to
         // make ApexAgent fully self-contained (no cross-repo coupling, no LFS,
         // no separate CI). shared-kit was pure-Foundation, so this is a clean lift.
-        .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0"),
         // Container runtime — pinned to 1.0 stable (June 2026 release)
         .package(url: "https://github.com/apple/containerization.git", branch: "main"),
         // Explicitly declare transitive Apple infrastructure packages
@@ -71,7 +70,6 @@ let package = Package(
             dependencies: [
                 "SharedKit",
                 "MCPKit",
-                .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Containerization", package: "containerization"),
                 .product(name: "ContainerizationOCI", package: "containerization"),
@@ -112,8 +110,8 @@ let package = Package(
                     "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_SwiftUI",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels",
-                    // Sparkle.framework is linked transitively via ApexAgentCore;
-                    // add the rpath so it dlopen's at app launch.
+                    // ApexAgentCore's SPM deps (Containerization, etc.) are linked into
+                    // the app; add the rpath so they dlopen at app launch.
                     "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../Frameworks"
                 ])
             ]
@@ -143,8 +141,8 @@ let package = Package(
                     "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels",
                     // SwiftPM does not add the build-products dir to the test bundle's
-                    // @rpath, so Sparkle.framework (linked transitively via ApexAgentCore)
-                    // fails to dlopen at test launch. Add the rpath explicitly.
+                    // @rpath, so ApexAgentCore's linked frameworks fail to dlopen at
+                    // test launch. Add the rpath explicitly.
                     "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../../.."
                 ])
             ]
