@@ -161,6 +161,7 @@ let package = Package(
             name: "ApexAgentTests",
             dependencies: [
                 "ApexAgentCore",
+                "MCPKit",
             ],
             path: "ApexAgentTests",
             resources: [

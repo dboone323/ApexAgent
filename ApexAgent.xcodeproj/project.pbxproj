@@ -61,6 +61,7 @@
 		424832240A3119CE7A32C28A /* AgentProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 925A92C3B22F0B3846FAD195 /* AgentProfileTests.swift */; };
 		42F00DF1A93D9DCCFFFD25F3 /* DynamicToolRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167A0B5084A0E6678EF5C2C /* DynamicToolRouting.swift */; };
 		46EAB24998DD5F982139E964 /* DiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF6EC58E8437F751F288312 /* DiagnosticsView.swift */; };
+		4BB8A8C0B8332B055E31DFAE /* MCPKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = ACA20C2A176DB00AD435BCD7 /* MCPKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4C1F255E7E2E8043C98A4920 /* ContainerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB08FB6B01A5EF21819F07F8 /* ContainerManager.swift */; };
 		4D76B1EE78497D8CB7D412E7 /* MCPManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFB51AE0DEA35770B157534 /* MCPManager.swift */; };
 		4D8668A2B63D24A4A698ABDD /* WebSearchTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C7C320DE2DD5CA46182330 /* WebSearchTool.swift */; };
@@ -115,6 +116,7 @@
 		A5563BDE3900736E18214475 /* WeeklyReflectionTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73EBA0A13DA26623CD9B4AAD /* WeeklyReflectionTool.swift */; };
 		A70AE07D38670C18F0212675 /* SharedLogging.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 694736B63E8080A09030C984 /* SharedLogging.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A7AD22CF8CBB9EED53EC8210 /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEBDD2E1BE7227175F6E00F9 /* Enums.swift */; };
+		A9249DBFEA92A09DF690FB74 /* LogicGapFillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E6A9A66CF3C285CD98595E /* LogicGapFillTests.swift */; };
 		A95F8B3029A159BEFC419B17 /* ReflectionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 475AA27E9CD4482A51D18B19 /* ReflectionManagerTests.swift */; };
 		A9F999F499EA9DC225A150AC /* CodeReviewPersistenceToolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B7F459F6D864CD347D5903 /* CodeReviewPersistenceToolsTests.swift */; };
 		ABA644927935CD3D07C24A09 /* MCPKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA20C2A176DB00AD435BCD7 /* MCPKit.framework */; };
@@ -143,6 +145,7 @@
 		C62BA40A39EC1024FB073312 /* SharedLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6E862FC7A7EB6367D85FAAF /* SharedLogger.swift */; };
 		C6D7C00FD77A5233BB1D6EDF /* VisionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B794F96FA4DE4D166248AECE /* VisionTests.swift */; };
 		C73DC1D2FED954BDCEDC1DED /* ToolEventLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8132A9F44AC949466E064A1 /* ToolEventLogger.swift */; };
+		C9603EDD6CECA4A30ADFA11A /* MCPKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA20C2A176DB00AD435BCD7 /* MCPKit.framework */; };
 		CA698A9E77AA22866CC8F113 /* TerminalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C969C3513ACFED675B536F24 /* TerminalView.swift */; };
 		CB86A396B61077852DF3688C /* ConfirmCompletionTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E817C7D6FBC35DE13A3FEA6 /* ConfirmCompletionTool.swift */; };
 		CBBD91ADC313362D05B3F854 /* GeneratedContentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8605872FF724956E1B1223B8 /* GeneratedContentTests.swift */; };
@@ -197,6 +200,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 61AFB82B28D8753880168205;
 			remoteInfo = ApexAgentCore;
+		};
+		3DC138D6A19C65A19EBB20D9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 39A304CAF52E92D2EBA80EA7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6AC26794B772FA676E01431C;
+			remoteInfo = MCPKit;
 		};
 		53EAB110BD6E90399FF1755C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -285,6 +295,7 @@
 			dstSubfolderSpec = 10;
 			files = (
 				A017BECDE9535C5E98B32863 /* ApexAgentCore.framework in Embed Frameworks */,
+				4BB8A8C0B8332B055E31DFAE /* MCPKit.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -378,6 +389,7 @@
 		53745D922C4FB32257EE8691 /* MCPServerProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerProtocol.swift; sourceTree = "<group>"; };
 		5638C1E659D0F686B42AC53E /* AppleScriptTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptTool.swift; sourceTree = "<group>"; };
 		574DC27832C1565197903328 /* DelegateTaskTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelegateTaskTool.swift; sourceTree = "<group>"; };
+		57E6A9A66CF3C285CD98595E /* LogicGapFillTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogicGapFillTests.swift; sourceTree = "<group>"; };
 		5B6ED6D2C1DF9945362BD977 /* PlanStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanStep.swift; sourceTree = "<group>"; };
 		60059FF9B1E135BD6AB89148 /* AppGroupDataBus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupDataBus.swift; sourceTree = "<group>"; };
 		62E462DE5554A24F8065D57D /* ContainerManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerManagerTests.swift; sourceTree = "<group>"; };
@@ -497,6 +509,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				969AD4C3CE7C46E33C44487A /* ApexAgentCore.framework in Frameworks */,
+				C9603EDD6CECA4A30ADFA11A /* MCPKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -853,6 +866,7 @@
 				EF48EBF7067949B2BC247A27 /* DynamicToolRoutingTests.swift */,
 				DB49EF6B9F915AB53E7690F6 /* FileSearchToolTests.swift */,
 				892BE4093C46CC79832CBDF0 /* GatewayModelsTests.swift */,
+				57E6A9A66CF3C285CD98595E /* LogicGapFillTests.swift */,
 				79587609F5644E47301DB386 /* mock_mcp_server.sh */,
 				35A0258F1156666D67102CD6 /* ProjectManagementToolsTests.swift */,
 				475AA27E9CD4482A51D18B19 /* ReflectionManagerTests.swift */,
@@ -885,6 +899,7 @@
 			);
 			dependencies = (
 				862758B03E9BC5246AFA292C /* PBXTargetDependency */,
+				D6D2B10D83506FBFA54A2D06 /* PBXTargetDependency */,
 			);
 			name = ApexAgentTests;
 			packageProductDependencies = (
@@ -1293,6 +1308,7 @@
 				C488504C0CEC4D50D683CEB8 /* DynamicToolRoutingTests.swift in Sources */,
 				1CA86EFB38E8E138F603F0BF /* FileSearchToolTests.swift in Sources */,
 				F326C05BBA0F63B54D395CE4 /* GatewayModelsTests.swift in Sources */,
+				A9249DBFEA92A09DF690FB74 /* LogicGapFillTests.swift in Sources */,
 				1F2EF57942B7CE01EB0DA012 /* ProjectManagementToolsTests.swift in Sources */,
 				A95F8B3029A159BEFC419B17 /* ReflectionManagerTests.swift in Sources */,
 				A131EDDC5255E880CBC741BB /* SecuritySandboxErrorTests.swift in Sources */,
@@ -1362,6 +1378,11 @@
 			isa = PBXTargetDependency;
 			target = 61AFB82B28D8753880168205 /* ApexAgentCore */;
 			targetProxy = 2D425B0473208C5466F49892 /* PBXContainerItemProxy */;
+		};
+		D6D2B10D83506FBFA54A2D06 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 6AC26794B772FA676E01431C /* MCPKit */;
+			targetProxy = 3DC138D6A19C65A19EBB20D9 /* PBXContainerItemProxy */;
 		};
 		D9F50AF8C2B551F0BE995047 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;

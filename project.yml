@@ -171,6 +171,7 @@ targets:
         LD_RUNPATH_SEARCH_PATHS: $(inherited) $(BUILD_DIR)/Products/Debug
     dependencies:
       - target: ApexAgentCore
+      - target: MCPKit
 
   ApexAgentIntelligenceTests:
     type: bundle.unit-test
