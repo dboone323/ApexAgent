@@ -1,0 +1,19 @@
+{
+  "name": "ApexAgent",
+  "version": "1.0.0",
+  "description": "Xcode 27 agentic-coding plugin that surfaces ApexAgent's tools and agents inside Xcode via the Model Context Protocol (MCP) and skills.",
+  "author": "ApexAgent",
+  "homepage": "https://github.com/apexagent/apexagent",
+  "license": "MIT",
+  "mcpServers": {
+    "apexagent": {
+      "command": "swift",
+      "args": ["run", "--package-path", ".", "ApexAgentMCPServer"]
+    }
+  },
+  "skills": [
+    { "name": "run-agent-task", "path": "skills/run-agent-task.md" },
+    { "name": "ask-apex-agent", "path": "skills/ask-apex-agent.md" },
+    { "name": "index-notes", "path": "skills/index-notes.md" }
+  ]
+}
