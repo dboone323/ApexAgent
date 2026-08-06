@@ -99,6 +99,7 @@ let package = Package(
             name: "ApexAgent",
             dependencies: [
                 "ApexAgentCore",
+                "ApexAgentIntents",
                 "MCPKit",
                 .product(name: "Containerization", package: "containerization"),
                 .product(name: "ContainerizationOCI", package: "containerization"),
@@ -118,6 +119,23 @@ let package = Package(
                     // the app; add the rpath so they dlopen at app launch.
                     "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../Frameworks"
                 ])
+            ]
+        ),
+
+        // ─────────────────────────────────────────────────────────────────────
+        // ApexAgentIntents: App Intents (Siri / Shortcuts) exposing ApexAgent's
+        // on-device model to the system. Backed by the real `fm` CLI. AppIntents
+        // is a system framework on macOS; link it explicitly.
+        // ─────────────────────────────────────────────────────────────────────
+        .target(
+            name: "ApexAgentIntents",
+            dependencies: ["ApexAgentCore"],
+            path: "ApexAgentIntents",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
+            ],
+            linkerSettings: [
+                .unsafeFlags(["-framework", "AppIntents"])
             ]
         ),
 
