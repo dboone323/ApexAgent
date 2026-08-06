@@ -80,16 +80,17 @@ struct SpotlightSearchTool: Tool {
             metadataQuery.valueListAttributes = [kMDItemTitle as String, kMDItemPath as String, kMDItemTextContent as String]
 
             let obsBox = UncheckedSendableBox<NSObjectProtocol?>(nil)
+            let queryBoxInner = UncheckedSendableBox(metadataQuery)
             obsBox.value = NotificationCenter.default.addObserver(
                 forName: .NSMetadataQueryDidFinishGathering,
                 object: metadataQuery,
                 queue: .main
             ) { _ in
-                metadataQuery.disableUpdates()
-                let count = min(metadataQuery.resultCount, maxResults)
+                queryBoxInner.value.disableUpdates()
+                let count = min(queryBoxInner.value.resultCount, maxResults)
                 var hits: [SpotlightHit] = []
                 for i in 0..<count {
-                    guard let item = metadataQuery.result(at: i) as? NSMetadataItem else { continue }
+                    guard let item = queryBoxInner.value.result(at: i) as? NSMetadataItem else { continue }
                     let title = (item.value(forAttribute: kMDItemTitle as String) as? String)
                         ?? (item.value(forAttribute: kMDItemFSName as String) as? String)
                         ?? "Untitled"
@@ -98,17 +99,17 @@ struct SpotlightSearchTool: Tool {
                     let snippet = rawContent.isEmpty ? nil : String(rawContent.prefix(200))
                     hits.append(SpotlightHit(title: title, path: path, snippet: snippet))
                 }
-                metadataQuery.stop()
+                queryBoxInner.value.stop()
                 if let obs = obsBox.value { NotificationCenter.default.removeObserver(obs) }
                 continuation.resume(returning: hits)
             }
 
             // Watchdog: if the gather never completes (Spotlight unavailable),
             // resume with an empty result so the caller is never stranded.
-            let queryBox = UncheckedSendableBox(metadataQuery)
+            let watchdogBox = UncheckedSendableBox(metadataQuery)
             DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 3) {
                 DispatchQueue.main.async {
-                    queryBox.value.stop()
+                    watchdogBox.value.stop()
                     if let obs = obsBox.value { NotificationCenter.default.removeObserver(obs) }
                     continuation.resume(returning: [])
                 }

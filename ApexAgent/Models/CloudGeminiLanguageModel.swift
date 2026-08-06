@@ -186,13 +186,16 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                     requestBody["tools"] = tools
                     
                     let mode: String
-                    switch request.generationOptions.toolCallingMode {
-                    case .allowed?: mode = "AUTO"
-                    case .required?: mode = "ANY"
-                    case .disallowed?, .none: mode = "OFF"
-                    @unknown default: mode = "AUTO"
+                    let tcMode = request.generationOptions.toolCallingMode
+                    if tcMode == .allowed {
+                        mode = "AUTO"
+                    } else if tcMode == .required {
+                        mode = "ANY"
+                    } else if tcMode == .disallowed {
+                        mode = "OFF"
+                    } else {
+                        mode = "AUTO"
                     }
-                    
                     requestBody["toolConfig"] = [
                         "functionCallingConfig": [
                             "mode": mode

@@ -100,7 +100,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     /// Check if Private Cloud Compute is available by verifying the process has the required entitlement.
     /// Returns false when running in CLI/test environments without code signing.
-    static func isPrivateCloudComputeAvailable() -> Bool {
+    nonisolated static func isPrivateCloudComputeAvailable() -> Bool {
         let task = SecTaskCreateFromSelf(nil)
         guard let task else { return false }
         let value = SecTaskCopyValueForEntitlement(task, "com.apple.developer.private-cloud-compute" as CFString, nil)
@@ -653,7 +653,6 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             AnyExecutableTool(FileSearchTool(orchestrator: self)),
             AnyExecutableTool(SpotlightSearchTool(orchestrator: self)),
             AnyExecutableTool(DynamicToolCallTool(orchestrator: self)),
-            AnyExecutableTool(ContainerStatusTool(orchestrator: self)),
             AnyExecutableTool(DailyBriefingTool(orchestrator: self))
         ]
         _allTools = tools
@@ -733,12 +732,15 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
         // Stop any active text-to-speech playback
         VoiceController.shared.stopSpeaking()
-
         activeTurnToolCallCount = 0
         isGenerating = true
 
+        let spanID = AgentSignpost.begin("SendMessage", detail: trimmedText.prefix(64).description)
+        Task { TraceBus.shared.append(TraceEvent(source: "orchestrator", operation: "sendMessage", detail: String(trimmedText.prefix(120)))) }
         currentTask = Task {
             defer {
+                AgentSignpost.end("SendMessage", spanID)
+                Task { TraceBus.shared.append(TraceEvent(source: "orchestrator", operation: "sendMessage", detail: "complete")) }
                 self.isGenerating = false
                 self.activeAssistantMessageId = nil
             }
@@ -792,13 +794,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         let session = createCompactionSession(model: model, instructions: "Summarize chat logs concisely. Focus on facts, status, file paths, and results.")
 
         do {
-            let stream = session.streamResponse(to: compactionText)
-            print("[DIAG] compaction stream started")
-            var summary = ""
-            for try await response in stream {
-                summary = response.content
-            }
-            print("[DIAG] compaction stream ended; summary.isEmpty=\(summary.isEmpty)")
+            let response = try await session.respond(to: compactionText)
+            let summary = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            print("[DIAG] compaction respond ended; summary.isEmpty=\(summary.isEmpty)")
 
             if !summary.isEmpty {
                 let summaryMsg = ChatMessage(role: .system, content: "Summary of earlier conversation:\n\(summary)")
@@ -1284,8 +1282,6 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     public func shouldConfirmTool(name: String) -> Bool {
         if requireConfirmationForAll { return true }
-        // Union of the legacy dangerous-tool set and the central risk map
-        // (AgentSecurity) so every high-risk tool is confirmation-gated.
         return AgentOrchestrator.dangerousToolNames.contains(name) || AgentSecurity.requiresConfirmation(name)
     }
 
