@@ -25,7 +25,7 @@ struct SandboxCtl {
             print("[sandboxctl] state: \(await manager.stateDescription)")
 
             // Probe 1: guest root as cwd ("/" always exists in the guest).
-            let (output, code) = try await manager.exec("echo APEX_SANDBOX_OK", workingDirectory: "/")
+            let (output, code) = try await manager.exec("echo APEX_SANDBOX_OK")
             print("[sandboxctl] exec exit=\(code) output=\(output)")
 
             try await manager.stopContainer()

@@ -73,5 +73,6 @@ struct ConversationRow: View {
             }
         }
         .padding(.vertical, 4)
+        .accessibilityIdentifier("conversationRow")
     }
 }

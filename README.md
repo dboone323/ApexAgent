@@ -1,6 +1,6 @@
 # ⚡ Apex Agent
 
-A privacy-first AI personal assistant for macOS 26+ — powered primarily by **Apple Foundation Models** running **on-device** on Apple Silicon.
+A privacy-first AI personal assistant for macOS 27+ — powered primarily by **Apple Foundation Models** running **on-device** on Apple Silicon.
 
 The default LLM is Apple's on-device Foundation Model (no cloud, no key). You can optionally route agents to **Google Gemini** or a local **Ollama** server; their credentials are stored securely in the macOS **Keychain**, never in plaintext.
 
@@ -9,8 +9,8 @@ The default LLM is Apple's on-device Foundation Model (no cloud, no key). You ca
 ## 🚀 Getting Started
 
 ### Prerequisites
-- macOS 26 (Golden Gate) or later
-- Xcode 27 or later (Swift 6)
+- macOS 27
+- Xcode 27 Beta or later (Swift 6)
 - Apple Intelligence enabled in **System Settings → Apple Intelligence & Siri**
 - Apple Silicon Mac (M1 or later)
 
@@ -51,7 +51,7 @@ The on-device Apple Foundation Model needs **no key**. Keys are only needed for 
 - **Cloud Gemini** — optional, Keychain-backed
 - **Local Ollama** — optional, self-hosted
 
-Per-agent model preferences are supported (localSystem / privateCloud / cloudGemini / localOllama / hybrid).
+Per-agent model preferences are supported (`localSystem` / `privateCloud` / `cloudGemini` / `localOllama` / `hybrid`).
 
 ---
 
@@ -68,8 +68,7 @@ Apex ships **32 tools** the model can call, including:
 | 🔎 `file_search` | Search the filesystem |
 | 🌐 `web_search` | Search the web (Brave → DDG fallback) |
 | 🍎 `run_applescript` | Control any scriptable macOS app |
-| 🖥️ `get_frontmost_app` | Identify the active application |
-| 📸 `take_screenshot` | Capture your screen |
+| 🖥️ `get_frontmost_app` / 📸 `take_screenshot` | Identify the active app / capture the screen |
 | 📋 `read_clipboard` / `write_clipboard` | Read/set clipboard content |
 | 🔔 `send_notification` | Send macOS notifications |
 | ℹ️ `get_system_info` / 📊 `get_running_processes` | System & process info |
@@ -108,10 +107,10 @@ Specialized sub-agents (developer, executor, controller, researcher, planner, UI
 
 ## 🛡️ Safety
 
-- **No App Sandbox** — Apex has full system access (required for a capable agent)
 - **Confirmation Gate** — Destructive actions (file deletion, dangerous shell commands, AppleScript) require explicit approval
 - **60s Auto-deny** — Unreviewed confirmations are automatically denied
 - **On-device by default** — With the Apple Foundation Model, your data never leaves your Mac
+- **Sandbox fallback** — Apple Container / Docker sandbox fallback for execution contexts where needed
 
 ---
 
@@ -123,6 +122,19 @@ Access via **Settings → Quick Modes**:
 - **⚙️ System Mode** — Full system administration
 
 Or edit the **System Prompt** directly in Settings to customize Apex's behavior.
+
+---
+
+## 🧪 Testing
+
+Current verified state:
+
+- **Phase 2:** Logic gap-fill tests
+- **Phase 3:** SwiftUI view hosting tests
+- **Phase 4:** Real macOS UI e2e via XCUITest + accessibility labeling
+- **`ApexAgentTests`:** 134 tests in 22 suites passed
+- **`ApexAgentIntelligenceTests`:** 53 tests in 10 suites executed; 1 benchmark issue under investigation
+- **`ApexAgentContainerTests`:** test path present; standalone verification pending
 
 ---
 

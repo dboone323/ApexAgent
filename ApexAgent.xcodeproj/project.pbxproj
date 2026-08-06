@@ -177,7 +177,9 @@
 		FA006B50608F7F6CE5D1B582 /* AskApexAgentIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F49308EB721317B242E0C24C /* AskApexAgentIntent.swift */; };
 		FB9B0243104189B3936BEB1F /* AgentSessionEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C0392E1D6F6CA4B11C6DF5 /* AgentSessionEntity.swift */; };
 		FD50115C2BD486F1983C91B7 /* VoiceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7D2D0D85063D0D8705E2834 /* VoiceController.swift */; };
-		FF3836AAE50E47351FBB3046 /* AgentOrchestrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D179C4E088707045651E9481 /* AgentOrchestrator.swift */; };
+				FF3836AAE50E47351FBB3046 /* AgentOrchestrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D179C4E088707045651E9481 /* AgentOrchestrator.swift */; };
+				B1B2C3D4E5F60718293A4B5C /* TraceEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* TraceEvent.swift */; };
+				B1B2C3D4E5F60718293A4B5D /* TraceBus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* TraceBus.swift */; };
 		FFF7BF7793E9F1A72246F640 /* AgentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528F1631BDA859F3FE5E6EC3 /* AgentEngine.swift */; };
 /* End PBXBuildFile section */
 
@@ -479,7 +481,9 @@
 		CBF6EC58E8437F751F288312 /* DiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsView.swift; sourceTree = "<group>"; };
 		CC816014A875377AB08C6513 /* WeeklyReflection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReflection.swift; sourceTree = "<group>"; };
 		D167A0B5084A0E6678EF5C2C /* DynamicToolRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicToolRouting.swift; sourceTree = "<group>"; };
-		D179C4E088707045651E9481 /* AgentOrchestrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentOrchestrator.swift; sourceTree = "<group>"; };
+				D179C4E088707045651E9481 /* AgentOrchestrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentOrchestrator.swift; sourceTree = "<group>"; };
+								A1B2C3D4E5F60718293A4B5C /* TraceEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/TraceEvent.swift; sourceTree = "<group>"; };
+								A1B2C3D4E5F60718293A4B5D /* TraceBus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/TraceBus.swift; sourceTree = "<group>"; };
 		D1844C7164F6C29E259C41A2 /* WritingToolsSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WritingToolsSupport.swift; sourceTree = "<group>"; };
 		D3C0392E1D6F6CA4B11C6DF5 /* AgentSessionEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSessionEntity.swift; sourceTree = "<group>"; };
 		D3D6924D7807351B7AE11F6F /* DailyBriefingTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyBriefingTool.swift; sourceTree = "<group>"; };
@@ -842,7 +846,9 @@
 		CEEA9C8740F0C1BA7F4B41DD /* ApexAgent */ = {
 			isa = PBXGroup;
 			children = (
-				D179C4E088707045651E9481 /* AgentOrchestrator.swift */,
+								D179C4E088707045651E9481 /* AgentOrchestrator.swift */,
+								A1B2C3D4E5F60718293A4B5C /* TraceEvent.swift */,
+								A1B2C3D4E5F60718293A4B5D /* TraceBus.swift */,
 				B66A755BDD664BFE2E951C37 /* AgentSystemPrompt.swift */,
 				1C76440A35838941EFC30E32 /* ApexAgentApp.swift */,
 				F89795B5349F400EF42BD8D7 /* Assets.xcassets */,
@@ -1186,7 +1192,9 @@
 				B119A8FCACA3F29DD39A00C3 /* AgentAuditLog.swift in Sources */,
 				FFF7BF7793E9F1A72246F640 /* AgentEngine.swift in Sources */,
 				09521627D95B181A2A56E4D4 /* AgentHandoff.swift in Sources */,
-				FF3836AAE50E47351FBB3046 /* AgentOrchestrator.swift in Sources */,
+								FF3836AAE50E47351FBB3046 /* AgentOrchestrator.swift in Sources */,
+								B1B2C3D4E5F60718293A4B5C /* TraceEvent.swift in Sources */,
+								B1B2C3D4E5F60718293A4B5D /* TraceBus.swift in Sources */,
 				1E4095593E50F7C4E5C7E927 /* AgentProfiles.swift in Sources */,
 				15757DB7F8023000CB18A090 /* AgentRegistry.swift in Sources */,
 				0A5750EE81AA09A15B551DDB /* AgentSecurity.swift in Sources */,

@@ -441,6 +441,8 @@ struct ChatInputBar: View {
                     }
                     .buttonStyle(.plain)
                     .help("Stop generation")
+                    .accessibilityIdentifier("stopGenerationButton")
+                    .accessibilityLabel("Stop generation")
                 } else {
                     Button(action: send) {
                         ZStack {

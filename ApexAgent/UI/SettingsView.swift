@@ -295,7 +295,7 @@ struct SettingsView: View {
                             } else if isSandboxRunning {
                                 Button("Stop Sandbox") {
                                     Task {
-                                        if let manager = await ContainerBridge.shared {
+                                        if let manager = ContainerBridge.shared {
                                             try? await manager.stopContainer()
                                             startSandboxStatusPolling()
                                         }
@@ -306,7 +306,7 @@ struct SettingsView: View {
                             } else {
                                 Button("Start Sandbox") {
                                     Task {
-                                        if let manager = await ContainerBridge.shared {
+                                        if let manager = ContainerBridge.shared {
                                             try? await manager.startContainer()
                                             startSandboxStatusPolling()
                                         }
@@ -750,8 +750,8 @@ extension SettingsView {
         sandboxPollTask?.cancel()
         sandboxPollTask = Task {
             while !Task.isCancelled {
-                if let manager = await ContainerBridge.shared {
-                    let desc = await manager.stateDescription
+                if let manager = ContainerBridge.shared {
+                    let desc = manager.stateDescription
                     self.sandboxStateDescription = desc
                     self.isSandboxRunning = desc == "Sandbox Running"
                     self.isSandboxTransitioning = desc.contains("...") || desc.contains("Downloading") || desc.contains("Pulling")

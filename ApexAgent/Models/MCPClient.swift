@@ -17,6 +17,46 @@ enum MCPError: Error, LocalizedError {
     }
 }
 
+struct MCPClientConfig: Codable, Sendable, Equatable {
+    var requestTimeout: TimeInterval
+    var pingTimeout: TimeInterval
+    var maxRetries: Int
+    var circuitFailureThreshold: Int
+    var restartRateLimitWindow: TimeInterval
+    var maxRestartsInWindow: Int
+
+    static let `default` = MCPClientConfig(
+        requestTimeout: 60,
+        pingTimeout: 3,
+        maxRetries: 5,
+        circuitFailureThreshold: 3,
+        restartRateLimitWindow: 60,
+        maxRestartsInWindow: 3
+    )
+}
+
+struct MCPClientHealth: Codable, Sendable, Equatable {
+    let serverName: String
+    let isRunning: Bool
+    let circuitOpen: Bool
+    let failureCount: Int
+    let restartCountInWindow: Int
+
+    init(
+        serverName: String,
+        isRunning: Bool = false,
+        circuitOpen: Bool = false,
+        failureCount: Int = 0,
+        restartCountInWindow: Int = 0
+    ) {
+        self.serverName = serverName
+        self.isRunning = isRunning
+        self.circuitOpen = circuitOpen
+        self.failureCount = failureCount
+        self.restartCountInWindow = restartCountInWindow
+    }
+}
+
 struct MCPToolDefinition: Codable {
     let name: String
     let description: String?
@@ -92,7 +132,7 @@ actor MCPClient {
     let arguments: [String]
     private let logger: ToolEventLogger
     let orchestrator: OrchestratorProvider?
-    
+    let config: MCPClientConfig
     private var process: Process?
     private var stdinPipe: Pipe?
     private var stdoutPipe: Pipe?
@@ -110,12 +150,31 @@ actor MCPClient {
     private var lastRestartTime = Date.distantPast
     private var restartCountInWindow = 0
     
-    init(serverName: String, command: String, arguments: [String] = [], logger: ToolEventLogger, orchestrator: OrchestratorProvider? = nil) {
+    /// Public read-only circuit state for observability and tests.
+    public func isCircuitOpen() async -> Bool {
+        return circuitOpen
+    }
+    
+    /// Reset circuit/failure state so a server can be retried cleanly.
+    func resetCircuit() {
+        circuitOpen = false
+        failureCount = 0
+    }
+
+    /// Test/control path: simulate a permanently failed circuit without
+    /// depending on a real server or a fixed number of request failures.
+    func openCircuit() {
+        circuitOpen = true
+        failureCount = maxRetries
+    }
+    
+    init(serverName: String, command: String, arguments: [String] = [], logger: ToolEventLogger, orchestrator: OrchestratorProvider? = nil, config: MCPClientConfig = .default) {
         self.serverName = serverName
         self.command = command
         self.arguments = arguments
         self.logger = logger
         self.orchestrator = orchestrator
+        self.config = config
     }
     
     func start() async throws {
@@ -335,6 +394,18 @@ actor MCPClient {
         return process?.isRunning ?? false
     }
 
+    func health() -> MCPClientHealth {
+        MCPClientHealth(
+            serverName: serverName,
+            isRunning: isRunning(),
+            circuitOpen: circuitOpen,
+            failureCount: failureCount,
+            restartCountInWindow: restartCountInWindow
+        )
+    }
+
+    nonisolated var maxRetryCount: Int { maxRetries }
+
     private func handleIncomingMessage(_ data: Data) {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let id = json["id"] as? Int else {
@@ -508,7 +579,7 @@ actor MCPClient {
     // MARK: - MCP API Protocol Methods
 
     struct EmptyParams: Codable {}
-
+    
     struct ToolsListResponse: Codable {
         let tools: [MCPToolDefinition]
     }

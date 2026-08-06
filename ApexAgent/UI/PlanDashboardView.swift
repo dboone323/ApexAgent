@@ -37,6 +37,8 @@ struct PlanDashboardView: View {
         }
         .frame(minWidth: 320, idealWidth: 340, maxWidth: 400)
         .background(AppTheme.Palette.windowBackground)
+        .accessibilityIdentifier("planDashboard")
+        .accessibilityLabel("Plan dashboard")
         .sheet(item: $selectedStep) { step in
             NavigationStack {
                 PlanStepDetailView(step: step)

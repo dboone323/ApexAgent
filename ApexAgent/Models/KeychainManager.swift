@@ -29,7 +29,9 @@ struct KeychainManager {
         
         // Add new item
         let status = SecItemAdd(query as CFDictionary, nil)
-        return status == errSecSuccess
+        let success = status == errSecSuccess
+        Task { await AgentAuditLog.shared.record(toolName: "keychain.save", arguments: "key=\(key)", wasConfirmed: false, status: success ? "success" : "failed") }
+        return success
     }
 
     static func get(key: String) -> String? {
@@ -45,9 +47,11 @@ struct KeychainManager {
         let status = SecItemCopyMatching(query as CFDictionary, &dataTypeRef)
         
         guard status == errSecSuccess, let data = dataTypeRef as? Data else {
+            Task { await AgentAuditLog.shared.record(toolName: "keychain.get", arguments: "key=\(key)", wasConfirmed: false, status: "failed") }
             return nil
         }
         
+        Task { await AgentAuditLog.shared.record(toolName: "keychain.get", arguments: "key=\(key)", wasConfirmed: false, status: "success") }
         return String(data: data, encoding: .utf8)
     }
 
@@ -60,6 +64,8 @@ struct KeychainManager {
         ]
         
         let status = SecItemDelete(query as CFDictionary)
-        return status == errSecSuccess
+        let success = status == errSecSuccess || status == errSecItemNotFound
+        Task { await AgentAuditLog.shared.record(toolName: "keychain.delete", arguments: "key=\(key)", wasConfirmed: false, status: success ? "success" : "failed") }
+        return success
     }
 }

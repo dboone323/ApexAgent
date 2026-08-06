@@ -24,7 +24,7 @@ struct DiagnosticManager {
         let orchestrator = provider?.orchestrator ?? MCPManager.shared.orchestrator
         let isRestricted = orchestrator.isFolderAccessRestricted()
 
-        // Check CLI tools concurrently in background tasks to prevent main actor deadlock/freeze
+        // Use bounded checks so a hung tool cannot block diagnostics forever.
         async let xcodeCheck = checkCommandExists("xcode-select -p", isFolderAccessRestricted: isRestricted)
         async let brewCheck = checkCommandExists("which brew", isFolderAccessRestricted: isRestricted)
         async let nodeCheck = checkCommandExists("which node", isFolderAccessRestricted: isRestricted)
@@ -33,47 +33,12 @@ struct DiagnosticManager {
 
         let (hasXcodeSelect, hasBrew, hasNode, hasPython, hasGit) = await (xcodeCheck, brewCheck, nodeCheck, pythonCheck, gitCheck)
 
-        // 1. Xcode CLI Tools
-        items.append(DiagnosticItem(
-            name: "Xcode Command Line Tools",
-            category: "CLI Tools",
-            status: hasXcodeSelect ? .pass : .fail,
-            message: hasXcodeSelect ? "Installed successfully." : "Missing. Run 'xcode-select --install' in Terminal."
-        ))
+        items.append(DiagnosticItem(name: "Xcode Command Line Tools", category: "CLI Tools", status: hasXcodeSelect ? .pass : .fail, message: hasXcodeSelect ? "Installed successfully." : "Missing. Run 'xcode-select --install' in Terminal."))
+        items.append(DiagnosticItem(name: "Homebrew", category: "CLI Tools", status: hasBrew ? .pass : .warning, message: hasBrew ? "Homebrew is available." : "Missing. Install from brew.sh to easily manage dependencies."))
+        items.append(DiagnosticItem(name: "Node.js", category: "CLI Tools", status: hasNode ? .pass : .warning, message: hasNode ? "Node.js is available." : "Missing. Required for running JavaScript tasks or packages."))
+        items.append(DiagnosticItem(name: "Python 3", category: "CLI Tools", status: hasPython ? .pass : .warning, message: hasPython ? "Python 3 is available." : "Missing. Highly recommended for AI scripts and local tooling."))
+        items.append(DiagnosticItem(name: "Git", category: "CLI Tools", status: hasGit ? .pass : .fail, message: hasGit ? "Git is available." : "Missing. Git is required to manage source code changes."))
 
-        // 2. Homebrew
-        items.append(DiagnosticItem(
-            name: "Homebrew",
-            category: "CLI Tools",
-            status: hasBrew ? .pass : .warning,
-            message: hasBrew ? "Homebrew is available." : "Missing. Install from brew.sh to easily manage dependencies."
-        ))
-
-        // 3. Node.js
-        items.append(DiagnosticItem(
-            name: "Node.js",
-            category: "CLI Tools",
-            status: hasNode ? .pass : .warning,
-            message: hasNode ? "Node.js is available." : "Missing. Required for running JavaScript tasks or packages."
-        ))
-
-        // 4. Python 3
-        items.append(DiagnosticItem(
-            name: "Python 3",
-            category: "CLI Tools",
-            status: hasPython ? .pass : .warning,
-            message: hasPython ? "Python 3 is available." : "Missing. Highly recommended for AI scripts and local tooling."
-        ))
-
-        // 5. Check Git
-        items.append(DiagnosticItem(
-            name: "Git",
-            category: "CLI Tools",
-            status: hasGit ? .pass : .fail,
-            message: hasGit ? "Git is available." : "Missing. Git is required to manage source code changes."
-        ))
-
-        // 6. Check Accessibility Permissions
         let isAccessibilityTrusted = AXIsProcessTrusted()
         let isAccessibilityAllowedInSettings = orchestrator.permissions?.accessibilityAllowed ?? false
         items.append(DiagnosticItem(
@@ -85,7 +50,6 @@ struct DiagnosticManager {
                 : "Disabled in Settings."
         ))
 
-        // 7. Check Screen Recording Permissions
         let screenAccess = checkScreenRecordingAccess()
         let isScreenAllowedInSettings = orchestrator.permissions?.screenRecordingAllowed ?? false
         items.append(DiagnosticItem(
@@ -97,7 +61,6 @@ struct DiagnosticManager {
                 : "Disabled in Settings."
         ))
 
-        // 8. Check Custom Tools & Skills
         let fm = FileManager.default
         let homeDir = fm.homeDirectoryForCurrentUser
         let toolsDir = homeDir.appendingPathComponent(".apex/tools")
@@ -136,6 +99,20 @@ struct DiagnosticManager {
         return items
     }
 
+    @MainActor
+    static func exportReport(_ items: [DiagnosticItem]) -> String {
+        struct DiagnosticReport: Codable {
+            let generatedAt: String
+            let items: [DiagnosticItem]
+        }
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let report = DiagnosticReport(generatedAt: ISO8601DateFormatter().string(from: Date()), items: items)
+        let data = (try? encoder.encode(report)) ?? Data("[]".utf8)
+        return String(data: data, encoding: .utf8) ?? "[]"
+    }
+
     private static func checkCommandExists(_ command: String, isFolderAccessRestricted: Bool) async -> Bool {
         return await Task.detached(priority: .background) {
             let process = Process()
@@ -162,15 +139,14 @@ struct DiagnosticManager {
 
             do {
                 try process.run()
-                // Watchdog: a hung diagnostic command (e.g. one that blocks on
-                // stdin or never exits) must not hang the diagnostic pass or the
-                // calling test forever. Terminate it if it outlives the budget.
-                let watchdog = Task {
-                    try? await Task.sleep(nanoseconds: 5_000_000_000)
-                    if process.isRunning { process.terminate() }
+                let deadline = Date(timeIntervalSinceNow: 2)
+                while Date() < deadline, process.isRunning {
+                    try? await Task.sleep(nanoseconds: 50_000_000)
+                }
+                if process.isRunning {
+                    process.terminate()
                 }
                 process.waitUntilExit()
-                watchdog.cancel()
                 return process.terminationStatus == 0
             } catch {
                 return false
@@ -179,6 +155,6 @@ struct DiagnosticManager {
     }
 
     private static func checkScreenRecordingAccess() -> Bool {
-        return CGPreflightScreenCaptureAccess()
+        CGPreflightScreenCaptureAccess()
     }
 }

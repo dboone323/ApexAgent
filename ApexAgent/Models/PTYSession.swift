@@ -9,11 +9,12 @@ public protocol ContainerInteractiveSession: Sendable {
     func kill() async
 }
 
+@MainActor
 public protocol ContainerManagerProtocol: Sendable {
-    var stateDescription: String { get async }
-    var containerCPUs: Int { get async }
-    var containerMemoryMB: Int { get async }
-    var appleContainerImage: String { get async }
+    var stateDescription: String { get }
+    var containerCPUs: Int { get }
+    var containerMemoryMB: Int { get }
+    var appleContainerImage: String { get }
 
     func startContainer() async throws
     func stopContainer() async throws
@@ -112,14 +113,14 @@ class PTYSession: @unchecked Sendable {
                 }
                 // Initialize via native ContainerManager
                 let session = try await manager.startInteractiveShell(
-                    onOutput: { [weak self] text in
+                    onOutput: { [weak self] (text: String) in
                         guard let self = self else { return }
                         self.onOutput?(text)
                         self.outputQueue.async {
                             self.processContinuationOutput(text)
                         }
                     },
-                    onExit: { [weak self] code in
+                    onExit: { [weak self] (code: Int32) in
                         guard let self = self else { return }
                         self.cleanup()
                         self.onExit?(code)

@@ -145,6 +145,8 @@ struct ConfirmationOverlay: View {
                                 .background(Color(nsColor: .quaternaryLabelColor).opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("confirmationDeny")
+                        .accessibilityLabel("Deny action")
                         .keyboardShortcut(.escape, modifiers: [])
 
                         Button {
@@ -162,6 +164,8 @@ struct ConfirmationOverlay: View {
                                 )
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("confirmationApprove")
+                        .accessibilityLabel("Approve action")
                         .keyboardShortcut(.return, modifiers: .command)
                     }
                 }
@@ -177,6 +181,7 @@ struct ConfirmationOverlay: View {
         }
         .onAppear { startTimer() }
         .onDisappear { stopTimer() }
+        .accessibilityIdentifier("confirmationOverlay")
     }
 
     @State private var timerTask: Task<Void, Never>?

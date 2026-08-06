@@ -55,6 +55,7 @@ struct ToolActivityView: View {
             }
         }
         .background(Color(nsColor: .controlBackgroundColor))
+        .accessibilityIdentifier("toolActivityView")
     }
 }
 

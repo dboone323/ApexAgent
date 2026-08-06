@@ -76,6 +76,14 @@ enum AgentSecurity {
         riskLevel(for: toolName) == .high
     }
 
+    /// Per-tool allowlist enforcement. By default, all tools are allowed unless
+    /// explicitly denied in the user's stored denylist. A nil/empty denylist
+    /// means no additional restriction beyond the existing confirmation gate.
+    static func isAllowed(_ toolName: String) -> Bool {
+        let denied = UserDefaults.standard.stringArray(forKey: "apex.deniedTools") ?? []
+        return !denied.contains(toolName)
+    }
+
     /// Wraps external content so the model treats it as data, not instructions.
     /// Complements `sanitizeForPromptInjection` for tools that fetch content
     /// from clearly identified external sources (web pages, remote files).

@@ -6,6 +6,7 @@ struct DiagnosticsView: View {
     @State private var results: [DiagnosticItem] = []
     @State private var isRunning = false
     @State private var startedAt: Date?
+    @State private var exportMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -42,8 +43,28 @@ struct DiagnosticsView: View {
                     Button("Close") { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Re-Run") { runDiagnostics() }
-                        .disabled(isRunning)
+                    HStack {
+                        if let exportMessage {
+                            Text(exportMessage)
+                                .font(AppTheme.Font.caption(11))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
+                        }
+                        Button("Re-Run") { runDiagnostics() }
+                            .disabled(isRunning)
+                        Button("Export") {
+                            let report = DiagnosticManager.exportReport(results)
+                            let panel = NSSavePanel()
+                            panel.nameFieldLabel = "Diagnostic Report"
+                            panel.nameFieldStringValue = "diagnostics-report.json"
+                            panel.allowedContentTypes = [.json]
+                            if panel.runModal() == .OK, let url = panel.url {
+                                try? report.write(to: url, atomically: true, encoding: .utf8)
+                                exportMessage = "Saved to \(url.path)"
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 3) { exportMessage = nil }
+                            }
+                        }
+                        .disabled(results.isEmpty)
+                    }
                 }
             }
             .onAppear { runDiagnostics() }
@@ -68,11 +89,12 @@ struct DiagnosticsView: View {
     private func runDiagnostics() {
         isRunning = true
         startedAt = Date()
+        exportMessage = nil
         Task { @MainActor in
             let items = await DiagnosticManager.runSelfCheck()
             self.results = items
             self.isRunning = false
-            
+
             let failures = items.filter { $0.status == .fail }
             if !failures.isEmpty {
                 let failureNames = failures.map { $0.name }.joined(separator: ", ")

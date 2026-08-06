@@ -36,7 +36,7 @@ struct ConveneMeetingTool: Tool {
             var validAgents: [RegisteredAgent] = []
             for p in arguments.participants {
                 let cleaned = p.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-                if let agent = await AgentRegistry.shared.resolve(name: cleaned) {
+                if let agent = AgentRegistry.shared.resolve(name: cleaned) {
                     validAgents.append(agent)
                 }
             }
@@ -83,15 +83,11 @@ struct ConveneMeetingTool: Tool {
                         debateHistory: debateHistory
                     )
 
-                    var finalTurnContent = ""
                     let prompt = "Please provide your contribution and response/feedback to the discussion on: \(arguments.topic)"
-                    let stream = session.streamResponse(to: prompt)
-                    
-                    for try await response in stream {
-                        finalTurnContent = response.content
-                        await MainActor.run {
-                            orchestrator.updateMessage(id: messageId, content: accumulatedText + "\n\n🤖 [\(displayName)]: \(finalTurnContent)")
-                        }
+                    let response = try await session.respond(to: Prompt(prompt), options: GenerationOptions(toolCallingMode: .allowed))
+                    let finalTurnContent = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                    await MainActor.run {
+                        orchestrator.updateMessage(id: messageId, content: accumulatedText + "\n\n🤖 [\(displayName)]: \(finalTurnContent)")
                     }
 
                     debateHistory.append(MeetingTurn(agentName: displayName, statement: finalTurnContent))

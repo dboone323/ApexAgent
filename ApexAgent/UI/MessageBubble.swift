@@ -5,6 +5,13 @@ struct MessageBubble: View {
 
     var isUser: Bool { message.role == .user }
 
+    private var accessibilityIdentifierForBubble: String {
+        if isUser {
+            return "UserMessage_\(message.id.uuidString)"
+        }
+        return "AgentResponse_\(message.id.uuidString)"
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             if isUser {
@@ -17,7 +24,8 @@ struct MessageBubble: View {
             VStack(alignment: isUser ? .trailing : .leading, spacing: 6) {
                 // Bubble
                 BubbleContent(message: message)
-                    .accessibilityIdentifier(isUser ? "UserMessage" : "AgentResponse")
+                    .accessibilityIdentifier(accessibilityIdentifierForBubble)
+                    .accessibilityValue(message.content)
 
                 // Timestamp
                 Text(message.timestamp.formatted(date: .omitted, time: .shortened))

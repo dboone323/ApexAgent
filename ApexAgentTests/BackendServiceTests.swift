@@ -39,6 +39,17 @@ import SharedModels
     }
     
     @Test func testPTYSessionInteractiveCommands() async throws {
+        // Pin the sandbox flags: this test asserts plain PTY behavior, so it
+        // must not inherit docker/Apple-container settings left in the
+        // swiftpm-testing-helper defaults domain by an earlier run.
+        let sandboxKeys = [
+            "apex.dockerSandboxingEnabled",
+            "apex.testDockerFallback",
+            "apex.appleContainersEnabled",
+            "apex.testAppleContainerFallback",
+        ]
+        for key in sandboxKeys { UserDefaults.standard.removeObject(forKey: key) }
+
         // Spawn a real, functioning interactive shell session and execute a command
         let pty = try await PTYSession(workspacePath: "/Users/danielstevens/Developer/ApexAgent")
         #expect(pty != nil)
