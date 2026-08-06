@@ -75,7 +75,6 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-
                 // MARK: Model Status
                 Section("Model Configuration") {
                     @Bindable var orchestrator = orchestrator
@@ -296,7 +295,7 @@ struct SettingsView: View {
                             } else if isSandboxRunning {
                                 Button("Stop Sandbox") {
                                     Task {
-                                        if let manager = await ContainerBridge.shared {
+                                        if let manager = ContainerBridge.shared {
                                             try? await manager.stopContainer()
                                             startSandboxStatusPolling()
                                         }
@@ -307,7 +306,7 @@ struct SettingsView: View {
                             } else {
                                 Button("Start Sandbox") {
                                     Task {
-                                        if let manager = await ContainerBridge.shared {
+                                        if let manager = ContainerBridge.shared {
                                             try? await manager.startContainer()
                                             startSandboxStatusPolling()
                                         }
@@ -472,23 +471,6 @@ struct SettingsView: View {
                     }
                 }
 
-                // MARK: Sparkle Auto-Update
-                Section("Application Updates") {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Auto-Updates (Sparkle)")
-                            Text("Check for the latest version of Apex Agent")
-                                .font(AppTheme.Font.caption(11))
-                                .foregroundStyle(AppTheme.Palette.textSecondary)
-                        }
-                        Spacer()
-                        Button("Check for Updates...") {
-                            UpdaterController.shared.checkForUpdates()
-                        }
-                        .buttonStyle(.bordered)
-                    }
-                }
-
                 // MARK: Agent Persona
                 Section {
                     TextEditor(text: $localInstructions)
@@ -583,6 +565,7 @@ struct SettingsView: View {
                 Text("This will overwrite the current system prompt instructions and reset the model session.")
             }
         }
+        .accessibilityIdentifier("settingsForm")
     }
     
     private var modelPrivacyText: String {
@@ -750,7 +733,7 @@ struct CollaborativeServerSettingsSection: View {
                     }
                 }
             }
-            
+
             Button(action: openAccessAuditLog) {
                 HStack {
                     Label("View Access Audit Log", systemImage: "doc.text.magnifyingglass")
@@ -767,8 +750,8 @@ extension SettingsView {
         sandboxPollTask?.cancel()
         sandboxPollTask = Task {
             while !Task.isCancelled {
-                if let manager = await ContainerBridge.shared {
-                    let desc = await manager.stateDescription
+                if let manager = ContainerBridge.shared {
+                    let desc = manager.stateDescription
                     self.sandboxStateDescription = desc
                     self.isSandboxRunning = desc == "Sandbox Running"
                     self.isSandboxTransitioning = desc.contains("...") || desc.contains("Downloading") || desc.contains("Pulling")

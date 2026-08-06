@@ -17,7 +17,7 @@ public struct RegisteredAgent: Codable, Sendable {
 public actor AgentRegistry {
     public static let shared = AgentRegistry()
     
-    private var registeredAgents: [String: RegisteredAgent] = [:]
+    nonisolated(unsafe) private var registeredAgents: [String: RegisteredAgent] = [:]
     
     public static let builtInDefaults: [String: RegisteredAgent] = [
         "developer": RegisteredAgent(
@@ -90,18 +90,27 @@ public actor AgentRegistry {
         self.registeredAgents = agents
     }
     
-    public func allAgents() -> [RegisteredAgent] {
+    public nonisolated func allAgents() -> [RegisteredAgent] {
         return Array(registeredAgents.values).sorted(by: { $0.name < $1.name })
     }
     
-    public func resolve(name: String) -> RegisteredAgent? {
+    public nonisolated func resolve(name: String) -> RegisteredAgent? {
         return registeredAgents[name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)]
     }
     
-    public func loadAgentsFromDisk() {
+    public nonisolated func register(_ agent: RegisteredAgent) {
+        let key = agent.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        registeredAgents[key] = agent
+    }
+    
+    public nonisolated func unregister(name: String) {
+        let key = name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        registeredAgents.removeValue(forKey: key)
+    }
+    
+    public func loadAgentsFromDisk(directory: URL? = nil) {
         let fm = FileManager.default
-        let homeDir = fm.homeDirectoryForCurrentUser
-        let agentsDir = homeDir.appendingPathComponent(".apex/agents")
+        let agentsDir = directory ?? fm.homeDirectoryForCurrentUser.appendingPathComponent(".apex/agents")
         
         // Attempt to create the directory if it does not exist
         try? fm.createDirectory(at: agentsDir, withIntermediateDirectories: true)

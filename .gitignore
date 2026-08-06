@@ -24,3 +24,11 @@ apex-agent-config.json
 
 # hermes agent internals (desktop attachments, skills)
 .hermes/
+# xo-project collaboration / temporary artifacts
+Carthage/
+docs/Reference/export.html
+r2.html
+googlec86b2f6eb74a972d.html
+xoxo.html
+# remote workspace state from xo-project flows
+PlatformLoginState

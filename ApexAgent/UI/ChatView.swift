@@ -104,6 +104,7 @@ struct ChatView: View {
                     .allowsHitTesting(!displayIsGenerating)
                 }
                 .accessibilityLabel("Conversation messages list")
+                .accessibilityIdentifier("conversationScrollView")
                 .onChange(of: displayMessages.count) {
                     scrollToBottom(proxy: proxy)
                 }
@@ -238,6 +239,8 @@ struct SuggestionChip: View {
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .frame(maxWidth: 440)
+        .accessibilityIdentifier("suggestionChip_\(text)")
+        .accessibilityLabel(text)
     }
 }
 
@@ -312,6 +315,8 @@ struct ChatInputBar: View {
                     }
                     .buttonStyle(.plain)
                     .help("Attach Image file")
+                    .accessibilityIdentifier("attachImageButton")
+                    .accessibilityLabel("Attach image file")
 
                     Button {
                         Task {
@@ -327,6 +332,8 @@ struct ChatInputBar: View {
                     }
                     .buttonStyle(.plain)
                     .help("Take and attach Screenshot")
+                    .accessibilityIdentifier("attachScreenshotButton")
+                    .accessibilityLabel("Attach screenshot")
 
                     Button {
                         toggleRecording()
@@ -340,6 +347,8 @@ struct ChatInputBar: View {
                     }
                     .buttonStyle(.plain)
                     .help(voiceController.isRecording ? "Stop recording" : "Start recording (Speech-to-Text)")
+                    .accessibilityIdentifier("voiceRecordButton")
+                    .accessibilityLabel(voiceController.isRecording ? "Stop recording" : "Start recording")
                 }
 
                 // Text input
@@ -359,6 +368,7 @@ struct ChatInputBar: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .scrollContentBackground(.hidden)
                         .focused($isInputFocused)
+                        .accessibilityIdentifier("chatInputField")
                         .onKeyPress(.return) {
                             if NSEvent.modifierFlags.contains(.shift) {
                                 inputText += "\n"
@@ -431,22 +441,27 @@ struct ChatInputBar: View {
                     }
                     .buttonStyle(.plain)
                     .help("Stop generation")
+                    .accessibilityIdentifier("stopGenerationButton")
+                    .accessibilityLabel("Stop generation")
                 } else {
                     Button(action: send) {
                         ZStack {
                             Circle()
                                 .fill(
                                     (inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && orchestrator.pendingAttachments.isEmpty)
-                                    ? AnyShapeStyle(Color(nsColor: .tertiaryLabelColor).opacity(0.3))
-                                    : AnyShapeStyle(LinearGradient(colors: [AppTheme.Palette.accent, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                        ? AnyShapeStyle(Color(nsColor: .tertiaryLabelColor).opacity(0.3))
+                                        : AnyShapeStyle(LinearGradient(colors: [AppTheme.Palette.accent, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
                                 )
                                 .frame(width: 38, height: 38)
                             Image(systemName: "arrow.up")
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(.white)
                         }
+                        .frame(width: 38, height: 38)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("sendButton")
+                    .accessibilityLabel("Send message")
                     .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && orchestrator.pendingAttachments.isEmpty)
                     .help("Send message (Return)")
                 }

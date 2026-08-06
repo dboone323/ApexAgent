@@ -58,6 +58,8 @@ struct TerminalView: View {
             }
         }
         .frame(minHeight: 220)
+        .accessibilityIdentifier("terminalView")
+        .accessibilityLabel("Terminal view")
     }
 
     private func formattedText(segments: [StyledSegment]) -> Text {

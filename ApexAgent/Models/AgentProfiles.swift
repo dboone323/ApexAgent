@@ -113,8 +113,10 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
     let reasoningLevel: ContextOptions.ReasoningLevel?
     /// Optional cap on generated tokens; nil leaves the model default.
     let maxResponseTokens: Int?
+    /// Determines whether this session runs on-device or private cloud when both are available.
+    let usePrivateCloudIfAvailable: Bool
 
-    init(agentType: AgentType, instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider, reasoningLevel: ContextOptions.ReasoningLevel? = nil, maxResponseTokens: Int? = nil) {
+    init(agentType: AgentType, instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider, reasoningLevel: ContextOptions.ReasoningLevel? = nil, maxResponseTokens: Int? = nil, usePrivateCloudIfAvailable: Bool = false) {
         self.agentType = agentType
         self.instructions = instructions
         self.model = model
@@ -123,9 +125,10 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
         self.allowedTools = AgentRegistry.builtInDefaults[agentType.rawValue]?.allowedTools ?? []
         self.reasoningLevel = reasoningLevel
         self.maxResponseTokens = maxResponseTokens
+        self.usePrivateCloudIfAvailable = usePrivateCloudIfAvailable
     }
 
-    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider, allowedTools: [String], reasoningLevel: ContextOptions.ReasoningLevel? = nil, maxResponseTokens: Int? = nil) {
+    init(instructions: String, model: Model, toolCallingMode: GenerationOptions.ToolCallingMode, orchestrator: OrchestratorProvider, allowedTools: [String], reasoningLevel: ContextOptions.ReasoningLevel? = nil, maxResponseTokens: Int? = nil, usePrivateCloudIfAvailable: Bool = false) {
         self.agentType = .developer
         self.instructions = instructions
         self.model = model
@@ -134,10 +137,30 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
         self.allowedTools = allowedTools
         self.reasoningLevel = reasoningLevel
         self.maxResponseTokens = maxResponseTokens
+        self.usePrivateCloudIfAvailable = usePrivateCloudIfAvailable
     }
     
     var body: some LanguageModelSession.DynamicProfile {
-        LanguageModelSession.Profile {
+        activeModelProfile(model: resolvedModel())
+        .model(resolvedModel())
+    }
+
+    private func resolvedModel() -> any LanguageModel {
+        let fallback = SystemLanguageModel.default
+        switch model {
+        case let m as SystemLanguageModel: return m
+        case let m as PrivateCloudComputeLanguageModel:
+            if usePrivateCloudIfAvailable && AgentOrchestrator.isPrivateCloudComputeAvailable() { return m }
+            return fallback
+        case let m as CloudGeminiLanguageModel: return m
+        case let m as LocalOllamaLanguageModel: return m
+        case let m as LocalMLXLanguageModel: return m
+        default: return fallback
+        }
+    }
+
+    private func activeModelProfile(model: any LanguageModel) -> some LanguageModelSession.DynamicProfile {
+        let profile = LanguageModelSession.Profile {
             Instructions(instructions)
             
             if allowedTools.contains("read_file") {
@@ -243,11 +266,11 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
                 ShellTool(orchestrator: orchestrator)
             }
         }
-        .apexAuditHooks()
-        .model(model)
-        .toolCallingMode(toolCallingMode)
-        .reasoningLevel(reasoningLevel)
-        .maximumResponseTokens(maxResponseTokens)
+        return profile
+            .apexAuditHooks()
+            .toolCallingMode(toolCallingMode)
+            .reasoningLevel(reasoningLevel)
+            .maximumResponseTokens(maxResponseTokens)
     }
 }
 

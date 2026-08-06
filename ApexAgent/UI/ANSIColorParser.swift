@@ -33,7 +33,14 @@ struct ANSIColorParser {
                 commitSegment()
                 
                 if scanner.scanString("[") != nil {
-                    if let codesStr = scanner.scanUpToString("m") {
+                    if scanner.scanString("m") != nil {
+                        // "ESC[m" — empty parameter list is defined by ANSI as
+                        // equivalent to "ESC[0m" (full reset). Scanner's
+                        // scanUpToString returns nil at the delimiter, so this
+                        // case never reaches the codes loop below.
+                        foregroundColor = .primary
+                        isBold = false
+                    } else if let codesStr = scanner.scanUpToString("m") {
                         _ = scanner.scanString("m") // Consume 'm'
                         let codes = codesStr.components(separatedBy: ";").compactMap { Int($0) }
                         

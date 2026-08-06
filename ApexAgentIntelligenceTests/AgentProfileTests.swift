@@ -119,13 +119,13 @@ struct AgentProfileTests {
 
     @Test func testReasoningBudgetMapping() {
         // The setting-to-SDK mapping must round-trip the documented levels.
+        defer { UserDefaults.standard.removeObject(forKey: "apex.reasoningBudget") }
         UserDefaults.standard.set("light", forKey: "apex.reasoningBudget")
         #expect(apexConfiguredReasoningLevel() == .light)
         UserDefaults.standard.set("deep", forKey: "apex.reasoningBudget")
         #expect(apexConfiguredReasoningLevel() == .deep)
         UserDefaults.standard.set("off", forKey: "apex.reasoningBudget")
         #expect(apexConfiguredReasoningLevel() == nil)
-        UserDefaults.standard.removeObject(forKey: "apex.reasoningBudget")
     }
 
     @Test func testScrubHistoryDropsInjection() {

@@ -28,7 +28,7 @@ struct DelegateTaskTool: Tool {
             let orchestrator = await self.orchestrator.orchestrator
             
             let agentName = arguments.agentType.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-            guard let agent = await AgentRegistry.shared.resolve(name: agentName) else {
+            guard let agent = AgentRegistry.shared.resolve(name: agentName) else {
                 return "ERROR: Invalid agentType '\(arguments.agentType)'."
             }
             
@@ -62,18 +62,16 @@ struct DelegateTaskTool: Tool {
                 return (s, msgId)
             }
             
-            // 2. Stream the sub-agent response and update the UI asynchronously
-            var finalContent = ""
-            let stream = session.streamResponse(to: arguments.taskDescription)
-            for try await response in stream {
-                finalContent = response.content
-                await MainActor.run {
-                    orchestrator.updateMessage(id: messageId, content: startMessage + finalContent)
-                }
-            }
-            
-            // 3. Mark the message as finished streaming on the MainActor and log coordination trace
+            // 2. Generate the sub-agent response.
+            let response = try await session.respond(
+                to: Prompt(arguments.taskDescription),
+                options: GenerationOptions(toolCallingMode: .allowed)
+            )
+            let finalContent = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            // 3. Update the assistant bubble on the MainActor.
             await MainActor.run {
+                orchestrator.updateMessage(id: messageId, content: startMessage + finalContent)
                 orchestrator.updateMessage(id: messageId, isStreaming: false)
                 let displayName = agent.name.prefix(1).uppercased() + agent.name.dropFirst()
                 let trace = AgentTraceLog(
@@ -84,7 +82,7 @@ struct DelegateTaskTool: Tool {
                 )
                 orchestrator.coordinationTraces.append(trace)
             }
-            
+
             return finalContent
         }
     }

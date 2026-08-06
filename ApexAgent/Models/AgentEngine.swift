@@ -59,65 +59,52 @@ struct NativeAppleEngine: AgentEngine {
             let poiID = OSSignpostID(log: agentPointsOfInterestLog)
             os_signpost(.begin, log: agentPointsOfInterestLog, name: "Generate", signpostID: poiID)
             defer { os_signpost(.end, log: agentPointsOfInterestLog, name: "Generate", signpostID: poiID) }
-            let stream = session.streamResponse(options: options) {
-                promptWithContext
-                for attachment in attachments {
-                    Attachment(attachment)
+            // On macOS 27 beta 4, multimodal streaming can also hang, so use
+            // respond(to:) directly and surface any output before falling back.
+            do {
+                let attachmentNotes = if attachments.isEmpty {
+                    ""
+                } else {
+                    "\n" + attachments.map { _ in "[image attachment]" }.joined(separator: "\n")
                 }
-            }
-            var lastLogged = ""
-            for try await partialResponse in stream {
-                lastLogged = partialResponse.content
-                onUpdate(partialResponse.content)
-            }
-            AgentSignpost.event("NativeGenerate.Complete", detail: "multimodal")
-            // Same beta-4 empty-output fallback as the text branch: if streaming
-            // yields nothing, try respond(to:) before surfacing the warning.
-            if lastLogged.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                do {
-                    let response = try await session.respond(to: promptWithContext, options: options)
-                    let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !text.isEmpty { onUpdate(text); return }
-                } catch {
-                    Logger.provider.error("Native multimodal respond(to:) fallback failed: \(error.localizedDescription, privacy: .public)")
-                }
-                onUpdate("⚠️ The on-device model returned no output for this image. Switch Model Provider to “Local Ollama” or “Cloud Gemini” to continue.")
-            }
-        } else {
-            print("[DIAG] NativeAppleEngine streamResponse start")
-            let genID = AgentSignpost.begin("NativeGenerate", detail: "text")
-            defer { AgentSignpost.end("NativeGenerate", genID) }
-            let poiID = OSSignpostID(log: agentPointsOfInterestLog)
-            os_signpost(.begin, log: agentPointsOfInterestLog, name: "Generate", signpostID: poiID)
-            defer { os_signpost(.end, log: agentPointsOfInterestLog, name: "Generate", signpostID: poiID) }
-            let stream = session.streamResponse(to: promptWithContext, options: options)
-            var lastLogged = ""
-            for try await partialResponse in stream {
-                lastLogged = partialResponse.content
-                onUpdate(partialResponse.content)
-            }
-            print("[DIAG] NativeAppleEngine streamResponse end; lastCount=\(lastLogged.count)")
-            AgentSignpost.event("NativeGenerate.Complete", detail: "chars=\(lastLogged.count)")
-            // The on-device model can report `availability = available` yet still
-            // produce zero tokens (e.g. its multi-GB weights haven't finished
-            // downloading, or — on macOS 27 beta 4 — `streamResponse` returns
-            // "Session ended without producing a response" with no output). In that
-            // case fall back to `respond(to:)`, which DOES yield a result on this
-            // beta, so the app actually replies instead of hanging on "thinking".
-            if lastLogged.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                do {
-                    let response = try await session.respond(to: promptWithContext, options: options)
-                    let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !text.isEmpty {
-                        onUpdate(text)
-                        AgentSignpost.event("NativeGenerate.Complete", detail: "chars=\(text.count) (respond-fallback)")
-                        return
+                let multimodalPrompt = Prompt("\(promptWithContext)\(attachmentNotes)")
+                let response = try await session.respond(to: multimodalPrompt, options: options)
+                let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !text.isEmpty {
+                    onUpdate(text)
+                    if let id = orchestrator.activeAssistantMessageId {
+                        orchestrator.updateMessage(id: id, content: text)
+                        orchestrator.updateMessage(id: id, isStreaming: false)
                     }
-                } catch {
-                    Logger.provider.error("Native respond(to:) fallback failed: \(error.localizedDescription, privacy: .public)")
+                    AgentSignpost.event("NativeGenerate.Complete", detail: "multimodal (respond-direct)")
+                    return
                 }
-                onUpdate("⚠️ The on-device model returned no output. This usually means its model asset is still downloading (enable Apple Intelligence in Settings → Siri and wait), or isn't available on this macOS build. Switch Model Provider to “Local Ollama” (if Ollama is running) or “Cloud Gemini” to continue.")
+            } catch {
+                Logger.provider.error("Native multimodal respond(to:) failed: \(error.localizedDescription, privacy: .public)")
             }
+            onUpdate("⚠️ The on-device model returned no output for this image. Switch Model Provider to “Local Ollama” or “Cloud Gemini” to continue.")
+        } else {
+            // On macOS 27 beta 4, `streamResponse` hangs forever without ever
+            // yielding or returning, so use `respond(to:)` directly, which DOES
+            // yield a result on this beta. The app actually replies instead of
+            // hanging on "thinking" or crashing on a nonexistent streaming API.
+            do {
+                let response = try await session.respond(to: promptWithContext, options: options)
+                let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !text.isEmpty {
+                    print("[DIAG] NativeAppleEngine respond(to:) text=\(text)")
+                    onUpdate(text)
+                    if let id = orchestrator.activeAssistantMessageId {
+                        orchestrator.updateMessage(id: id, content: text)
+                        orchestrator.updateMessage(id: id, isStreaming: false)
+                    }
+                    AgentSignpost.event("NativeGenerate.Complete", detail: "chars=\(text.count) (respond-direct)")
+                    return
+                }
+            } catch {
+                Logger.provider.error("Native respond(to:) failed: \(error.localizedDescription, privacy: .public)")
+            }
+            onUpdate("⚠️ The on-device model returned no output. This usually means its model asset is still downloading (enable Apple Intelligence in Settings → Siri and wait), or isn't available on this macOS build. Switch Model Provider to “Local Ollama” (if Ollama is running) or “Cloud Gemini” to continue.")
         }
     }
 }

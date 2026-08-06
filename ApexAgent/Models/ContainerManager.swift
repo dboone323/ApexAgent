@@ -43,8 +43,30 @@ public final class ContainerManager: Sendable, ContainerManagerProtocol {
     
     // Core settings synced with UserDefaults
     public var appleContainerImage: String {
-        get { UserDefaults.standard.string(forKey: "apex.appleContainerImage") ?? "swift:latest" }
+        get { Self.normalizeImageReference(UserDefaults.standard.string(forKey: "apex.appleContainerImage") ?? "swift:latest") }
         set { UserDefaults.standard.set(newValue, forKey: "apex.appleContainerImage") }
+    }
+
+    /// Containerization's ImageStore requires fully-qualified references
+    /// (registry host + repository path). Bare Docker-Hub-style names like
+    /// "swift:latest" or "alpine:3.20" fail with "invalid domain for image
+    /// reference". Normalize the way the docker CLI does: no host → docker.io,
+    /// no path component → library/.
+    public static func normalizeImageReference(_ ref: String) -> String {
+        let trimmed = ref.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return trimmed }
+        let firstComponent = trimmed.split(separator: "/", maxSplits: 1)[0]
+        // A registry host contains a "." or ":" (host:port) or is "localhost".
+        let hasHost = firstComponent.contains(".") || firstComponent.contains(":") || firstComponent == "localhost"
+        if hasHost && trimmed.contains("/") {
+            return trimmed
+        }
+        if trimmed.contains("/") {
+            // e.g. "user/repo:tag" → docker.io/user/repo:tag
+            return "docker.io/\(trimmed)"
+        }
+        // e.g. "swift:latest" → docker.io/library/swift:latest
+        return "docker.io/library/\(trimmed)"
     }
     
     public var containerCPUs: Int {
@@ -125,10 +147,13 @@ public final class ContainerManager: Sendable, ContainerManagerProtocol {
             
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/tar")
+            // Extract the whole kata-containers dir: vmlinux.container is a
+            // SYMLINK inside the tarball (→ vmlinux-<ver>-<build>). Extracting
+            // only the symlink member produces a broken link and no kernel.
             process.arguments = [
                 "-xf", tarballURL.path(percentEncoded: false),
                 "-C", tempDir.path(percentEncoded: false),
-                "opt/kata/share/kata-containers/vmlinux.container"
+                "opt/kata/share/kata-containers"
             ]
             try process.run()
             process.waitUntilExit()
@@ -137,10 +162,16 @@ public final class ContainerManager: Sendable, ContainerManagerProtocol {
                 throw NSError(domain: "ContainerManager", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: "tar extraction failed"])
             }
             
-            let extractedFile = tempDir.appendingPathComponent("opt/kata/share/kata-containers/vmlinux.container")
-            if FileManager.default.fileExists(atPath: dest.path(percentEncoded: false)) {
-                try? FileManager.default.removeItem(at: dest)
+            // Resolve the symlink to the real kernel binary before moving.
+            let extractedLink = tempDir.appendingPathComponent("opt/kata/share/kata-containers/vmlinux.container")
+            let extractedFile = extractedLink.resolvingSymlinksInPath()
+            guard FileManager.default.fileExists(atPath: extractedFile.path(percentEncoded: false)) else {
+                throw NSError(domain: "ContainerManager", code: -10, userInfo: [NSLocalizedDescriptionKey: "Extracted kernel missing: \(extractedFile.path)"])
             }
+            // Remove any previous dest — including a BROKEN symlink, which
+            // fileExists(atPath:) reports as absent because it traverses links.
+            // moveItem would then fail with POSIX 17 "File exists".
+            try? FileManager.default.removeItem(at: dest)
             try FileManager.default.moveItem(at: extractedFile, to: dest)
             
             // Cleanup
@@ -206,9 +237,11 @@ public final class ContainerManager: Sendable, ContainerManagerProtocol {
             
             // Initialize the Apple ContainerManager library wrapper.
             // NOTE: Containerization is Apple-Silicon (arm64) only. This initfs is a
-            // pinned Apple vminit asset (0.30.0); keep this reference in sync with the
-            // Containerization package version when upgrading.
-            let initfsRef = "ghcr.io/apple/containerization/vminit:0.30.0"
+            // pinned Apple vminit asset; it MUST exactly match the host library
+            // version (Package.swift pins containerization 0.38.0). vmexec's
+            // sync-pipe protocol is version-coupled: a mismatched vminit fails
+            // exec with "no PID data from sync pipe". Keep both pins in sync.
+            let initfsRef = "ghcr.io/apple/containerization/vminit:0.38.0"
             
             // Pull the initfs if not present
             state = .pullingImage(0.0)
@@ -250,8 +283,12 @@ public final class ContainerManager: Sendable, ContainerManagerProtocol {
             
             let containerId = "apex-sandbox"
             
-            // Recreate container folder
-            let containerPath = appRoot.appendingPathComponent("containers").appendingPathComponent(containerId)
+            // Recreate container folder. The Containerization ImageStore keeps
+            // per-container state under <imagestore>/containers/<id> — NOT
+            // under appRoot/containers (the old path here, which never matched
+            // anything, so a crashed prior run left stale state and create()
+            // failed with POSIX 17 "File exists").
+            let containerPath = appRoot.appendingPathComponent("imagestore/containers").appendingPathComponent(containerId)
             try? FileManager.default.removeItem(at: containerPath)
             
             let cpus = containerCPUs
@@ -267,6 +304,14 @@ public final class ContainerManager: Sendable, ContainerManagerProtocol {
             ) { @Sendable config in
                 config.cpus = cpus
                 config.memoryInBytes = UInt64(memory) * 1024 * 1024
+                
+                // PID 1 must stay alive for the sandbox lifetime. The image
+                // CMD (e.g. swift:latest → /bin/bash) exits immediately with
+                // no TTY/stdin, killing the guest before any exec can run
+                // ("vmexec: No such process / no PID data from sync pipe").
+                // Apple's own integration tests use /bin/sleep as init.
+                config.process.arguments = ["/bin/sleep", "infinity"]
+                config.process.terminal = false
                 
                 // Mount current directory/workspace
                 let czMount = Containerization.Mount.share(

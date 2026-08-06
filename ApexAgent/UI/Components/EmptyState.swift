@@ -25,5 +25,6 @@ struct EmptyState: View {
         }
         .padding(AppTheme.Spacing.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityIdentifier("emptyState")
     }
 }

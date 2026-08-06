@@ -8,12 +8,9 @@ options:
   createIntermediateGroups: true
 
 packages:
-  Sparkle:
-    url: https://github.com/sparkle-project/Sparkle
-    from: 2.6.0
   Containerization:
     url: https://github.com/apple/containerization
-    branch: main
+    exactVersion: 0.38.0
 
 settings:
   base:
@@ -22,8 +19,13 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-    # Local dev builds should not require a paid cert / manual signing.
-    CODE_SIGNING_ALLOWED: NO
+    # Local dev builds: ad-hoc sign (no paid cert) so entitlements actually
+    # embed. CODE_SIGNING_ALLOWED:NO produced a linker-signed binary with ZERO
+    # entitlements — Virtualization.framework then refuses to create VMs, so
+    # the Apple Container sandbox could never start. Ad-hoc identity "-" signs
+    # locally and embeds ApexAgent.entitlements.
+    CODE_SIGNING_ALLOWED: YES
+    CODE_SIGN_IDENTITY: "-"
     # FoundationModels is weak-linked so the app launches on builds that lack
     # the symbols (AgentEngine.swift dlsym-checks availability).
     OTHER_LDFLAGS: "-weak_framework FoundationModels -weak_framework _FoundationModels_AppKit -weak_framework _FoundationModels_SwiftUI -weak_framework _Vision_FoundationModels -weak_framework _CoreSpotlight_FoundationModels"
@@ -109,8 +111,6 @@ targets:
     dependencies:
       - target: SharedKit
       - target: MCPKit
-      - package: Sparkle
-        product: Sparkle
       - package: Containerization
         product: Containerization
       - package: Containerization
@@ -148,20 +148,13 @@ targets:
       - target: SharedModels
       - target: SharedLogging
       - target: MCPKit
-      # App links Sparkle directly so Xcode embeds the dynamic Sparkle.framework
-      # into the .app bundle (otherwise the app crashes at launch: dyld can't
-      # find Sparkle.framework). NOTE: linking Sparkle here makes
-      # `xcodebuildmcp macos test` fail with "Multiple commands produce
-      # Crypto.framework" (Xcode build-graph quirk when app + test bundles both
-      # pull Sparkle's transitive SPM deps). The repo's test gate is SwiftPM
-      # `make test`, which is unaffected — use that for the coverage gate.
-      - package: Sparkle
-        product: Sparkle
     scheme:
+      gatherCoverageData: true
       testTargets:
         - ApexAgentTests
         - ApexAgentIntelligenceTests
         - ApexAgentContainerTests
+        - ApexAgentUITests
       environmentVariables:
         APEX_DEBUG: "1"
 
@@ -179,6 +172,7 @@ targets:
         LD_RUNPATH_SEARCH_PATHS: $(inherited) $(BUILD_DIR)/Products/Debug
     dependencies:
       - target: ApexAgentCore
+      - target: MCPKit
 
   ApexAgentIntelligenceTests:
     type: bundle.unit-test
@@ -207,10 +201,24 @@ targets:
         LD_RUNPATH_SEARCH_PATHS: $(inherited) $(BUILD_DIR)/Products/Debug
     dependencies:
       - target: ApexAgentCore
-      - package: Containerization
-        product: Containerization
-      - package: Containerization
-        product: ContainerizationOCI
+      # NOTE: do NOT link Containerization products here directly. The tests only
+      # use `@testable import ApexAgentCore` (which already links them). Linking
+      # the same dynamic SPM products from two targets makes `xcodebuild test`
+      # emit duplicate build commands for PackageFrameworks/Crypto.framework
+      # ("Multiple commands produce ... Crypto.framework").
+
+  ApexAgentUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: ApexAgentUITests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgentUITests
+        TEST_TARGET_NAME: ApexAgent
+    dependencies:
+      - target: ApexAgent
 
 schemes:
   ApexAgent:
@@ -220,9 +228,16 @@ schemes:
         ApexAgentTests: [test]
         ApexAgentIntelligenceTests: [test]
         ApexAgentContainerTests: [test]
+        ApexAgentUITests: [test]
     run:
       config: Debug
     test:
       config: Debug
+      gatherCoverageData: true
+      targets:
+        - ApexAgentTests
+        - ApexAgentIntelligenceTests
+        - ApexAgentContainerTests
+        - ApexAgentUITests
     archive:
       config: Release

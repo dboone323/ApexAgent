@@ -64,17 +64,16 @@ final class MCPManager: OrchestratorProvider {
             ))
         }
         
-        // Clean up legacy npx-based Git MCP config
-        loadedServers.removeAll(where: { $0.name == "Git MCP" && $0.command == "npx" })
-        // Clean up legacy Git MCP configs that hardwired an absolute dev python path.
-        loadedServers.removeAll(where: { $0.name == "Git MCP" && $0.command.hasPrefix("/Users/") })
+        // Remove any previously-saved Git MCP configs (from older app versions
+        // that auto-loaded it) so they cannot bypass the opt-in gate below.
+        loadedServers.removeAll(where: { $0.name == "Git MCP" })
         
-        if !loadedServers.contains(where: { $0.name == "Git MCP" }) {
+        // Git MCP requires the python module and a real repo path; only load
+        // it when explicitly enabled so beta/CI runs don't spam stderr.
+        if ProcessInfo.processInfo.environment["APEX_ENABLE_GIT_MCP"] == "1",
+           !loadedServers.contains(where: { $0.name == "Git MCP" }) {
             loadedServers.append(MCPServerConfig(
                 name: "Git MCP",
-                // Discover python3 from PATH at runtime instead of hardcoding an
-                // absolute developer path. The MCPClient wraps commands in a login
-                // shell, so `/usr/bin/env python3` resolves the user's python3.
                 command: "/usr/bin/env",
                 arguments: ["python3", "-m", "mcp_server_git", "--repository", finalPath]
             ))
@@ -128,12 +127,18 @@ final class MCPManager: OrchestratorProvider {
         saveConfigs()
     }
     
+    func resetClientCircuit(id: UUID) async {
+        if let client = clients[id] {
+            await client.resetCircuit()
+        }
+    }
+    
     func getClient(for config: MCPServerConfig) -> MCPClient {
         if let client = clients[config.id] {
             return client
         }
         let logger = eventLogger ?? self.orchestrator
-        let client = MCPClient(serverName: config.name, command: config.command, arguments: config.arguments, logger: logger, orchestrator: self)
+        let client = MCPClient(serverName: config.name, command: config.command, arguments: config.arguments, logger: logger, orchestrator: self, config: .default)
         clients[config.id] = client
         return client
     }

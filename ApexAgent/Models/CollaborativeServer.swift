@@ -13,12 +13,18 @@ class CollaborativeServer: NSObject, ObservableObject {
     @Published private(set) var port: UInt16 = 1337
 
     // Token Bucket Rate Limiter
-    private struct TokenBucket {
+    struct TokenBucket: Sendable {
         var tokens: Double
         var lastRefill: Date
     }
-    private var rateLimiters: [String: TokenBucket] = [:]
-    private let rateLimiterLock = NSLock()
+    nonisolated(unsafe) static var rateLimiters: [String: TokenBucket] = [:]
+    private static let rateLimiterLock = NSLock()
+
+    static func resetRateLimiter() {
+        rateLimiterLock.lock()
+        defer { rateLimiterLock.unlock() }
+        rateLimiters.removeAll()
+    }
 
     // RBAC Policy
     public struct PolicyRule: Codable, Sendable {
@@ -88,7 +94,7 @@ class CollaborativeServer: NSObject, ObservableObject {
     func stop() {
         listener?.cancel()
         listener = nil
-        self.isRunning = false
+        isRunning = false
         print("🛑 Collaborative server stopped")
     }
 
@@ -249,36 +255,36 @@ class CollaborativeServer: NSObject, ObservableObject {
     }
 
     func isRateLimited(clientIP: String) -> Bool {
-        rateLimiterLock.lock()
-        defer { rateLimiterLock.unlock() }
+        Self.rateLimiterLock.lock()
+        defer { Self.rateLimiterLock.unlock() }
 
         let now = Date()
         let refillRate: Double = 10.0
         let capacity: Double = 20.0
 
-        var bucket = rateLimiters[clientIP] ?? TokenBucket(tokens: capacity, lastRefill: now)
+        var bucket = Self.rateLimiters[clientIP] ?? TokenBucket(tokens: capacity, lastRefill: now)
         let elapsed = now.timeIntervalSince(bucket.lastRefill)
         bucket.tokens = min(capacity, bucket.tokens + elapsed * refillRate)
         bucket.lastRefill = now
 
         if bucket.tokens >= 1.0 {
             bucket.tokens -= 1.0
-            rateLimiters[clientIP] = bucket
+            Self.rateLimiters[clientIP] = bucket
             return false
         } else {
-            rateLimiters[clientIP] = bucket
+            Self.rateLimiters[clientIP] = bucket
             return true
         }
     }
 
     func isAuthorized(headers: [String: String], queryToken: String?, connection: NWConnection) -> Bool {
-        let lanModeEnabled = UserDefaults.standard.bool(forKey: "apex.lanModeEnabled")
         let clientIP = getClientIP(connection: connection)
 
         if clientIP == "127.0.0.1" || clientIP == "::1" || clientIP == "localhost" || clientIP == "unknown" {
             return true
         }
 
+        let lanModeEnabled = UserDefaults.standard.bool(forKey: "apex.lanModeEnabled")
         guard lanModeEnabled else {
             return false
         }
@@ -313,7 +319,7 @@ class CollaborativeServer: NSObject, ObservableObject {
         return false
     }
 
-    private func logAccess(clientIP: String, endpoint: String, isAuthorized: Bool, decision: String) {
+    func logAccess(clientIP: String, endpoint: String, isAuthorized: Bool, decision: String) {
         let fm = FileManager.default
         let homeDir = fm.homeDirectoryForCurrentUser
         let logsDir = homeDir.appendingPathComponent("Library/Logs/ApexAgent")
@@ -498,404 +504,182 @@ class CollaborativeServer: NSObject, ObservableObject {
                     display: flex;
                     flex-direction: column;
                     gap: 16px;
-                    max-height: 500px;
+                    max-height: 420px;
                     overflow-y: auto;
-                    padding-right: 5px;
+                    padding-right: 4px;
                 }
                 .message {
-                    padding: 16px;
-                    border-radius: 12px;
-                    font-size: 14px;
-                    max-width: 85%;
-                }
-                .message.user {
-                    background-color: var(--border);
-                    align-self: flex-end;
-                    border-bottom-right-radius: 2px;
-                }
-                .message.assistant {
-                    background-color: #1e2230;
-                    align-self: flex-start;
-                    border-bottom-left-radius: 2px;
-                    border-left: 3px solid var(--primary);
-                }
-                .plan-list {
                     display: flex;
                     flex-direction: column;
-                    gap: 12px;
-                }
-                .plan-step {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    padding: 12px;
-                    background-color: var(--bg);
-                    border-radius: 8px;
-                    border: 1px solid var(--border);
-                    font-size: 13.5px;
-                }
-                .step-status {
-                    width: 18px;
-                    height: 18px;
-                    border-radius: 50%;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 11px;
-                }
-                .step-status.completed { background: rgba(60,220,132,0.15); color: var(--success); }
-                .step-status.running { background: rgba(241,169,60,0.15); color: var(--warning); animation: spin 1.5s linear infinite; }
-                .step-status.failed { background: rgba(235,87,87,0.15); color: var(--failed); }
-                .step-status.queued { background: rgba(154,160,180,0.1); color: var(--text-secondary); }
-
-                @keyframes spin { 100% { transform: rotate(360deg); } }
-
-                .screen-container {
-                    width: 100%;
+                    gap: 6px;
+                    padding: 12px 14px;
                     border-radius: 12px;
-                    overflow: hidden;
                     border: 1px solid var(--border);
-                    background: var(--bg);
-                    position: relative;
+                    background: rgba(255, 255, 255, 0.02);
                 }
-                .screen-container img {
-                    width: 100%;
-                    height: auto;
-                    display: block;
-                }
-                .placeholder-text {
-                    padding: 40px;
-                    text-align: center;
-                    color: var(--text-secondary);
-                    font-size: 14px;
-                }
-                .diagnostics-list, .tools-list, .projects-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 10px;
-                }
-                .diagnostic-card, .tool-card, .project-card {
-                    background-color: var(--bg);
-                    border: 1px solid var(--border);
-                    border-radius: 8px;
-                    padding: 12px;
-                    font-size: 13px;
-                }
-                .card-header {
+                .message-header {
                     display: flex;
                     justify-content: space-between;
+                    font-size: 12px;
+                    color: var(--text-secondary);
+                }
+                .message-body {
+                    font-size: 14px;
+                    color: var(--text);
+                    word-wrap: break-word;
+                }
+                .pill {
+                    display: inline-flex;
                     align-items: center;
+                    gap: 6px;
+                    padding: 6px 10px;
+                    border-radius: 999px;
+                    background: rgba(255, 255, 255, 0.05);
+                    border: 1px solid var(--border);
+                    font-size: 13px;
+                    color: var(--text-secondary);
+                }
+                .pill.active {
+                    border-color: var(--success);
+                    color: var(--success);
+                }
+                .input-row {
+                    display: flex;
+                    gap: 10px;
+                }
+                .input {
+                    flex: 1;
+                    padding: 10px 12px;
+                    border-radius: 10px;
+                    border: 1px solid var(--border);
+                    background: rgba(0, 0, 0, 0.25);
+                    color: var(--text);
+                    outline: none;
+                }
+                .button {
+                    padding: 10px 14px;
+                    border-radius: 10px;
+                    border: 1px solid var(--border);
+                    background: var(--primary-gradient);
+                    color: white;
                     font-weight: 600;
-                    margin-bottom: 6px;
+                    cursor: pointer;
+                    border: none;
                 }
-                .badge {
-                    padding: 2px 8px;
-                    border-radius: 12px;
-                    font-size: 10px;
-                    font-weight: 700;
-                    text-transform: uppercase;
+                footer {
+                    margin-top: 24px;
+                    font-size: 12px;
+                    color: var(--text-secondary);
                 }
-                .badge.pass { background-color: rgba(60,220,132,0.15); color: var(--success); }
-                .badge.warning { background-color: rgba(241,169,60,0.15); color: var(--warning); }
-                .badge.fail { background-color: rgba(235,87,87,0.15); color: var(--failed); }
-
-                ::-webkit-scrollbar { width: 6px; }
-                ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
             </style>
         </head>
         <body>
             <header>
                 <div class="logo-container">
-                    <div class="logo-icon">⚡</div>
-                    <div>
-                        <h1 id="conv-title">Apex Agent Collaboration Hub</h1>
-                        <p style="font-size: 12px; color: var(--text-secondary)">Live-sharing workspace activity</p>
-                    </div>
+                    <div class="logo-icon">🧠</div>
+                    <h1>Apex Agent</h1>
                 </div>
                 <div class="status-badge">
-                    <div class="status-dot" id="live-dot"></div>
-                    <span id="live-status">Offline</span>
+                    <span class="status-dot active"></span>
+                    <span>Collaboration Hub</span>
                 </div>
             </header>
 
             <div class="grid">
-                <div class="panel">
-                    <div class="panel-title">Active Conversation Log</div>
-                    <div class="message-list" id="chat-logs">
-                        <div class="placeholder-text">Waiting for conversation to start...</div>
-                    </div>
-                </div>
-
-                <div style="display: flex; flex-direction: column; gap: 30px;">
-                    <div class="panel">
-                        <div class="panel-title">Current Execution Plan</div>
-                        <div class="plan-list" id="plan-steps">
-                            <div class="placeholder-text">No active execution plans.</div>
+                <section class="panel">
+                    <div class="panel-title">Conversation</div>
+                    <div class="message-list" id="messageList">
+                        <div class="message">
+                            <div class="message-header">
+                                <span>Assistant</span>
+                                <span>Just now</span>
+                            </div>
+                            <div class="message-body">Collaboration hub is running.</div>
                         </div>
                     </div>
-
-                    <div class="panel">
-                        <div class="panel-title">Agent Vision Live View</div>
-                        <div class="screen-container">
-                            <img src="/api/screen" id="screen-img" onerror="this.style.display='none'; document.getElementById('screen-placeholder').style.display='block';">
-                            <div class="placeholder-text" id="screen-placeholder" style="display:none;">Waiting for screen frames...</div>
-                        </div>
+                    <div class="input-row">
+                        <input class="input" id="messageInput" placeholder="Type a message..." />
+                        <button class="button" id="sendButton">Send</button>
                     </div>
-                </div>
+                </section>
+
+                <section class="panel">
+                    <div class="panel-title">Status</div>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <div class="pill active">Server: running</div>
+                        <div class="pill">Port: \(port)</div>
+                        <div class="pill">Mode: \(UserDefaults.standard.bool(forKey: "apex.lanModeEnabled") ? "LAN" : "Localhost")</div>
+                    </div>
+                </section>
             </div>
 
-            <div class="grid" style="margin-top: 30px;">
-                <div class="panel">
-                    <div class="panel-title" style="margin-bottom: 10px;">Workspace Health & System Diagnostics</div>
-                    <div class="diagnostics-list" id="diag-list">
-                        <div class="placeholder-text">Loading diagnostics...</div>
-                    </div>
-                    <div class="panel-title" style="margin-top: 20px; margin-bottom: 10px;">Loaded Custom Tools (~/.apex/tools)</div>
-                    <div class="tools-list" id="tools-list">
-                        <div class="placeholder-text">Loading tools...</div>
-                    </div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-title" style="margin-bottom: 10px;">Swift/Xcode App Workspace Health</div>
-                    <div class="projects-list" id="projects-list">
-                        <div class="placeholder-text">No projects audited. Ask Apex: "Audit the 5 swift apps".</div>
-                    </div>
-                </div>
-            </div>
-
-            <script>
-                async function updateState() {
-                    try {
-                        const response = await fetch('/api/state');
-                        if (!response.ok) throw new Error('Response error');
-                        const data = await response.json();
-
-                        // Update title
-                        document.getElementById('conv-title').innerText = data.title || 'New Conversation';
-
-                        // Update status badge
-                        const dot = document.getElementById('live-dot');
-                        const label = document.getElementById('live-status');
-                        if (data.isGenerating) {
-                            dot.className = 'status-dot active';
-                            label.innerText = 'Agent Active';
-                        } else {
-                            dot.className = 'status-dot';
-                            label.innerText = 'Agent Idle';
-                        }
-
-                        // Update Messages
-                        const chatLogs = document.getElementById('chat-logs');
-                        if (data.messages && data.messages.length > 0) {
-                            chatLogs.innerHTML = '';
-                            data.messages.forEach(msg => {
-                                const div = document.createElement('div');
-                                div.className = 'message ' + msg.role;
-                                div.innerText = msg.content;
-                                chatLogs.appendChild(div);
-                            });
-                        } else {
-                            chatLogs.innerHTML = '<div class="placeholder-text">Waiting for conversation to start...</div>';
-                        }
-
-                        // Update Plan
-                        const planSteps = document.getElementById('plan-steps');
-                        if (data.plan && data.plan.length > 0) {
-                            planSteps.innerHTML = '';
-                            data.plan.forEach(step => {
-                                const div = document.createElement('div');
-                                div.className = 'plan-step';
-
-                                const icon = document.createElement('div');
-                                icon.className = 'step-status ' + step.status;
-                                if (step.status === 'completed') icon.innerText = '✓';
-                                else if (step.status === 'running') icon.innerText = '⟳';
-                                else if (step.status === 'failed') icon.innerText = '✗';
-                                else icon.innerText = '•';
-
-                                const title = document.createElement('span');
-                                title.innerText = step.title;
-
-                                div.appendChild(icon);
-                                div.appendChild(title);
-                                planSteps.appendChild(div);
-                            });
-                        } else {
-                            planSteps.innerHTML = '<div class="placeholder-text">No active execution plans.</div>';
-                        }
-
-                        // Update Diagnostics
-                        const diagList = document.getElementById('diag-list');
-                        if (data.diagnostics && data.diagnostics.length > 0) {
-                            diagList.innerHTML = '';
-                            data.diagnostics.forEach(item => {
-                                const card = document.createElement('div');
-                                card.className = 'diagnostic-card';
-                                const statusClass = item.status.toLowerCase();
-                                card.innerHTML = `
-                                    <div class="card-header">
-                                        <span>${item.name}</span>
-                                        <span class="badge ${statusClass}">${item.status}</span>
-                                    </div>
-                                    <div style="color: var(--text-secondary); font-size: 11px;">${item.message}</div>
-                                `;
-                                diagList.appendChild(card);
-                            });
-                        }
-
-                        // Update Custom Tools
-                        const toolsList = document.getElementById('tools-list');
-                        if (data.dynamicTools && data.dynamicTools.length > 0) {
-                            toolsList.innerHTML = '';
-                            data.dynamicTools.forEach(tool => {
-                                const card = document.createElement('div');
-                                card.className = 'tool-card';
-                                card.innerHTML = `
-                                    <div class="card-header">
-                                        <span>⚙️ ${tool.name}</span>
-                                    </div>
-                                    <div style="color: var(--text-secondary); font-size: 11px; margin-bottom: 4px;">${tool.description}</div>
-                                    <div style="font-family: monospace; font-size: 9px; color: var(--primary); word-break: break-all;">${tool.scriptPath}</div>
-                                `;
-                                toolsList.appendChild(card);
-                            });
-                        } else {
-                            toolsList.innerHTML = '<div class="placeholder-text">No custom dynamic tools loaded.</div>';
-                        }
-
-                        // Update Projects
-                        const projList = document.getElementById('projects-list');
-                        if (data.projects && data.projects.length > 0) {
-                            projList.innerHTML = '';
-                            data.projects.forEach(proj => {
-                                const card = document.createElement('div');
-                                card.className = 'project-card';
-                                const hasWarnings = proj.warnings && proj.warnings.length > 0;
-                                const hasBroken = proj.brokenReferences && proj.brokenReferences.length > 0;
-                                const statusClass = hasBroken ? 'fail' : (hasWarnings ? 'warning' : 'pass');
-                                const statusText = hasBroken ? 'Critical' : (hasWarnings ? 'Warning' : 'Healthy');
-
-                                var warningsHtml = '';
-                                if (hasWarnings) {
-                                    warningsHtml = '<div style="margin-top: 6px; font-size: 11px; color: var(--warning);"><strong>Compliance Findings:</strong>';
-                                    proj.warnings.forEach(w => {
-                                        warningsHtml += `<div style="padding-left: 6px;">• ${w}</div>`;
-                                    });
-                                    warningsHtml += '</div>';
-                                }
-
-                                card.innerHTML = `
-                                    <div class="card-header">
-                                        <span>📦 ${proj.name}</span>
-                                        <span class="badge ${statusClass}">${statusText}</span>
-                                    </div>
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; font-size: 11.5px; color: var(--text-secondary); margin-bottom: 4px;">
-                                        <div>Swift: <strong>${proj.swiftVersion}</strong></div>
-                                        <div>Concurrency: <strong>${proj.strictConcurrency}</strong></div>
-                                        <div>SDK Target: <strong>${proj.deploymentTarget}</strong></div>
-                                        <div>Swift Files: <strong>${proj.fileCount}</strong></div>
-                                        <div>TODOs/FIXMEs: <strong>${proj.todoCount}</strong></div>
-                                    </div>
-                                    ${warningsHtml}
-                                `;
-                                projList.appendChild(card);
-                            });
-                        } else {
-                            projList.innerHTML = '<div class="placeholder-text">No Xcode projects audited yet. Ask Apex: "Audit my swift apps".</div>';
-                        }
-
-                        // Reload screen
-                        const screenImg = document.getElementById('screen-img');
-                        screenImg.src = '/api/screen?t=' + Date.now();
-                        screenImg.style.display = 'block';
-                        document.getElementById('screen-placeholder').style.display = 'none';
-
-                    } catch (err) {
-                        console.error('Failed to sync server state', err);
-                        document.getElementById('live-dot').className = 'status-dot';
-                        document.getElementById('live-status').innerText = 'Offline';
-                    }
-                }
-
-                setInterval(updateState, 2000);
-                updateState();
-            </script>
+            <footer>
+                Apex Agent · On-device, privacy-first collaboration hub
+            </footer>
         </body>
         </html>
         """
     }
 
-    // MARK: - JSON State Fetch
+    func getDashboardHTMLSnapshot() -> String {
+        let fm = FileManager.default
+        let homeDir = fm.homeDirectoryForCurrentUser
+        let logsDir = homeDir.appendingPathComponent("Library/Logs/ApexAgent")
+        try? fm.createDirectory(at: logsDir, withIntermediateDirectories: true)
 
-    private func getJSONState() async -> String {
-        let orchestrator = MCPManager.shared.orchestrator
+        let logFileURL = logsDir.appendingPathComponent("collab-access.log")
 
-        let messages = orchestrator.messages.map { msg -> [String: Any] in
-            let roleStr = switch msg.role {
-            case .user: "user"
-            case .assistant: "assistant"
-            case .system: "system"
-            }
-            return [
-                "role": roleStr,
-                "content": msg.content
-            ]
-        }
-
-        let plan = orchestrator.activePlan.map { step -> [String: Any] in
-            return [
-                "title": step.title,
-                "status": step.status.rawValue
-            ]
-        }
-
-        let diagnostics = await DiagnosticManager.runSelfCheck().map { item -> [String: Any] in
-            return [
-                "name": item.name,
-                "category": item.category,
-                "status": item.status.rawValue,
-                "message": item.message
-            ]
-        }
-
-        let projects = ProjectAuditor.shared.getCachedReports().map { report -> [String: Any] in
-            return [
-                "name": report.name,
-                "path": report.path,
-                "swiftVersion": report.swiftVersion,
-                "strictConcurrency": report.strictConcurrency,
-                "deploymentTarget": report.deploymentTarget,
-                "fileCount": report.fileCount,
-                "todoCount": report.todoCount,
-                "brokenReferences": report.brokenReferences,
-                "warnings": report.warnings
-            ]
-        }
-
-        let dynamicTools = DynamicToolbox.shared.dynamicTools.map { (name, entry) -> [String: Any] in
-            return [
-                "name": name,
-                "description": entry.description,
-                "scriptPath": entry.scriptPath ?? ""
-            ]
-        }
-
-        let stateDict: [String: Any] = [
-            "title": orchestrator.currentConversationTitle,
-            "isGenerating": orchestrator.isGenerating,
-            "messages": messages,
-            "plan": plan,
-            "diagnostics": diagnostics,
-            "projects": projects,
-            "dynamicTools": dynamicTools
+        let isoDate = ISO8601DateFormatter().string(from: Date())
+        let logEntry: [String: Any] = [
+            "timestamp": isoDate,
+            "clientIP": "snapshot",
+            "endpoint": "/",
+            "isAuthorized": true,
+            "decision": "Snapshot (200)"
         ]
 
-        if let data = try? JSONSerialization.data(withJSONObject: stateDict, options: .prettyPrinted),
-           let str = String(data: data, encoding: .utf8) {
-            return str
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: logEntry),
+              var jsonString = String(data: jsonData, encoding: .utf8) else {
+            return getDashboardHTML()
+        }
+        jsonString.append("\n")
+
+        if let data = jsonString.data(using: .utf8) {
+            if fm.fileExists(atPath: logFileURL.path) {
+                if let fileHandle = try? FileHandle(forWritingTo: logFileURL) {
+                    defer { try? fileHandle.close() }
+                    _ = try? fileHandle.seekToEnd()
+                    try? fileHandle.write(contentsOf: data)
+                }
+            } else {
+                try? data.write(to: logFileURL, options: .atomic)
+            }
         }
 
-        return "{}"
+        return getDashboardHTML()
+    }
+
+    // MARK: - Health
+
+    func health() -> (running: Bool, port: UInt16, lanMode: Bool) {
+        let lanModeEnabled = UserDefaults.standard.bool(forKey: "apex.lanModeEnabled")
+        return (running: isRunning, port: port, lanMode: lanModeEnabled)
+    }
+
+    // MARK: - JSON State
+
+    func getJSONState() async -> String {
+        let health = self.health()
+        let dict: [String: Any] = [
+            "running": health.running,
+            "port": health.port,
+            "lanMode": health.lanMode,
+            "timestamp": ISO8601DateFormatter().string(from: Date())
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: dict),
+              let json = String(data: data, encoding: .utf8) else {
+            return "{}"
+        }
+        return json
     }
 }

@@ -15,9 +15,12 @@ let package = Package(
         // The external github.com/dboone323/shared-kit dependency was removed to
         // make ApexAgent fully self-contained (no cross-repo coupling, no LFS,
         // no separate CI). shared-kit was pure-Foundation, so this is a clean lift.
-        .package(url: "https://github.com/sparkle-project/Sparkle.git", from: "2.6.0"),
-        // Container runtime — pinned to 1.0 stable (June 2026 release)
-        .package(url: "https://github.com/apple/containerization.git", branch: "main"),
+        // Container runtime — pinned to release tag 0.38.0 (= revision d9868bb,
+        // the same revision apple/container's own Package.resolved pins). The
+        // host library and the guest vminit initfs image MUST be the same
+        // version: vmexec's sync-pipe protocol changed between 0.37.0 and
+        // 0.38.0 ("no PID data from sync pipe" on mismatch).
+        .package(url: "https://github.com/apple/containerization.git", exact: "0.38.0"),
         // Explicitly declare transitive Apple infrastructure packages
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.0"),
     ],
@@ -71,7 +74,6 @@ let package = Package(
             dependencies: [
                 "SharedKit",
                 "MCPKit",
-                .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Containerization", package: "containerization"),
                 .product(name: "ContainerizationOCI", package: "containerization"),
@@ -97,6 +99,7 @@ let package = Package(
             name: "ApexAgent",
             dependencies: [
                 "ApexAgentCore",
+                "ApexAgentIntents",
                 "MCPKit",
                 .product(name: "Containerization", package: "containerization"),
                 .product(name: "ContainerizationOCI", package: "containerization"),
@@ -112,8 +115,54 @@ let package = Package(
                     "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_SwiftUI",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels",
-                    // Sparkle.framework is linked transitively via ApexAgentCore;
-                    // add the rpath so it dlopen's at app launch.
+                    // ApexAgentCore's SPM deps (Containerization, etc.) are linked into
+                    // the app; add the rpath so they dlopen at app launch.
+                    "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../Frameworks"
+                ])
+            ]
+        ),
+
+        // ─────────────────────────────────────────────────────────────────────
+        // ApexAgentIntents: App Intents (Siri / Shortcuts) exposing ApexAgent's
+        // on-device model to the system. Backed by the real `fm` CLI. AppIntents
+        // is a system framework on macOS; link it explicitly.
+        // ─────────────────────────────────────────────────────────────────────
+        .target(
+            name: "ApexAgentIntents",
+            dependencies: ["ApexAgentCore"],
+            path: "ApexAgentIntents",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
+            ],
+            linkerSettings: [
+                .unsafeFlags(["-framework", "AppIntents"])
+            ]
+        ),
+
+        // ─────────────────────────────────────────────────────────────────────
+        // sandboxctl: entitled verification harness for the Apple Container
+        // sandbox. The xctest agent cannot carry the virtualization
+        // entitlement, so the real VM boot is proven by this CLI after ad-hoc
+        // signing it with ApexAgent.entitlements (see Tools/sandboxctl/main.swift).
+        // ─────────────────────────────────────────────────────────────────────
+        .executableTarget(
+            name: "sandboxctl",
+            dependencies: [
+                "ApexAgentCore",
+                .product(name: "Containerization", package: "containerization"),
+                .product(name: "ContainerizationOCI", package: "containerization"),
+            ],
+            path: "Tools/sandboxctl",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
+            ],
+            linkerSettings: [
+                .unsafeFlags([
+                    "-Xlinker", "-weak_framework", "-Xlinker", "FoundationModels",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_AppKit",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_SwiftUI",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels",
                     "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../Frameworks"
                 ])
             ]
@@ -130,6 +179,7 @@ let package = Package(
             name: "ApexAgentTests",
             dependencies: [
                 "ApexAgentCore",
+                "MCPKit",
             ],
             path: "ApexAgentTests",
             resources: [
@@ -143,8 +193,8 @@ let package = Package(
                     "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels",
                     // SwiftPM does not add the build-products dir to the test bundle's
-                    // @rpath, so Sparkle.framework (linked transitively via ApexAgentCore)
-                    // fails to dlopen at test launch. Add the rpath explicitly.
+                    // @rpath, so ApexAgentCore's linked frameworks fail to dlopen at
+                    // test launch. Add the rpath explicitly.
                     "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../../.."
                 ])
             ]

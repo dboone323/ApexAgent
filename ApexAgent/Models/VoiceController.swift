@@ -179,12 +179,6 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         if speechSynthesizer.isSpeaking {
             speechSynthesizer.stopSpeaking(at: .immediate)
         }
-        // Set synchronously (we're already on the MainActor). The earlier
-        // `Task { @MainActor in ... }` wrapper deferred this past the caller,
-        // which broke synchronous callers (test asserted !isSpeaking before
-        // the task ran) and raced with message reassignments in cancelGeneration().
-        // Delegate callbacks (didCancel/didFinish) still clear isSpeaking off
-        // the transaction, so there's no double-publish.
         isSpeaking = false
     }
     

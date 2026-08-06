@@ -104,12 +104,11 @@ final class ReflectionManager {
         do {
             let responseText: String = try await withThrowingTaskGroup(of: String.self) { group in
                 group.addTask {
-                    let stream = session.streamResponse(to: requestText)
-                    var collected = ""
-                    for try await chunk in stream {
-                        collected += chunk.content
-                    }
-                    return collected
+                    let response = try await session.respond(
+                        to: Prompt(requestText),
+                        options: GenerationOptions(toolCallingMode: .allowed)
+                    )
+                    return response.content.trimmingCharacters(in: .whitespacesAndNewlines)
                 }
 
                 group.addTask {

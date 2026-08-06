@@ -15,7 +15,14 @@ struct SystemInfoTool: Tool {
     let description = """
     Returns detailed information about the macOS system including \
     OS version, hardware model, chip, RAM, storage, and network info. \
-    Use this to understand the environment before running system-specific commands.
+    ONLY call this tool when the user's request actually depends on \
+    OS version, hardware, storage, or network details. \
+    For greetings ("hi", "hey", "hello"), casual chat, or any input \
+    that does not require environmental details, respond conversationally \
+    and do NOT call this tool. \
+    Call this tool AT MOST ONCE per turn; once you receive the info block, \
+    summarize the relevant details and proceed — do not retry or re-call it. \
+    If the block contains an error or warning, report it and stop.
     """
 
     @Generable
@@ -93,7 +100,7 @@ struct ProcessListTool: Tool {
     }
     
     let name = "get_running_processes"
-    let description = "Returns a list of currently running macOS applications (user-visible apps, not background daemons)."
+    let description = "Returns a list of currently running macOS applications (user-visible apps, not background daemons). Call this tool AT MOST ONCE per turn. Once you receive the list, do NOT call it again — summarize what is running to the user and proceed. If the result contains an error, report it and stop; do not retry."
 
     @Generable
     struct Arguments: Decodable {
