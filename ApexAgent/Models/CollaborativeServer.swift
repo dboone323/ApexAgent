@@ -280,7 +280,10 @@ class CollaborativeServer: NSObject, ObservableObject {
     func isAuthorized(headers: [String: String], queryToken: String?, connection: NWConnection) -> Bool {
         let clientIP = getClientIP(connection: connection)
 
-        if clientIP == "127.0.0.1" || clientIP == "::1" || clientIP == "localhost" || clientIP == "unknown" {
+        // Only genuine loopback addresses are implicitly trusted. An
+        // unresolvable client IP ("unknown") must NOT be trusted — it must
+        // present a valid token (handled below in LAN mode).
+        if clientIP == "127.0.0.1" || clientIP == "::1" || clientIP == "localhost" {
             return true
         }
 
@@ -367,7 +370,11 @@ class CollaborativeServer: NSObject, ObservableObject {
         let headers = "HTTP/1.1 \(status)\r\n" +
                       "Content-Type: \(contentType)\r\n" +
                       "Content-Length: \(data.count)\r\n" +
-                      "Connection: close\r\n\r\n"
+                      "Connection: close\r\n" +
+                      "X-Content-Type-Options: nosniff\r\n" +
+                      "X-Frame-Options: DENY\r\n" +
+                      "Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'\r\n" +
+                      "Server: ApexAgent\r\n\r\n"
 
         guard var responseData = headers.data(using: .utf8) else {
             connection.cancel()

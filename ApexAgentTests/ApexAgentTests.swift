@@ -454,6 +454,11 @@ class MockToolEventLogger: ToolEventLogger {
         if let httpResponse = response as? HTTPURLResponse {
             #expect(httpResponse.statusCode == 200)
             #expect(httpResponse.value(forHTTPHeaderField: "Content-Type") == "application/json")
+            // WS2 hardening: security headers must be present on every response.
+            #expect(httpResponse.value(forHTTPHeaderField: "X-Content-Type-Options") == "nosniff")
+            #expect(httpResponse.value(forHTTPHeaderField: "X-Frame-Options") == "DENY")
+            #expect(httpResponse.value(forHTTPHeaderField: "Content-Security-Policy") != nil)
+            #expect(httpResponse.value(forHTTPHeaderField: "Server") == "ApexAgent")
         }
         
         // Test fetching dashboard HTML
@@ -463,6 +468,8 @@ class MockToolEventLogger: ToolEventLogger {
         if let httpResponse = htmlResponse as? HTTPURLResponse {
             #expect(httpResponse.statusCode == 200)
             #expect(httpResponse.value(forHTTPHeaderField: "Content-Type") == "text/html")
+            // Security headers apply to HTML responses too.
+            #expect(httpResponse.value(forHTTPHeaderField: "X-Frame-Options") == "DENY")
         }
         
         server.stop()
