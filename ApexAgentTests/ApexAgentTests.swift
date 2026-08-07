@@ -928,11 +928,28 @@ class MockToolEventLogger: ToolEventLogger {
     
     @MainActor
     @Test func testRealWorkspaceAudit() async throws {
-        let auditor = WorkspaceProactiveAuditor(workspacePath: "/Users/danielstevens/Developer/ApexAgent")
+        // Audit a small, deterministic temp workspace instead of the whole repo:
+        // exercises the real WorkspaceProactiveAuditor scan + aggregation path
+        // without a repo-wide file walk (slow, non-hermetic, and previously hung
+        // on the unbounded enumeration). Mirrors testAuditorDetectsTodosAndTestGaps.
+        let fm = FileManager.default
+        let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: tempDir) }
+
+        let sourceFile = tempDir.appendingPathComponent("AuditSample.swift")
+        let content = """
+        // TODO: Reduce duplication in parsing
+        // FIXME: Guard against empty input
+        struct AuditSample {}
+        """
+        try content.write(to: sourceFile, atomically: true, encoding: .utf8)
+
+        let auditor = WorkspaceProactiveAuditor(workspacePath: tempDir.path)
         let report = await auditor.performAudit()
-        print("\n\n======== REAL WORKSPACE AUDIT REPORT ========")
-        print(report)
-        print("=============================================\n\n")
+        #expect(report.contains("Workspace Proactive Audit Report"))
+        #expect(report.contains("AuditSample.swift"))
+        #expect(report.contains("Reduce duplication in parsing"))
     }
     
     @Test func testRunWorkflowToolDecoding() throws {
@@ -1011,8 +1028,24 @@ class MockToolEventLogger: ToolEventLogger {
         
         let toolbox = DynamicToolbox.shared
         toolbox.orchestrator = orchestrator
-        
-        MCPManager.shared.loadConfigs()
+
+        // Use the deterministic mock MCP server (mock_mcp_server.sh, copied into
+        // the test bundle) instead of spawning a live npx/git MCP server. This
+        // exercises the real DynamicToolbox -> MCPManager -> MCPClient -> loadMCPTools
+        // integration path without depending on network/node or a 60s-per-request
+        // handshake timeout against an external process.
+        #if SWIFT_PACKAGE
+        let testResourceURL = Bundle.module.resourceURL!
+        #else
+        final class BundleToken {}
+        let testResourceURL = Bundle(for: BundleToken.self).resourceURL!
+        #endif
+        let mockScript = testResourceURL
+            .appendingPathComponent("mock_mcp_server.sh")
+            .path
+        MCPManager.shared.servers = [
+            MCPServerConfig(name: "Mock MCP", command: mockScript, arguments: [])
+        ]
         await toolbox.loadMCPTools()
         
         print("--- Loaded Dynamic Tools ---")
@@ -1032,5 +1065,8 @@ class MockToolEventLogger: ToolEventLogger {
         } else {
             print("⚠️ Git MCP 'git_status' tool not loaded.")
         }
+        // Terminate the mock MCP server subprocess so the test host can exit
+        // cleanly (the mock runs an infinite `while read` loop otherwise).
+        await MCPManager.shared.stopAll()
         }
         }

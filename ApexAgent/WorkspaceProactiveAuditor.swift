@@ -131,14 +131,19 @@ public actor WorkspaceProactiveAuditor {
             guard let regex = try? NSRegularExpression(pattern: "\\b(todo|fixme)\\b", options: [.caseInsensitive]) else {
                 return results
             }
+            // Bound the scan so a large tree (e.g. the whole repo under test) can
+            // never hang the caller. Real audits rely on an explicit, small scope.
+            let maxFiles = 5000
+            var scanned = 0
             let enumerator = fm.enumerator(atPath: path)
             while let file = enumerator?.nextObject() as? String {
                 guard file.hasSuffix(".swift") else { continue }
-                if file.contains(".build") || file.contains(".git") || file.contains("Packages") { continue }
-                
+                if Self.shouldSkip(path: file) { continue }
+                scanned += 1
+                if scanned > maxFiles { break }
                 let fullPath = URL(fileURLWithPath: path).appendingPathComponent(file).path
                 guard let content = try? String(contentsOfFile: fullPath, encoding: .utf8) else { continue }
-                
+
                 let lines = content.components(separatedBy: .newlines)
                 for (idx, line) in lines.enumerated() {
                     let range = NSRange(line.startIndex..., in: line)
@@ -158,12 +163,16 @@ public actor WorkspaceProactiveAuditor {
             let fm = FileManager.default
             var sourceFiles = [String]()
             var testFiles = Set<String>()
-            
+
+            let maxFiles = 5000
+            var scanned = 0
             let enumerator = fm.enumerator(atPath: path)
             while let file = enumerator?.nextObject() as? String {
                 guard file.hasSuffix(".swift") else { continue }
-                if file.contains(".build") || file.contains(".git") { continue }
-                
+                if Self.shouldSkip(path: file) { continue }
+                scanned += 1
+                if scanned > maxFiles { break }
+
                 let filename = URL(fileURLWithPath: file).lastPathComponent
                 if file.contains("Tests") {
                     let nameWithoutTests = filename.replacingOccurrences(of: "Tests.swift", with: "")
@@ -176,11 +185,19 @@ public actor WorkspaceProactiveAuditor {
                     }
                 }
             }
-            
+
             return sourceFiles.filter { file in
                 let nameWithoutSuffix = URL(fileURLWithPath: file).lastPathComponent.replacingOccurrences(of: ".swift", with: "")
                 return !testFiles.contains(nameWithoutSuffix)
             }
         }.value
+    }
+
+    /// True for build/derived/cache directories that should never be scanned.
+    /// Checks path *components* (not a fragile substring) so nested matches work.
+    private static func shouldSkip(path: String) -> Bool {
+        let components = URL(fileURLWithPath: path).pathComponents
+        let skips = Set(["build", ".build", ".git", "node_modules", "Packages", "DerivedData", "xcuserdata"])
+        return !skips.isDisjoint(with: components)
     }
 }
