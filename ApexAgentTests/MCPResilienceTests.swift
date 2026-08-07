@@ -58,4 +58,45 @@ struct MCPResilienceTests {
         #expect(health.circuitOpen == true)
         #expect(health.failureCount >= 1)
     }
+
+    /// End-to-end resilience proof: point the client at a process that stays
+    /// alive but never replies (a silent server), and verify the real timeout ->
+    /// retry -> circuit-open machinery actually fires — not just the state
+    /// mutators exercised by openCircuit(). Uses a tight config so it fails fast.
+    @Test func testClientTimeoutOpensCircuitAgainstSilentServer() async {
+        let orchestrator = AgentOrchestrator()
+        // Silent server: reads stdin but never writes a JSON-RPC response.
+        let silentCommand = "/bin/zsh"
+        let silentArgs = ["-c", "while true; do read line; sleep 1; done"]
+        let config = MCPClientConfig(
+            requestTimeout: 2,
+            pingTimeout: 1,
+            maxRetries: 1,
+            circuitFailureThreshold: 1,
+            restartRateLimitWindow: 60,
+            maxRestartsInWindow: 1
+        )
+        let client = MCPClient(
+            serverName: "WS6 Silent",
+            command: silentCommand,
+            arguments: silentArgs,
+            logger: orchestrator,
+            orchestrator: orchestrator,
+            config: config
+        )
+
+        // The handshake must time out (no response) and trip the circuit.
+        do {
+            _ = try await client.listTools()
+            Issue.record("Expected the silent server to cause a timeout/circuit-open, but listTools returned.")
+        } catch {
+            // Expected: timeout (or circuitOpen) once the retries are exhausted.
+        }
+
+        // Give the supervisor a moment to flip the circuit.
+        try? await Task.sleep(for: .milliseconds(200))
+        #expect(await client.isCircuitOpen(), "Circuit should open after the silent server fails to respond.")
+
+        await client.stop()
+    }
 }

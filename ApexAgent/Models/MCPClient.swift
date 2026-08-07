@@ -532,26 +532,28 @@ actor MCPClient {
         fullData.append(10) // '\n'
         let dataToShare = fullData
         let stdinToShare = stdin
-        let responseData: Data = try await withThrowingTaskGroup(of: Data.self) { group in
-            group.addTask { [id, dataToShare, stdinToShare] in
-                try await self.registerAndWrite(id: id, data: dataToShare, stdin: stdinToShare)
+        let responseData: Data = try await Tracing.span("mcp.request", source: "MCPClient", metadata: ["method": method]) {
+            try await withThrowingTaskGroup(of: Data.self) { group in
+                group.addTask { [id, dataToShare, stdinToShare] in
+                    try await self.registerAndWrite(id: id, data: dataToShare, stdin: stdinToShare)
+                }
+
+                group.addTask {
+                    try await Task.sleep(for: .seconds(60))
+                    // Force-resume the suspended continuation so an unresponsive
+                    // server cannot hang the caller forever. removeValue is atomic,
+                    // so the real response path and this timeout path cannot both
+                    // resume the same continuation (which would crash).
+                    await self.resumeOnTimeout(id: id)
+                    throw MCPError.timeout("Request timed out after 60 seconds.")
+                }
+
+                guard let resultData = try await group.next() else {
+                    throw MCPError.timeout("Request timed out")
+                }
+                group.cancelAll()
+                return resultData
             }
-            
-            group.addTask {
-                try await Task.sleep(for: .seconds(60))
-                // Force-resume the suspended continuation so an unresponsive
-                // server cannot hang the caller forever. removeValue is atomic,
-                // so the real response path and this timeout path cannot both
-                // resume the same continuation (which would crash).
-                await self.resumeOnTimeout(id: id)
-                throw MCPError.timeout("Request timed out after 60 seconds.")
-            }
-            
-            guard let resultData = try await group.next() else {
-                throw MCPError.timeout("Request timed out")
-            }
-            group.cancelAll()
-            return resultData
         }
 
         let decoder = JSONDecoder()
@@ -570,7 +572,7 @@ actor MCPClient {
             }
             throw MCPError.protocolError("Empty result from MCP server.")
         }
-        
+
         failureCount = 0
         circuitOpen = false
         return result

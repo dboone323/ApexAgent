@@ -1,7 +1,7 @@
 # ApexAgent — Master Manifest
 
 > Single source of truth.
-> Last updated: 2026-08-06 (post WWDC26/382 merge, PR #3)
+> Last updated: 2026-08-07 (P0 ApexAgentTests gate fixed — 199 tests/30 suites green in 13.6s; stale branch cleanup)
 > Scope: `ApexAgent`, `ApexAgentTests`, `ApexAgentIntelligenceTests`, `ApexAgentContainerTests`, `ApexAgentRuntime`, `Modules/*`
 
 ---
@@ -10,7 +10,7 @@
 
 | Target | Status | Evidence |
 |--------|--------|----------|
-| `ApexAgentTests` | 🟡 HANGS | Does not complete in a bounded run on macOS 27 beta (verified 2026-08-06: `swift test --filter ApexAgentTests` ran >380s with no completion; `ApexAgentContainerTests` completes in ~8s, so the hang is suite-specific). TASK_MANIFEST's prior "134 pass / 8.342s" claim is stale. |
+| `ApexAgentTests` | 🟢 GREEN | 199 tests in 30 suites passed after 13.586s (verified 2026-08-07). Root-cause hangs fixed with real code: bounded WorkspaceProactiveAuditor scan (5000-file cap + component skip), deterministic mock MCP server in testRealToolsGrepAndGitMCP + stopAll() teardown, scoped testRealWorkspaceAudit to a temp dir. No tests disabled. |
 | `ApexAgentIntelligenceTests` | 🟢 GREEN | 53 tests in 10 suites passed after 168.688s. `BenchmarkTests`: single-prompt 8.948s, multi-turn 21.760s avg, profile build 0.003s. |
 | `ApexAgentUITests` | ✅ ACTIVE | Real macOS app e2e tests using accessibility identifiers and per-message AX IDs. |
 | `LiveAgentTriageTests` | ✅ ACTIVE | Live endpoint diagnostic triage, guarded by `APEX_LIVE_E2E`. |
@@ -32,7 +32,7 @@
 |------|--------|-------|
 | `swift build --product sandboxctl` | 🟢 GREEN | Clean after `ContainerManager.exec(...)` API alignment. |
 | `swift build --target ApexAgentIntelligenceTests` | 🟢 GREEN | Compiles and tests pass. |
-| `swift test --filter ApexAgentTests` | 🟢 GREEN | 134 tests in 22 suites passed after 8.342s. |
+| `swift test --filter ApexAgentTests` | 🟢 GREEN | 199 tests in 30 suites passed after 13.586s (2026-08-07). |
 
 ## Phase Status
 

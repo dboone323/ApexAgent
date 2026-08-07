@@ -12,7 +12,7 @@
 |--------|--------|-------|
 | `ApexAgentIntelligenceTests` | 🟢 GREEN | 24 pass |
 | `ApexAgentContainerTests` | 🟢 GREEN | 4 pass |
-| `ApexAgentTests` | 🟡 HANGS | Not green, not failing — needs investigation before it can gate anything |
+| `ApexAgentTests` | 🟢 GREEN | 199 tests in 30 suites passed after 13.586s (2026-08-07). Root-cause hangs fixed with real code, no tests disabled. |
 | `ApexAgentRuntime` | n/a | **The app executable** (`.executableTarget`, path `ApexAgentRuntime`). **NOT a test target.** Corrects the plan's implicit "4 test targets" assumption. |
 
 ---
