@@ -1,7 +1,7 @@
 # ApexAgent — Master Manifest
 
 > Single source of truth.
-> Last updated: 2026-07-31
+> Last updated: 2026-08-06 (post WWDC26/382 merge, PR #3)
 > Scope: `ApexAgent`, `ApexAgentTests`, `ApexAgentIntelligenceTests`, `ApexAgentContainerTests`, `ApexAgentRuntime`, `Modules/*`
 
 ---
@@ -43,7 +43,8 @@
 | Phase 3 SwiftUI view hosting tests | ✅ Done |
 | Phase 4 real macOS UI e2e | ✅ Done |
 | Accessibility labeling | ✅ Done |
-| Apple Container sandbox e2e | ✅ Build gate fixed; `ApexAgentContainerTests` green; runtime container boot pending hardware/entitlement verification |
+| Apple Container sandbox e2e | 🟡 Build gate fixed; `ApexAgentContainerTests` green; runtime container boot pending hardware/entitlement verification |
+| WWDC26/382 Integrations | ✅ Done — merged to `main` (PR #3, `48daf5c`): `LanguageModel` registry + `fm` CLI conformer, CoreSpotlight RAG via real `SpotlightSearchTool`, Xcode 27 MCP plugin, App Intents, Evaluations harness. MLX/`LanguageModel` executor path still blocked by a macOS 27 beta `LanguageModelSession()` SIGSEGV (Apple bug; `MLXAgentEngine` direct-HTTP is the working path). |
 
 ## Next Actions (from NEXT_STEPS.md)
 
