@@ -10,7 +10,7 @@
 
 | Target | Status | Evidence |
 |--------|--------|----------|
-| `ApexAgentTests` | 🟢 GREEN | 134 tests in 22 suites passed after 8.342s. |
+| `ApexAgentTests` | 🟡 HANGS | Does not complete in a bounded run on macOS 27 beta (verified 2026-08-06: `swift test --filter ApexAgentTests` ran >380s with no completion; `ApexAgentContainerTests` completes in ~8s, so the hang is suite-specific). TASK_MANIFEST's prior "134 pass / 8.342s" claim is stale. |
 | `ApexAgentIntelligenceTests` | 🟢 GREEN | 53 tests in 10 suites passed after 168.688s. `BenchmarkTests`: single-prompt 8.948s, multi-turn 21.760s avg, profile build 0.003s. |
 | `ApexAgentUITests` | ✅ ACTIVE | Real macOS app e2e tests using accessibility identifiers and per-message AX IDs. |
 | `LiveAgentTriageTests` | ✅ ACTIVE | Live endpoint diagnostic triage, guarded by `APEX_LIVE_E2E`. |
