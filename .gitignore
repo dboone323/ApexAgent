@@ -30,5 +30,9 @@ docs/Reference/export.html
 r2.html
 googlec86b2f6eb74a972d.html
 xoxo.html
-# remote workspace state from xo-project flows
-PlatformLoginState
+# build artifacts / junk
+BuildArtifacts/
+*.profraw
+Package.swift.bak
+Package.swift.bak2
+Tools/benchmark-repro/
