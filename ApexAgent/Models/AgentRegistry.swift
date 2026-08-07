@@ -90,6 +90,34 @@ public actor AgentRegistry {
         self.registeredAgents = agents
     }
     
+    // MARK: - Handoff / Consensus reconciliation (WS1.5)
+    // The AgentHandoff DTOs (TaskResult / ConsensusReport / AgentDisagreement)
+    // are the structured outputs of delegate_task / convene_meeting. They are
+    // recorded here so the orchestrator / dashboard can reconcile sub-agent work
+    // without re-parsing free-text tool output.
+    
+    private var handoffs: [TaskResult] = []
+    private var consensusReports: [ConsensusReport] = []
+    private let handoffLimit = 50
+    
+    public func recordHandoff(_ result: TaskResult) {
+        handoffs.append(result)
+        if handoffs.count > handoffLimit { handoffs.removeFirst() }
+    }
+    
+    public func recordConsensus(_ report: ConsensusReport) {
+        consensusReports.append(report)
+        if consensusReports.count > handoffLimit { consensusReports.removeFirst() }
+    }
+    
+    public func recentHandoffs(limit: Int = 20) -> [TaskResult] {
+        Array(handoffs.suffix(limit))
+    }
+    
+    public func recentConsensusReports(limit: Int = 20) -> [ConsensusReport] {
+        Array(consensusReports.suffix(limit))
+    }
+    
     public nonisolated func allAgents() -> [RegisteredAgent] {
         return Array(registeredAgents.values).sorted(by: { $0.name < $1.name })
     }

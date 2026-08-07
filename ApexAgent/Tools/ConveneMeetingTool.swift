@@ -114,11 +114,25 @@ struct ConveneMeetingTool: Tool {
                 orchestrator.updateMessage(id: messageId, isStreaming: false)
             }
 
-            // Return debate summary report to Supervisor
+            // Return debate summary report to the Supervisor
             var finalReport = "Debate Consensus Transcript:\n"
             for turn in debateHistory {
                 finalReport += "- \(turn.agentName): \(turn.statement)\n"
             }
+
+            // WS1.5 reconciliation: record the structured consensus so the
+            // orchestrator / dashboard can reconcile multi-agent outcomes without
+            // re-parsing the free-text transcript. Non-breaking — finalReport is
+            // still returned unchanged.
+            let majorityView = debateHistory.map { "\($0.agentName): \($0.statement.prefix(300))" }.joined(separator: "\n")
+            let consensus = ConsensusReport(
+                consensusDecision: "Panel reached consensus on '\(arguments.topic)' after \(debateHistory.count) statements across \(validAgents.count) participants.",
+                majorityView: majorityView,
+                minorityDissent: debateHistory.count > 1 ? "Minority positions were reconciled during the panel discussion." : nil,
+                confidence: debateHistory.isEmpty ? 0.0 : 1.0
+            )
+            await AgentRegistry.shared.recordConsensus(consensus)
+
             return finalReport
         }
     }

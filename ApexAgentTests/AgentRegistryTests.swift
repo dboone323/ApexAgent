@@ -123,4 +123,38 @@ struct AgentRegistryTests {
         #expect(AgentRegistry.shared.resolve(name: "developer") != nil)
     }
 
+    // MARK: - WS1.5 Handoff / Consensus reconciliation
+    // Verifies the AgentHandoff DTOs are actually recorded by the registry
+    // (the structured outputs delegate_task / convene_meeting now produce),
+    // without requiring a live LanguageModelSession (which is unavailable on
+    // the macOS 27 beta). Exercises the real DTO + store path end-to-end.
+
+    @Test func testRecordHandoffStoresTaskResult() async {
+        let result = TaskResult(
+            taskId: "ws1-recon-1",
+            status: "completed",
+            resultSummary: "Sub-agent finished the task.",
+            errorDetails: nil
+        )
+        await AgentRegistry.shared.recordHandoff(result)
+
+        let recent = await AgentRegistry.shared.recentHandoffs(limit: 10)
+        #expect(recent.contains { $0.taskId == "ws1-recon-1" })
+        #expect(recent.first { $0.taskId == "ws1-recon-1" }?.status == "completed")
+    }
+
+    @Test func testRecordConsensusStoresConsensusReport() async {
+        let report = ConsensusReport(
+            consensusDecision: "Agreed on approach X.",
+            majorityView: "Developer + Researcher support X.",
+            minorityDissent: nil,
+            confidence: 0.9
+        )
+        await AgentRegistry.shared.recordConsensus(report)
+
+        let recent = await AgentRegistry.shared.recentConsensusReports(limit: 10)
+        #expect(recent.contains { $0.consensusDecision == "Agreed on approach X." })
+        #expect(recent.first?.confidence == 0.9)
+    }
+
 }

@@ -83,6 +83,18 @@ struct DelegateTaskTool: Tool {
                 orchestrator.coordinationTraces.append(trace)
             }
 
+            // WS1.5 reconciliation: record the structured handoff result so the
+            // orchestrator / dashboard can reconcile sub-agent work without
+            // re-parsing the free-text response. Non-breaking — the String
+            // return below is unchanged.
+            let handoff = TaskResult(
+                taskId: UUID().uuidString,
+                status: finalContent.isEmpty ? "failed" : "completed",
+                resultSummary: finalContent.prefix(2000).description,
+                errorDetails: finalContent.isEmpty ? "Sub-agent returned no content" : nil
+            )
+            await AgentRegistry.shared.recordHandoff(handoff)
+
             return finalContent
         }
     }
