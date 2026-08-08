@@ -141,7 +141,14 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     var agentInstructions: String = AgentSystemPrompt.default
     var proactiveAuditResult: String = ""
     var toolCallingMode: AgentToolCallingMode = .auto
-    var modelPreference: AgentModelPreference = .localSystem
+    var modelPreference: AgentModelPreference = .localOllama
+    // Default is .localOllama (not .localSystem) because the on-device
+    // FoundationModels executor channel (LanguageModelSession()) SIGSEGVs on
+    // macOS 27.0 26A5388g — the NativeAppleEngine path crashes at session
+    // construction. OllamaAgentEngine/MLXAgentEngine stream from a local
+    // model server over HTTP and run the same tool pipeline, so the agent
+    // works end-to-end on this beta. Revert to .localSystem once Apple ships
+    // a fixed FoundationModels build.
     var pendingAttachments: [NSImage] = []
     private(set) var activeTurnToolCallCount: Int = 0
     var activeTerminalOutput: String = ""
