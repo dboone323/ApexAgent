@@ -122,6 +122,9 @@ struct FileWriteTool: Tool {
                 fileHandle.closeFile()
                 return "✅ Appended \(arguments.content.count) characters to \(expandedPath)"
             } else {
+                // WS5.7: snapshot the previous contents before overwriting so
+                // the write can be rolled back.
+                FileRollback.snapshot(path: expandedPath)
                 try arguments.content.write(to: url, atomically: true, encoding: .utf8)
                 return "✅ Written \(arguments.content.count) characters to \(expandedPath)"
             }
@@ -288,6 +291,8 @@ struct DeleteFileTool: Tool {
 
             do {
                 if permanent {
+                    // WS5.7: snapshot before permanent delete so it can be rolled back.
+                    FileRollback.snapshot(path: expandedPath)
                     try FileManager.default.removeItem(at: url)
                     return "✅ Permanently deleted: \(expandedPath)"
                 } else {
@@ -341,6 +346,8 @@ struct MoveFileTool: Tool {
             try? FileManager.default.createDirectory(atPath: dstParent, withIntermediateDirectories: true)
 
             do {
+                // WS5.7: snapshot the source before moving so the move can be undone.
+                FileRollback.snapshot(path: srcExpanded)
                 try FileManager.default.moveItem(
                     at: URL(fileURLWithPath: srcExpanded),
                     to: URL(fileURLWithPath: dstExpanded)

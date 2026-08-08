@@ -108,7 +108,12 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
     let model: Model
     let toolCallingMode: GenerationOptions.ToolCallingMode
     let orchestrator: OrchestratorProvider
-    let allowedTools: [String]
+    private let storedAllowedTools: [String]
+    /// Per-agent allowlist, intersected with the global `ToolPolicy` so a
+    /// user/settings toggle can disable a tool app-wide (WS5.6).
+    var allowedTools: [String] {
+        storedAllowedTools.filter { ToolPolicy.shared.isGloballyAllowed($0) }
+    }
     /// Optional reasoning budget; nil leaves the model default.
     let reasoningLevel: ContextOptions.ReasoningLevel?
     /// Optional cap on generated tokens; nil leaves the model default.
@@ -122,7 +127,7 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
         self.model = model
         self.toolCallingMode = toolCallingMode
         self.orchestrator = orchestrator
-        self.allowedTools = AgentRegistry.builtInDefaults[agentType.rawValue]?.allowedTools ?? []
+        self.storedAllowedTools = AgentRegistry.builtInDefaults[agentType.rawValue]?.allowedTools ?? []
         self.reasoningLevel = reasoningLevel
         self.maxResponseTokens = maxResponseTokens
         self.usePrivateCloudIfAvailable = usePrivateCloudIfAvailable
@@ -134,7 +139,7 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
         self.model = model
         self.toolCallingMode = toolCallingMode
         self.orchestrator = orchestrator
-        self.allowedTools = allowedTools
+        self.storedAllowedTools = allowedTools
         self.reasoningLevel = reasoningLevel
         self.maxResponseTokens = maxResponseTokens
         self.usePrivateCloudIfAvailable = usePrivateCloudIfAvailable
