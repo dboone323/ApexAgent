@@ -68,6 +68,10 @@ struct ChatProbeTests {
 
     @Test("native Apple Foundation Models chat returns a response (beta 5)")
     func nativeAppleChat() async throws {
+        // Allow a custom message via env (APEX_FM_PROMPT) for CLI-style runs;
+        // default to a deterministic probe string.
+        let envPrompt = ProcessInfo.processInfo.environment["APEX_FM_PROMPT"]
+        let prompt = envPrompt?.isEmpty == false ? envPrompt! : "Reply with exactly: NATIVE FM OK"
         print("[PROBE] native step 1: constructing AgentOrchestrator (default .localSystem)")
         let orch = AgentOrchestrator()
         orch.modelPreference = .localSystem
@@ -82,10 +86,9 @@ struct ChatProbeTests {
         print("[PROBE] native step 3: NativeAppleEngine created")
 
         let instructions = "You are ApexAgent, a concise assistant. Answer briefly."
-        let prompt = "Reply with exactly: NATIVE FM OK"
         var full = ""
         var chunks = 0
-        print("[PROBE] native step 4: calling streamResponse")
+        print("[PROBE] native step 4: calling streamResponse (prompt: \(prompt))")
 
         try await engine.streamResponse(
             prompt: prompt,
