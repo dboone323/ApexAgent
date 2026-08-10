@@ -141,14 +141,17 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     var agentInstructions: String = AgentSystemPrompt.default
     var proactiveAuditResult: String = ""
     var toolCallingMode: AgentToolCallingMode = .auto
-    var modelPreference: AgentModelPreference = .localOllama
-    // Default is .localOllama (not .localSystem) because the on-device
-    // FoundationModels executor channel (LanguageModelSession()) SIGSEGVs on
-    // macOS 27.0 26A5388g — the NativeAppleEngine path crashes at session
-    // construction. OllamaAgentEngine/MLXAgentEngine stream from a local
+    var modelPreference: AgentModelPreference = .localSystem
+    // Default is .localSystem (on-device Apple Foundation Models) because the
+    // native path works on macOS 27 beta 5 (build 26A5406g/26A5406e): a runtime
+    // probe confirms `SystemLanguageModel.default.respond(to:)` returns real
+    // text (~7s) with no SIGSEGV and no empty output. OllamaAgentEngine /
+    // MLXAgentEngine remain selectable fallbacks via the Settings provider
+    // picker for when a local model server (Ollama/MLX-LM) is preferred. Earlier
+    // betas (26A5388g) SIGSEGV'd the executor channel, which is why the default
+    // was temporarily .localOllama — that workaround is no longer needed.
     // model server over HTTP and run the same tool pipeline, so the agent
-    // works end-to-end on this beta. Revert to .localSystem once Apple ships
-    // a fixed FoundationModels build.
+    // works end-to-end on this beta too.
     var pendingAttachments: [NSImage] = []
     private(set) var activeTurnToolCallCount: Int = 0
     var activeTerminalOutput: String = ""
