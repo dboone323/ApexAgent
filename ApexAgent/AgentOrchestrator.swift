@@ -110,8 +110,15 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     // MARK: Constants
     private static let ragSimilarityThreshold: Double = 0.4
     private static let ragTopK: Int = 3
-    private static let contextPruningMaxChars: Int = 1500
-    private static let rehydrationWindowSize: Int = 10
+    /// On-device FM (AFM 3) enforces a hard 4,096-token input ceiling. The
+    /// rehydration window + per-message pruning below are tuned so `rehydrateSession()`
+    /// assembles a transcript that stays comfortably under that budget (system
+    /// instructions + tool definitions + rehydrated history), preventing the
+    /// `DecoderModelError("Provided X tokens, maximum 4,096")` crash seen when
+    /// the window was 10×1500. Tool-heavy turns should be routed to sub-agent
+    /// profiles (Layer 2) rather than inflated into the supervisor's context.
+    private static let contextPruningMaxChars: Int = 500
+    private static let rehydrationWindowSize: Int = 4
     private static let contextCompactionThreshold: Int = 12000
     private static let terminalOutputCap: Int = 50000
     private static let maxToolEventCount: Int = 200

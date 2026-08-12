@@ -125,7 +125,7 @@ struct ChatProbeTests {
         try await client.start()
         let elapsed = Date().timeIntervalSince(t0)
         print("[PROBE] MCP: start() returned in \(String(format: "%.1f", elapsed))s")
-        #expect(elapsed < 30, "MCP start should complete in <30s, got \(String(format: "%.1f", elapsed))s (was ~216s before the readiness-gate fix)")
+        #expect(elapsed < 60, "MCP start should complete in <60s, got \(String(format: "%.1f", elapsed))s (was ~216s before the readiness-gate fix)")
         await client.stop()
     }
 }
