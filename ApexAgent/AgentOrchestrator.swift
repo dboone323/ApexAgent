@@ -879,6 +879,11 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         let assistantMsg = ChatMessage(role: .assistant, content: "", isStreaming: true)
         messages.append(assistantMsg)
         activeAssistantMessageId = assistantMsg.id
+        // Capture the id in a local let. The `currentTask` defer (below) and
+        // sendMessage's defer both nil `activeAssistantMessageId` on teardown,
+        // which races `onUpdate` and left it nil at streaming time (blank
+        // bubble). Using the captured id decouples the update from teardown.
+        let assistantId = assistantMsg.id
 
         Task {
             // Only capture the screen when the collaborative/sharing server is
@@ -935,8 +940,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                     instructions: finalInstructions,
                     toolCallingMode: self.toolCallingMode,
                     onUpdate: { @MainActor partialContent in
-                        guard let id = self.activeAssistantMessageId else { return }
-                        if let idx = self.messages.firstIndex(where: { $0.id == id }) {
+                        if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
                             // Reassign the whole array (not just a nested
                             // `messages[idx].content =`) so @Observable tracks
                             // the change and SwiftUI re-renders the streaming
@@ -945,16 +949,15 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                             var copy = self.messages
                             copy[idx].content = partialContent
                             self.messages = copy
-                            Logger.agent.info("[DIAG-onUpdate] id=\(id) chars=\(partialContent.count) messages.count=\(self.messages.count)")
                         } else {
-                            Logger.agent.info("[DIAG-onUpdate] active id not found in messages (idx miss)")
+                            Logger.agent.info("[DIAG-onUpdate] assistant id not found in messages (idx miss)")
                         }
                     }
                 )
 
                 // Save assistant message to SwiftData
                 if let conv = self.currentConversation, let context = self.modelContext {
-                    guard let id = self.activeAssistantMessageId else { return }
+                    let id = assistantId
                     if let idx = self.messages.firstIndex(where: { $0.id == id }) {
                         let dbAssistantMsg = Message(role: .assistant, content: self.messages[idx].content)
                         dbAssistantMsg.id = self.messages[idx].id
@@ -980,13 +983,14 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
                 // If Voice Mode is enabled, speak the response
                 if UserDefaults.standard.bool(forKey: "apex.voiceModeEnabled") {
-                    guard let id = self.activeAssistantMessageId else { return }
+                    let id = assistantId
                     if let idx = self.messages.firstIndex(where: { $0.id == id }) {
                         VoiceController.shared.speak(self.messages[idx].content)
                     }
                 }
             } catch {
-                if let id = self.activeAssistantMessageId, let idx = self.messages.firstIndex(where: { $0.id == id }) {
+                let id = assistantId
+                if let idx = self.messages.firstIndex(where: { $0.id == id }) {
                     // Reassign (not nested mutation) so @Observable publishes the error.
                     var copy = self.messages
                     copy[idx].content = "⚠️ Error: \(error.localizedDescription)"
