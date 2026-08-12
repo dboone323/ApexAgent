@@ -138,20 +138,33 @@ actor MCPClient {
     private var stdoutPipe: Pipe?
     private var stderrPipe: Pipe?
 
-    /// Readiness warmup: the spawned Node server needs a moment after `proc.run()`
-    /// before its JSON-RPC stdio transport is attached and it can answer
-    /// `initialize`. Sending `initialize` immediately races cold start and, on
-    /// this beta, produced a 60s-per-request timeout storm (~216s stall). A short
-    /// fixed warmup (the server prints "running on stdio" at ~1.7s) eliminates
-    /// the race. Runs on the actor executor (no off-actor access). The 60s
-    /// request timeout remains as a backstop for slower servers.
+    /// Readiness gate: wait until the spawned Node server has attached its
+    /// JSON-RPC stdio transport (signalled by its "running on stdio" stderr
+    /// line, captured by the stderr read loop) before sending `initialize`.
+    /// A fixed warmup (e.g. 2s) raced cold starts under launch-time CPU
+    /// contention and produced a 60s-per-request timeout storm (~216-597s stall).
+    /// Polling the real signal collapses that to a few seconds. A 45s ceiling is
+    /// the fallback for servers that don't print the known readiness line.
     private func waitUntilReady() async {
-        try? await Task.sleep(for: .seconds(2))
+        let deadline = Date().addingTimeInterval(45)
+        while !transportReady && Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(200))
+        }
     }
 
     private var nextRequestId = 1
     private var pendingRequests: [Int: CheckedContinuation<Data, Error>] = [:]
-    
+    // Set by the stderr read loop (which runs on the actor) once the spawned
+    // server prints its "running on stdio" readiness line. `waitUntilReady`
+    // gates `initialize` on this so we never race a not-yet-attached transport
+    // (the root cause of the 216s+ handshake stall under launch-time CPU
+    // contention). A 45s ceiling in `waitUntilReady` is the fallback.
+    private var transportReady = false
+    // Actor-isolated mutator so the stderr read-loop Task (a detached context)
+    // can flip the flag without an off-actor mutation (Swift 6 isolation).
+    private func markTransportReady() {
+        transportReady = true
+    }
     // Hardening configurations
     private let maxRetries = 5
     private var failureCount = 0
@@ -189,6 +202,7 @@ actor MCPClient {
     func start() async throws {
         signal(SIGPIPE, SIG_IGN)
         guard process == nil else { return }
+        transportReady = false
         
         let isRestricted = await MainActor.run { orchestrator?.orchestrator.isFolderAccessRestricted() ?? false }
         
@@ -274,6 +288,12 @@ actor MCPClient {
                 for try await line in stderr.fileHandleForReading.bytes.lines {
                     guard !line.isEmpty else { continue }
                     print("📡 [MCP Server - \(serverNameForLogs) Stderr]: \(line)")
+                    // The filesystem MCP server prints "running on stdio" once its
+                    // JSON-RPC transport is attached. Mark readiness so initialize
+                    // doesn't race a cold start.
+                    if line.contains("running on stdio") || line.contains("stdio") {
+                        await self.markTransportReady()
+                    }
                 }
             } catch {
                 // Pipe closed / process exited — expected at teardown.
