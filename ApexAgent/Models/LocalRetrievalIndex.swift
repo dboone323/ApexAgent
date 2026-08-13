@@ -45,7 +45,7 @@ public enum CoreSpotlightRAG {
     ///   - maximumResponseSize: optional cap on retrieved bytes.
     public static func makeTool(
         maximumResponseSize: Int? = nil
-    ) -> any Tool {
+    ) -> _CoreSpotlight_FoundationModels.SpotlightSearchTool {
         let configuration = _CoreSpotlight_FoundationModels.SpotlightSearchTool.Configuration(
             sources: [.coreSpotlight],
             guide: .complete,

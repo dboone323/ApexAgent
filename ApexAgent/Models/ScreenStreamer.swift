@@ -7,6 +7,7 @@ import CoreMedia
 class ScreenStreamer: NSObject, SCStreamDelegate, SCStreamOutput {
     static let shared = ScreenStreamer()
     
+    private var lastError: Error?
     private var stream: SCStream?
     private(set) var circularBuffer: [NSImage] = []
     private let maxBufferCount = 5
@@ -22,22 +23,26 @@ class ScreenStreamer: NSObject, SCStreamDelegate, SCStreamOutput {
         }
         
         do {
-            // 1. Get shareable content
-            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-            guard let display = content.displays.first else {
-                print("No displays found for screen capture.")
-                return
-            }
-            
             // 2. Create filter and configuration
+            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            let display = content.displays.first!
             let filter = SCContentFilter(display: display, excludingWindows: [])
             let config = SCStreamConfiguration()
             config.width = 1024 // Scale down to optimize memory
             config.height = 768
             config.minimumFrameInterval = CMTime(value: 1, timescale: 1) // Capture 1 frame per second
             config.queueDepth = 3
-            
-            // 3. Create stream
+
+            // 3. Verify Screen Recording permission is actually granted before attempting to stream.
+            do {
+                _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            } catch {
+                print("ScreenStreamer: Screen Recording permission not granted — cannot start capture: \(error.localizedDescription)")
+                self.lastError = error
+                return
+            }
+
+            // 4. Create stream
             let activeStream = SCStream(filter: filter, configuration: config, delegate: self)
             try activeStream.addStreamOutput(self, type: .screen, sampleHandlerQueue: captureQueue)
             

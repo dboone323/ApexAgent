@@ -1,4 +1,44 @@
 import SwiftUI
+import Speech
+
+struct VoicePermissionStatus: View {
+    @State private var status: SFSpeechRecognizerAuthorizationStatus = .notDetermined
+    @State private var checked = false
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(.system(size: 11))
+        }
+        .task {
+            status = SFSpeechRecognizer.authorizationStatus()
+            checked = true
+        }
+    }
+
+    private var color: Color {
+        if !checked { return .secondary }
+        switch status {
+        case .authorized: return .green
+        case .denied, .restricted: return .red
+        default: return .yellow
+        }
+    }
+
+    private var label: String {
+        if !checked { return "checking..." }
+        switch status {
+        case .authorized: return "granted"
+        case .denied: return "denied"
+        case .restricted: return "restricted"
+        case .notDetermined: return "not set"
+        @unknown default: return "unknown"
+        }
+    }
+}
 
 enum IsolationMode: String, CaseIterable, Identifiable {
     case none = "None"
@@ -262,6 +302,15 @@ struct SettingsView: View {
                             }
                             Slider(value: $voiceSpeechRate, in: 0.1...1.0, step: 0.05)
                         }
+
+                        HStack {
+                            Label("Voice Permissions", systemImage: "mic.fill")
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
+                            Spacer()
+                            VoicePermissionStatus()
+                                .font(AppTheme.Font.caption(11))
+                        }
+                        .padding(.top, 4)
                     }
                 }
 

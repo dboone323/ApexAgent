@@ -20,17 +20,25 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         speechSynthesizer.delegate = self
     }
     
+    @Published private(set) var permissionGranted: Bool = false
+
     func requestPermissions() async -> Bool {
-        return await withCheckedContinuation { continuation in
+        let result = await withCheckedContinuation { continuation in
             SFSpeechRecognizer.requestAuthorization { authStatus in
                 AVCaptureDevice.requestAccess(for: .audio) { audioGranted in
                     DispatchQueue.main.async {
                         let granted = authStatus == .authorized && audioGranted
+                        if !granted {
+                            print("[VoiceController] Permission denied — speech= \(authStatus), audio= \(audioGranted)")
+                        }
+                        self.permissionGranted = granted
                         continuation.resume(returning: granted)
                     }
                 }
             }
         }
+        self.permissionGranted = result
+        return result
     }
     
     func startRecording(onTranscription: @escaping (String) -> Void) throws {
@@ -45,8 +53,14 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         
         let localeId = UserDefaults.standard.string(forKey: "apex.voiceLocale") ?? "en-US"
         let recognizer = SFSpeechRecognizer(locale: Locale(identifier: localeId)) ?? SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
-        recognizer?.delegate = self
-        
+
+        guard let recognizer, recognizer.isAvailable else {
+            throw NSError(domain: "VoiceController", code: -2,
+                          userInfo: [NSLocalizedDescriptionKey: "Speech recognition is not available on this system. Check System Settings ➔ Privacy & Security ➔ Speech Recognition."])
+        }
+
+        recognizer.delegate = self
+
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         guard let recognitionRequest = recognitionRequest else {
             throw NSError(domain: "VoiceController", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unable to create recognition request"])
@@ -69,7 +83,7 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         audioEngine.prepare()
         try audioEngine.start()
         
-        recognitionTask = recognizer?.recognitionTask(with: recognitionRequest) { result, error in
+        recognitionTask = recognizer.recognitionTask(with: recognitionRequest) { result, error in
             Task { @MainActor in
                 var isFinal = false
                 if let result = result {

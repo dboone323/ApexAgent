@@ -6,7 +6,6 @@ import FoundationModels
 import Intents
 import SwiftData
 import SwiftUI
-import UniformTypeIdentifiers
 import SharedKit
 
 @MainActor
@@ -87,6 +86,38 @@ class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
         setupGlobalHotkey()
         setupShortcuts()
         setupSpotlight()
+        checkFMCLIAvailability()
+    }
+
+    /// On macOS 27 the on-device FoundationModel + App Intents depend on `/usr/bin/fm`.
+    /// If the CLI is missing (non-Apple Silicon, build without FM, or `sudo fm license` not
+    /// accepted), surface a one-shot warning so the user isn't left with silent failures when
+    /// they try to use on-device model features.
+    private func checkFMCLIAvailability() {
+        let fmPath = "/usr/bin/fm"
+        guard FileManager.default.fileExists(atPath: fmPath) else {
+            print("[Apex] WARNING: /usr/bin/fm not found — on-device FoundationModel + App Intents will be unavailable. Run `sudo fm license` to enable Apple's on-device model.")
+            return
+        }
+        // Probe that `fm` actually responds (it is gated behind `sudo fm license` on macOS 27).
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: fmPath)
+        process.arguments = ["version"]
+        let out = Pipe()
+        let err = Pipe()
+        process.standardOutput = out
+        process.standardError = err
+        do {
+            try process.run()
+            process.waitUntilExit()
+            if process.terminationStatus != 0 {
+                print("[Apex] WARNING: /usr/bin/fm exists but is not licensed/functional (exit \(process.terminationStatus)). Run `sudo fm license` to enable Apple's on-device model.")
+            } else {
+                print("[Apex] FoundationModels CLI (/usr/bin/fm) is available.")
+            }
+        } catch {
+            print("[Apex] WARNING: could not probe /usr/bin/fm: \(error.localizedDescription)")
+        }
     }
 
     private func setupStatusItem() {

@@ -1,5 +1,4 @@
 import AppKit
-import UniformTypeIdentifiers
 
 @MainActor
 final class WritingToolsSupport: NSObject {

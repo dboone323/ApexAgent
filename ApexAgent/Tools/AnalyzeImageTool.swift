@@ -1,7 +1,6 @@
 import Foundation
 import FoundationModels
 import AppKit
-import Darwin
 
 // MARK: - Multimodal Reader Profile
 
