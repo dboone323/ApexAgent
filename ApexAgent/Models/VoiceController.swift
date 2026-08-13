@@ -58,7 +58,11 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         let recordingFormat = inputNode.outputFormat(forBus: 0)
         
         let request = recognitionRequest
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+        // macOS 27 deprecates installTap(onBus:bufferSize:format:block:); the
+        // replacement is __installTapOnBus(_:bufferSize:format:error:block:)
+        // (its `error:` is a Swift-overlay placeholder of type () on this SDK,
+        // so it cannot surface an NSError here).
+        try inputNode.__installTap(onBus: 0, bufferSize: 1024, format: recordingFormat, error: ()) { buffer, _ in
             request.append(buffer)
         }
         

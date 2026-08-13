@@ -110,8 +110,15 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     // MARK: Constants
     private static let ragSimilarityThreshold: Double = 0.4
     private static let ragTopK: Int = 3
-    private static let contextPruningMaxChars: Int = 1500
-    private static let rehydrationWindowSize: Int = 10
+    /// On-device FM (AFM 3) enforces a hard 4,096-token input ceiling. The
+    /// rehydration window + per-message pruning below are tuned so `rehydrateSession()`
+    /// assembles a transcript that stays comfortably under that budget (system
+    /// instructions + tool definitions + rehydrated history), preventing the
+    /// `DecoderModelError("Provided X tokens, maximum 4,096")` crash seen when
+    /// the window was 10×1500. Tool-heavy turns should be routed to sub-agent
+    /// profiles (Layer 2) rather than inflated into the supervisor's context.
+    private static let contextPruningMaxChars: Int = 500
+    private static let rehydrationWindowSize: Int = 4
     private static let contextCompactionThreshold: Int = 12000
     private static let terminalOutputCap: Int = 50000
     private static let maxToolEventCount: Int = 200
@@ -141,14 +148,17 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     var agentInstructions: String = AgentSystemPrompt.default
     var proactiveAuditResult: String = ""
     var toolCallingMode: AgentToolCallingMode = .auto
-    var modelPreference: AgentModelPreference = .localOllama
-    // Default is .localOllama (not .localSystem) because the on-device
-    // FoundationModels executor channel (LanguageModelSession()) SIGSEGVs on
-    // macOS 27.0 26A5388g — the NativeAppleEngine path crashes at session
-    // construction. OllamaAgentEngine/MLXAgentEngine stream from a local
+    var modelPreference: AgentModelPreference = .localSystem
+    // Default is .localSystem (on-device Apple Foundation Models) because the
+    // native path works on macOS 27 beta 5 (build 26A5406g/26A5406e): a runtime
+    // probe confirms `SystemLanguageModel.default.respond(to:)` returns real
+    // text (~7s) with no SIGSEGV and no empty output. OllamaAgentEngine /
+    // MLXAgentEngine remain selectable fallbacks via the Settings provider
+    // picker for when a local model server (Ollama/MLX-LM) is preferred. Earlier
+    // betas (26A5388g) SIGSEGV'd the executor channel, which is why the default
+    // was temporarily .localOllama — that workaround is no longer needed.
     // model server over HTTP and run the same tool pipeline, so the agent
-    // works end-to-end on this beta. Revert to .localSystem once Apple ships
-    // a fixed FoundationModels build.
+    // works end-to-end on this beta too.
     var pendingAttachments: [NSImage] = []
     private(set) var activeTurnToolCallCount: Int = 0
     var activeTerminalOutput: String = ""
@@ -554,13 +564,8 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     private func createSession<M: LanguageModel>(model: M, instructions: String, mode: GenerationOptions.ToolCallingMode, transcript: Transcript) -> LanguageModelSession {
         let reasoning = configuredReasoningLevel
         let maxTokens = configuredMaxResponseTokens
-        if multiAgentModeEnabled {
-            let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self, reasoningLevel: reasoning, maxResponseTokens: maxTokens)
-            return LanguageModelSession(profile: profile, history: transcript)
-        } else {
-            let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self, reasoningLevel: reasoning, maxResponseTokens: maxTokens)
-            return LanguageModelSession(profile: profile, history: transcript)
-        }
+        let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self, reasoningLevel: reasoning, maxResponseTokens: maxTokens)
+        return LanguageModelSession(profile: profile, history: transcript)
     }
 
     private func prunedContent(_ content: String, maxChars: Int = AgentOrchestrator.contextPruningMaxChars) -> String {
@@ -573,7 +578,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     }
 
     private func rehydrateSession() {
-    let instructions = multiAgentModeEnabled ? SupervisorPrompt.system : agentInstructions
+        // Layer 2: the on-device session always runs the supervisor profile with
+        // supervisor instructions. `multiAgentModeEnabled` controls whether the
+        // supervisor ALSO uses `convene_meeting` (parallel panel) vs only
+        // `delegate_task` (sequential delegation) — both routes delegate to
+        // sub-agent sessions, never inflate the supervisor's own context.
+        let instructions = SupervisorPrompt.system
 
         // Rehydrate model session history using Transcript.Entry
         var transcriptEntries: [Transcript.Entry] = []
@@ -767,7 +777,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     @MainActor
     private func createCompactionSession(model: any LanguageModel, instructions: String) -> LanguageModelSession {
         func helper<M: LanguageModel>(_ m: M) -> LanguageModelSession {
-            let profile = ApexAgentProfile(
+            let profile = SupervisorAgentProfile(
                 instructions: instructions,
                 model: m,
                 toolCallingMode: .disallowed,
@@ -876,6 +886,11 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         let assistantMsg = ChatMessage(role: .assistant, content: "", isStreaming: true)
         messages.append(assistantMsg)
         activeAssistantMessageId = assistantMsg.id
+        // Capture the id in a local let. The `currentTask` defer (below) and
+        // sendMessage's defer both nil `activeAssistantMessageId` on teardown,
+        // which races `onUpdate` and left it nil at streaming time (blank
+        // bubble). Using the captured id decouples the update from teardown.
+        let assistantId = assistantMsg.id
 
         Task {
             // Only capture the screen when the collaborative/sharing server is
@@ -932,8 +947,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                     instructions: finalInstructions,
                     toolCallingMode: self.toolCallingMode,
                     onUpdate: { @MainActor partialContent in
-                        guard let id = self.activeAssistantMessageId else { return }
-                        if let idx = self.messages.firstIndex(where: { $0.id == id }) {
+                        if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
                             // Reassign the whole array (not just a nested
                             // `messages[idx].content =`) so @Observable tracks
                             // the change and SwiftUI re-renders the streaming
@@ -942,16 +956,15 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                             var copy = self.messages
                             copy[idx].content = partialContent
                             self.messages = copy
-                            Logger.agent.info("[DIAG-onUpdate] id=\(id) chars=\(partialContent.count) messages.count=\(self.messages.count)")
                         } else {
-                            Logger.agent.info("[DIAG-onUpdate] active id not found in messages (idx miss)")
+                            Logger.agent.info("[DIAG-onUpdate] assistant id not found in messages (idx miss)")
                         }
                     }
                 )
 
                 // Save assistant message to SwiftData
                 if let conv = self.currentConversation, let context = self.modelContext {
-                    guard let id = self.activeAssistantMessageId else { return }
+                    let id = assistantId
                     if let idx = self.messages.firstIndex(where: { $0.id == id }) {
                         let dbAssistantMsg = Message(role: .assistant, content: self.messages[idx].content)
                         dbAssistantMsg.id = self.messages[idx].id
@@ -977,13 +990,14 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
                 // If Voice Mode is enabled, speak the response
                 if UserDefaults.standard.bool(forKey: "apex.voiceModeEnabled") {
-                    guard let id = self.activeAssistantMessageId else { return }
+                    let id = assistantId
                     if let idx = self.messages.firstIndex(where: { $0.id == id }) {
                         VoiceController.shared.speak(self.messages[idx].content)
                     }
                 }
             } catch {
-                if let id = self.activeAssistantMessageId, let idx = self.messages.firstIndex(where: { $0.id == id }) {
+                let id = assistantId
+                if let idx = self.messages.firstIndex(where: { $0.id == id }) {
                     // Reassign (not nested mutation) so @Observable publishes the error.
                     var copy = self.messages
                     copy[idx].content = "⚠️ Error: \(error.localizedDescription)"

@@ -37,8 +37,16 @@ public struct ApexAgentApp: App {
             semaphore.wait()
             exit(0)
         } else {
-            // Attempt to connect to background daemon gateway
-            ApexGatewayClient.shared.connect()
+            // Attempt to connect to background daemon gateway. Deferred to a
+            // separate task so the resulting observable state mutation
+            // (connect -> refused -> isConnected=false) does not race the
+            // app's initial view-update transaction ("Publishing changes from
+            // within view updates"). The gateway server is a separate process
+            // the app does not auto-start, so a refused connection is expected
+            // and handled by ApexGatewayClient's capped retry.
+            Task { @MainActor in
+                ApexGatewayClient.shared.connect()
+            }
         }
     }
 

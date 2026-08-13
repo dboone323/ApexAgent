@@ -172,7 +172,14 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            orchestrator.modelContext = modelContext
+            // Defer the modelContext assignment off the initial view-update
+            // transaction. `modelContext`'s didSet performs a SwiftData fetch
+            // (loadOrCreatePermissions); writing it synchronously inside
+            // onAppear can race the first render and trip SwiftUI's
+            // "Publishing changes from within view updates" assertion.
+            DispatchQueue.main.async {
+                orchestrator.modelContext = modelContext
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .showDiagnosticsSheet)) { _ in
             showDiagnostics = true

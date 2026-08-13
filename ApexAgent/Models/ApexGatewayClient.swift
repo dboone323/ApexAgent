@@ -18,6 +18,12 @@ final class ApexGatewayClient {
     private var connection: NWConnection?
     private let queue = DispatchQueue(label: "apex.gateway.client")
     private var retryAttempt = 0
+    /// Counts consecutive connection-refused errors. The gateway server is a
+    /// separate peer-coordination process the app does not auto-start, so a
+    /// refused connection means "not available" — stop retrying after a few
+    /// attempts instead of logging "Connection refused" every 30s forever.
+    private var refusedAttempts = 0
+    private let maxRefusedAttempts = 3
     
     init() {}
     
@@ -83,13 +89,30 @@ final class ApexGatewayClient {
             let isTesting = ProcessInfo.processInfo.arguments.contains { $0.contains("test") || $0.contains("xctest") } || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1"
             guard !isTesting else { return }
             
-            let delay: Double
             if isConnectionRefused {
-                delay = 30.0
-            } else {
-                delay = min(3.0 * pow(1.5, Double(self.retryAttempt)), 60.0)
-                self.retryAttempt += 1
+                self.refusedAttempts += 1
+                if self.refusedAttempts > self.maxRefusedAttempts {
+                    // Gateway server isn't running (this app doesn't start it).
+                    // Stop hammering the port; surface one clear message and stay
+                    // disconnected. The user can start the gateway separately.
+                    if self.refusedAttempts == self.maxRefusedAttempts + 1 {
+                        print("📡 [ApexGatewayClient] Gateway server not reachable at 127.0.0.1:1337 — peer coordination disabled (start ApexGatewayServer to enable).")
+                    }
+                    return
+                }
+                // Log the first few refused attempts, then go quiet.
+                print("📡 [ApexGatewayClient] Gateway server not reachable at 127.0.0.1:1337 (attempt \(self.refusedAttempts)/\(self.maxRefusedAttempts)). Retrying…")
+                do {
+                    try await Task.sleep(for: .seconds(30))
+                    self.connect()
+                } catch {
+                    print("📡 [ApexGatewayClient] Reconnect task cancelled.")
+                }
+                return
             }
+
+            self.retryAttempt += 1
+            let delay = min(3.0 * pow(1.5, Double(self.retryAttempt)), 60.0)
             
             if self.retryAttempt <= 3 {
                 print("📡 [ApexGatewayClient] Disconnected. Retrying in \(String(format: "%.1f", delay))s...")

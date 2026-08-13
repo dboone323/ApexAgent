@@ -30,7 +30,10 @@ struct OllamaAgentEngine: AgentEngine {
         guard let baseURL = URL(string: hostString) else {
             throw NSError(domain: "OllamaAgentEngine", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid Ollama host URL: \(hostString)"])
         }
-        let model = (UserDefaults.standard.string(forKey: "apex.ollamaModel") ?? "llama3.2:1b").trimmingCharacters(in: .whitespacesAndNewlines)
+        // Default to gemma4:12b when unset: a strong local model for Apple
+        // Silicon on macOS 27 (Gemma 4 family, ~7.6GB). Falls back to a clear
+        // "model not pulled" error from Ollama if it isn't available.
+        let model = (UserDefaults.standard.string(forKey: "apex.ollamaModel") ?? "gemma4:12b").trimmingCharacters(in: .whitespacesAndNewlines)
         let useTools = toolCallingMode != .disabled
 
         // Map history + system instructions + new prompt into Ollama messages.

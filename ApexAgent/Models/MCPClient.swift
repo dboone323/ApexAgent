@@ -137,12 +137,34 @@ actor MCPClient {
     private var stdinPipe: Pipe?
     private var stdoutPipe: Pipe?
     private var stderrPipe: Pipe?
-    private var stdoutSource: DispatchSourceRead?
-    private var stderrSource: DispatchSourceRead?
-    
+
+    /// Readiness gate: wait until the spawned Node server has attached its
+    /// JSON-RPC stdio transport (signalled by its "running on stdio" stderr
+    /// line, captured by the stderr read loop) before sending `initialize`.
+    /// A fixed warmup (e.g. 2s) raced cold starts under launch-time CPU
+    /// contention and produced a 60s-per-request timeout storm (~216-597s stall).
+    /// Polling the real signal collapses that to a few seconds. A 45s ceiling is
+    /// the fallback for servers that don't print the known readiness line.
+    private func waitUntilReady() async {
+        let deadline = Date().addingTimeInterval(45)
+        while !transportReady && Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(200))
+        }
+    }
+
     private var nextRequestId = 1
     private var pendingRequests: [Int: CheckedContinuation<Data, Error>] = [:]
-    
+    // Set by the stderr read loop (which runs on the actor) once the spawned
+    // server prints its "running on stdio" readiness line. `waitUntilReady`
+    // gates `initialize` on this so we never race a not-yet-attached transport
+    // (the root cause of the 216s+ handshake stall under launch-time CPU
+    // contention). A 45s ceiling in `waitUntilReady` is the fallback.
+    private var transportReady = false
+    // Actor-isolated mutator so the stderr read-loop Task (a detached context)
+    // can flip the flag without an off-actor mutation (Swift 6 isolation).
+    private func markTransportReady() {
+        transportReady = true
+    }
     // Hardening configurations
     private let maxRetries = 5
     private var failureCount = 0
@@ -180,6 +202,7 @@ actor MCPClient {
     func start() async throws {
         signal(SIGPIPE, SIG_IGN)
         guard process == nil else { return }
+        transportReady = false
         
         let isRestricted = await MainActor.run { orchestrator?.orchestrator.isFolderAccessRestricted() ?? false }
         
@@ -242,64 +265,45 @@ actor MCPClient {
 
         try proc.run()
 
-        // Listen to stdout stream in background using DispatchSourceRead
-        let stdoutFd = stdout.fileHandleForReading.fileDescriptor
-        _ = fcntl(stdoutFd, F_SETFL, O_NONBLOCK)
-        let stdoutSrc = DispatchSource.makeReadSource(fileDescriptor: stdoutFd, queue: DispatchQueue.global())
-        
-        var stdoutBuffer = Data()
-        stdoutSrc.setEventHandler { [weak self, weak stdoutSrc] in
-            guard let self = self, let stdoutSrc = stdoutSrc else { return }
-            let available = stdoutSrc.data
-            guard available > 0 else {
-                stdoutSrc.cancel()
-                return
-            }
-            
+        // Read stdout/stderr using the modern Foundation async-byte-stream API
+        // (FileHandle.bytes). The read loops run inside Tasks created here, within
+        // the actor-isolated start(), so they execute ON the MCPClient actor —
+        // no off-actor `self` access, no DispatchSourceRead executor hazards.
+        // JSON-RPC is newline-delimited, so `.lines` splits frames correctly.
+        Task { [weak self] in
+            guard let self else { return }
             do {
-                if let data = try? stdout.fileHandleForReading.read(upToCount: Int(available)), !data.isEmpty {
-                    stdoutBuffer.append(data)
-                    while let newlineIndex = stdoutBuffer.firstIndex(of: 10) {
-                        let lineData = stdoutBuffer.subdata(in: 0..<newlineIndex)
-                        stdoutBuffer.removeSubrange(0...newlineIndex)
-                        if !lineData.isEmpty {
-                            Task {
-                                await self.handleIncomingMessage(lineData)
-                            }
-                        }
-                    }
-                } else {
-                    stdoutSrc.cancel()
+                for try await line in stdout.fileHandleForReading.bytes.lines {
+                    guard !line.isEmpty else { continue }
+                    await self.handleIncomingMessage(Data(line.utf8))
                 }
+            } catch {
+                // Pipe closed / process exited — expected at teardown.
             }
         }
-        stdoutSrc.resume()
-        self.stdoutSource = stdoutSrc
 
-        // Listen to stderr stream in background using DispatchSourceRead
-        let stderrFd = stderr.fileHandleForReading.fileDescriptor
-        _ = fcntl(stderrFd, F_SETFL, O_NONBLOCK)
-        let stderrSrc = DispatchSource.makeReadSource(fileDescriptor: stderrFd, queue: DispatchQueue.global())
-        let serverNameForLogs = self.serverName
-        
-        stderrSrc.setEventHandler { [weak stderrSrc] in
-            guard let stderrSrc = stderrSrc else { return }
-            let available = stderrSrc.data
-            guard available > 0 else {
-                stderrSrc.cancel()
-                return
-            }
-            if let data = try? stderr.fileHandleForReading.read(upToCount: Int(available)), !data.isEmpty {
-                if let logStr = String(data: data, encoding: .utf8) {
-                    print("📡 [MCP Server - \(serverNameForLogs) Stderr]: \(logStr)")
+        Task { [weak self, serverNameForLogs = self.serverName] in
+            guard let self else { return }
+            do {
+                for try await line in stderr.fileHandleForReading.bytes.lines {
+                    guard !line.isEmpty else { continue }
+                    print("📡 [MCP Server - \(serverNameForLogs) Stderr]: \(line)")
+                    // The filesystem MCP server prints "running on stdio" once its
+                    // JSON-RPC transport is attached. Mark readiness so initialize
+                    // doesn't race a cold start.
+                    if line.contains("running on stdio") || line.contains("stdio") {
+                        await self.markTransportReady()
+                    }
                 }
-            } else {
-                stderrSrc.cancel()
+            } catch {
+                // Pipe closed / process exited — expected at teardown.
             }
         }
-        stderrSrc.resume()
-        self.stderrSource = stderrSrc
-        
+
+        // Short warmup so `initialize` doesn't race the server's stdio transport
+        // cold start (previously caused a 60s-per-request timeout storm → ~216s stall).
+        await waitUntilReady()
+
         try await performInitializeHandshake()
     }
     
@@ -329,9 +333,28 @@ actor MCPClient {
             capabilities: InitializeParams.Capabilities(),
             clientInfo: InitializeParams.ClientInfo(name: "ApexAgent", version: "1.0.0")
         )
-        
-        let _: InitializeResult = try await sendRequestInternal(method: "initialize", params: params)
-        
+
+        // The server may still be warming its transport even after the 2s
+        // readiness warmup (e.g. under CPU contention when multiple servers
+        // start at once). Retry `initialize` with short backoff so a slow cold
+        // start degrades to a few seconds rather than a single 60s timeout.
+        var lastError: Error?
+        for attempt in 0..<3 {
+            do {
+                let _: InitializeResult = try await sendRequestInternal(method: "initialize", params: params)
+                lastError = nil
+                break
+            } catch {
+                lastError = error
+                if attempt < 2 {
+                    try? await Task.sleep(for: .seconds(1))
+                }
+            }
+        }
+        if let lastError {
+            throw lastError
+        }
+
         let notification = JSONRPCNotification(method: "notifications/initialized")
         let encoder = JSONEncoder()
         let notifData = try encoder.encode(notification)
@@ -380,10 +403,6 @@ actor MCPClient {
         stdinPipe = nil
         stdoutPipe = nil
         stderrPipe = nil
-        stdoutSource?.cancel()
-        stdoutSource = nil
-        stderrSource?.cancel()
-        stderrSource = nil
         for (_, continuation) in pendingRequests {
             continuation.resume(throwing: NSError(domain: "MCPClient", code: -1, userInfo: [NSLocalizedDescriptionKey: "Client stopped."]))
         }
