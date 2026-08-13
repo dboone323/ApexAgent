@@ -5,6 +5,7 @@ import os
 // MARK: - Agent Type Enum
 
 enum AgentType: String, Codable, CaseIterable, Identifiable {
+    case supervisor = "supervisor"
     case developer = "developer"
     case executor = "executor"
     case controller = "controller"
@@ -17,6 +18,7 @@ enum AgentType: String, Codable, CaseIterable, Identifiable {
     
     var displayName: String {
         switch self {
+        case .supervisor: return "Apex Prime"
         case .developer: return "Codex"
         case .executor: return "Nexus"
         case .controller: return "Pilot"
@@ -29,6 +31,8 @@ enum AgentType: String, Codable, CaseIterable, Identifiable {
     
     var systemPrompt: String {
         switch self {
+        case .supervisor:
+            return SupervisorPrompt.system
         case .developer:
             return """
             You are Codex, the Developer Agent. Your role is to write, inspect, modify, and analyze codebase files. \
@@ -298,29 +302,22 @@ struct SupervisorAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynami
         self.maxResponseTokens = maxResponseTokens
     }
     
+    // Layer 2: the supervisor profile exposes ONLY delegation + coordination tools.
+    // Every "real" tool (file ops, shell, browser, clipboard, memory, skills, workflows)
+    // is delegated to a sub-agent session via delegate_task / convene_meeting, keeping the
+    // supervisor's context well under the on-device FM 4,096-token ceiling.
     private var delegateTaskTool: DelegateTaskTool { DelegateTaskTool(orchestrator: orchestrator) }
     private var conveneMeetingTool: ConveneMeetingTool { ConveneMeetingTool(orchestrator: orchestrator) }
     private var updatePlanTool: UpdatePlanTool { UpdatePlanTool(orchestrator: orchestrator) }
     private var notificationTool: NotificationTool { NotificationTool(orchestrator: orchestrator) }
-    private var storeMemoryTool: StoreMemoryTool { StoreMemoryTool(orchestrator: orchestrator) }
-    private var searchMemoryTool: SearchMemoryTool { SearchMemoryTool(orchestrator: orchestrator) }
-    private var createSkillTool: CreateSkillTool { CreateSkillTool(orchestrator: orchestrator) }
-    private var runWorkflowTool: RunWorkflowTool { RunWorkflowTool(orchestrator: orchestrator) }
-    private var dynamicToolCallTool: DynamicToolCallTool { DynamicToolCallTool(orchestrator: orchestrator) }
 
     var body: some LanguageModelSession.DynamicProfile {
         LanguageModelSession.Profile {
             Instructions(instructions)
-            
             delegateTaskTool
             conveneMeetingTool
             updatePlanTool
             notificationTool
-            storeMemoryTool
-            searchMemoryTool
-            createSkillTool
-            runWorkflowTool
-            dynamicToolCallTool
         }
         .apexAuditHooks()
         .model(model)
@@ -413,6 +410,37 @@ extension LanguageModelSession.DynamicProfile {
             .onActivate {
                 Logger.agent.info("Native profile activated")
                 AgentSignpost.event("NativeProfileActivate")
+            }
+            .onDeactivate {
+                Logger.agent.info("Native profile deactivated")
+                AgentSignpost.event("NativeProfileDeactivate")
+            }
+            .onPrompt { (prompt: Transcript.Prompt) in
+                let text = prompt.segments.compactMap { seg in
+                    if case .text(let t) = seg { t.content } else { nil }
+                }.joined(separator: "\n")
+                Logger.agent.debug("Native onPrompt: \(text.prefix(120), privacy: .public)")
+            }
+            .onToolCall { (call: Transcript.ToolCall) in
+                let argsString = call.arguments.jsonString
+                Logger.security.info("Native onToolCall: \(call.toolName, privacy: .public)")
+                let signpostID = AgentSignpost.begin("NativeToolCall", detail: call.toolName)
+                await AgentAuditLog.shared.record(toolName: call.toolName, arguments: argsString, status: "started")
+                AgentSignpost.end("NativeToolCall", signpostID)
+            }
+            .onToolOutput { (call: Transcript.ToolCall, output: Transcript.ToolOutput) in
+                let resultText = output.segments.compactMap { segment in
+                    if case .text(let textSeg) = segment { textSeg.content } else { nil }
+                }.joined(separator: "\n")
+                Logger.tools.debug("Native onToolOutput: \(call.toolName, privacy: .public)")
+                await AgentAuditLog.shared.record(toolName: call.toolName, arguments: "", status: "success")
+                _ = resultText // output consumed by the framework; recorded for completeness
+            }
+            .onResponse { (response: Transcript.Response) in
+                let text = response.segments.compactMap { segment in
+                    if case .text(let textSeg) = segment { textSeg.content } else { nil }
+                }.joined(separator: "\n")
+                Logger.agent.debug("Native onResponse: \(text.prefix(120), privacy: .public)")
             }
             .onDeactivate {
                 Logger.agent.info("Native profile deactivated")

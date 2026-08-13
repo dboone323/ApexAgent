@@ -111,6 +111,28 @@ struct ChatProbeTests {
         #expect(!full.isEmpty, "expected a non-empty response from native Apple FM on beta 5")
     }
 
+    @Test("supervisor registry allowlist contains ONLY delegation tools (Layer 2 Step 3 invariant)")
+    func supervisorAllowlistIsDelegationOnly() async throws {
+        let sup = AgentRegistry.builtInDefaults["supervisor"]
+        #expect(sup != nil, "supervisor registry entry must exist")
+        let tools = sup!.allowedTools
+        print("[PROBE] supervisor registered tools: \(tools.sorted())")
+        // These 4 are the delegation/coordination tools the supervisor body exposes.
+        #expect(tools.contains("delegate_task"), "supervisor must register delegate_task")
+        #expect(tools.contains("convene_meeting"), "supervisor must register convene_meeting")
+        #expect(tools.contains("update_plan"), "supervisor must register update_plan")
+        // notification_tool is the Tool struct name; "send_notification" is the tool name.
+        #expect(tools.contains("notification_tool") || tools.contains("send_notification"),
+                 "supervisor must register notification tool")
+        // File/shell/browser/memory/skills/workflow/system tools belong to sub-agents, NOT the supervisor.
+        #expect(!tools.contains("read_file"), "supervisor must NOT register read_file (sub-agent tool)")
+        #expect(!tools.contains("write_file"), "supervisor must NOT register write_file (sub-agent tool)")
+        #expect(!tools.contains("run_shell_command"), "supervisor must NOT register run_shell_command (sub-agent tool)")
+        #expect(!tools.contains("web_search"), "supervisor must NOT register web_search (sub-agent tool)")
+        #expect(!tools.contains("store_memory"), "supervisor must NOT register store_memory (sub-agent tool)")
+        #expect(!tools.contains("create_skill"), "supervisor must NOT register create_skill (sub-agent tool)")
+    }
+
     @Test("MCP filesystem server initializes quickly (no 216s stall)")
     func mcpInitNotStalled() async throws {
         print("[PROBE] MCP: constructing client for filesystem server")

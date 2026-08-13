@@ -564,13 +564,8 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     private func createSession<M: LanguageModel>(model: M, instructions: String, mode: GenerationOptions.ToolCallingMode, transcript: Transcript) -> LanguageModelSession {
         let reasoning = configuredReasoningLevel
         let maxTokens = configuredMaxResponseTokens
-        if multiAgentModeEnabled {
-            let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self, reasoningLevel: reasoning, maxResponseTokens: maxTokens)
-            return LanguageModelSession(profile: profile, history: transcript)
-        } else {
-            let profile = ApexAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self, reasoningLevel: reasoning, maxResponseTokens: maxTokens)
-            return LanguageModelSession(profile: profile, history: transcript)
-        }
+        let profile = SupervisorAgentProfile(instructions: instructions, model: model, toolCallingMode: mode, orchestrator: self, reasoningLevel: reasoning, maxResponseTokens: maxTokens)
+        return LanguageModelSession(profile: profile, history: transcript)
     }
 
     private func prunedContent(_ content: String, maxChars: Int = AgentOrchestrator.contextPruningMaxChars) -> String {
@@ -583,7 +578,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     }
 
     private func rehydrateSession() {
-    let instructions = multiAgentModeEnabled ? SupervisorPrompt.system : agentInstructions
+        // Layer 2: the on-device session always runs the supervisor profile with
+        // supervisor instructions. `multiAgentModeEnabled` controls whether the
+        // supervisor ALSO uses `convene_meeting` (parallel panel) vs only
+        // `delegate_task` (sequential delegation) — both routes delegate to
+        // sub-agent sessions, never inflate the supervisor's own context.
+        let instructions = SupervisorPrompt.system
 
         // Rehydrate model session history using Transcript.Entry
         var transcriptEntries: [Transcript.Entry] = []
@@ -777,7 +777,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     @MainActor
     private func createCompactionSession(model: any LanguageModel, instructions: String) -> LanguageModelSession {
         func helper<M: LanguageModel>(_ m: M) -> LanguageModelSession {
-            let profile = ApexAgentProfile(
+            let profile = SupervisorAgentProfile(
                 instructions: instructions,
                 model: m,
                 toolCallingMode: .disallowed,
