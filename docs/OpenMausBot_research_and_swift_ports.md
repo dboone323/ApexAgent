@@ -38,11 +38,11 @@ Bots (BotProfile/BotManager/BotSession/BotMessageSender), sub-agent registry + d
 | O2 | **`SecretRedactor`** (credential redaction) | `redact.ts` | partial (Keychain; no content redactor) | 🔴 secrets leak into transcripts/audit | ✅ |
 | O3 | **`ApprovalPolicy`** (auto-grant verdicts) | `auto-approve.ts` | `ToolPolicy` allowlist only; no auto-mode/always-allow/unattended-block | 🔴 Grok-style "approve what matters, unattended is guarded" | ✅ |
 | O4 | **`TurnWatchdog`** (activity-based stall) | `turn-watchdog.ts` | none (no generation watchdog) | 🟡 stuck bot leaves composer locked forever | ✅ |
-| O5 | **Routine webhook trigger + run receipts** | `routines.ts`, `webhook-ingress.ts` | `RoutineTrigger` lacks webhook + run status | 🟡 "Routines on a schedule" external-trigger parity | 🟡 (trigger+status added; HTTP receiver next) |
-| O6 | Per-rule **decision log** rows | `decision-log.ts` | `AgentAuditLog` lacks rule attribution | 🟡 | ⏳ |
-| O7 | **Chief-of-staff / delegations** auto-commander | `chief-of-staff.ts`, `delegations.ts` | has delegation tools; no auto commander | 🟡 | ⏳ |
-| O8 | **Skills triggerTerms/capabilities manifest** | `skill-library.ts` | `Skill` lacks trigger terms | 🟢 | ⏳ |
-| O9 | **Branching**, **peer-approval** | `branching.ts`, `peer-approval.ts` | partial | 🟢 | ⏳ |
+| O5 | **Routine webhook trigger + run receipts** | `routines.ts`, `webhook-ingress.ts` | `RoutineTrigger` lacks webhook + run status | 🟡 "Routines on a schedule" external-trigger parity | ✅ |
+| O6 | Per-rule **decision log** rows | `decision-log.ts` | `AgentAuditLog` lacks rule attribution | 🟡 | ✅ |
+| O7 | **Chief-of-staff / delegations** auto-commander | `chief-of-staff.ts`, `delegations.ts` | has delegation tools; no auto commander | 🟡 | ✅ |
+| O8 | **Skills triggerTerms/capabilities manifest** | `skill-library.ts` | `Skill` lacks trigger terms | 🟢 | ✅ |
+| O9 | **Peer-approval** gate | `peer-approval.ts` | partial | 🟢 | ✅ |
 
 All O1–O5 are **pure Foundation** (no new dependency), trivially unit-testable.
 
