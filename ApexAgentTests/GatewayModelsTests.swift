@@ -27,7 +27,7 @@ import SharedModels
     }
     
     @Test func testCodableChatMessageSerialization() throws {
-        let event = CodableToolEvent(toolName: "list_dir", status: "success", riskDescription: nil, arguments: "", result: "")
+        _ = CodableToolEvent(toolName: "list_dir", status: "success", riskDescription: nil, arguments: "", result: "")
         let msg = CodableChatMessage(
             role: CodableMessageRole.assistant,
             content: "Scanning complete",

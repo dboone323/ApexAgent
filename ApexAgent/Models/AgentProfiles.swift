@@ -442,37 +442,6 @@ extension LanguageModelSession.DynamicProfile {
                 }.joined(separator: "\n")
                 Logger.agent.debug("Native onResponse: \(text.prefix(120), privacy: .public)")
             }
-            .onDeactivate {
-                Logger.agent.info("Native profile deactivated")
-                AgentSignpost.event("NativeProfileDeactivate")
-            }
-            .onPrompt { (prompt: Transcript.Prompt) in
-                let text = prompt.segments.compactMap { seg in
-                    if case .text(let t) = seg { t.content } else { nil }
-                }.joined(separator: "\n")
-                Logger.agent.debug("Native onPrompt: \(text.prefix(120), privacy: .public)")
-            }
-            .onToolCall { (call: Transcript.ToolCall) in
-                let argsString = call.arguments.jsonString
-                Logger.security.info("Native onToolCall: \(call.toolName, privacy: .public)")
-                let signpostID = AgentSignpost.begin("NativeToolCall", detail: call.toolName)
-                await AgentAuditLog.shared.record(toolName: call.toolName, arguments: argsString, status: "started")
-                AgentSignpost.end("NativeToolCall", signpostID)
-            }
-            .onToolOutput { (call: Transcript.ToolCall, output: Transcript.ToolOutput) in
-                let resultText = output.segments.compactMap { segment in
-                    if case .text(let textSeg) = segment { textSeg.content } else { nil }
-                }.joined(separator: "\n")
-                Logger.tools.debug("Native onToolOutput: \(call.toolName, privacy: .public)")
-                await AgentAuditLog.shared.record(toolName: call.toolName, arguments: "", status: "success")
-                _ = resultText // output consumed by the framework; recorded for completeness
-            }
-            .onResponse { (response: Transcript.Response) in
-                let text = response.segments.compactMap { segment in
-                    if case .text(let textSeg) = segment { textSeg.content } else { nil }
-                }.joined(separator: "\n")
-                Logger.agent.debug("Native onResponse: \(text.prefix(120), privacy: .public)")
-            }
         )
     }
 }

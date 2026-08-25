@@ -30,11 +30,11 @@ import SwiftData
         client.connect(port: 27888)
 
         // Wait for the NWConnection state handler to flip isConnected.
-        let connected = await withTimeout(seconds: 3) { await client.isConnected }
+        let connected = await withTimeout(seconds: 3) { client.isConnected }
         #expect(connected, "Client should report isConnected after connecting to a live server")
 
         client.disconnect()
-        let disconnected = await withTimeout(seconds: 3) { !(await client.isConnected) }
+        let disconnected = await withTimeout(seconds: 3) { !(client.isConnected) }
         #expect(disconnected, "Client should report !isConnected after disconnect()")
     }
 }

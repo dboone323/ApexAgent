@@ -36,3 +36,8 @@ BuildArtifacts/
 Package.swift.bak
 Package.swift.bak2
 Tools/benchmark-repro/
+
+# Local xcodebuild artifacts
+.dd/
+.dd-release/
+results/

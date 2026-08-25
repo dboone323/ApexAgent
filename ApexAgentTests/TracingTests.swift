@@ -10,7 +10,7 @@ struct TracingTests {
         // Clear any prior spans so the assertion is deterministic.
         TraceBus.shared.clear()
 
-        let result = try await Tracing.span("test.operation", source: "TracingTests") {
+        let result = await Tracing.span("test.operation", source: "TracingTests") {
             try? await Task.sleep(for: .milliseconds(20))
             return 42
         }

@@ -65,27 +65,46 @@ public enum CoreSpotlightRAG {
 public struct SpotlightRetrievalIndex: LocalRetrievalIndex {
     public init() {}
 
-    public func search(_ query: String, limit: Int = 8) async -> [RetrievalItem] {
+    public func search(_ text: String, limit: Int = 8) async -> [RetrievalItem] {
         await withCheckedContinuation { continuation in
-            let query = NSMetadataQuery()
-            query.searchScopes = [NSMetadataQueryLocalComputerScope]
-            query.predicate = NSPredicate(
+            // NSMetadataQuery is documented single-thread-use; its lifetime is
+            // fully contained here and notifications are delivered on `.main`,
+            // so the @Sendable observer block below can safely touch it.
+            nonisolated(unsafe) let metadataQuery = NSMetadataQuery()
+            metadataQuery.searchScopes = [NSMetadataQueryLocalComputerScope]
+            metadataQuery.predicate = NSPredicate(
                 format: "kMDItemDisplayName LIKE[c] %@ OR kMDItemTextContent LIKE[c] %@",
-                "*\(query)*", "*\(query)*"
+                "*\(text)*", "*\(text)*"
             )
-            var observation: NSObjectProtocol?
-            observation = NotificationCenter.default.addObserver(
+            // The observer removes itself on first fire; a tiny box guards
+            // against double-resume when the watchdog below fires instead.
+            final class OnceBox: @unchecked Sendable {
+                private let lock = NSLock()
+                private var claimed = false
+                var token: NSObjectProtocol?
+                func claim() -> Bool {
+                    lock.lock()
+                    defer { lock.unlock() }
+                    if claimed { return false }
+                    claimed = true
+                    return true
+                }
+            }
+            let once = OnceBox()
+            let center = NotificationCenter.default
+            once.token = center.addObserver(
                 forName: .NSMetadataQueryDidFinishGathering,
-                object: query,
+                object: metadataQuery,
                 queue: .main
             ) { _ in
-                if let obs = observation {
-                    NotificationCenter.default.removeObserver(obs)
+                guard once.claim() else { return }
+                if let token = once.token {
+                    center.removeObserver(token)
                 }
-                query.stop()
+                metadataQuery.stop()
                 var items: [RetrievalItem] = []
-                for i in 0..<min(query.resultCount, limit) {
-                    guard let item = query.result(at: i) as? NSMetadataItem else { continue }
+                for i in 0..<min(metadataQuery.resultCount, limit) {
+                    guard let item = metadataQuery.result(at: i) as? NSMetadataItem else { continue }
                     let name = (item.value(forAttribute: NSMetadataItemDisplayNameKey) as? String) ?? "Untitled"
                     let path = (item.value(forAttribute: NSMetadataItemPathKey) as? String) ?? ""
                     let content = (item.value(forAttribute: NSMetadataItemTextContentKey) as? String) ?? ""
@@ -98,7 +117,16 @@ public struct SpotlightRetrievalIndex: LocalRetrievalIndex {
                 }
                 continuation.resume(returning: items)
             }
-            query.start()
+            // Watchdog: if Spotlight (mds) is stalled or disabled the gathering
+            // notification never fires and the continuation would leak. Bound
+            // the wait and degrade to "no results" instead of hanging forever.
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 15) {
+                guard once.claim() else { return }
+                if let token = once.token { center.removeObserver(token) }
+                metadataQuery.stop()
+                continuation.resume(returning: [])
+            }
+            metadataQuery.start()
         }
     }
 }

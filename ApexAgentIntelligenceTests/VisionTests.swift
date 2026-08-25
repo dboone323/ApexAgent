@@ -125,7 +125,7 @@ struct VisionTests {
             return true
         }
         let attachment = Attachment(image)
-        #expect(attachment != nil, "Attachment(image) should succeed")
+        _ = attachment // non-optional: construction succeeded or threw
 
         // Attempt one streaming step — cancel quickly to avoid long test times
         let streamTask = Task<Void, Error> {

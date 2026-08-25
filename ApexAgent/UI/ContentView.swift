@@ -3,6 +3,8 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(AgentOrchestrator.self) private var orchestrator
+    @Environment(BotManager.self) private var botManager
+    @Environment(Computer.self) private var computer
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Conversation.updatedAt, order: .reverse) private var conversations: [Conversation]
     
@@ -12,24 +14,42 @@ struct ContentView: View {
     @AppStorage("apex.showActivityLog") private var showActivityLog = true
     @AppStorage("apex.showTerminal") private var showTerminal = false
     @AppStorage("apex.showPlanDashboard") private var showPlanDashboard = false
- 
+    @State private var showCreateBotSheet = false
+    
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            SidebarView(
-                conversations: conversations,
-                selectedConversation: orchestrator.currentConversation,
-                onSelectConversation: { orchestrator.loadConversation($0) },
-                onDeleteConversations: deleteSavedConversations
-            )
-            .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 300)
-            .navigationTitle("Conversations")
+            // MARK: - Sidebar: Bots + Conversations
+            VStack(spacing: 0) {
+                // Bots section
+                BotSidebarSection(bm: botManager)
+                
+                Divider().padding(.horizontal, 12)
+                
+                // Conversations section (legacy)
+                SidebarView(
+                    conversations: conversations,
+                    selectedConversation: orchestrator.currentConversation,
+                    onSelectConversation: { orchestrator.loadConversation($0) },
+                    onDeleteConversations: deleteSavedConversations
+                )
+                .frame(minHeight: 100)
+            }
+            .navigationSplitViewColumnWidth(min: 220, ideal: 280, max: 340)
+            .navigationTitle("Apex Bots")
         } detail: {
-            // Main Content: Chat + Toggleable Tool Activity Sidebar
+            // MARK: - Detail: Chat + Toggleable Sidebars
             HStack(spacing: 0) {
                 VSplitView {
-                    ChatView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .frame(minHeight: 200)
+                    // Chat view (driven by active Bot session or legacy orchestrator)
+                    if let session = botManager.activeSession {
+                        BotChatView(session: session)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .frame(minHeight: 200)
+                    } else {
+                        ChatView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .frame(minHeight: 200)
+                    }
                     
                     if showTerminal {
                         TerminalView()
@@ -65,7 +85,7 @@ struct ContentView: View {
                     Text("Apex")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
-                    ModelStatusBadge()
+                    BotStatusBadge()
                 }
             }
             ToolbarItemGroup(placement: .primaryAction) {
@@ -78,7 +98,15 @@ struct ContentView: View {
                 }
                 .pickerStyle(.menu)
                 .help("Tool Calling Mode")
- 
+                
+                Button {
+                    showCreateBotSheet = true
+                } label: {
+                    Image(systemName: "person.badge.plus")
+                }
+                .help("Create New Bot")
+                .accessibilityIdentifier("createBotButton")
+                
                 Button {
                     orchestrator.startNewConversation()
                 } label: {
@@ -86,7 +114,7 @@ struct ContentView: View {
                 }
                 .help("New Conversation (⌘N)")
                 .accessibilityIdentifier("newConversationButton")
- 
+                
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
@@ -99,7 +127,7 @@ struct ContentView: View {
                 .help("Toggle Sidebar")
                 .accessibilityIdentifier("toggleSidebarButton")
                 .accessibilityLabel("Toggle sidebar")
-
+                
                 Button {
                     showSettings.toggle()
                 } label: {
@@ -109,7 +137,7 @@ struct ContentView: View {
                 .help("Settings")
                 .accessibilityIdentifier("settingsButton")
                 .accessibilityLabel("Settings")
-
+                
                 Button {
                     showDiagnostics.toggle()
                 } label: {
@@ -119,7 +147,7 @@ struct ContentView: View {
                 .help("System Diagnostics Self-Check")
                 .accessibilityIdentifier("diagnosticsButton")
                 .accessibilityLabel("System diagnostics")
-
+                
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
                         showTerminal.toggle()
@@ -166,20 +194,21 @@ struct ContentView: View {
         .sheet(isPresented: $showDiagnostics) {
             DiagnosticsView()
         }
+        .sheet(isPresented: $showCreateBotSheet) {
+            CreateBotSheet()
+        }
         .overlay {
             if let _ = orchestrator.pendingConfirmation {
                 ConfirmationOverlay()
             }
         }
         .onAppear {
-            // Defer the modelContext assignment off the initial view-update
-            // transaction. `modelContext`'s didSet performs a SwiftData fetch
-            // (loadOrCreatePermissions); writing it synchronously inside
-            // onAppear can race the first render and trip SwiftUI's
-            // "Publishing changes from within view updates" assertion.
             DispatchQueue.main.async {
                 orchestrator.modelContext = modelContext
             }
+            // Wire the BotManager's modelContext
+            botManager.modelContext = modelContext
+            botManager.reloadBots()
         }
         .onReceive(NotificationCenter.default.publisher(for: .showDiagnosticsSheet)) { _ in
             showDiagnostics = true

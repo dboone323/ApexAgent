@@ -5,12 +5,12 @@ import Foundation
 @Suite("TraceBusTests")
 struct TraceBusTests {
 
-    @Test func testRecentEventsContainsAppendedEvents() async {
-        await TraceBus.shared.append(TraceEvent(source: "tool", operation: "read_file", detail: "success", metadata: ["chars": "128"]))
-        await TraceBus.shared.append(TraceEvent(source: "tool", operation: "read_file", detail: "failed", metadata: ["error": "boom"]))
-        await Task.yield()
+    @MainActor
+    @Test func testRecentEventsContainsAppendedEvents() {
+        TraceBus.shared.append(TraceEvent(source: "tool", operation: "read_file", detail: "success", metadata: ["chars": "128"]))
+        TraceBus.shared.append(TraceEvent(source: "tool", operation: "read_file", detail: "failed", metadata: ["error": "boom"]))
 
-        let recent = await TraceBus.shared.recentEvents()
+        let recent = TraceBus.shared.recentEvents()
         let sources = recent.map(\.source)
         #expect(sources.contains("tool"))
         let operations = recent.map(\.operation)
@@ -20,12 +20,12 @@ struct TraceBusTests {
         #expect(details.contains("failed"))
     }
 
-    @Test func testRecentEventsReturnsNewestFirst() async {
-        await TraceBus.shared.append(TraceEvent(source: "mcp", operation: "list_tools", detail: "success", metadata: nil))
-        await TraceBus.shared.append(TraceEvent(source: "mcp", operation: "list_tools", detail: "start", metadata: nil))
-        await Task.yield()
+    @MainActor
+    @Test func testRecentEventsReturnsNewestFirst() {
+        TraceBus.shared.append(TraceEvent(source: "mcp", operation: "list_tools", detail: "success", metadata: nil))
+        TraceBus.shared.append(TraceEvent(source: "mcp", operation: "list_tools", detail: "start", metadata: nil))
 
-        let recent = await TraceBus.shared.recentEvents()
+        let recent = TraceBus.shared.recentEvents()
         let successEvent = recent.first { $0.detail == "success" }
         #expect(successEvent != nil, "Recent events should include the latest success entry")
     }

@@ -8,7 +8,7 @@ import SwiftData
     
     @Test func testAuditorInitializationAndWorkspacePath() async throws {
         let auditor = WorkspaceProactiveAuditor.shared
-        #expect(auditor != nil)
+        _ = auditor // shared singleton
         
         // Test fallback path is not empty
         let report = await auditor.performAudit()

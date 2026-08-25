@@ -12,20 +12,20 @@ import SharedKit
         let orchestrator = AgentOrchestrator()
         let tool = DailyBriefingTool(orchestrator: orchestrator)
         let briefing = try await tool.run()
-        #expect(briefing != nil)
+        _ = briefing // non-optional result
     }
 
     @Test func testPersonalContextLive() {
         let ctx = ApexAgentPersonalContext.live
-        #expect(ctx != nil)
+        _ = ctx // non-optional live context
     }
 
     @Test func testWeeklyReflectionCreation() {
         let reflection = WeeklyReflection.snapshot(text: "Achieved weekly goals")
         #expect(reflection.text == "Achieved weekly goals")
-        #expect(reflection.id != nil)
-        #expect(reflection.weekStartDate != nil)
-        #expect(reflection.createdAt != nil)
+        _ = reflection.id // value types: fields are non-optional by construction
+        _ = reflection.weekStartDate
+        _ = reflection.createdAt
     }
 
     @MainActor

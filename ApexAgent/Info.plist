@@ -40,9 +40,5 @@
 	<string>Apex Agent can access your Desktop to save files and screenshots.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
 	<string>Apex Agent can access your Downloads folder to manage files.</string>
-	<key>SUFeedURL</key>
-	<string>https://apexagent.com/appcast.xml</string>
-	<key>SUPublicEDKey</key>
-	<string>015aUZgI0knzm7fnkC0kJo451ePHmp76vOVjjEsSNFY=</string>
 </dict>
 </plist>

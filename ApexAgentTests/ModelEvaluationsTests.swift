@@ -55,7 +55,7 @@ struct ModelEvaluationsTests {
     @Test("CoreSpotlight RAG tool builds as a real FoundationModels.Tool")
     func coreSpotlightRAGTool() {
         let tool = CoreSpotlightRAG.makeTool()
-        #expect(tool is any Tool)
+        _ = tool // concrete SpotlightSearchTool already satisfies Tool
         #expect(CoreSpotlightRAG.isAvailable)
     }
 
@@ -64,11 +64,10 @@ struct ModelEvaluationsTests {
         let evaluation = ApexModelEvaluation()
         // Real framework: dataset is an ArrayLoader exposing an async stream.
         var sampleCount = 0
-        if let stream = try? evaluation.dataset.stream {
-            var iterator = stream.makeAsyncIterator()
-            while let _ = try? await iterator.next() {
-                sampleCount += 1
-            }
+        let stream = evaluation.dataset.stream
+        var iterator = stream.makeAsyncIterator()
+        while let _ = try? await iterator.next() {
+            sampleCount += 1
         }
         #expect(sampleCount == 2)
         #expect(evaluation.evaluators.count == 1)
@@ -83,7 +82,7 @@ struct ModelEvaluationsTests {
         ]
         for provider in providers {
             let model = ModelRegistry.model(for: .explicit(provider), apiKey: "test-key")
-            #expect(model is any LanguageModel)
+            _ = model // registry returns a concrete LanguageModel
         }
     }
 

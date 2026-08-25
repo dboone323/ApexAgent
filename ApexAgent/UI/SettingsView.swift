@@ -470,29 +470,14 @@ struct SettingsView: View {
 
                 // MARK: Model Context Protocol (MCP) Registry
                 Section("Model Context Protocol (MCP) Servers") {
-                    ForEach(mcpManager.servers) { config in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(config.name)
-                                    .fontWeight(.medium)
-                                Text("\(config.command) \(config.arguments.joined(separator: " "))")
-                                    .font(AppTheme.Font.mono(10))
-                                    .foregroundStyle(AppTheme.Palette.textSecondary)
-                            }
-                            Spacer()
-                            Button(role: .destructive) {
-                                mcpManager.removeServer(id: config.id)
-                                DynamicToolbox.shared.loadTools()
-                            } label: {
-                                Image(systemName: "trash")
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
+                    DynamicToolboxManagerSection()
+                    RoutinesSection()
+                }
 
-                    VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                        Text("Add New MCP Server")
-                            .font(AppTheme.Font.headline(11))
+                Section("Add New MCP Server") {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                    Text("Add New MCP Server")
+                        .font(AppTheme.Font.headline(11))
                             .bold()
                         TextField("Server Name (e.g. Postgres)", text: $newServerName)
                             .accessibilityLabel("New Server Name")
@@ -606,6 +591,7 @@ struct SettingsView: View {
                  sandboxPollTask?.cancel()
             }
             .frame(minWidth: 480, minHeight: 520)
+            .accessibilityIdentifier("settingsForm")
             .confirmationDialog("Change Agent Mode?", isPresented: $showingQuickModeConfirm, titleVisibility: .visible) {
                 Button("Change Mode", role: .destructive) {
                     pendingQuickModeAction?()
@@ -614,9 +600,8 @@ struct SettingsView: View {
                 Text("This will overwrite the current system prompt instructions and reset the model session.")
             }
         }
-        .accessibilityIdentifier("settingsForm")
     }
-    
+
     private var modelPrivacyText: String {
         switch orchestrator.modelPreference {
         case .localSystem: return "On-device (private, offline)"

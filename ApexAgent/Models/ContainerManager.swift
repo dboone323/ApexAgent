@@ -10,7 +10,7 @@ extension InteractiveSession: ContainerInteractiveSession {}
 
 @Observable
 @MainActor
-public final class ContainerManager: Sendable, ContainerManagerProtocol {
+public final class ContainerManager: ContainerManagerProtocol {
     public static let shared = ContainerManager()
     
     public enum State: Sendable, Equatable {

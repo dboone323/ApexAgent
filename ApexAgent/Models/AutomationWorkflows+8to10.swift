@@ -94,7 +94,7 @@ extension ApexWorkflows {
                 }
             }
             """
-            try await FileWriteTool(orchestrator: orch)
+            _ = try await FileWriteTool(orchestrator: orch)
                 .call(arguments: .init(path: legacyPath, content: legacy, append: false))
 
             let hits = try await FileSearchTool(orchestrator: orch).call(
@@ -113,7 +113,7 @@ extension ApexWorkflows {
                                       evidence: "expected >=2 proposals, got \(proposals.count)")
             }
             let modernized = ModernizationSweep.apply(proposals, to: current)
-            try await FileWriteTool(orchestrator: orch)
+            _ = try await FileWriteTool(orchestrator: orch)
                 .call(arguments: .init(path: legacyPath, content: modernized, append: false))
 
             let after = try await FileReadTool(orchestrator: orch)

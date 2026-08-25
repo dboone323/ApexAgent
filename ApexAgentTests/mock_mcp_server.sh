@@ -4,7 +4,10 @@
 # client sent. Notifications (no id) are ignored. Keeps the client handshake from
 # blocking on a missing response. Method names may arrive JSON-escaped (e.g.
 # "tools\/list"), so the matcher tolerates the escaped slash.
+echo "[mock] started pid 52040" >> /tmp/mock_mcp_debug.log
 while IFS= read -r line; do
+    printf '%s
+' "[mock] got line: $line" >> /tmp/mock_mcp_debug.log
     id=$(printf '%s' "$line" | grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*')
     if printf '%s' "$line" | grep -q '"method":"initialize"'; then
         echo "{\"jsonrpc\":\"2.0\",\"id\":$id,\"result\":{\"protocolVersion\":\"2024-11-05\",\"capabilities\":{},\"serverInfo\":{\"name\":\"MockServer\",\"version\":\"1.0.0\"}}}"

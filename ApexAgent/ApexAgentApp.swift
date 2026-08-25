@@ -12,8 +12,14 @@ import SharedKit
 public struct ApexAgentApp: App {
     let orchestrator = AppDelegate.sharedOrchestrator
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @State private var botManager: BotManager
+    let computer: Computer
+    @State private var skillManager = SkillManager()
+    @State private var routineManager = RoutineManager()
 
     public init() {
+        self.computer = Computer()
+        self.botManager = BotManager(orchestrator: orchestrator, computer: computer)
         ContainerBridge.shared = ContainerManager.shared
         let args = CommandLine.arguments
         if args.contains("--daemon") {
@@ -53,11 +59,16 @@ public struct ApexAgentApp: App {
         WindowGroup {
             ContentView()
                 .environment(orchestrator)
+                .environment(botManager)
+                .environment(computer)
+                .environment(\.groupChatManager, GroupChatManager())
+                .environment(skillManager)
+                .environment(routineManager)
                 .frame(minWidth: 960, minHeight: 640)
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
-        .modelContainer(for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self])
+        .modelContainer(for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self])
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Conversation") {
@@ -78,6 +89,29 @@ class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
     var dataBus: AppGroupDataBus {
         return AppGroupDataBus.shared
     }
+
+    func sessionForAgent(
+        agent: RegisteredAgent,
+        preference: AgentModelPreference,
+        instructions: String,
+        allowedTools: [String],
+        toolCallingMode: GenerationOptions.ToolCallingMode,
+        reasoningLevel: ContextOptions.ReasoningLevel?,
+        maxResponseTokens: Int?,
+        history: Transcript?
+    ) -> LanguageModelSession {
+        orchestrator.sessionForAgent(
+            agent: agent,
+            preference: preference,
+            instructions: instructions,
+            allowedTools: allowedTools,
+            toolCallingMode: toolCallingMode,
+            reasoningLevel: reasoningLevel,
+            maxResponseTokens: maxResponseTokens,
+            history: history
+        )
+    }
+
     var statusItem: NSStatusItem?
     var quickPromptPanel: QuickPromptPanel?
 

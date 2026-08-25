@@ -76,7 +76,7 @@ class MockToolEventLogger: ToolEventLogger {
     @MainActor
     @Test func testAgentOrchestratorInitialization() {
         let orchestrator = AgentOrchestrator()
-        #expect(ApexAgentTests.sharedOrchestrator != nil)
+        _ = ApexAgentTests.sharedOrchestrator // shared singleton materializes lazily
         #expect(orchestrator.currentConversationTitle == "New Conversation")
         #expect(orchestrator.messages.isEmpty)
         #expect(orchestrator.toolEvents.isEmpty)
@@ -282,9 +282,9 @@ class MockToolEventLogger: ToolEventLogger {
         // Test navigating to a local loopback
         do {
             let result = try await tool.call(arguments: BrowserAutomationTool.Arguments(action: "open_url", url: "https://localhost:9999/invalid_endpoint"))
-            #expect(result != nil)
+            #expect(!result.isEmpty)
         } catch {
-            #expect(error != nil)
+            Issue.record("unexpected browser automation error: \(error)")
         }
     }
     
@@ -385,7 +385,7 @@ class MockToolEventLogger: ToolEventLogger {
     @MainActor
     @Test func testVoiceControllerPlayback() {
         let voiceController = VoiceController.shared
-        #expect(voiceController != nil)
+        _ = voiceController // shared singleton
 
         // Real-path assertion: speak() must synchronously enqueue an utterance and
         // flip isSpeaking to true. A no-op implementation would leave it false.
@@ -410,7 +410,7 @@ class MockToolEventLogger: ToolEventLogger {
         }
         
         let pty = try await PTYSession(workspacePath: "/tmp")
-        #expect(pty != nil)
+        _ = pty // non-optional: init succeeded or threw
         
         let result = try await pty.runCommand("echo \"fallback_works\"")
         #expect(result.contains("fallback_works"))
@@ -428,7 +428,7 @@ class MockToolEventLogger: ToolEventLogger {
         }
         
         let pty = try await PTYSession(workspacePath: "/tmp")
-        #expect(pty != nil)
+        _ = pty // non-optional: init succeeded or threw
         
         let result = try await pty.runCommand("echo \"apple_container_fallback_works\"")
         #expect(result.contains("apple_container_fallback_works"))
@@ -450,7 +450,7 @@ class MockToolEventLogger: ToolEventLogger {
         let url = URL(string: "http://localhost:1338/api/state")!
         let (data, response) = try await URLSession.shared.data(from: url)
         
-        #expect(data != nil)
+        #expect(!data.isEmpty)
         if let httpResponse = response as? HTTPURLResponse {
             #expect(httpResponse.statusCode == 200)
             #expect(httpResponse.value(forHTTPHeaderField: "Content-Type") == "application/json")
@@ -464,7 +464,7 @@ class MockToolEventLogger: ToolEventLogger {
         // Test fetching dashboard HTML
         let htmlUrl = URL(string: "http://localhost:1338/")!
         let (htmlData, htmlResponse) = try await URLSession.shared.data(from: htmlUrl)
-        #expect(htmlData != nil)
+        #expect(!htmlData.isEmpty)
         if let httpResponse = htmlResponse as? HTTPURLResponse {
             #expect(httpResponse.statusCode == 200)
             #expect(httpResponse.value(forHTTPHeaderField: "Content-Type") == "text/html")
@@ -482,7 +482,7 @@ class MockToolEventLogger: ToolEventLogger {
         let path = "/Users/danielstevens/Developer/fleet"
         let reports = await auditor.runWorkspaceAudit(at: path)
         
-        #expect(reports != nil)
+        _ = reports // decoded (possibly empty) report list
         if FileManager.default.fileExists(atPath: path) {
             #expect(!(reports.isEmpty), "Should find the swift applications")
             if !reports.isEmpty {
@@ -506,7 +506,7 @@ class MockToolEventLogger: ToolEventLogger {
     
     @MainActor
     @Test func testAgentTypeInitialization() {
-        #expect(AgentType.allCases.count == 7)
+        #expect(AgentType.allCases.count == 8)
         for type in AgentType.allCases {
             #expect(!(type.systemPrompt.isEmpty))
         }
@@ -1068,7 +1068,7 @@ class MockToolEventLogger: ToolEventLogger {
             print("--- Real git_status Result ---")
             print(gitResult)
             print("------------------------------")
-            #expect(gitResult != nil)
+            #expect(!gitResult.isEmpty)
         } else {
             print("⚠️ Git MCP 'git_status' tool not loaded.")
         }

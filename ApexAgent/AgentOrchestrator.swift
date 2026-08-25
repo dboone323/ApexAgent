@@ -97,6 +97,61 @@ enum AgentModelPreference: String, CaseIterable, Identifiable, Codable {
 @MainActor
 public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
+    // MARK: - OrchestratorProvider conformance
+
+    func sessionForAgent(
+        agent: RegisteredAgent,
+        preference: AgentModelPreference,
+        instructions: String,
+        allowedTools: [String],
+        toolCallingMode: GenerationOptions.ToolCallingMode,
+        reasoningLevel: ContextOptions.ReasoningLevel? = nil,
+        maxResponseTokens: Int? = nil,
+        history: Transcript? = nil
+    ) -> LanguageModelSession {
+        func makeSession<M: LanguageModel>(_ model: M) -> LanguageModelSession {
+            let effectiveReasoning = reasoningLevel ?? configuredReasoningLevel
+            let effectiveMaxTokens = maxResponseTokens ?? configuredMaxResponseTokens
+            let transcript: Transcript = history ?? Transcript(entries: [])
+            let profile = SupervisorAgentProfile(
+                instructions: instructions,
+                model: model,
+                toolCallingMode: toolCallingMode,
+                orchestrator: self,
+                reasoningLevel: effectiveReasoning,
+                maxResponseTokens: effectiveMaxTokens
+            )
+            return LanguageModelSession(profile: profile, history: transcript)
+            }
+
+        switch preference {
+        case .localSystem:
+            return makeSession(localSystemModel())
+        case .privateCloud:
+            if Self.isPrivateCloudComputeAvailable() {
+                return makeSession(PrivateCloudComputeLanguageModel())
+            } else {
+                return makeSession(localSystemModel())
+            }
+        case .cloudGemini:
+            let apiKey = KeychainManager.get(key: "geminiAPIKey") ?? ""
+            return makeSession(CloudGeminiLanguageModel(apiKey: apiKey))
+        case .localOllama:
+            let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? AgentOrchestrator.defaultOllamaURLString) ?? URL(string: AgentOrchestrator.defaultOllamaURLString)!
+            return makeSession(LocalOllamaLanguageModel(hostURL: host))
+        case .localMLX:
+            let host = URL(string: UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString) ?? URL(string: LocalMLXLanguageModel.defaultHostURLString)!
+            return makeSession(LocalMLXLanguageModel(hostURL: host))
+        case .hybrid:
+            if multiAgentModeEnabled {
+                return makeSession(localSystemModel())
+            } else if Self.isPrivateCloudComputeAvailable() {
+                return makeSession(PrivateCloudComputeLanguageModel())
+            } else {
+                return makeSession(localSystemModel())
+            }
+        }
+    }
 
     /// Check if Private Cloud Compute is available by verifying the process has the required entitlement.
     /// Returns false when running in CLI/test environments without code signing.
@@ -539,17 +594,17 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     /// Maps the user's `apex.reasoningBudget` setting to the native
     /// `ContextOptions.ReasoningLevel`. "off" yields nil (model default).
-    private var configuredReasoningLevel: ContextOptions.ReasoningLevel? {
+    var configuredReasoningLevel: ContextOptions.ReasoningLevel? {
         apexConfiguredReasoningLevel()
     }
 
     /// Reads the `apex.maxResponseTokens` setting; returns nil when it is 0
     /// (meaning "no cap").
-    private var configuredMaxResponseTokens: Int? {
+    var configuredMaxResponseTokens: Int? {
         apexConfiguredMaxResponseTokens()
     }
 
-    private func resolveModelForSession() -> any LanguageModel {
+    func resolveModelForSession() -> any LanguageModel {
         if modelPreference == .hybrid && !multiAgentModeEnabled {
             // Single-agent hybrid mode uses PCC for deep reasoning, falling back to local system if unavailable
             if Self.isPrivateCloudComputeAvailable() {
@@ -914,18 +969,23 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 onStateChanged?()
             }
             let engine: any AgentEngine
-            switch self.modelPreference {
-            case .localOllama:
+            if ProcessInfo.processInfo.environment["APEX_TEST_FAKE_ENGINE"] == "1" {
+                // Deterministic e2e/UI-test engine (see FakeAgentEngine.swift):
+                // streams a canned reply so the always-green suite never needs
+                // a live model.
+                engine = FakeAgentEngine(orchestrator: self)
+            } else if self.modelPreference == .localOllama {
                 // Direct-HTTP Ollama path: the FoundationModels
                 // LanguageModelExecutorGenerationChannel pump crashes on
                 // macOS 27.0 26A5388g, so we stream from Ollama's local
                 // /api/chat directly and run tools through allTools.
                 engine = OllamaAgentEngine(orchestrator: self)
-            case .localMLX:
+            } else if self.modelPreference == .localMLX {
                 // Direct-HTTP MLX-LM path (OpenAI-compatible SSE) — same
                 // FoundationModels channel bypass rationale as Ollama.
                 engine = MLXAgentEngine(orchestrator: self)
-            case .localSystem, .privateCloud, .cloudGemini, .hybrid:
+            } else {
+                // .localSystem / .privateCloud / .cloudGemini / .hybrid
                 engine = NativeAppleEngine(orchestrator: self)
             }
 

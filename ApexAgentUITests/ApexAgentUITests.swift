@@ -19,39 +19,46 @@ import XCTest
 //  - Toggle assertions are STATE-RELATIVE: they compare post-toggle visibility
 //    to the pre-toggle baseline, so they pass regardless of prior persisted state.
 
+@MainActor
 final class ApexAgentUITests: XCTestCase {
 
     private var app: XCUIApplication!
 
-    override func setUpWithError() throws {
+    /// Fresh-launch lifecycle, invoked explicitly at the top of every test.
+    /// setUpWithError overrides are nonisolated under Swift strict concurrency,
+    /// so all main-actor UI work lives here instead.
+    private func launchFreshApp() {
         continueAfterFailure = false
-        app = XCUIApplication()
-        // Fresh launch for test isolation (resets isGenerating + orchestrator).
-        // -APEXUITestFakeEngine gives a deterministic, paced agent response so
-        // response assertions are meaningful without a live model.
+        // Terminate any instance left over from a previous test first (fresh
+        // launch resets isGenerating + orchestrator state).
         if let app {
             app.terminate()
             let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app, handler: nil)
-            XCTWaiter.wait(for: [gone], timeout: 20)
+            _ = XCTWaiter.wait(for: [gone], timeout: 20)
         }
         // UI-e2e seams are delivered via sentinel files written before launch.
         // xcodebuildmcp does not reliably forward launch args/env to the app,
         // but the test process controls the filesystem, so a sentinel file is
         // the reliable channel. Unit tests use true DI instead (no files).
-        app.launch()
-        app.activate()
+        //
+        // -APEXUITestFakeEngine gives a deterministic, paced agent response so
+        // response assertions are meaningful without a live model.
+        let fresh = XCUIApplication()
+        app = fresh
+        // Deterministic agent engine (see FakeAgentEngine.swift): the app
+        // streams a canned reply when this env var is set, so response
+        // assertions never depend on a live model.
+        fresh.launchEnvironment["APEX_TEST_FAKE_ENGINE"] = "1"
+        fresh.launch()
+        fresh.activate()
         sleep(1)
         let input = chatInput
         XCTAssertTrue(input.waitForExistence(timeout: 20), "Chat input field did not appear — app failed to render.")
     }
 
     override func tearDownWithError() throws {
-        if let app {
-            app.terminate()
-            let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app, handler: nil)
-            XCTWaiter.wait(for: [gone], timeout: 20)
-        }
-        app = nil
+        // A leftover app instance is terminated by the next launchFreshApp();
+        // keeping this override body empty avoids nonisolated MainActor access.
     }
 
     /// The chat input is a TextEditor → AX text view. Falls back to textField.
@@ -81,7 +88,8 @@ final class ApexAgentUITests: XCTestCase {
         let _ = XCTWaiter.wait(for: [enabled], timeout: 5)
         tap(send)
 
-        let agentBubble = app.descendants(matching: .any).matching(identifier: "AgentResponse_").firstMatch
+        let agentBubble = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "AgentResponse_")).firstMatch
         XCTAssertTrue(agentBubble.waitForExistence(timeout: 15),
                       "No agent response bubble appeared after sending — run may not have started.")
 
@@ -106,6 +114,7 @@ final class ApexAgentUITests: XCTestCase {
     // MARK: - Phase 4 baseline
 
     @MainActor func testSendMessageRendersUserBubble() throws {
+        launchFreshApp()
         let prompt = "What is 2 + 2?"
         let input = chatInput
         input.click()
@@ -118,7 +127,8 @@ final class ApexAgentUITests: XCTestCase {
         tap(send)
 
         let bubble = app.scrollViews["conversationScrollView"]
-            .descendants(matching: .any)["UserMessage"].firstMatch
+            .descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "UserMessage_")).firstMatch
         XCTAssertTrue(
             bubble.waitForExistence(timeout: 10),
             "The sent prompt did not render as a user message bubble in the conversation."
@@ -127,6 +137,7 @@ final class ApexAgentUITests: XCTestCase {
     }
 
     @MainActor func testSettingsSheetOpensAndCloses() throws {
+        launchFreshApp()
         let settings = app.buttons["settingsButton"].firstMatch
         XCTAssertTrue(settings.waitForExistence(timeout: 5))
         tap(settings)
@@ -144,6 +155,7 @@ final class ApexAgentUITests: XCTestCase {
     }
 
     @MainActor func testTerminalPanelToggles() throws {
+        launchFreshApp()
         let terminal = app.buttons["toggleTerminalButton"].firstMatch
         XCTAssertTrue(terminal.waitForExistence(timeout: 5))
         let view = app.descendants(matching: .any)["terminalView"].firstMatch
@@ -153,6 +165,7 @@ final class ApexAgentUITests: XCTestCase {
     }
 
     @MainActor func testNewConversationButton() throws {
+        launchFreshApp()
         let input = chatInput
         input.click()
         input.typeText("seed message")
@@ -170,6 +183,7 @@ final class ApexAgentUITests: XCTestCase {
     // MARK: - Tier 1: Agent response appears + actually completes
 
     @MainActor func testAgentResponseAppearsAfterSend() throws {
+        launchFreshApp()
         let bubble = sendAndWaitForResponse("What is 2 + 2?")
         let text = bubble.value as? String ?? ""
         XCTAssertFalse(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
@@ -179,6 +193,7 @@ final class ApexAgentUITests: XCTestCase {
     // MARK: - Tier 1: Switching sessions must NOT end the current run
 
     @MainActor func testSwitchingSessionDoesNotEndRun() throws {
+        launchFreshApp()
         // Launch with the fake engine so the run actually streams to completion
         // even while we navigate away — proving the run survives the switch.
         app.terminate()
@@ -238,6 +253,7 @@ final class ApexAgentUITests: XCTestCase {
     // MARK: - Tier 2: Streaming lifecycle + Stop
 
     @MainActor func testStreamingStartsAndResolves() throws {
+        launchFreshApp()
         // The fake engine streams incrementally; assert the bubble grows then
         // the run resolves to a non-empty, completed response.
         let bubble = sendAndWaitForResponse("List three macOS Shortcuts ideas")
@@ -247,6 +263,7 @@ final class ApexAgentUITests: XCTestCase {
     }
 
     @MainActor func testStopGenerationHaltsRun() throws {
+        launchFreshApp()
         app.terminate()
         let slowApp = XCUIApplication()
         slowApp.launch()
@@ -274,6 +291,7 @@ final class ApexAgentUITests: XCTestCase {
     // MARK: - Tier 2: Suggestion chips
 
     @MainActor func testSuggestionChipSends() throws {
+        launchFreshApp()
         // Fresh launch shows the empty-state WelcomeView with suggestion chips.
         let chip = app.buttons["suggestionChip_What's using the most disk space?"].firstMatch
         guard chip.waitForExistence(timeout: 5) else {
@@ -282,13 +300,15 @@ final class ApexAgentUITests: XCTestCase {
         }
         tap(chip)
         let bubble = app.scrollViews["conversationScrollView"]
-            .descendants(matching: .any)["UserMessage"].firstMatch
+            .descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "UserMessage_")).firstMatch
         XCTAssertTrue(bubble.waitForExistence(timeout: 10), "Suggestion chip did not send a message.")
     }
 
     // MARK: - Tier 2: Plan dashboard toggles (state-relative)
 
     @MainActor func testPlanDashboardToggles() throws {
+        launchFreshApp()
         let toggle = app.buttons["togglePlanDashboardButton"].firstMatch
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
         let plan = app.descendants(matching: .any)["planDashboard"].firstMatch
@@ -302,6 +322,7 @@ final class ApexAgentUITests: XCTestCase {
     // MARK: - Tier 2: Confirmation overlay action identifiers are wired
 
     @MainActor func testConfirmationOverlayHasActions() throws {
+        launchFreshApp()
         let overlayApprove = app.buttons["confirmationApprove"].firstMatch
         let overlayDeny = app.buttons["confirmationDeny"].firstMatch
         if app.descendants(matching: .any)["confirmationApprove"].firstMatch.exists {
@@ -315,6 +336,7 @@ final class ApexAgentUITests: XCTestCase {
     // MARK: - Tier 2: Panel layout persistence across relaunch
 
     @MainActor func testPanelVisibilityPersistsAcrossRelaunch() throws {
+        launchFreshApp()
         let terminal = app.buttons["toggleTerminalButton"].firstMatch
         let plan = app.buttons["togglePlanDashboardButton"].firstMatch
         // Force both ON from a known baseline, then relaunch to verify @AppStorage.

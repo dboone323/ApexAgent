@@ -52,7 +52,7 @@ import SharedModels
 
         // Spawn a real, functioning interactive shell session and execute a command
         let pty = try await PTYSession(workspacePath: "/Users/danielstevens/Developer/ApexAgent")
-        #expect(pty != nil)
+        _ = pty // non-optional: init succeeded or threw
         
         do {
             let output = try await pty.runCommand("echo 'Hello PTY Session'")
@@ -84,10 +84,10 @@ import SharedModels
     @MainActor
     @Test func testVoiceAndScreenStreamerPreflight() async {
         let voice = VoiceController.shared
-        #expect(voice != nil)
+        _ = voice // shared singleton
         
         let streamer = ScreenStreamer.shared
-        #expect(streamer != nil)
+        _ = streamer // shared singleton
         #expect(streamer.getLatestFrame() == nil)
     }
     

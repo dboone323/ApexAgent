@@ -29,12 +29,14 @@ struct SandboxTests {
         do {
             try orchestrator.verifyPathAllowed("/var/denied-path")
             Issue.record("Expected pathViolation error")
-        } catch let error as SecuritySandboxError {
-            if case .pathViolation = error {} else {
-                Issue.record("Expected pathViolation, got \(error)")
-            }
         } catch {
-            Issue.record("Expected SecuritySandboxError, got \(error)")
+            guard let sandboxError = error as? SecuritySandboxError else {
+                Issue.record("Expected SecuritySandboxError, got \(error)")
+                return
+            }
+            if case .pathViolation = sandboxError {} else {
+                Issue.record("Expected pathViolation, got \(sandboxError)")
+            }
         }
     }
 }

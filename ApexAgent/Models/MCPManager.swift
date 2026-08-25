@@ -1,4 +1,5 @@
 import Foundation
+import FoundationModels
 import Observation
 import SharedKit
 
@@ -148,5 +149,27 @@ final class MCPManager: OrchestratorProvider {
             await client.stop()
         }
         clients.removeAll()
+    }
+
+    func sessionForAgent(
+        agent: RegisteredAgent,
+        preference: AgentModelPreference,
+        instructions: String,
+        allowedTools: [String],
+        toolCallingMode: GenerationOptions.ToolCallingMode,
+        reasoningLevel: ContextOptions.ReasoningLevel? = nil,
+        maxResponseTokens: Int? = nil,
+        history: Transcript? = nil
+    ) -> LanguageModelSession {
+        return orchestrator.sessionForAgent(
+            agent: agent,
+            preference: preference,
+            instructions: instructions,
+            allowedTools: allowedTools,
+            toolCallingMode: toolCallingMode,
+            reasoningLevel: reasoningLevel,
+            maxResponseTokens: maxResponseTokens,
+            history: history
+        )
     }
 }

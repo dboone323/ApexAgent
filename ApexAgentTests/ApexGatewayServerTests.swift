@@ -15,7 +15,7 @@ import SharedKit
         orchestrator.modelContext = ModelContext(container)
         
         let server = ApexGatewayServer(port: 27777, orchestrator: orchestrator)
-        #expect(server != nil)
+        _ = server // non-optional value type
         
         // Start the server
         try server.start()

@@ -113,8 +113,7 @@ struct AgentProfileTests {
         .model(SystemLanguageModel.default)
         .toolCallingMode(.disallowed)
         .apexAuditHooks()
-        #expect(instrumented is LanguageModelSession.AnyDynamicProfile,
-                "apexAuditHooks() composes into a valid instrumented profile")
+        _ = instrumented // AnyDynamicProfile conformance is enforced by the type system
     }
 
     @Test func testReasoningBudgetMapping() {

@@ -77,6 +77,8 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Containerization", package: "containerization"),
                 .product(name: "ContainerizationOCI", package: "containerization"),
+                .product(name: "ContainerizationArchive", package: "containerization"),
+                .product(name: "ContainerizationOS", package: "containerization"),
             ],
             path: "ApexAgent",
             exclude: [
@@ -210,8 +212,6 @@ let package = Package(
             name: "ApexAgentContainerTests",
             dependencies: [
                 "ApexAgentCore",
-                .product(name: "Containerization", package: "containerization"),
-                .product(name: "ContainerizationOCI", package: "containerization"),
             ],
             path: "ApexAgentContainerTests",
             linkerSettings: [

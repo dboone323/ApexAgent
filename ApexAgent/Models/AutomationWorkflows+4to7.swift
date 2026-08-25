@@ -27,7 +27,7 @@ extension ApexWorkflows {
             let doc = DocsRenderer.renderToolReference(schemas: schemas, toolNames: toolNames)
 
             let docPath = scratch + "/TOOL_REFERENCE.md"
-            try await FileWriteTool(orchestrator: orch)
+            _ = try await FileWriteTool(orchestrator: orch)
                 .call(arguments: .init(path: docPath, content: doc, append: false))
             let readBack = try await FileReadTool(orchestrator: orch)
                 .call(arguments: .init(path: docPath, maxLines: nil))
@@ -95,9 +95,13 @@ extension ApexWorkflows {
     static func workflow6() async -> WorkflowResult {
         let name = "Multi-agent task orchestration (StateGraph)"
         do {
-            let registry = AgentRegistry.shared
             let expected = ["developer", "linter", "executor"]
-            let missing = expected.filter { registry.resolve(name: $0) == nil }
+            var missing: [String] = []
+            for name in expected {
+                if AgentRegistry.shared.resolve(name: name) == nil {
+                    missing.append(name)
+                }
+            }
             guard missing.isEmpty else {
                 return WorkflowResult(id: 6, name: name, passed: false,
                                       evidence: "AgentRegistry missing agents: \(missing)")
@@ -183,7 +187,7 @@ extension ApexWorkflows {
             }
             let baseline = SchemaSnapshot.capture(live)
             let path = scratch + "/schema-baseline.json"
-            try await FileWriteTool(orchestrator: orch).call(
+            _ = try await FileWriteTool(orchestrator: orch).call(
                 arguments: .init(path: path, content: baseline.json, append: false))
 
             // No drift against itself.

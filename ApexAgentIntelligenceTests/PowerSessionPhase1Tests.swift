@@ -67,7 +67,7 @@ final class PowerSessionPhase1Tests {
     @Test func testSpotlightQueryReturnsHitStructs() async {
         // Best-effort: run a broad query and assert the return type is well-formed.
         let hits = await SpotlightSearchTool.runSpotlightQuery(query: "Info", maxResults: 3, contentType: nil)
-        #expect(hits is [SpotlightHit])
+        #expect(hits.count <= 3)
     }
 
     // MARK: - App Intents exposure

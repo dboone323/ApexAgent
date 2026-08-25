@@ -17,7 +17,7 @@ import SharedModels
         let contentView = ContentView()
             .environment(orchestrator)
         
-        #expect(contentView != nil)
+        _ = contentView // view construction succeeded
         
         let sidebar = SidebarView(
             conversations: [],
@@ -26,7 +26,7 @@ import SharedModels
             onDeleteConversations: { _ in }
         )
         .environment(orchestrator)
-        #expect(sidebar != nil)
+        _ = sidebar // view construction succeeded
         
         #expect(!(orchestrator.isGenerating))
     }
@@ -39,11 +39,11 @@ import SharedModels
         
         let chatView = ChatView()
             .environment(orchestrator)
-        #expect(chatView != nil)
+        _ = chatView // view construction succeeded
         
         let bubble = MessageBubble(message: msg)
         let view = bubble.environment(orchestrator)
-        #expect(view != nil)
+        _ = view // view construction succeeded
         
         let markdownView = MarkdownText(content: msg.content)
         let parsed = markdownView.parseBlocks(msg.content)
@@ -58,7 +58,7 @@ import SharedModels
         let orchestrator = AgentOrchestrator()
         let settingsView = SettingsView()
             .environment(orchestrator)
-        #expect(settingsView != nil)
+        _ = settingsView // view construction succeeded
     }
     
     @MainActor
@@ -66,11 +66,11 @@ import SharedModels
         let orchestrator = AgentOrchestrator()
         let planView = PlanDashboardView()
             .environment(orchestrator)
-        #expect(planView != nil)
+        _ = planView // view construction succeeded
         
         let toolActivityView = ToolActivityView()
             .environment(orchestrator)
-        #expect(toolActivityView != nil)
+        _ = toolActivityView // view construction succeeded
     }
     
     @MainActor
@@ -78,10 +78,10 @@ import SharedModels
         let orchestrator = AgentOrchestrator()
         let terminalView = TerminalView()
             .environment(orchestrator)
-        #expect(terminalView != nil)
+        _ = terminalView // view construction succeeded
         
         let diagnosticsView = DiagnosticsView()
             .environment(orchestrator)
-        #expect(diagnosticsView != nil)
+        _ = diagnosticsView // view construction succeeded
     }
 }

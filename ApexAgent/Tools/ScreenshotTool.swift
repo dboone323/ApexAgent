@@ -33,11 +33,11 @@ struct ScreenshotTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
-            let isScreenAllowed = DispatchQueue.main.sync {
-                self.orchestrator.orchestrator.permissions?.screenRecordingAllowed ?? false
-            }
-            guard isScreenAllowed else {
-                return "ERROR: Screen Recording check is disabled in Settings."
+            // Probe the actual macOS TCC state instead of trusting a stored boolean
+            // that defaults to false and is never set to true by the OS after a grant.
+            // CGPreflightScreenCaptureAccess() is the same probe DiagnosticManager uses.
+            guard CGPreflightScreenCaptureAccess() else {
+                return "ERROR: Screen Recording is not permitted by macOS. Enable it in System Settings → Privacy & Security → Screen Recording, grant access to Apex Agent / Hermes, then retry."
             }
 
             let isDesktopAllowed = DispatchQueue.main.sync {

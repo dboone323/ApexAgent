@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Darwin
 
 enum MCPError: Error, LocalizedError {
     case connectionFailed(String)
@@ -141,12 +142,39 @@ actor MCPClient {
     /// Readiness gate: wait until the spawned Node server has attached its
     /// JSON-RPC stdio transport (signalled by its "running on stdio" stderr
     /// line, captured by the stderr read loop) before sending `initialize`.
+    /// Blocking-read line stream for a child process pipe. Yields one String
+    /// per newline-delimited frame; finishes at EOF. The blocking
+    /// `availableData` call runs on a utility queue, never on an executor.
+    private static func makeLineStream(handle: FileHandle) -> AsyncStream<String> {
+        AsyncStream { continuation in
+            DispatchQueue.global(qos: .utility).async {
+                var buffer = Data()
+                while true {
+                    let chunk = handle.availableData
+                    if chunk.isEmpty { break } // EOF: write end closed
+                    buffer.append(chunk)
+                    while let nl = buffer.firstIndex(of: 0x0A) {
+                        let lineData = buffer.subdata(in: buffer.startIndex..<nl)
+                        buffer.removeSubrange(buffer.startIndex...nl)
+                        continuation.yield(String(decoding: lineData, as: UTF8.self))
+                    }
+                }
+                if !buffer.isEmpty {
+                    continuation.yield(String(decoding: buffer, as: UTF8.self))
+                }
+                continuation.finish()
+            }
+        }
+    }
+
     /// A fixed warmup (e.g. 2s) raced cold starts under launch-time CPU
     /// contention and produced a 60s-per-request timeout storm (~216-597s stall).
-    /// Polling the real signal collapses that to a few seconds. A 45s ceiling is
-    /// the fallback for servers that don't print the known readiness line.
+    /// Polling the real signal collapses that to a few seconds. For servers
+    /// that never print the known readiness line, keep only a short blind wait:
+    /// `performInitializeHandshake()` already retries with backoff and a 60s
+    /// per-attempt timeout, so a long fallback here just adds dead latency.
     private func waitUntilReady() async {
-        let deadline = Date().addingTimeInterval(45)
+        let deadline = Date().addingTimeInterval(3)
         while !transportReady && Date() < deadline {
             try? await Task.sleep(for: .milliseconds(200))
         }
@@ -265,38 +293,38 @@ actor MCPClient {
 
         try proc.run()
 
-        // Read stdout/stderr using the modern Foundation async-byte-stream API
-        // (FileHandle.bytes). The read loops run inside Tasks created here, within
-        // the actor-isolated start(), so they execute ON the MCPClient actor —
-        // no off-actor `self` access, no DispatchSourceRead executor hazards.
-        // JSON-RPC is newline-delimited, so `.lines` splits frames correctly.
+// Read stdout/stderr with blocking `availableData` reads pumped onto a
+        // utility queue. (The previous `FileHandle.bytes.lines` implementation
+        // stopped delivering pipe data inside the XCTest host on Xcode 27:
+        // requests were written and the child replied, but no line ever reached
+        // the reader. A plain blocking read loop is regression-proof.)
+        let stdoutLines = MCPClient.makeLineStream(handle: stdout.fileHandleForReading)
+        let stderrLines = MCPClient.makeLineStream(handle: stderr.fileHandleForReading)
+
         Task { [weak self] in
             guard let self else { return }
-            do {
-                for try await line in stdout.fileHandleForReading.bytes.lines {
-                    guard !line.isEmpty else { continue }
-                    await self.handleIncomingMessage(Data(line.utf8))
-                }
-            } catch {
-                // Pipe closed / process exited — expected at teardown.
+            for await line in stdoutLines {
+                guard !line.isEmpty else { continue }
+                // Any inbound stdout traffic proves the JSON-RPC transport is
+                // attached, even for servers that never print a stderr
+                // readiness banner (otherwise waitUntilReady() would burn
+                // its whole fallback window before the first request).
+                await self.markTransportReady()
+                await self.handleIncomingMessage(Data(line.utf8))
             }
         }
 
         Task { [weak self, serverNameForLogs = self.serverName] in
             guard let self else { return }
-            do {
-                for try await line in stderr.fileHandleForReading.bytes.lines {
-                    guard !line.isEmpty else { continue }
-                    print("📡 [MCP Server - \(serverNameForLogs) Stderr]: \(line)")
-                    // The filesystem MCP server prints "running on stdio" once its
-                    // JSON-RPC transport is attached. Mark readiness so initialize
-                    // doesn't race a cold start.
-                    if line.contains("running on stdio") || line.contains("stdio") {
-                        await self.markTransportReady()
-                    }
+            for await line in stderrLines {
+                guard !line.isEmpty else { continue }
+                print("📡 [MCP Server - \(serverNameForLogs) Stderr]: \(line)")
+                // The filesystem MCP server prints "running on stdio" once its
+                // JSON-RPC transport is attached. Mark readiness so initialize
+                // doesn't race a cold start.
+                if line.contains("running on stdio") || line.contains("stdio") {
+                    await self.markTransportReady()
                 }
-            } catch {
-                // Pipe closed / process exited — expected at teardown.
             }
         }
 
@@ -398,6 +426,17 @@ actor MCPClient {
 
     func stop() {
         process?.terminationHandler = nil
+
+        // Kill the entire process group (negative PID) so that children like
+        // `node` spawned by `npx` or `zsh` spawned by the exec wrapper are
+        // also reaped. Without this, orchestrated MCP servers leave orphaned
+        // processes that block the test host exit (xcode27-dev skill finding).
+        if let proc = process {
+            let pid = proc.processIdentifier
+            // kill(-pid, SIGTERM) targets the process group rooted at `pid`.
+            kill(-pid, SIGTERM)
+        }
+
         process?.terminate()
         process = nil
         stdinPipe = nil

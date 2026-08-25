@@ -12,28 +12,39 @@ import XCTest
 // Based on the triage pattern: long timeouts for cold starts, XCTContext
 // activity step-tracing, and xcparse-extracted screenshots on timeout.
 
+@MainActor
 final class LiveAgentTriageTests: XCTestCase {
 
     private var app: XCUIApplication!
 
-    override func setUpWithError() throws {
+    /// Fresh-launch lifecycle, invoked explicitly at the top of every test
+    /// (setUpWithError overrides are nonisolated under strict concurrency).
+    private func launchFreshApp() {
         // Stop early only if elements are genuinely missing; otherwise let the
         // run continue and triage.
         continueAfterFailure = false
-        app = XCUIApplication()
-        app.launch()
-        app.activate()
+        if let app { app.terminate() }
+        let fresh = XCUIApplication()
+        app = fresh
+        fresh.launch()
+        fresh.activate()
         sleep(1)
     }
 
     override func tearDownWithError() throws {
-        app?.terminate()
+        // A leftover app instance is terminated by the next launchFreshApp().
     }
 
     /// Triage a live endpoint: send a distinctive prompt, wait up to 45s for the
     /// agent response bubble, screenshot + fail loudly on timeout, and log the
     /// actual returned text for triage.
     func testLiveAgentResponseTriage() throws {
+        // Needs a live model backend; skip in the always-green suite just like
+        // the full-response triage below.
+        guard ProcessInfo.processInfo.environment["APEX_LIVE_E2E"] == "1" else {
+            throw XCTSkip("Set APEX_LIVE_E2E=1 to run live response triage.")
+        }
+        launchFreshApp()
         let chatInput = app.textViews["chatInputField"].firstMatch
         XCTAssertTrue(chatInput.waitForExistence(timeout: 10),
                       "🔴 CRITICAL: Chat input field is missing — app failed to render.")
@@ -75,6 +86,7 @@ final class LiveAgentTriageTests: XCTestCase {
     /// then verify the reply mentions the expected phrase. Gated behind
     /// APEX_LIVE_E2E so it only runs in intentional live environments.
     func testLiveAgentFullResponseTriage() throws {
+        launchFreshApp()
         guard ProcessInfo.processInfo.environment["APEX_LIVE_E2E"] == "1" else {
             throw XCTSkip("Set APEX_LIVE_E2E=1 to run live full-response triage.")
         }
