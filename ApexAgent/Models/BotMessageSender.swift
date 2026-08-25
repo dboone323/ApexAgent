@@ -56,10 +56,18 @@ extension BotSession {
                         }
                     }
                 )
+                // Streaming finished successfully — clear isStreaming on this
+                // BotSession's own message copy so pollers observe completion.
+                if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
+                    var copy = self.messages
+                    copy[idx].isStreaming = false
+                    self.messages = copy
+                }
             } catch {
                 if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
                     var copy = self.messages
                     copy[idx].content = "⚠️ Error: \(error.localizedDescription)"
+                    copy[idx].isStreaming = false
                     self.messages = copy
                 }
             }
