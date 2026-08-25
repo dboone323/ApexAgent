@@ -98,4 +98,12 @@ Priority: 🔴 critical (defines Grok), 🟡 important, ⚪ deferred/out-of-poli
 - **Deferred**: iOS client, skills marketplace, enterprise SSO (external/paid; policy).
 
 *Nothing above was committed in planning mode. This doc is authoritative for the parity effort.*
+
+---
+
+## Progress (updated as features land)
+
+- **2026-08-25 · P0 + WS1** (`c15f791`): ApexAgentCore builds clean with the multi-bot layer; baseline committed; WS1 bot-layer test suite (**20 tests / 6 suites**, all green).
+- **2026-08-25 · WS2 + WS6** (`5aa7925`): native **`RoutineRecorder`** (teach-a-task: capture shell/applescript/note/app-activation steps to a numbered recipe → `Routine` with `<Bot>: ` routing) and **group-chat tool actions** (safe allowlist, preflight `GroupToolPermission`, human approval gate for risky tools; group instructions now allow approved tool use). **15 new tests**; bot layer now **35 tests / 8 suites**, all green.
+- Still open: WS3 (24/7 LaunchAgent daemon), WS4 (persistent logged-in tool sessions + Keychain vault), WS5 (proactive follow-up / cross-bot handoff); wiring `record_demo` as a registered tool + Settings UI is the natural next slice of WS2.
 **~284 tests** across SPM test targets.
