@@ -39,6 +39,9 @@ final class BotSession {
     // MARK: - Shared references (not owned)
     weak var orchestrator: AgentOrchestrator?
     weak var computer: Computer?
+    /// Back-reference for chief-of-staff roster composition. Set by BotManager
+    /// when it creates the session.
+    weak var botManager: BotManager?
 
     // MARK: - SwiftData
     var modelContext: ModelContext?
@@ -56,10 +59,27 @@ final class BotSession {
         self.modelAvailability = orchestrator.modelAvailability
     }
 
-    // MARK: - System Instructions (dynamic, includes memory)
+    // MARK: - System Instructions (dynamic, includes memory + chief roster)
 
     var systemInstructions: String {
-        bot.systemInstructions
+        guard bot.isChiefOfStaff, let botManager else { return bot.systemInstructions }
+        // Chief of staff: append a live roster so the commander knows who it
+        // can delegate to. Caps/clipping live in ChiefOfStaff itself.
+        let members = botManager.allBots.map { profile in
+            ChiefTeamMember(
+                id: profile.id.uuidString,
+                name: profile.name,
+                title: profile.title.isEmpty ? nil : profile.title,
+                descriptionText: profile.descriptionText.isEmpty ? nil : profile.descriptionText,
+                busy: botManager.isGenerating(botId: profile.id),
+                hidden: false,
+                section: nil)
+        }
+        let rosterPrompt = ChiefOfStaff.systemPrompt(
+            chiefId: bot.id.uuidString,
+            bots: members,
+            canDelegate: true)
+        return bot.systemInstructions + "\n\n" + rosterPrompt
     }
 
     // MARK: - Reset / New Conversation

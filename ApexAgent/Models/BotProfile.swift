@@ -30,6 +30,10 @@ final class BotProfile {
     /// The last time this Bot was active (for sorting "needs attention").
     var lastActiveAt: Date
 
+    /// When true, this Bot's instructions include a live roster of its team
+    /// (Grok-style "chief of staff") so it can coordinate specialists.
+    var isChiefOfStaff: Bool = false
+
     /// Default initializer for SwiftData insertion.
     init(
         id: UUID = UUID(),

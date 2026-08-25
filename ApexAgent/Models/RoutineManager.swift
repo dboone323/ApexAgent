@@ -170,6 +170,23 @@ final class RoutineManager: Observable {
         }
     }
 
+    // MARK: - Webhook dispatch (O5)
+
+    /// Fire the enabled `.webhook` routine matching `routineName`. Returns the
+    /// assistant response, or nil when no such routine exists / no BotManager
+    /// is wired / generation did not produce output in time.
+    @discardableResult
+    func dispatchWebhook(routineName: String) async -> String? {
+        loadRoutines()
+        guard let routine = routines.first(where: {
+            $0.enabled && $0.trigger == .webhook && $0.name == routineName
+        }) else {
+            print("⚠️ [RoutineManager] No enabled .webhook routine named '\\(routineName)'")
+            return nil
+        }
+        return await execute(routine)
+    }
+
     // MARK: - Helpers
 
     private func defaultApexBot() -> BotProfile {

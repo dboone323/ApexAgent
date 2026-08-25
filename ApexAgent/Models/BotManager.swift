@@ -58,6 +58,19 @@ final class BotManager {
         self.computer = computer
     }
 
+    /// Single session factory so every session carries the manager
+    /// back-reference (chief-of-staff roster composition needs it).
+    private func makeSession(for bot: BotProfile) -> BotSession {
+        let session = BotSession(bot: bot, orchestrator: orchestrator!, computer: computer)
+        session.botManager = self
+        return session
+    }
+
+    /// Non-creating peek at whether a bot's session is mid-generation.
+    func isGenerating(botId: UUID) -> Bool {
+        sessions[botId]?.isGenerating ?? false
+    }
+
     // MARK: - Bot CRUD
 
     /// Creates a new Bot with the given parameters and persists it.
@@ -75,7 +88,7 @@ final class BotManager {
             isPinned: false
         )
         saveBot(bot)
-        let session = BotSession(bot: bot, orchestrator: orchestrator!, computer: computer)
+        let session = makeSession(for: bot)
         sessions[bot.id] = session
         return bot
     }
@@ -90,8 +103,9 @@ final class BotManager {
             memory: bot.memory,
             isPinned: bot.isPinned
         )
+        copy.isChiefOfStaff = bot.isChiefOfStaff
         saveBot(copy)
-        let session = BotSession(bot: copy, orchestrator: orchestrator!, computer: computer)
+        let session = makeSession(for: copy)
         sessions[copy.id] = session
         return copy
     }
@@ -147,7 +161,7 @@ final class BotManager {
     /// Opens a conversation with a Bot — creates a new session if one doesn't exist.
     func openConversation(with bot: BotProfile) {
         if sessions[bot.id] == nil {
-            let session = BotSession(bot: bot, orchestrator: orchestrator!, computer: computer)
+            let session = makeSession(for: bot)
             sessions[bot.id] = session
         }
         activeBotId = bot.id
@@ -164,7 +178,7 @@ final class BotManager {
         if let existing = sessions[bot.id] {
             return existing
         }
-        let session = BotSession(bot: bot, orchestrator: orchestrator!, computer: computer)
+        let session = makeSession(for: bot)
         sessions[bot.id] = session
         return session
     }
@@ -225,7 +239,7 @@ final class BotManager {
             bots = try context.fetch(descriptor)
             for bot in bots {
                 if sessions[bot.id] == nil {
-                    let session = BotSession(bot: bot, orchestrator: orchestrator!, computer: computer)
+                    let session = makeSession(for: bot)
                     session.modelContext = context
                     sessions[bot.id] = session
                 } else {
