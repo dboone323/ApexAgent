@@ -36,6 +36,24 @@ private struct GroupChatManagerEnvironmentValuesKey: EnvironmentKey {
 /// participants appear in one shared ChatMessage list rendered in a
 /// single chat view. The user's own messages are tagged with the
 /// "host" role so the group knows the human is present.
+// MARK: - GroupToolPermission & allowlist (Grok Bot: group chat takes actions)
+
+/// Outcome of asking whether a group participant may run a given tool.
+enum GroupToolPermission: Equatable {
+    case allowed
+    case needsApproval
+    case denied(String)
+}
+
+/// Safe tools group participants may run without extra scoping. Filesystem-
+/// mutating, shell, and AppleScript tools are intentionally excluded by default.
+enum DefaultGroupToolAllowlist {
+    static let set: Set<String> = [
+        "web_search", "read_file", "list_directory", "file_search",
+        "search_memory", "store_memory", "get_system_info", "send_notification",
+    ]
+}
+
 @Observable
 @MainActor
 final class GroupChatSession {
@@ -57,6 +75,15 @@ final class GroupChatSession {
     var generationOrder: [UUID]  // round-robin order (participant bot ids)
     var currentTurnIndex: Int = 0
     var maxTurnsPerParticipant: Int = 3  // stop after N turns each, or let user interrupt
+
+    // MARK: - Group tool actions (WS6: bots can take real work, not just talk)
+    var toolCallsEnabled = true
+    var allowedGroupTools: Set<String> = DefaultGroupToolAllowlist.set
+    private(set) var toolExecutionLog: [String] = []  // "tool: <result>"
+
+    /// Tools that always require human approval, even when weblisted.
+    private static let riskyGroupTools: Set<String> =
+        ["run_shell_command", "write_file", "delete_file", "move_file", "run_applescript"]
 
     // MARK: - Shared references (not owned)
     weak var orchestrator: AgentOrchestrator?
@@ -283,9 +310,53 @@ final class GroupChatSession {
         2. Address what the previous speaker said; don't repeat it.
         3. If you disagree or have a different approach, say so respectfully.
         4. Ask clarifying questions when the group is ambiguous.
-        5. Do NOT call tools from a group chat turn (no file writes, shell commands, etc.).
+        5. You may call approved tools to get real work done when it helps the group.
+           Never modify files, run shell commands, or use AppleScript without approval.
         6. Stay in character as \(botName).
         """
+    }
+
+    // MARK: - Group tool actions (permission + execution)
+
+    /// Pure preflight decision for whether a group participant may run `tool`.
+    /// Deterministic and side-effect free, so it is unit-testable without an
+    /// orchestrator or model.
+    func groupToolPermission(tool: String) -> GroupToolPermission {
+        guard toolCallsEnabled else {
+            return .denied("Group tool calls are disabled for this chat.")
+        }
+        guard allowedGroupTools.contains(tool) else {
+            return .denied("'\(tool)' is not an allowed group tool.")
+        }
+        return Self.riskyGroupTools.contains(tool) ? .needsApproval : .allowed
+    }
+
+    /// Runs a tool on behalf of a group participant, applying the allowlist and
+    /// the human confirmation gate. Never reaches the filesystem/network while
+    /// the permission is denied or the approval is refused.
+    func executeGroupTool(tool: String, arguments: String) async throws -> String {
+        switch groupToolPermission(tool: tool) {
+        case .allowed:
+            break
+        case .needsApproval:
+            let approved = await orchestrator?.requestConfirmation(
+                toolName: tool,
+                arguments: arguments,
+                riskDescription: "A Bot in the group '\(name)' wants to run '\(tool)'."
+            ) ?? false
+            guard approved else {
+                return "DECLINED: A Bot requested '\(tool)' but the approval was not granted."
+            }
+        case .denied(let reason):
+            return "DENIED: \(reason)"
+        }
+
+        guard let orchestrator else {
+            return "ERROR: No orchestrator available to execute '\(tool)'."
+        }
+        let result = try await orchestrator.executeToolByName(name: tool, jsonArguments: arguments)
+        toolExecutionLog.append("\(tool): \(result.prefix(200))")
+        return result
     }
 
     // MARK: - Reset
@@ -296,6 +367,7 @@ final class GroupChatSession {
         participantsGenerating.removeAll()
         currentTurnIndex = 0
         pendingAttachments = []
+        toolExecutionLog = []
     }
 }
 
