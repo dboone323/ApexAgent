@@ -44,6 +44,9 @@ enum ApprovalVerdictSource: String, Sendable {
     case unattendedBlock = "unattended-block"
     case localComputerBlock = "local-computer-block"
     case noGrant = "no-grant"
+    /// The human answered a card themselves (decision-log attribution only —
+    /// never produced by `ApprovalPolicy.verdict`).
+    case user = "user"
 }
 
 /// The verdict for one permission request. `approve` is non-nil exactly when
@@ -83,6 +86,11 @@ enum ApprovalPolicy {
 
     static func looksSensitive(_ text: String) -> Bool {
         matchFirst(ApprovalRule.sensitive, in: text) != nil
+    }
+
+    /// A stable name for the destructive guard (decision-log attribution).
+    static var destructiveGuardRuleName: String {
+        ApprovalRule.destructive.first?.pattern ?? "destructive-guard"
     }
 
     /// The key an "Always allow" grant is remembered under. A bare tool name

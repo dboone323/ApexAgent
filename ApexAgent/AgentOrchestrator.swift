@@ -1361,6 +1361,18 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
     }
 
+    // MARK: - Auto-approve policy (O3/O6 wiring)
+    //
+    /// When true, tool calls that survive the destructive/sensitive guards are
+    /// approved without showing the human a card (Grok Bot-style auto mode).
+    public var autoApproveToolCalls: Bool = false
+    /// Remembered "Always allow" grant keys (narrowed per-program for shell
+    /// tools by `ApprovalPolicy.approvalKey`).
+    public var alwaysAllowKeys: [String] = []
+    /// True while the current turn was started by an external trigger
+    /// (webhook/schedule) with nobody at the keyboard: grants do not inherit.
+    public var isUnattendedTurn: Bool = false
+
     public func shouldConfirmTool(name: String) -> Bool {
         if requireConfirmationForAll { return true }
         return AgentOrchestrator.dangerousToolNames.contains(name) || AgentSecurity.requiresConfirmation(name)
@@ -1378,10 +1390,41 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         if isTesting {
             return true
         }
-        if let gateway = confirmationGateway {
-            return await gateway(toolName, arguments, riskDescription)
+
+        // O3/O6: auto-grant fast path. The destructive/sensitive guards outrank
+        // grants, so an always-allow can never widen into them — a guarded or
+        // unguarded-but-ungranted call still falls through to the human card,
+        // with the deciding rule written to the decision log either way.
+        let verdict = ApprovalPolicy.verdict(
+            tool: toolName,
+            summary: arguments,
+            alwaysAllow: alwaysAllowKeys,
+            autoApprove: autoApproveToolCalls,
+            unattended: isUnattendedTurn
+        )
+        if verdict.approve != nil {
+            await AgentAuditLog.shared.recordDecision(
+                toolName: toolName, arguments: arguments, approved: true,
+                source: verdict.source, rule: verdict.rule)
+            return true
         }
-        return await withCheckedContinuation { continuation in
+        if verdict.source != .noGrant {
+            // The row worth auditing: this WOULD have auto-approved, and only
+            // the guard (or the absence of a grant on an unattended turn)
+            // stood in the way.
+            await AgentAuditLog.shared.recordDecision(
+                toolName: toolName, arguments: arguments, approved: false,
+                source: verdict.source, rule: verdict.rule)
+        }
+
+        if let gateway = confirmationGateway {
+            let approved = await gateway(toolName, arguments, riskDescription)
+            await AgentAuditLog.shared.recordDecision(
+                toolName: toolName, arguments: arguments, approved: approved,
+                source: .user, rule: nil)
+            return approved
+        }
+        let approved: Bool = await withCheckedContinuation { continuation in
             let request = ConfirmationRequest(
                 toolName: toolName,
                 arguments: arguments,
@@ -1402,6 +1445,10 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 }
             }
         }
+        await AgentAuditLog.shared.recordDecision(
+            toolName: toolName, arguments: arguments, approved: approved,
+            source: .user, rule: nil)
+        return approved
     }
 
     public func resolveConfirmation(approved: Bool) {

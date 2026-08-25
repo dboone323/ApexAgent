@@ -19,6 +19,10 @@ actor AgentAuditLog {
         let riskLevel: String
         let wasConfirmed: Bool
         let status: String        // "success" | "failed" | "denied" | "started"
+        // Decision-log attribution (O6): WHY the call was allowed/denied and by
+        // which rule. Optional so previously-written rows still decode.
+        var decisionSource: String? = nil   // ApprovalVerdictSource rawValue, or "user"
+        var decisionRule: String? = nil     // guard regex source or granted key
     }
 
     private(set) var entries: [AuditEntry] = []
@@ -60,6 +64,36 @@ actor AgentAuditLog {
             riskLevel: AgentSecurity.riskLevel(for: toolName).rawValue,
             wasConfirmed: wasConfirmed,
             status: status
+        )
+        entries.append(entry)
+        if entries.count > maxInMemoryEntries {
+            entries.removeFirst(entries.count - maxInMemoryEntries)
+        }
+        persist(entry)
+    }
+
+    /// Append an authorization DECISION row: which tool call was allowed or
+    /// denied, by which rule, from which source (O6, port of OpenMausBot
+    /// decision-log.ts). Arguments are redacted through SecretRedactor first —
+    /// summaries carry whatever the agent typed, credentials included.
+    func recordDecision(
+        toolName: String,
+        arguments: String,
+        approved: Bool,
+        source: ApprovalVerdictSource?,
+        rule: String?
+    ) {
+        let redacted = SecretRedactor.redact(text: arguments)
+        let entry = AuditEntry(
+            id: UUID(),
+            timestamp: Date(),
+            toolName: toolName,
+            arguments: String(redacted.prefix(2000)),
+            riskLevel: AgentSecurity.riskLevel(for: toolName).rawValue,
+            wasConfirmed: approved,
+            status: approved ? "auto-approved" : "denied",
+            decisionSource: source?.rawValue,
+            decisionRule: rule
         )
         entries.append(entry)
         if entries.count > maxInMemoryEntries {
