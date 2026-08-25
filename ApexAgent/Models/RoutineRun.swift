@@ -1,0 +1,63 @@
+import Foundation
+import SwiftData
+
+// MARK: - RoutineRun: a receipt for one execution of a Routine (O5, port of OpenMausBot routines.ts run receipts)
+//
+// RoutineManager.execute() is fire-and-forget today. A run receipt snapshots
+// the work so an edited/deleted definition cannot rewrite history, and lets
+// the UI (and, later, webhooks) show queued → running → completed/failed/cancelled
+// with the output/error that ended it.
+
+enum RoutineRunStatus: String, Codable, Sendable {
+    case queued = "queued"
+    case running = "running"
+    case completed = "completed"
+    case failed = "failed"
+    case cancelled = "cancelled"
+
+    var isActive: Bool { self == .queued || self == .running }
+}
+
+/// A snapshot of one routine execution, keyed independently of the Routine so
+/// history survives edits/deletes. Lightweight — not currently backed by
+/// SwiftData (kept as a value type so tests and the UI can share it freely).
+struct RoutineRun: Identifiable, Codable, Equatable, Sendable {
+    let id: UUID
+    let routineId: UUID
+    let routineName: String
+    /// Snapshot the work so an edited/deleted definition cannot rewrite history.
+    let prompt: String
+    let botId: UUID?
+    let trigger: RoutineTrigger
+    var status: RoutineRunStatus
+    var startedAt: Date
+    var finishedAt: Date?
+    var output: String?
+    var error: String?
+
+    init(
+        id: UUID = UUID(),
+        routineId: UUID,
+        routineName: String,
+        prompt: String,
+        botId: UUID? = nil,
+        trigger: RoutineTrigger = .manual,
+        status: RoutineRunStatus = .queued,
+        startedAt: Date = Date(),
+        finishedAt: Date? = nil,
+        output: String? = nil,
+        error: String? = nil
+    ) {
+        self.id = id
+        self.routineId = routineId
+        self.routineName = routineName
+        self.prompt = prompt
+        self.botId = botId
+        self.trigger = trigger
+        self.status = status
+        self.startedAt = startedAt
+        self.finishedAt = finishedAt
+        self.output = output
+        self.error = error
+    }
+}

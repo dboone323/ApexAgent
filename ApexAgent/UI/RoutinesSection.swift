@@ -115,6 +115,7 @@ struct RoutineRow: View {
         case .onError:     return "exclamationmark.triangle"
         case .onSuccess:   return "checkmark.circle"
         case .onMessage:   return "message"
+        case .webhook:     return "bolt"
         }
     }
 
@@ -125,6 +126,7 @@ struct RoutineRow: View {
         case .onError:     return "On failure"
         case .onSuccess:   return "On success"
         case .onMessage:   return "On message"
+        case .webhook:     return "Webhook"
         }
     }
 }

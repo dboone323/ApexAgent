@@ -46,4 +46,5 @@ enum RoutineTrigger: String, Codable, CaseIterable {
     case onError             = "When build/tool fails"   // reaction to a failure signal
     case onSuccess           = "When build/tool succeeds"// reaction to a success signal
     case onMessage           = "On specific message"     // (placeholder — Phase 3 hook)
+    case webhook             = "Webhook"                 // triggered by an external POST
 }
