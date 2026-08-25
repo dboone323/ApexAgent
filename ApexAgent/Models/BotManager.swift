@@ -71,6 +71,57 @@ final class BotManager {
         sessions[botId]?.isGenerating ?? false
     }
 
+    // MARK: - Peer approvals (O9 wiring)
+
+    /// Gate for BOT-initiated contact with another bot (a chief delegating,
+    /// an ask-bot hand-off). User-typed messages never pass through here.
+    let peerApprovals = PeerApprovalCoordinator()
+
+    enum PeerDeliveryDecision: Equatable {
+        /// A grant covered this pair — deliver immediately.
+        case deliver
+        /// A card was raised on the sender's session; hold the message until
+        /// `resolvePeerRequest` settles it.
+        case blockedPendingCard(requestId: String)
+    }
+
+    /// Decide whether `from` may send `message` to `to`. Without a grant this
+    /// raises a pending approval and flags the sender's session for attention;
+    /// the caller must not deliver until it resolves to allow.
+    func peerDeliveryDecision(from: BotProfile, to: BotProfile, message: String) -> PeerDeliveryDecision {
+        let outcome = peerApprovals.requestApproval(
+            fromBotId: from.id.uuidString,
+            toBotId: to.id.uuidString,
+            action: .askBot,
+            message: message)
+        switch outcome {
+        case .allowedByExistingGrant:
+            return .deliver
+        case .pendingCard(let requestId):
+            if let senderSession = sessions[from.id] {
+                senderSession.needsAttention = true
+            }
+            return .blockedPendingCard(requestId: requestId)
+        }
+    }
+
+    /// Settle a peer-approval card. With `remember`, a grant is written so the
+    /// same (action, target) pair passes silently next time.
+    @discardableResult
+    func resolvePeerRequest(requestId: String, allow: Bool, remember: Bool = false) -> Bool {
+        let request = peerApprovals.pendingRequest(id: requestId)
+        guard case .resolved(let allowed) =
+            peerApprovals.resolve(requestId: requestId, allow: allow, rememberGrant: remember) else {
+            return false
+        }
+        // The card settled: clear the attention flag it raised.
+        if let request, let uuid = UUID(uuidString: request.fromBotId),
+           let senderSession = sessions[uuid] {
+            senderSession.needsAttention = false
+        }
+        return allowed
+    }
+
     // MARK: - Bot CRUD
 
     /// Creates a new Bot with the given parameters and persists it.

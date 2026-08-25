@@ -114,6 +114,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
 
     var statusItem: NSStatusItem?
     var quickPromptPanel: QuickPromptPanel?
+    private var webhookServer: WebhookServer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
@@ -121,6 +122,25 @@ class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
         setupShortcuts()
         setupSpotlight()
         checkFMCLIAvailability()
+        startWebhookReceiverIfPossible()
+    }
+
+    /// O5: serve .webhook routines while the GUI runs. If the port is taken
+    /// (e.g. the daemon is already bound), its receiver covers us — non-fatal.
+    private func startWebhookReceiverIfPossible() {
+        let server = WebhookServer(manager: WebhookManager())
+        server.onAccepted = { routineName, _, _, _ in
+            Task { @MainActor in
+                _ = await RoutineManager.shared.dispatchWebhook(routineName: routineName)
+            }
+        }
+        do {
+            try server.start(preferredPort: 8800)
+            webhookServer = server
+            RoutineManager.shared.loadRoutines()
+        } catch {
+            print("ℹ️ Webhook receiver not started: \(error.localizedDescription)")
+        }
     }
 
     /// On macOS 27 the on-device FoundationModel + App Intents depend on `/usr/bin/fm`.
@@ -296,11 +316,23 @@ private func runDaemonMode() async {
     print("=== RUNNING DAEMON MODE ===")
     let orchestrator = AgentOrchestrator()
     do {
-        let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self)
+        let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self)
         orchestrator.modelContext = ModelContext(container)
         if let url = container.configurations.first?.url {
             print("🧠 SwiftData Store URL: \(url.path)")
         }
+
+        // WS3: the daemon owns bots + routines so scheduled/webhook work
+        // keeps running while the GUI is closed.
+        let computer = Computer()
+        let botManager = BotManager(orchestrator: orchestrator, computer: computer)
+        botManager.modelContext = ModelContext(container)
+        botManager.loadBotsFromDisk()
+        RoutineManager.shared.modelContext = ModelContext(container)
+        RoutineManager.shared.botManager = botManager
+        RoutineManager.shared.loadRoutines()
+        RoutineManager.shared.startScheduledRoutines()
+        print("🤖 Daemon bots: \(botManager.allBots.count), routines: \(RoutineManager.shared.routines.count)")
     } catch {
         print("⚠️ Failed to initialize SwiftData model context: \(error)")
     }
@@ -308,6 +340,23 @@ private func runDaemonMode() async {
     let server = ApexGatewayServer(port: 1337, orchestrator: orchestrator)
     do {
         try server.start()
+
+        // O5: localhost webhook receiver so .webhook routines fire externally.
+        let webhooks = WebhookServer(manager: WebhookManager())
+        webhooks.onAccepted = { routineName, _, _, _ in
+            Task { @MainActor in
+                _ = await RoutineManager.shared.dispatchWebhook(routineName: routineName)
+            }
+        }
+        do {
+            try webhooks.start(preferredPort: 8800)
+            print("🪝 Webhook receiver: http://127.0.0.1:\(webhooks.port)/hooks/<endpoint>")
+        } catch {
+            // Port busy (e.g. the GUI app is already running its own receiver):
+            // non-fatal, the gateway above still serves.
+            print("⚠️ Webhook receiver unavailable: \(error.localizedDescription)")
+        }
+
         // Wait a brief moment to ensure SystemLanguageModel is ready/loaded
         try? await Task.sleep(for: .seconds(2))
 
