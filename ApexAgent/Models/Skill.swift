@@ -13,6 +13,11 @@ final class Skill {
     var enabled: Bool
     var createdAt: Date
     var updatedAt: Date
+    // O8: SKILL.md-style catalog fields (defaults keep SwiftData lightweight
+    // migration working for stores created before these existed).
+    var triggerTermsJSON: String = "[]"
+    var requiredCapabilitiesJSON: String = "[]"
+    var version: String = "1.0.0"
 
     init(name: String,
          descriptionText: String,
