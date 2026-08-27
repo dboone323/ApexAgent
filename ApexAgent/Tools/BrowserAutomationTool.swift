@@ -19,7 +19,8 @@ class BrowserManager: NSObject, WKNavigationDelegate {
     func initializeWebView() {
         if webView == nil {
             let config = WKWebViewConfiguration()
-            webView = WKWebView(frame: .zero, configuration: config)
+            config.websiteDataStore = WKWebsiteDataStore.default()
+            webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 1280, height: 800), configuration: config)
             webView?.navigationDelegate = self
         }
     }
@@ -53,12 +54,12 @@ class BrowserManager: NSObject, WKNavigationDelegate {
         }
         
         let timeoutTask = Task {
-            try await Task.sleep(for: .seconds(10))
+            try await Task.sleep(for: .seconds(15))
             navigateTask.cancel()
             if self.navigationContinuation != nil {
                 let cont = self.navigationContinuation
                 self.navigationContinuation = nil
-                cont?.resume(throwing: NSError(domain: "BrowserManager", code: -4, userInfo: [NSLocalizedDescriptionKey: "Navigation timed out after 10 seconds"]))
+                cont?.resume(throwing: NSError(domain: "BrowserManager", code: -4, userInfo: [NSLocalizedDescriptionKey: "Navigation timed out after 15 seconds"]))
             }
         }
         
@@ -83,6 +84,49 @@ class BrowserManager: NSObject, WKNavigationDelegate {
                     continuation.resume(throwing: error)
                 } else {
                     continuation.resume(returning: result as? String ?? "")
+                }
+            }
+        }
+    }
+
+    func extractLinks() async throws -> String {
+        guard let webView = webView else {
+            return "ERROR: Browser has not been opened yet. Run open_url first."
+        }
+
+        let js = """
+        (function() {
+            var links = Array.from(document.querySelectorAll('a[href]')).slice(0, 50).map(function(a) {
+                var text = a.innerText.trim() || a.getAttribute('aria-label') || a.getAttribute('title') || '';
+                return '[' + text + '](' + a.href + ')';
+            });
+            return links.join('\\n');
+        })()
+        """
+        return try await withCheckedThrowingContinuation { continuation in
+            webView.evaluateJavaScript(js) { result, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: result as? String ?? "No links found.")
+                }
+            }
+        }
+    }
+
+    func evaluateScript(_ script: String) async throws -> String {
+        guard let webView = webView else {
+            return "ERROR: Browser has not been opened yet. Run open_url first."
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            webView.evaluateJavaScript(script) { result, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else if let result = result {
+                    continuation.resume(returning: "\(result)")
+                } else {
+                    continuation.resume(returning: "Script executed successfully (null return).")
                 }
             }
         }
@@ -145,6 +189,15 @@ class BrowserManager: NSObject, WKNavigationDelegate {
             }
         }
     }
+
+    func clearSession() async throws -> String {
+        let store = WKWebsiteDataStore.default()
+        let types = WKWebsiteDataStore.allWebsiteDataTypes()
+        let date = Date(timeIntervalSince1970: 0)
+        await store.removeData(ofTypes: types, modifiedSince: date)
+        cleanup()
+        return "✅ Browser session and stored website data cleared."
+    }
     
     // MARK: - WKNavigationDelegate
     
@@ -184,11 +237,11 @@ struct BrowserAutomationTool: Tool {
     }
 
     let name = "control_browser"
-    let description = "Controls a headless, windowless web browser (Safari/WebKit based) to open pages, scrape content, click elements, and fill forms."
+    let description = "Controls a persistent headless web browser (WebKit-based) to open pages, scrape content, click elements, fill forms, extract links, evaluate JavaScript, and manage sessions."
 
     @Generable
     struct Arguments: Decodable {
-        @Guide(description: "The action to perform: 'open_url', 'scrape_page', 'click_element', 'input_text'")
+        @Guide(description: "The action to perform: 'open_url', 'scrape_page', 'extract_links', 'click_element', 'input_text', 'evaluate_script', 'clear_session'")
         var action: String
         
         @Guide(description: "The URL to navigate to - required for open_url")
@@ -197,7 +250,7 @@ struct BrowserAutomationTool: Tool {
         @Guide(description: "CSS selector for the target element - required for click_element and input_text")
         var selector: String?
         
-        @Guide(description: "The text value to input - required for input_text")
+        @Guide(description: "The text value to input or JavaScript snippet to evaluate")
         var textValue: String?
     }
 
@@ -212,6 +265,15 @@ struct BrowserAutomationTool: Tool {
                 
             case "scrape_page":
                 return try await BrowserManager.shared.scrapePage()
+
+            case "extract_links":
+                return try await BrowserManager.shared.extractLinks()
+
+            case "evaluate_script":
+                guard let script = arguments.textValue else {
+                    return "ERROR: textValue containing JavaScript is required for evaluate_script action."
+                }
+                return try await BrowserManager.shared.evaluateScript(script)
                 
             case "click_element":
                 guard let selector = arguments.selector else {
@@ -227,9 +289,12 @@ struct BrowserAutomationTool: Tool {
                     return "ERROR: textValue is required for input_text action."
                 }
                 return try await BrowserManager.shared.inputText(selector: selector, text: textValue)
+
+            case "clear_session":
+                return try await BrowserManager.shared.clearSession()
                 
             default:
-                return "ERROR: Unknown action '\(arguments.action)'. Supported: open_url, scrape_page, click_element, input_text"
+                return "ERROR: Unknown action '\(arguments.action)'. Supported: open_url, scrape_page, extract_links, click_element, input_text, evaluate_script, clear_session"
             }
         }
     }

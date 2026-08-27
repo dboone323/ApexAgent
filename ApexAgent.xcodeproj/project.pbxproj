@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D918D1E88C7BF68C53E8ED06 /* BrowserAndDaemonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D18CE40E150BF0C27EDBEEC /* BrowserAndDaemonTests.swift */; };
 		596E94EBA667D5475C637B3E /* AppleShortcutsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 739FA470EFCB60E7A008AB23 /* AppleShortcutsTool.swift */; };
 		AE980ECFFDEAB2F97F97EBBA /* OSLogQueryTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0036449A9821D6485FC1D32 /* OSLogQueryTool.swift */; };
 		213F889B296238AE52DC31A3 /* WatchPathsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC1B9141FF465C447395500 /* WatchPathsTool.swift */; };
@@ -473,6 +474,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		9D18CE40E150BF0C27EDBEEC /* BrowserAndDaemonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserAndDaemonTests.swift; sourceTree = "<group>"; };
 		739FA470EFCB60E7A008AB23 /* AppleShortcutsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleShortcutsTool.swift; sourceTree = "<group>"; };
 		C0036449A9821D6485FC1D32 /* OSLogQueryTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSLogQueryTool.swift; sourceTree = "<group>"; };
 		DEC1B9141FF465C447395500 /* WatchPathsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPathsTool.swift; sourceTree = "<group>"; };

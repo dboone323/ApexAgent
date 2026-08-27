@@ -113,6 +113,9 @@ struct SettingsView: View {
     @AppStorage("apex.voiceSpeechRate") private var voiceSpeechRate: Double = 0.52
     @AppStorage("apex.reasoningBudget") private var reasoningBudget: String = "moderate"
     @AppStorage("apex.maxResponseTokens") private var maxResponseTokens: Int = 4096
+    @AppStorage("apex.autoApproveToolCalls") private var autoApproveToolCalls: Bool = false
+    @State private var isDaemonInstalled: Bool = false
+    @State private var alwaysAllowKeys: [String] = []
 
     var body: some View {
         NavigationStack {
@@ -523,6 +526,66 @@ struct SettingsView: View {
                     }
                 }
 
+                // MARK: 24/7 Background Daemon & Webhooks
+                Section("24/7 Background Daemon & Webhooks") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Supervised LaunchAgent Daemon")
+                                    .font(AppTheme.Font.headline(13, weight: .semibold))
+                                Text(isDaemonInstalled ? "Daemon is installed & supervised by launchd." : "Daemon is not installed.")
+                                    .font(AppTheme.Font.caption(11))
+                                    .foregroundStyle(AppTheme.Palette.textSecondary)
+                            }
+                            Spacer()
+                            Button(isDaemonInstalled ? "Uninstall Daemon" : "Install Daemon") {
+                                toggleDaemon()
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(isDaemonInstalled ? .red : .green)
+                        }
+                        
+                        Divider()
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Webhook Ingress Endpoint")
+                                .font(AppTheme.Font.headline(12, weight: .semibold))
+                            Text("http://localhost:8800/api/v1/webhook/:routineName")
+                                .font(AppTheme.Font.mono(11))
+                                .foregroundStyle(AppTheme.Palette.accent)
+                            Text("Authorization: Bearer <apex.webhookSecret> or ?secret=<key>")
+                                .font(AppTheme.Font.caption(10))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
+                        }
+                    }
+                    .padding(.vertical, AppTheme.Spacing.xs)
+                }
+
+                // MARK: Tool Governance & Auto-Approval Policy
+                Section("Tool Governance & Auto-Approval") {
+                    Toggle("Auto-Approve Safe Tool Calls", isOn: $autoApproveToolCalls)
+                    
+                    if !alwaysAllowKeys.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Remembered 'Always Allow' Grants")
+                                .font(AppTheme.Font.headline(12, weight: .semibold))
+                            ForEach(alwaysAllowKeys, id: \.self) { key in
+                                HStack {
+                                    Text(key)
+                                        .font(AppTheme.Font.mono(11))
+                                    Spacer()
+                                    Button("Revoke") {
+                                        revokeKey(key)
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .foregroundStyle(.red)
+                                }
+                            }
+                        }
+                        .padding(.vertical, AppTheme.Spacing.xs)
+                    }
+                }
+
                 // MARK: Agent Persona
                 Section {
                     TextEditor(text: $localInstructions)
@@ -605,6 +668,8 @@ struct SettingsView: View {
                  localInstructions = orchestrator.agentInstructions
                  orchestrator.multiAgentModeEnabled = multiAgentModeEnabled
                  startSandboxStatusPolling()
+                 refreshDaemonStatus()
+                 refreshAlwaysAllowKeys()
             }
             .onDisappear {
                  sandboxPollTask?.cancel()
@@ -816,5 +881,39 @@ extension SettingsView {
                 try? await Task.sleep(for: .seconds(1))
             }
         }
+    }
+
+    @MainActor
+    fileprivate func refreshDaemonStatus() {
+        let controller = LaunchAgentController()
+        self.isDaemonInstalled = controller.isInstalled
+    }
+
+    @MainActor
+    fileprivate func refreshAlwaysAllowKeys() {
+        self.alwaysAllowKeys = UserDefaults.standard.stringArray(forKey: "apex.alwaysAllowKeys") ?? []
+    }
+
+    @MainActor
+    fileprivate func toggleDaemon() {
+        let controller = LaunchAgentController()
+        if isDaemonInstalled {
+            controller.bootoutNow()
+            try? controller.uninstall()
+        } else {
+            let appPath = Bundle.main.bundlePath
+            let execPath = Bundle.main.executablePath ?? "\(appPath)/Contents/MacOS/ApexAgent"
+            try? controller.install(programPath: execPath)
+            controller.bootstrapNow()
+        }
+        refreshDaemonStatus()
+    }
+
+    @MainActor
+    fileprivate func revokeKey(_ key: String) {
+        var keys = UserDefaults.standard.stringArray(forKey: "apex.alwaysAllowKeys") ?? []
+        keys.removeAll { $0 == key }
+        UserDefaults.standard.set(keys, forKey: "apex.alwaysAllowKeys")
+        refreshAlwaysAllowKeys()
     }
 }
