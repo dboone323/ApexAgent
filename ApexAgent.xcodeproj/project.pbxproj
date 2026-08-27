@@ -7,6 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		596E94EBA667D5475C637B3E /* AppleShortcutsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 739FA470EFCB60E7A008AB23 /* AppleShortcutsTool.swift */; };
+		AE980ECFFDEAB2F97F97EBBA /* OSLogQueryTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0036449A9821D6485FC1D32 /* OSLogQueryTool.swift */; };
+		213F889B296238AE52DC31A3 /* WatchPathsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC1B9141FF465C447395500 /* WatchPathsTool.swift */; };
+		DF6079775C89250E2E98FAEA /* NetworkDiagnosticsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBE770207CA8010F63BED8F /* NetworkDiagnosticsTool.swift */; };
+		4EEC12B2D5EFB521203E7F78 /* SimctlTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1590FF72EAF22336F4835E0 /* SimctlTool.swift */; };
+		793005F360BB537E34F009AD /* MailAutomationTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 738C9E9B3FBE031CCD3A8E0C /* MailAutomationTool.swift */; };
+		83B571717B90523262F45C36 /* DeepLinkTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0C7D95E5B59BCF3F5041F36 /* DeepLinkTool.swift */; };
+		94E11136114E3FCCA82BB199 /* ComputerUseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 794B96927E447F31F3E9AF53 /* ComputerUseTests.swift */; };
+		E165B6127AF3FE9F193A27AA /* SystemToolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 536D0CDBD534BD2B50C4FB01 /* SystemToolsTests.swift */; };
+		AF50CEDC5511222686D42EF5 /* ExternalToolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CB7A3E3904B6F6CFF13B17B /* ExternalToolsTests.swift */; };
 		08B19F2EFE9C8E9B0C961165 /* WeatherTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4CF70964D59F07B1F7A1974 /* WeatherTool.swift */; };
 		03B8D1E05338508516C01BB0 /* MapSearchTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10DC210E739EF6B27CBE988B /* MapSearchTool.swift */; };
 		F6AE809CBAEE40DC94A176D9 /* DirectionsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = E36BEC63EC4B7EEF24085796 /* DirectionsTool.swift */; };
@@ -14,6 +24,7 @@
 		55CE43D59C6207E9633B8EA6 /* ReminderTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3896B25562F15E63F12612EE /* ReminderTool.swift */; };
 		512BD307E9E98C5968D7547C /* TranslateTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1280DD3CA2255FBC82C82BC7 /* TranslateTool.swift */; };
 		C7B3EAAD6B506FAFC6098EB3 /* EntityExtractTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08B93392848DB6BB1A575664 /* EntityExtractTool.swift */; };
+		AB12CD34000000000000B001 /* NativeToolsP3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB12CD34000000000000B002 /* NativeToolsP3Tests.swift */; };
 		831C1CBD49692AC5F4D030B9 /* NativeToolsP0Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 597733B79596393601865F20 /* NativeToolsP0Tests.swift */; };
 		427E4E985FE7BAD1193C141E /* NativeToolsP1Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6ADE99DB9DBBC9E436A115C2 /* NativeToolsP1Tests.swift */; };
 		6760CC0B51E701D17DC657DB /* NativeToolsP2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47CF0ED419C543AE7B02ECFB /* NativeToolsP2Tests.swift */; };
@@ -462,6 +473,16 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		739FA470EFCB60E7A008AB23 /* AppleShortcutsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleShortcutsTool.swift; sourceTree = "<group>"; };
+		C0036449A9821D6485FC1D32 /* OSLogQueryTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSLogQueryTool.swift; sourceTree = "<group>"; };
+		DEC1B9141FF465C447395500 /* WatchPathsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPathsTool.swift; sourceTree = "<group>"; };
+		8BBE770207CA8010F63BED8F /* NetworkDiagnosticsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkDiagnosticsTool.swift; sourceTree = "<group>"; };
+		A1590FF72EAF22336F4835E0 /* SimctlTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimctlTool.swift; sourceTree = "<group>"; };
+		738C9E9B3FBE031CCD3A8E0C /* MailAutomationTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailAutomationTool.swift; sourceTree = "<group>"; };
+		F0C7D95E5B59BCF3F5041F36 /* DeepLinkTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkTool.swift; sourceTree = "<group>"; };
+		794B96927E447F31F3E9AF53 /* ComputerUseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComputerUseTests.swift; sourceTree = "<group>"; };
+		536D0CDBD534BD2B50C4FB01 /* SystemToolsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemToolsTests.swift; sourceTree = "<group>"; };
+		8CB7A3E3904B6F6CFF13B17B /* ExternalToolsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalToolsTests.swift; sourceTree = "<group>"; };
 		C4CF70964D59F07B1F7A1974 /* WeatherTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherTool.swift; sourceTree = "<group>"; };
 		10DC210E739EF6B27CBE988B /* MapSearchTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapSearchTool.swift; sourceTree = "<group>"; };
 		E36BEC63EC4B7EEF24085796 /* DirectionsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectionsTool.swift; sourceTree = "<group>"; };
@@ -469,6 +490,7 @@
 		3896B25562F15E63F12612EE /* ReminderTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderTool.swift; sourceTree = "<group>"; };
 		1280DD3CA2255FBC82C82BC7 /* TranslateTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslateTool.swift; sourceTree = "<group>"; };
 		08B93392848DB6BB1A575664 /* EntityExtractTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityExtractTool.swift; sourceTree = "<group>"; };
+		AB12CD34000000000000B002 /* NativeToolsP3Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeToolsP3Tests.swift; sourceTree = "<group>"; };
 		597733B79596393601865F20 /* NativeToolsP0Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeToolsP0Tests.swift; sourceTree = "<group>"; };
 		6ADE99DB9DBBC9E436A115C2 /* NativeToolsP1Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeToolsP1Tests.swift; sourceTree = "<group>"; };
 		47CF0ED419C543AE7B02ECFB /* NativeToolsP2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeToolsP2Tests.swift; sourceTree = "<group>"; };
@@ -891,6 +913,13 @@
 				8C2ECE1C5EB33E512C19A58F /* SystemInfoTool.swift */,
 				16B28413018F6CF1008978A5 /* Tool+Logging.swift */,
 				74C7C320DE2DD5CA46182330 /* WebSearchTool.swift */,
+				739FA470EFCB60E7A008AB23 /* AppleShortcutsTool.swift */,
+				C0036449A9821D6485FC1D32 /* OSLogQueryTool.swift */,
+				DEC1B9141FF465C447395500 /* WatchPathsTool.swift */,
+				8BBE770207CA8010F63BED8F /* NetworkDiagnosticsTool.swift */,
+				A1590FF72EAF22336F4835E0 /* SimctlTool.swift */,
+				738C9E9B3FBE031CCD3A8E0C /* MailAutomationTool.swift */,
+				F0C7D95E5B59BCF3F5041F36 /* DeepLinkTool.swift */,
 				C4CF70964D59F07B1F7A1974 /* WeatherTool.swift */,
 				10DC210E739EF6B27CBE988B /* MapSearchTool.swift */,
 				E36BEC63EC4B7EEF24085796 /* DirectionsTool.swift */,
@@ -1196,9 +1225,13 @@
 				DB601B8F44254F6C6A486D22 /* ModelEvaluationsTests.swift */,
 				58ED3B1CECD1A9B0BC40F6BF /* MultiBotParityP2Tests.swift */,
 				500ED1F99C8E4C1AB08B5BA7 /* MultiBotParityP3Tests.swift */,
+				794B96927E447F31F3E9AF53 /* ComputerUseTests.swift */,
+				536D0CDBD534BD2B50C4FB01 /* SystemToolsTests.swift */,
+				8CB7A3E3904B6F6CFF13B17B /* ExternalToolsTests.swift */,
 				597733B79596393601865F20 /* NativeToolsP0Tests.swift */,
 				6ADE99DB9DBBC9E436A115C2 /* NativeToolsP1Tests.swift */,
 				47CF0ED419C543AE7B02ECFB /* NativeToolsP2Tests.swift */,
+				AB12CD34000000000000B002 /* NativeToolsP3Tests.swift */,
 				A4E2B5131DC31C321E6339BD /* MultiBotParityTests.swift */,
 				7067E12C75A341C5734D4121 /* OpenMausBotPorts2Tests.swift */,
 				636D502A58B0A737F9DDFAAF /* OpenMausBotPortsTests.swift */,
@@ -1671,6 +1704,13 @@
 				FD50115C2BD486F1983C91B7 /* VoiceController.swift in Sources */,
 				A0383483E97583C16F881264 /* WebSearchHelper.swift in Sources */,
 				4D8668A2B63D24A4A698ABDD /* WebSearchTool.swift in Sources */,
+				596E94EBA667D5475C637B3E /* AppleShortcutsTool.swift in Sources */,
+				AE980ECFFDEAB2F97F97EBBA /* OSLogQueryTool.swift in Sources */,
+				213F889B296238AE52DC31A3 /* WatchPathsTool.swift in Sources */,
+				DF6079775C89250E2E98FAEA /* NetworkDiagnosticsTool.swift in Sources */,
+				4EEC12B2D5EFB521203E7F78 /* SimctlTool.swift in Sources */,
+				793005F360BB537E34F009AD /* MailAutomationTool.swift in Sources */,
+				83B571717B90523262F45C36 /* DeepLinkTool.swift in Sources */,
 				08B19F2EFE9C8E9B0C961165 /* WeatherTool.swift in Sources */,
 				03B8D1E05338508516C01BB0 /* MapSearchTool.swift in Sources */,
 				F6AE809CBAEE40DC94A176D9 /* DirectionsTool.swift in Sources */,
@@ -1792,9 +1832,13 @@
 				39CFC4C89C7B511958E99563 /* ModelEvaluationsTests.swift in Sources */,
 				50FF6DC81E88074A67DD27A2 /* MultiBotParityP2Tests.swift in Sources */,
 				4BCD36FE453CFBBC7CAD3040 /* MultiBotParityP3Tests.swift in Sources */,
+				94E11136114E3FCCA82BB199 /* ComputerUseTests.swift in Sources */,
+				E165B6127AF3FE9F193A27AA /* SystemToolsTests.swift in Sources */,
+				AF50CEDC5511222686D42EF5 /* ExternalToolsTests.swift in Sources */,
 				831C1CBD49692AC5F4D030B9 /* NativeToolsP0Tests.swift in Sources */,
 				427E4E985FE7BAD1193C141E /* NativeToolsP1Tests.swift in Sources */,
 				6760CC0B51E701D17DC657DB /* NativeToolsP2Tests.swift in Sources */,
+				AB12CD34000000000000B001 /* NativeToolsP3Tests.swift in Sources */,
 				744B67EC04E466B41B8C5852 /* MultiBotParityTests.swift in Sources */,
 				F8B3A8688CE7B0D6B412A925 /* OpenMausBotPorts2Tests.swift in Sources */,
 				474F8651D27756D6ABBE6558 /* OpenMausBotPortsTests.swift in Sources */,

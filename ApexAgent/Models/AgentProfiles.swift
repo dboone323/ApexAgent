@@ -295,6 +295,29 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
             if allowedTools.contains("extract_entities") {
                 EntityExtractTool(orchestrator: orchestrator)
             }
+            // Tier 2: System tools
+            if allowedTools.contains("run_shortcut") {
+                AppleShortcutsTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("query_logs") {
+                OSLogQueryTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("watch_paths") {
+                WatchPathsTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("network_diagnostics") {
+                NetworkDiagnosticsTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("simctl") {
+                SimctlTool(orchestrator: orchestrator)
+            }
+            // External integrations
+            if allowedTools.contains("mail_automation") {
+                MailAutomationTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("deep_link") {
+                DeepLinkTool(orchestrator: orchestrator)
+            }
         }
         return profile
             .apexAuditHooks()

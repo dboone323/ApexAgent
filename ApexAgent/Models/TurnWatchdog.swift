@@ -10,29 +10,44 @@ import Foundation
 // is wedged. Turns parked on a human approval are exempt — waiting on a
 // person is not a stall.
 
-struct WatchedTurn: Sendable {
-    let threadId: String
-    let botId: String
-    let startedAt: TimeInterval
-    var lastEventAt: TimeInterval
-    var waitingOnHuman: Bool
+public struct WatchedTurn: Sendable {
+    public let threadId: String
+    public let botId: String
+    public let startedAt: TimeInterval
+    public var lastEventAt: TimeInterval
+    public var waitingOnHuman: Bool
+
+    public init(threadId: String, botId: String, startedAt: TimeInterval, lastEventAt: TimeInterval, waitingOnHuman: Bool = false) {
+        self.threadId = threadId
+        self.botId = botId
+        self.startedAt = startedAt
+        self.lastEventAt = lastEventAt
+        self.waitingOnHuman = waitingOnHuman
+    }
 }
 
-final class TurnWatchdog {
+public final class TurnWatchdog {
 
-    struct Options {
-        var stallMs: TimeInterval
-        var checkMs: TimeInterval
+    public struct Options: @unchecked Sendable {
+        public var stallMs: TimeInterval
+        public var checkMs: TimeInterval
         /// Called once per stalled turn, after the entry is removed.
-        var onStall: (WatchedTurn) -> Void
-        var now: () -> TimeInterval
+        public var onStall: (WatchedTurn) -> Void
+        public var now: () -> TimeInterval
+
+        public init(stallMs: TimeInterval, checkMs: TimeInterval, onStall: @escaping (WatchedTurn) -> Void, now: @escaping () -> TimeInterval = { Date().timeIntervalSince1970 }) {
+            self.stallMs = stallMs
+            self.checkMs = checkMs
+            self.onStall = onStall
+            self.now = now
+        }
     }
 
     private let options: Options
     private var turns: [String: WatchedTurn] = [:]
     private var timer: Timer?
 
-    init(options: Options) {
+    public init(options: Options) {
         self.options = options
     }
 
@@ -42,7 +57,7 @@ final class TurnWatchdog {
 
     // MARK: Lifecycle
 
-    func start() {
+    public func start() {
         guard timer == nil else { return }
         let timer = Timer(timeInterval: options.checkMs / 1000.0, repeats: true) { [weak self] _ in
             self?.sweep()
@@ -51,7 +66,7 @@ final class TurnWatchdog {
         self.timer = timer
     }
 
-    func stop() {
+    public func stop() {
         timer?.invalidate()
         timer = nil
         turns.removeAll()
@@ -60,13 +75,13 @@ final class TurnWatchdog {
     // MARK: Events
 
     /// A turn was dispatched on this thread.
-    func watch(threadId: String, botId: String) {
+    public func watch(threadId: String, botId: String) {
         let at = now()
         turns[threadId] = WatchedTurn(threadId: threadId, botId: botId, startedAt: at, lastEventAt: at, waitingOnHuman: false)
     }
 
     /// Any event for the thread proves the turn is alive.
-    func touch(threadId: String) {
+    public func touch(threadId: String) {
         guard var turn = turns[threadId] else { return }
         turn.lastEventAt = now()
         turns[threadId] = turn
@@ -74,7 +89,7 @@ final class TurnWatchdog {
 
     /// request.opened → true (a human is deciding; not a stall however long they
     /// take); request.resolved → false (the clock restarts).
-    func setWaitingOnHuman(threadId: String, waiting: Bool) {
+    public func setWaitingOnHuman(threadId: String, waiting: Bool) {
         guard var turn = turns[threadId] else { return }
         turn.waitingOnHuman = waiting
         turn.lastEventAt = now()
@@ -82,18 +97,18 @@ final class TurnWatchdog {
     }
 
     /// The turn settled normally — stop watching it.
-    func settle(threadId: String) {
+    public func settle(threadId: String) {
         turns.removeValue(forKey: threadId)
     }
 
-    func isWatching(threadId: String) -> Bool {
+    public func isWatching(threadId: String) -> Bool {
         turns[threadId] != nil
     }
 
     // MARK: Sweep
 
     /// Visible for tests; the timer calls this on its interval.
-    func sweep() {
+    public func sweep() {
         let at = now()
         for turn in turns.values where !turn.waitingOnHuman {
             if at - turn.lastEventAt < options.stallMs { continue }

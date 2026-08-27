@@ -27,7 +27,7 @@ public actor AgentRegistry {
             Use tools like `read_file`, `write_file`, `list_directory`, `create_directory`, `delete_file`, `move_file`, and `audit_projects` to research and edit the workspace. \
             Be precise, check for compiling/correctness, and return detailed progress/results to Apex Prime.
             """,
-            allowedTools: ["read_file", "write_file", "list_directory", "create_directory", "delete_file", "move_file", "audit_projects", "create_skill", "run_shell_command", "analyze_image", "translate", "extract_entities"]
+            allowedTools: ["read_file", "write_file", "list_directory", "create_directory", "delete_file", "move_file", "audit_projects", "create_skill", "run_shell_command", "analyze_image", "translate", "extract_entities", "simctl"]
         ),
         "executor": RegisteredAgent(
             name: "executor",
@@ -36,7 +36,7 @@ public actor AgentRegistry {
             Use tools like `run_shell_command`, `run_applescript`, `control_app`, and `control_accessibility` to run tasks on this Mac. \
             Confirm results and return stdout/stderr/exit codes to Apex Prime.
             """,
-            allowedTools: ["run_shell_command", "run_applescript", "control_app", "control_accessibility", "calendar", "reminders"]
+            allowedTools: ["run_shell_command", "run_applescript", "control_app", "control_accessibility", "inspect_ui", "calendar", "reminders", "run_shortcut", "query_logs", "watch_paths", "network_diagnostics", "simctl", "mail_automation", "deep_link"]
         ),
         "controller": RegisteredAgent(
             name: "controller",
@@ -45,16 +45,16 @@ public actor AgentRegistry {
             Use tools like `control_browser`, `take_screenshot`, `read_clipboard`, `write_clipboard`, `get_frontmost_app`, `get_running_processes`, and `send_notification`. \
             Return findings to Apex Prime.
             """,
-            allowedTools: ["get_frontmost_app", "get_running_processes", "read_clipboard", "write_clipboard", "send_notification", "system_info", "control_accessibility", "control_app", "control_browser", "get_weather", "map_search", "get_directions"]
+            allowedTools: ["get_frontmost_app", "get_running_processes", "read_clipboard", "write_clipboard", "send_notification", "system_info", "control_accessibility", "control_app", "control_browser", "get_weather", "map_search", "get_directions", "inspect_ui", "run_shortcut", "network_diagnostics", "simctl", "mail_automation", "deep_link"]
         ),
         "researcher": RegisteredAgent(
             name: "researcher",
             systemPrompt: """
             You are Oracle, the Researcher Agent. Your role is to search the web, gather documentation, synthesize information, and read files. \
-            Use tools like `web_search`, `get_weather`, `map_search`, `get_directions`, `translate`, `extract_entities`, `read_file`, `list_directory`, `screenshot_tool`, `read_clipboard`, and `write_clipboard` to answer questions. \
+            Use tools like `web_search`, `get_weather`, `map_search`, `get_directions`, `translate`, `extract_entities`, `read_file`, `list_directory`, `screenshot_tool`, `read_clipboard`, `write_clipboard`, and `query_logs` to answer questions. \
             Provide clear citations, source summaries, and a final synthesized report to Apex Prime.
             """,
-            allowedTools: ["web_search", "get_weather", "map_search", "get_directions", "translate", "extract_entities", "read_clipboard", "write_clipboard", "read_file", "list_directory", "take_screenshot"]
+            allowedTools: ["web_search", "get_weather", "map_search", "get_directions", "translate", "extract_entities", "read_clipboard", "write_clipboard", "read_file", "list_directory", "take_screenshot", "query_logs"]
         ),
         "linter": RegisteredAgent(
             name: "linter",
@@ -76,9 +76,9 @@ public actor AgentRegistry {
             name: "planner",
             systemPrompt: """
             You are Chronos, the Planner Agent. Your role is to decompose complex development goals into step-by-step roadmaps, assign task priorities, track milestones, and manage task lists. \
-            Use tools like `read_file`, `write_file`, `list_directory`, `update_plan`, `store_memory`, `search_memory`, `calendar`, `reminders`, and `extract_entities` to structure execution plans. Return findings to Apex Prime.
+            Use tools like `read_file`, `write_file`, `list_directory`, `update_plan`, `store_memory`, `search_memory`, `calendar`, `reminders`, `extract_entities`, and `deep_link` to structure execution plans. Return findings to Apex Prime.
             """,
-            allowedTools: ["read_file", "write_file", "list_directory", "update_plan", "store_memory", "search_memory", "calendar", "reminders", "extract_entities"]
+            allowedTools: ["read_file", "write_file", "list_directory", "update_plan", "store_memory", "search_memory", "calendar", "reminders", "extract_entities", "deep_link"]
         ),
         "supervisor": RegisteredAgent(
             name: "supervisor",

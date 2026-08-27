@@ -39,6 +39,7 @@ enum ApprovalRule {
 enum ApprovalVerdictSource: String, Sendable {
     case alwaysAllow = "always-allow"
     case autoMode = "auto-mode"
+    case containerSandbox = "container-sandbox"
     case destructiveGuard = "destructive-guard"
     case sensitiveGuard = "sensitive-guard"
     case unattendedBlock = "unattended-block"
@@ -127,14 +128,31 @@ enum ApprovalPolicy {
     ///   - unattended: the turn was started by an outside event (webhook/schedule)
     ///     with nobody at the keyboard — auto mode does not inherit it.
     ///   - localScope: the request controls the user's active desktop.
+    ///   - isContainerSandboxed: the request executes inside an isolated Apple Container micro-VM.
     static func verdict(
         tool: String,
         summary: String,
         alwaysAllow: [String] = [],
         autoApprove: Bool = false,
         unattended: Bool = false,
-        localScope: Bool = false
+        localScope: Bool = false,
+        isContainerSandboxed: Bool = false
     ) -> ApprovalVerdict {
+        // Fast-path: When running inside an isolated native Apple Container micro-VM:
+        // 1. Blast radius is strictly constrained to the ephemeral guest OCI rootfs.
+        // 2. Package manager installation (apt/apk), sudo, compilation, and guest filesystem tasks are safe.
+        // 3. Only catastrophic host device destruction commands need guarding.
+        if isContainerSandboxed {
+            let hostDiskDestructive = matchFirst([
+                try! NSRegularExpression(pattern: #"\bdiskutil\s+erase|\bdd\s+[^|]*\bof=/dev/(r?disk|nvme)"#, options: [.caseInsensitive]),
+                try! NSRegularExpression(pattern: #"\bmkfs\b"#, options: [.caseInsensitive])
+            ], in: summary)
+            if let hostDiskDestructive {
+                return ApprovalVerdict(approve: nil, source: .destructiveGuard, rule: hostDiskDestructive)
+            }
+            return ApprovalVerdict(approve: "auto-approved in Apple Container sandbox", source: .containerSandbox, rule: nil)
+        }
+
         // Guards outrank grants: an always-allow can never widen into them.
         let destructive = matchFirst(ApprovalRule.destructive, in: summary)
             ?? matchFirst(ApprovalRule.destructive, in: tool)
@@ -177,11 +195,13 @@ enum ApprovalPolicy {
         alwaysAllow: [String] = [],
         autoApprove: Bool = false,
         unattended: Bool = false,
-        localScope: Bool = false
+        localScope: Bool = false,
+        isContainerSandboxed: Bool = false
     ) -> String? {
         verdict(
             tool: tool, summary: summary, alwaysAllow: alwaysAllow,
-            autoApprove: autoApprove, unattended: unattended, localScope: localScope
+            autoApprove: autoApprove, unattended: unattended, localScope: localScope,
+            isContainerSandboxed: isContainerSandboxed
         ).approve
     }
 }

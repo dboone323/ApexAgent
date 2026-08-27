@@ -478,7 +478,11 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     }
 
     @MainActor
-    func isCommandOrScriptAllowed(_ input: String) -> Bool {
+    func isCommandOrScriptAllowed(_ input: String, isContainerSandboxed: Bool = false) -> Bool {
+        if isContainerSandboxed {
+            return true
+        }
+
         guard let permissions = self.permissions else {
             return false
         }
@@ -1394,12 +1398,14 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         // grants, so an always-allow can never widen into them — a guarded or
         // unguarded-but-ungranted call still falls through to the human card,
         // with the deciding rule written to the decision log either way.
+        let isContainer = UserDefaults.standard.bool(forKey: "apex.appleContainersEnabled") && toolName == "run_shell_command"
         let verdict = ApprovalPolicy.verdict(
             tool: toolName,
             summary: arguments,
             alwaysAllow: alwaysAllowKeys,
             autoApprove: autoApproveToolCalls,
-            unattended: isUnattendedTurn
+            unattended: isUnattendedTurn,
+            isContainerSandboxed: isContainer
         )
         if verdict.approve != nil {
             await AgentAuditLog.shared.recordDecision(

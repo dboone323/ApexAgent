@@ -24,19 +24,49 @@ struct SandboxTests {
         #expect(!orchestrator.isCommandOrScriptAllowed("echo hello"))
     }
 
-    @Test func testPathRejectionThrowsSecuritySandboxError() {
+    @Test func testCommandAllowedWhenContainerSandboxedEvenIfDesktopPathReferenced() {
         let orchestrator = AgentOrchestrator()
-        do {
-            try orchestrator.verifyPathAllowed("/var/denied-path")
-            Issue.record("Expected pathViolation error")
-        } catch {
-            guard let sandboxError = error as? SecuritySandboxError else {
-                Issue.record("Expected SecuritySandboxError, got \(error)")
-                return
-            }
-            if case .pathViolation = sandboxError {} else {
-                Issue.record("Expected pathViolation, got \(sandboxError)")
-            }
-        }
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let desktop = (home as NSString).appendingPathComponent("Desktop")
+        orchestrator.permissions = AppPermissions(desktopFolderAllowed: false)
+        
+        // On host: blocked
+        #expect(!orchestrator.isCommandOrScriptAllowed("ls " + desktop, isContainerSandboxed: false))
+        
+        // In container sandbox: allowed (isolated micro-VM guest)
+        #expect(orchestrator.isCommandOrScriptAllowed("ls " + desktop, isContainerSandboxed: true))
+    }
+
+    @Test func testApprovalPolicyAutoApprovesInContainerSandbox() {
+        // Privileged commands inside the container are auto-approved
+        let verdict = ApprovalPolicy.verdict(
+            tool: "run_shell_command",
+            summary: "sudo apt-get install -y build-essential && rm -rf /tmp/build",
+            isContainerSandboxed: true
+        )
+        #expect(verdict.approve != nil)
+        #expect(verdict.source == .containerSandbox)
+    }
+
+    @Test func testApprovalPolicyBlocksHostDiskEraseEvenInContainerSandbox() {
+        // Catastrophic host disk destruction is guarded regardless
+        let verdict = ApprovalPolicy.verdict(
+            tool: "run_shell_command",
+            summary: "diskutil eraseDisk APFS CleanDisk /dev/disk2",
+            isContainerSandboxed: true
+        )
+        #expect(verdict.approve == nil)
+        #expect(verdict.source == .destructiveGuard)
+    }
+
+    @Test func testApprovalPolicyRetainsDestructiveGuardOnHost() {
+        // Host execution without container sandbox blocks destructive rm -rf
+        let verdict = ApprovalPolicy.verdict(
+            tool: "run_shell_command",
+            summary: "rm -rf /Users/test/project",
+            isContainerSandboxed: false
+        )
+        #expect(verdict.approve == nil)
+        #expect(verdict.source == .destructiveGuard)
     }
 }

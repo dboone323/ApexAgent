@@ -26,11 +26,14 @@ struct ShellTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Executing command in your terminal") {
+        let isContainer = UserDefaults.standard.bool(forKey: "apex.appleContainersEnabled")
+        let riskDesc: String? = isContainer ? nil : "Executing command in your terminal"
+
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: riskDesc) {
             let orchestrator = await self.orchestrator.orchestrator
             
-            // Security Check 1: Verify command path safety properties
-            let isCmdAllowed = await MainActor.run { orchestrator.isCommandOrScriptAllowed(arguments.command) }
+            // Security Check 1: Verify command path safety properties (bypassed in isolated container)
+            let isCmdAllowed = await MainActor.run { orchestrator.isCommandOrScriptAllowed(arguments.command, isContainerSandboxed: isContainer) }
             if !isCmdAllowed {
                 return "ERROR: Access to restricted directories (Desktop, Documents, Downloads, or Music) is disabled by system security settings."
             }
@@ -41,9 +44,11 @@ struct ShellTool: Tool {
                 let expandedDir = NSString(string: workingDir).expandingTildeInPath
                 let standardizedDir = URL(fileURLWithPath: expandedDir).standardized.path
                 
-                let isDirAllowed = await MainActor.run { orchestrator.isPathAllowed(standardizedDir) }
-                if !isDirAllowed {
-                    return "ERROR: Working directory '\(workingDir)' is restricted by system security settings."
+                if !isContainer {
+                    let isDirAllowed = await MainActor.run { orchestrator.isPathAllowed(standardizedDir) }
+                    if !isDirAllowed {
+                        return "ERROR: Working directory '\(workingDir)' is restricted by system security settings."
+                    }
                 }
                 
                 // Securely transition to target directory using single-quote escaping to prevent command injection

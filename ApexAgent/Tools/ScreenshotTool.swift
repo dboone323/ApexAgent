@@ -2,6 +2,7 @@ import Foundation
 import FoundationModels
 import AppKit
 import CoreGraphics
+import ScreenCaptureKit
 
 // MARK: - Screenshot Tool
 // Uses the macOS `screencapture` CLI tool which works reliably on macOS 27
@@ -29,6 +30,9 @@ struct ScreenshotTool: Tool {
 
         @Guide(description: "If true, captures only the frontmost window instead of the full screen")
         var windowOnly: Bool?
+
+        @Guide(description: "If true, uses fast ScreenCaptureKit instead of fallback screencapture. Defaults to true.")
+        var fast: Bool?
     }
 
     func call(arguments: Arguments) async throws -> String {
@@ -65,6 +69,55 @@ struct ScreenshotTool: Tool {
             }
 
             let windowOnly = arguments.windowOnly ?? false
+            let fast = arguments.fast ?? true
+
+            if fast, #available(macOS 14.0, *) {
+                do {
+                    let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+                    let filter: SCContentFilter
+                    if windowOnly {
+                        let targetWindowID = await MainActor.run { self.getFrontmostWindowID() }
+                        if let wId = targetWindowID, let targetWindow = content.windows.first(where: { $0.windowID == wId }) {
+                            filter = SCContentFilter(desktopIndependentWindow: targetWindow)
+                        } else if let display = content.displays.first {
+                            filter = SCContentFilter(display: display, excludingWindows: [])
+                        } else {
+                            throw NSError(domain: "ScreenshotTool", code: -1, userInfo: [NSLocalizedDescriptionKey: "No display found"])
+                        }
+                    } else {
+                        if let display = content.displays.first {
+                            filter = SCContentFilter(display: display, excludingWindows: [])
+                        } else {
+                            throw NSError(domain: "ScreenshotTool", code: -1, userInfo: [NSLocalizedDescriptionKey: "No display found"])
+                        }
+                    }
+                    
+                    let config = SCStreamConfiguration()
+                    config.pixelFormat = kCVPixelFormatType_32BGRA
+                    let cgImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+                    
+                    let nsImage = NSImage(cgImage: cgImage, size: .zero)
+                    guard let tiffData = nsImage.tiffRepresentation,
+                          let bitmapImage = NSBitmapImageRep(data: tiffData),
+                          let pngData = bitmapImage.representation(using: .png, properties: [:]) else {
+                        throw NSError(domain: "ScreenshotTool", code: -2, userInfo: [NSLocalizedDescriptionKey: "Failed to convert image to PNG"])
+                    }
+                    
+                    try pngData.write(to: URL(fileURLWithPath: savePath))
+                    
+                    let fileSize = pngData.count / 1024
+                    let w = Int(nsImage.size.width)
+                    let h = Int(nsImage.size.height)
+                    let dimensions = "\nDimensions: \\(w) × \\(h) px"
+                    
+                    return """
+                    ✅ Screenshot saved (fast mode): \\(savePath)
+                    File size: \\(fileSize) KB\\(dimensions)
+                    """
+                } catch {
+                    return "ERROR: ScreenCaptureKit capture failed: \\(error.localizedDescription)"
+                }
+            }
 
             var windowID: UInt32? = nil
             if windowOnly {
@@ -81,9 +134,9 @@ struct ScreenshotTool: Tool {
                 guard let wId = windowID else {
                     return "ERROR: Could not detect active window ID of the frontmost application."
                 }
-                command = "/usr/sbin/screencapture -x -t png -o -l \(wId) \"\(savePath)\""
+                command = "/usr/sbin/screencapture -x -t png -o -l \\(wId) \"\\(savePath)\""
             } else {
-                command = "/usr/sbin/screencapture -x -t png \"\(savePath)\""
+                command = "/usr/sbin/screencapture -x -t png \"\\(savePath)\""
             }
 
             let process = Process()
@@ -102,7 +155,7 @@ struct ScreenshotTool: Tool {
                 process.waitUntilExit()
                 screenshotWatchdog.cancel()
             } catch {
-                return "ERROR: Could not run screencapture: \(error.localizedDescription)"
+                return "ERROR: Could not run screencapture: \\(error.localizedDescription)"
             }
 
             let exitCode = process.terminationStatus
@@ -111,9 +164,9 @@ struct ScreenshotTool: Tool {
                 let errData = stderr.fileHandleForReading.readDataToEndOfFile()
                 let errMsg = String(data: errData, encoding: .utf8) ?? "Unknown error"
                 return """
-                ERROR: screencapture failed (exit code \(exitCode)).
+                ERROR: screencapture failed (exit code \\(exitCode)).
                 Make sure Screen Recording is enabled in System Settings → Privacy & Security → Screen Recording.
-                Details: \(errMsg)
+                Details: \\(errMsg)
                 """
             }
 
@@ -134,14 +187,35 @@ struct ScreenshotTool: Tool {
             if let nsImage = NSImage(contentsOfFile: savePath) {
                 let w = Int(nsImage.size.width)
                 let h = Int(nsImage.size.height)
-                dimensions = "\nDimensions: \(w) × \(h) px"
+                dimensions = "\nDimensions: \\(w) × \\(h) px"
             }
 
             return """
-            ✅ Screenshot saved: \(savePath)
-            File size: \(fileSize) KB\(dimensions)
+            ✅ Screenshot saved: \\(savePath)
+            File size: \\(fileSize) KB\\(dimensions)
             """
         }
+    }
+
+    public func captureToData() async throws -> Data {
+        guard #available(macOS 14.0, *) else {
+            throw NSError(domain: "ScreenshotTool", code: -1, userInfo: [NSLocalizedDescriptionKey: "captureToData requires macOS 14.0+"])
+        }
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+        guard let display = content.displays.first else {
+            throw NSError(domain: "ScreenshotTool", code: -2, userInfo: [NSLocalizedDescriptionKey: "No display found"])
+        }
+        let filter = SCContentFilter(display: display, excludingWindows: [])
+        let config = SCStreamConfiguration()
+        config.pixelFormat = kCVPixelFormatType_32BGRA
+        let cgImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
+        let nsImage = NSImage(cgImage: cgImage, size: .zero)
+        guard let tiffData = nsImage.tiffRepresentation,
+              let bitmapImage = NSBitmapImageRep(data: tiffData),
+              let pngData = bitmapImage.representation(using: .png, properties: [:]) else {
+            throw NSError(domain: "ScreenshotTool", code: -3, userInfo: [NSLocalizedDescriptionKey: "Image encoding failed"])
+        }
+        return pngData
     }
 
     @MainActor
