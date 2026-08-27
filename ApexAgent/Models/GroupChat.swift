@@ -200,7 +200,7 @@ final class GroupChatSession {
         }
 
         do {
-            let engine = NativeAppleEngine(orchestrator: orchestrator)
+            let engine = resolveEngine(for: bot, prompt: context, orchestrator: orchestrator)
             try await engine.streamResponse(
                 prompt: context,
                 attachments: [],
@@ -244,6 +244,15 @@ final class GroupChatSession {
             isGenerating = false
             activeGeneratorId = nil
         }
+    }
+
+    private func resolveEngine(for bot: BotProfile, prompt: String, orchestrator: AgentOrchestrator) -> any AgentEngine {
+        ModelRegistry.resolveEngine(
+            for: bot,
+            prompt: prompt,
+            instructions: bot.systemInstructions,
+            orchestrator: orchestrator
+        )
     }
 
     // MARK: - User messages
@@ -373,51 +382,90 @@ final class GroupChatSession {
 
 // MARK: - GroupChatManager: owns active group chats
 
-/// Lightweight manager for in-progress group chats. One active group at a time
-/// for Phase 2a; later phases can extend to multiple concurrent groups.
+/// Lightweight manager for in-progress group chats.
 @Observable
 @MainActor
 final class GroupChatManager {
-    var activeGroup: GroupChatSession?
-    var isRunning: Bool { activeGroup?.isGenerating ?? false }
+    private var sessions: [UUID: GroupChatSession] = [:]
+    
+    var allGroups: [GroupChatSession] { Array(sessions.values) }
+    var activeGroupId: UUID?
+    
+    var activeGroup: GroupChatSession? { 
+        guard let id = activeGroupId else { return nil }
+        return sessions[id] 
+    }
+    
+    var runningGroupsCount: Int { 
+        sessions.values.filter { $0.isGenerating }.count 
+    }
 
     weak var botManager: BotManager?
     weak var orchestrator: AgentOrchestrator?
 
-    func startGroup(name: String, participantIds: [UUID], hostBotId: UUID? = nil) {
-        guard let bm = botManager else { return }
-        let participants = participantIds.compactMap { bm.bot(byId: $0) }
-        guard participants.count >= 2 else { return }
-        let host = hostBotId.flatMap { bm.bot(byId: $0) }
+    func startGroup(name: String, participantIds: [UUID], hostBotId: UUID? = nil) -> GroupChatSession {
+        let participants = participantIds.compactMap { botManager?.bot(byId: $0) }
+        let host = hostBotId.flatMap { botManager?.bot(byId: $0) }
         let group = GroupChatSession(name: name, participants: participants, hostBot: host)
-        activeGroup = group
-        group.botManager = bm
-        group.orchestrator = orchestrator ?? bm.orchestrator
-        group.computer = bm.computer
+        
+        group.botManager = botManager
+        group.orchestrator = orchestrator ?? botManager?.orchestrator
+        group.computer = botManager?.computer
+        
+        sessions[group.id] = group
+        activeGroupId = group.id
         group.start()
+        
+        return group
     }
 
-    func stopGroup() {
+    func selectGroup(id: UUID) {
+        activeGroupId = id
+    }
+
+    func closeGroup(id: UUID) {
+        sessions[id]?.stop()
+        sessions.removeValue(forKey: id)
+        if activeGroupId == id {
+            activeGroupId = sessions.keys.first
+        }
+    }
+
+    func cancelAllGroups() {
+        for group in sessions.values {
+            group.cancel()
+        }
+        sessions.removeAll()
+        activeGroupId = nil
+    }
+
+    public func stopGroup() {
         activeGroup?.stop()
-        activeGroup = nil
+        if let id = activeGroupId {
+            sessions.removeValue(forKey: id)
+            activeGroupId = sessions.keys.first
+        }
     }
 
-    func cancelGroup() {
+    public func cancelGroup() {
         activeGroup?.cancel()
-        activeGroup = nil
+        if let id = activeGroupId {
+            sessions.removeValue(forKey: id)
+            activeGroupId = sessions.keys.first
+        }
     }
 
-    func sendToGroup(_ text: String) {
+    public func sendToGroup(_ text: String) {
         activeGroup?.sendUserMessage(text)
     }
 
-    func sendToParticipant(_ text: String, botId: UUID) {
+    public func sendToParticipant(_ text: String, botId: UUID) {
         guard let group = activeGroup,
               let bot = group.participants.first(where: { $0.id == botId }) else { return }
         group.sendUserMessageToParticipant(text, addressedTo: bot)
     }
 
-    func endTurnEarly() {
+    public func endTurnEarly() {
         guard let group = activeGroup else { return }
         group.currentTurnIndex += 1
         if group.currentTurnIndex < group.generationOrder.count {

@@ -17,6 +17,7 @@ final class Routine {
     var descriptionText: String        // the prompt/signature of the routine
     var trigger: RoutineTrigger
     var scheduledMinutes: Int          // used when trigger == .timeInterval
+    var cronExpression: String?        // used when trigger == .cron
     var enabled: Bool
     var createdAt: Date
     var updatedAt: Date
@@ -26,15 +27,26 @@ final class Routine {
         descriptionText: String,
         trigger: RoutineTrigger = .manual,
         scheduledMinutes: Int = 0,
+        cronExpression: String? = nil,
         enabled: Bool = true
     ) {
         self.name = name
         self.descriptionText = descriptionText
         self.trigger = trigger
         self.scheduledMinutes = scheduledMinutes
+        self.cronExpression = cronExpression
         self.enabled = enabled
         self.createdAt = Date()
         self.updatedAt = Date()
+    }
+    
+    var effectiveScheduleDescription: String {
+        if trigger == .cron, let cron = cronExpression {
+            return (try? CronSchedule(expression: cron).humanReadableDescription) ?? trigger.rawValue
+        } else if trigger == .timeInterval {
+            return "Every \(scheduledMinutes) min"
+        }
+        return trigger.rawValue
     }
 }
 
@@ -43,6 +55,7 @@ final class Routine {
 enum RoutineTrigger: String, Codable, CaseIterable {
     case manual              = "Manual"                  // user presses "Run now"
     case timeInterval        = "Every N minutes"         // Timer-based; scheduledMinutes > 0
+    case cron                = "Cron expression"         // cron-based trigger
     case onError             = "When build/tool fails"   // reaction to a failure signal
     case onSuccess           = "When build/tool succeeds"// reaction to a success signal
     case onMessage           = "On specific message"     // (placeholder — Phase 3 hook)

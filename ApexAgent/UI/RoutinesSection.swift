@@ -13,6 +13,7 @@ struct RoutinesSection: View {
 
     @State private var isConfirmingDelete: Bool = false
     @State private var pendingRoutine: Routine? = nil
+    @State private var isRecordingRoutine: Bool = false
 
     var body: some View {
         Section("Routines") {
@@ -27,8 +28,14 @@ struct RoutinesSection: View {
                 }
             }
 
-            Button("Add Routine") {
-                // TODO(p2c): wire a CreateRoutineSheet; for now no-op.
+            HStack(spacing: 12) {
+                Button("Add Routine") {
+                    // TODO(p2c): wire a CreateRoutineSheet; for now no-op.
+                }
+                
+                Button("Teach a Bot (Record Routine)") {
+                    isRecordingRoutine = true
+                }
             }
         }
         .confirmationDialog(
@@ -47,6 +54,9 @@ struct RoutinesSection: View {
             }
         } message: {
             Text("This permanently removes the routine. This cannot be undone.")
+        }
+        .sheet(isPresented: $isRecordingRoutine) {
+            RoutineRecordingSheet()
         }
     }
 }
@@ -78,6 +88,10 @@ struct RoutineRow: View {
 
                 if routine.trigger == .timeInterval && routine.scheduledMinutes > 0 {
                     Text("every \(routine.scheduledMinutes) min")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                } else if routine.trigger == .cron {
+                    Text(routine.effectiveScheduleDescription)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
@@ -112,6 +126,7 @@ struct RoutineRow: View {
         switch routine.trigger {
         case .manual:      return "hand.tap"
         case .timeInterval: return "clock"
+        case .cron:        return "calendar.badge.clock"
         case .onError:     return "exclamationmark.triangle"
         case .onSuccess:   return "checkmark.circle"
         case .onMessage:   return "message"
@@ -123,6 +138,7 @@ struct RoutineRow: View {
         switch routine.trigger {
         case .manual:      return "Manual"
         case .timeInterval: return "Every \(routine.scheduledMinutes) min"
+        case .cron:        return "Cron Schedule"
         case .onError:     return "On failure"
         case .onSuccess:   return "On success"
         case .onMessage:   return "On message"

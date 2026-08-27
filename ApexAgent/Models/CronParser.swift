@@ -1,0 +1,146 @@
+import Foundation
+
+public struct CronSchedule: Sendable, Equatable {
+    public let rawExpression: String
+    
+    public let minutes: Set<Int>
+    public let hours: Set<Int>
+    public let daysOfMonth: Set<Int>
+    public let months: Set<Int>
+    public let daysOfWeek: Set<Int>
+    public var weekdays: Set<Int> { daysOfWeek }
+    
+    public init(expression: String) throws {
+        self.rawExpression = expression
+        let parts = expression.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
+        guard parts.count == 5 else {
+            throw NSError(domain: "CronParser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid cron expression"])
+        }
+        
+        self.minutes = try Self.parsePart(parts[0], min: 0, max: 59)
+        self.hours = try Self.parsePart(parts[1], min: 0, max: 23)
+        self.daysOfMonth = try Self.parsePart(parts[2], min: 1, max: 31)
+        self.months = try Self.parsePart(parts[3], min: 1, max: 12)
+        
+        let parsedDaysOfWeek = try Self.parsePart(parts[4], min: 0, max: 7)
+        var normalizedDaysOfWeek = parsedDaysOfWeek
+        if normalizedDaysOfWeek.contains(7) {
+            normalizedDaysOfWeek.remove(7)
+            normalizedDaysOfWeek.insert(0)
+        }
+        self.daysOfWeek = normalizedDaysOfWeek
+    }
+    
+    private static func parsePart(_ part: String, min: Int, max: Int) throws -> Set<Int> {
+        var results = Set<Int>()
+        let subparts = part.split(separator: ",")
+        
+        for subpart in subparts {
+            let s = String(subpart)
+            if s == "*" {
+                results.formUnion(min...max)
+            } else if s.hasPrefix("*/") {
+                let stepStr = s.dropFirst(2)
+                guard let step = Int(stepStr), step > 0 else {
+                    throw NSError(domain: "CronParser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid step"])
+                }
+                results.formUnion(stride(from: min, through: max, by: step))
+            } else if let rangeDashIndex = s.firstIndex(of: "-") {
+                if let slashIndex = s.firstIndex(of: "/") {
+                    let rangeStr = s[..<slashIndex]
+                    let stepStr = s[s.index(after: slashIndex)...]
+                    
+                    let rangeParts = rangeStr.split(separator: "-")
+                    guard rangeParts.count == 2,
+                          let start = Int(rangeParts[0]),
+                          let end = Int(rangeParts[1]),
+                          let step = Int(stepStr),
+                          start >= min, end <= max, start <= end, step > 0 else {
+                        throw NSError(domain: "CronParser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid range with step"])
+                    }
+                    results.formUnion(stride(from: start, through: end, by: step))
+                } else {
+                    let rangeParts = s.split(separator: "-")
+                    guard rangeParts.count == 2,
+                          let start = Int(rangeParts[0]),
+                          let end = Int(rangeParts[1]),
+                          start >= min, end <= max, start <= end else {
+                        throw NSError(domain: "CronParser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid range"])
+                    }
+                    results.formUnion(start...end)
+                }
+            } else {
+                guard let val = Int(s), val >= min, val <= max else {
+                    throw NSError(domain: "CronParser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid value"])
+                }
+                results.insert(val)
+            }
+        }
+        
+        if results.isEmpty {
+            throw NSError(domain: "CronParser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Empty part"])
+        }
+        
+        return results
+    }
+    
+    public func matches(date: Date, calendar: Calendar = .current) -> Bool {
+        let components = calendar.dateComponents([.minute, .hour, .day, .month, .weekday], from: date)
+        
+        guard let minute = components.minute,
+              let hour = components.hour,
+              let day = components.day,
+              let month = components.month,
+              let weekday = components.weekday else {
+            return false
+        }
+        
+        // In Swift Calendar, Sunday is 1, Monday is 2... Saturday is 7
+        // In our cron, Sunday is 0, Monday is 1... Saturday is 6
+        let cronWeekday = weekday - 1
+        
+        return minutes.contains(minute) &&
+               hours.contains(hour) &&
+               daysOfMonth.contains(day) &&
+               months.contains(month) &&
+               daysOfWeek.contains(cronWeekday)
+    }
+    
+    public func nextDate(after startDate: Date = Date(), calendar: Calendar = .current) -> Date? {
+        let nextDates = self.nextDates(after: startDate, count: 1, calendar: calendar)
+        return nextDates.first
+    }
+    
+    public func nextDates(after startDate: Date = Date(), count: Int, calendar: Calendar = .current) -> [Date] {
+        var results: [Date] = []
+        var currentDate = startDate
+        
+        guard let nextMinuteDate = calendar.date(byAdding: .minute, value: 1, to: currentDate) else { return [] }
+        currentDate = calendar.date(from: calendar.dateComponents([.year, .month, .day, .hour, .minute], from: nextMinuteDate)) ?? nextMinuteDate
+        
+        let maxDate = calendar.date(byAdding: .year, value: 5, to: startDate) ?? startDate
+        
+        while results.count < count && currentDate < maxDate {
+            if matches(date: currentDate, calendar: calendar) {
+                results.append(currentDate)
+            }
+            guard let nextDate = calendar.date(byAdding: .minute, value: 1, to: currentDate) else { break }
+            currentDate = nextDate
+        }
+        
+        return results
+    }
+    
+    public var humanReadableDescription: String {
+        return "Cron: \(rawExpression)"
+    }
+    
+    public static func isValid(_ expression: String) -> Bool {
+        do {
+            _ = try CronSchedule(expression: expression)
+            return true
+        } catch {
+            return false
+        }
+    }
+}

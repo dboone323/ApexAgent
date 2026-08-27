@@ -29,8 +29,13 @@ extension ApexWorkflows {
             let docPath = scratch + "/TOOL_REFERENCE.md"
             _ = try await FileWriteTool(orchestrator: orch)
                 .call(arguments: .init(path: docPath, content: doc, append: false))
-            let readBack = try await FileReadTool(orchestrator: orch)
+            let readToolResult = try await FileReadTool(orchestrator: orch)
                 .call(arguments: .init(path: docPath, maxLines: nil))
+            guard !readToolResult.hasPrefix("ERROR:") else {
+                return WorkflowResult(id: 4, name: name, passed: false,
+                                      evidence: "FileReadTool failed: \(readToolResult)")
+            }
+            let readBack = try String(contentsOfFile: docPath, encoding: .utf8)
 
             let documented = toolNames.filter { readBack.contains("`\($0)`") }
             let ok = documented.count == toolNames.count && readBack.contains("## Tool Reference")

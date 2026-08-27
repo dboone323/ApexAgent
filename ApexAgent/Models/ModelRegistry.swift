@@ -18,18 +18,18 @@ import FoundationModels
 public enum ModelProvider: String, CaseIterable, Sendable {
     case appleOnDevice
     case applePCC
-    case cloudGemini
     case localOllama
     case localMLX
+    case cloudGemini
     case fmCLI
 
     public var displayName: String {
         switch self {
-        case .appleOnDevice: "Apple On-Device"
+        case .appleOnDevice: "Apple On-Device (Auto-tiers to PCC / Ollama >4k)"
         case .applePCC: "Apple Private Cloud Compute"
+        case .localOllama: "Local Ollama (gemma4:12bmlx)"
+        case .localMLX: "Local MLX (gemma4:12bmlx)"
         case .cloudGemini: "Cloud Gemini"
-        case .localOllama: "Local Ollama"
-        case .localMLX: "Local MLX"
         case .fmCLI: "fm CLI (Apple)"
         }
     }
@@ -38,8 +38,8 @@ public enum ModelProvider: String, CaseIterable, Sendable {
 public enum ModelSelectionStrategy: Sendable {
     /// Use exactly the requested provider.
     case explicit(ModelProvider)
-    /// Replicate the legacy fallback chain used by the tools:
-    /// on-device → PCC → Gemini → Ollama → MLX.
+    /// Replicate the fallback chain used by the tools:
+    /// on-device (<=4k) → PCC (>4k) → Ollama gemma4:12bmlx → MLX.
     case automatic
 }
 
@@ -49,17 +49,22 @@ public struct ModelRegistry {
     private static let geminiKeyKey = "apex.geminiKey"
     private static let ollamaModelKey = "apex.ollamaModel"
     private static let mlxHostKey = "apex.mlxHost"
+    private static let mlxModelKey = "apex.mlxModel"
     public static let providerKey = "apex.modelProvider"
 
-    private static func geminiAPIKey() -> String {
+    public static func geminiAPIKey() -> String {
         UserDefaults.standard.string(forKey: geminiKeyKey) ?? ""
     }
 
-    private static func ollamaModel() -> String {
-        UserDefaults.standard.string(forKey: ollamaModelKey) ?? "qwen2.5-coder:latest"
+    public static func ollamaModel() -> String {
+        UserDefaults.standard.string(forKey: ollamaModelKey) ?? "gemma4:12bmlx"
     }
 
-    private static func mlxHost() -> URL {
+    public static func mlxModel() -> String {
+        UserDefaults.standard.string(forKey: mlxModelKey) ?? "gemma4:12bmlx"
+    }
+
+    public static func mlxHost() -> URL {
         let raw = UserDefaults.standard.string(forKey: mlxHostKey) ?? "http://localhost:8080"
         return URL(string: raw) ?? URL(string: "http://localhost:8080")!
     }
@@ -74,11 +79,73 @@ public struct ModelRegistry {
         return .appleOnDevice
     }
 
-    /// Build a `LanguageModel` for the given strategy.
+    /// Estimates the token count for a prompt, history, and instructions (~4 characters per token).
+    static func estimateTokenCount(prompt: String, history: [ChatMessage] = [], instructions: String = "") -> Int {
+        let historyChars = history.reduce(0) { $0 + $1.content.count }
+        let totalChars = prompt.count + historyChars + instructions.count
+        return max(1, totalChars / 4)
+    }
+
+    /// Resolves the optimal `ModelProvider` given the task size, user preference, and system capabilities.
     ///
-    /// - Note: `localMLX` is known to SIGSEGV on the current macOS 27 beta build
-    ///   (beta skew in the MLX-LM server bridge). It is included for API
-    ///   completeness; callers should not select it on this beta.
+    /// Fallback hierarchy when a task exceeds on-device Apple Foundation Model 4k limit (~3,800 tokens):
+    /// 1. Try Apple Private Cloud Compute (`.applePCC`) if available.
+    /// 2. Third option: Local Ollama (`.localOllama`, running `gemma4:12bmlx` for macOS 27).
+    /// 3. Local MLX (`.localMLX`, running `gemma4:12bmlx`).
+    static func resolveProviderForTask(
+        preferred: ModelProvider?,
+        prompt: String,
+        history: [ChatMessage] = [],
+        instructions: String = "",
+        isPCCAvailable: Bool? = nil
+    ) -> (provider: ModelProvider, reason: String?) {
+        let targetProvider = preferred ?? activeProvider()
+        let tokens = estimateTokenCount(prompt: prompt, history: history, instructions: instructions)
+        let pccAvailable = isPCCAvailable ?? AgentOrchestrator.isPrivateCloudComputeAvailable()
+
+        // Only auto-tier when set to on-device or default
+        if targetProvider == .appleOnDevice && tokens > 3800 {
+            if pccAvailable {
+                return (.applePCC, "Task context is ~\(tokens) tokens (>4k limit). Auto-tiering to Apple Private Cloud Compute.")
+            } else {
+                return (.localOllama, "Task context is ~\(tokens) tokens (>4k limit) and PCC is unavailable. Auto-tiering to Local Ollama (gemma4:12bmlx).")
+            }
+        }
+
+        return (targetProvider, nil)
+    }
+
+    /// Creates the appropriate `AgentEngine` with automatic context-overflow routing.
+    @MainActor
+    static func resolveEngine(
+        for bot: BotProfile? = nil,
+        prompt: String = "",
+        history: [ChatMessage] = [],
+        instructions: String = "",
+        orchestrator: AgentOrchestrator
+    ) -> any AgentEngine {
+        let preferred = bot?.modelProvider ?? activeProvider()
+        let (resolved, reason) = resolveProviderForTask(
+            preferred: preferred,
+            prompt: prompt,
+            history: history,
+            instructions: instructions
+        )
+        if let reason = reason {
+            print("🧠 [ModelRegistry] \(reason)")
+        }
+
+        switch resolved {
+        case .localOllama:
+            return OllamaAgentEngine(orchestrator: orchestrator, bot: bot)
+        case .localMLX:
+            return MLXAgentEngine(orchestrator: orchestrator)
+        case .appleOnDevice, .applePCC, .fmCLI, .cloudGemini:
+            return NativeAppleEngine(orchestrator: orchestrator)
+        }
+    }
+
+    /// Build a `LanguageModel` for the given strategy.
     public static func model(
         for strategy: ModelSelectionStrategy = .automatic,
         apiKey: String? = nil
@@ -104,8 +171,22 @@ public struct ModelRegistry {
         }
     }
 
-    /// Convenience: build the automatic fallback chain as an ordered list so a
-    /// caller can try providers in sequence and fall back on failure.
+    /// Build a `LanguageModel` for a specific Bot, respecting per-bot overrides.
+    static func model(
+        for bot: BotProfile,
+        apiKey: String? = nil
+    ) -> any LanguageModel {
+        let provider = bot.modelProvider ?? activeProvider()
+        return model(for: .explicit(provider), apiKey: apiKey)
+    }
+
+    /// Resolve the effective `ModelProvider` for a Bot — its own override,
+    /// or the global default.
+    static func effectiveProvider(for bot: BotProfile) -> ModelProvider {
+        bot.modelProvider ?? activeProvider()
+    }
+
+    /// Convenience: build the automatic fallback chain as an ordered list.
     public static func automaticChain() -> [any LanguageModel] {
         [
             SystemLanguageModel.default,

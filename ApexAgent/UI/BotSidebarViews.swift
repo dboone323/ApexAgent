@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import AppKit
 import FoundationModels
+import UniformTypeIdentifiers
 
 // MARK: - Bot Sidebar Section
 
@@ -11,6 +12,9 @@ struct BotSidebarSection: View {
     @State private var editingBot: BotProfile?
     @State private var showDeleteConfirm = false
     @State private var botToDelete: BotProfile?
+    @State private var showImportURLAlert = false
+    @State private var importURLString = ""
+    @State private var playbookNotification: String?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -26,9 +30,50 @@ struct BotSidebarSection: View {
                 Text("\(bm.allBots.count)")
                     .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
+                
+                // Playbook Actions Menu
+                Menu {
+                    Button {
+                        exportPlaybookJSON()
+                    } label: {
+                        Label("Export Team Playbook (JSON)...", systemImage: "square.and.arrow.up")
+                    }
+                    Button {
+                        exportPlaybookMarkdown()
+                    } label: {
+                        Label("Export Team Playbook (Markdown)...", systemImage: "doc.text")
+                    }
+                    Divider()
+                    Button {
+                        importPlaybookFromFile()
+                    } label: {
+                        Label("Import Playbook File...", systemImage: "square.and.arrow.down")
+                    }
+                    Button {
+                        importURLString = ""
+                        showImportURLAlert = true
+                    } label: {
+                        Label("Import Playbook from URL...", systemImage: "link")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                .menuStyle(.borderlessButton)
+                .frame(width: 16, height: 16)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+            
+            // Notification toast if playbook imported/exported
+            if let note = playbookNotification {
+                Text(note)
+                    .font(.system(size: 10))
+                    .foregroundStyle(AppTheme.Palette.accent)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 4)
+            }
             
             // Bot list
             ScrollView(.vertical, showsIndicators: false) {
@@ -93,6 +138,99 @@ struct BotSidebarSection: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This removes the Bot's profile and conversation. Files on the shared computer are not deleted.")
+        }
+        .alert("Import Playbook from URL", isPresented: $showImportURLAlert) {
+            TextField("https://raw.githubusercontent.com/.../team.json", text: $importURLString)
+            Button("Import") {
+                importPlaybookURL()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Enter a direct URL to a Team Playbook JSON or Markdown file.")
+        }
+    }
+    
+    // MARK: - Playbook Actions
+    
+    private func exportPlaybookJSON() {
+        let playbook = bm.exportPlaybook(name: "ApexAgent Team", description: "Exported team configuration")
+        guard let data = try? playbook.encode(),
+              let str = String(data: data, encoding: .utf8) else { return }
+        
+        let panel = NSSavePanel()
+        panel.title = "Export Team Playbook (JSON)"
+        panel.nameFieldStringValue = "apex-team.json"
+        panel.allowedContentTypes = [.json]
+        if panel.runModal() == .OK, let url = panel.url {
+            try? str.write(to: url, atomically: true, encoding: .utf8)
+            notify("Exported to \(url.lastPathComponent)")
+        }
+    }
+    
+    private func exportPlaybookMarkdown() {
+        let playbook = bm.exportPlaybook(name: "ApexAgent Team", description: "Exported team configuration")
+        let md = playbook.toMarkdown()
+        
+        let panel = NSSavePanel()
+        panel.title = "Export Team Playbook (Markdown)"
+        panel.nameFieldStringValue = "apex-team.md"
+        if let mdType = UTType(filenameExtension: "md") {
+            panel.allowedContentTypes = [mdType, .plainText]
+        }
+        if panel.runModal() == .OK, let url = panel.url {
+            try? md.write(to: url, atomically: true, encoding: .utf8)
+            notify("Exported to \(url.lastPathComponent)")
+        }
+    }
+    
+    private func importPlaybookFromFile() {
+        let panel = NSOpenPanel()
+        panel.title = "Import Team Playbook"
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        var types: [UTType] = [.json, .plainText]
+        if let mdType = UTType(filenameExtension: "md") {
+            types.append(mdType)
+        }
+        panel.allowedContentTypes = types
+        
+        if panel.runModal() == .OK, let url = panel.url,
+           let data = try? Data(contentsOf: url) {
+            if let playbook = try? TeamPlaybook.decode(from: data) {
+                let imported = bm.importPlaybook(playbook)
+                notify("Imported \(imported.count) bot(s)")
+            } else if let str = String(data: data, encoding: .utf8),
+                      let playbook = try? TeamPlaybook.decodeFromMarkdown(str) {
+                let imported = bm.importPlaybook(playbook)
+                notify("Imported \(imported.count) bot(s)")
+            } else {
+                notify("Failed to parse playbook format")
+            }
+        }
+    }
+    
+    private func importPlaybookURL() {
+        guard let url = URL(string: importURLString.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+            notify("Invalid URL")
+            return
+        }
+        Task { @MainActor in
+            do {
+                let imported = try await bm.importPlaybookFromURL(url)
+                notify("Imported \(imported.count) bot(s) from URL")
+            } catch {
+                notify("Import failed: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    private func notify(_ msg: String) {
+        playbookNotification = msg
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+            if playbookNotification == msg {
+                playbookNotification = nil
+            }
         }
     }
 }

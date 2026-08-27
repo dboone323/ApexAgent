@@ -23,79 +23,87 @@ struct DelegateTaskTool: Tool {
         var taskDescription: String
     }
 
+    @TaskLocal static var activeDelegationDepth: Int = 0
+
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
-            let orchestrator = await self.orchestrator.orchestrator
-            
-            let agentName = arguments.agentType.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-            guard let agent = AgentRegistry.shared.resolve(name: agentName) else {
-                return "ERROR: Invalid agentType '\(arguments.agentType)'."
-            }
-            
-            let indicatorPrefix: String
-            switch agent.name.lowercased() {
-            case "developer": indicatorPrefix = "💻 [Codex]"
-            case "executor": indicatorPrefix = "⚙️ [Nexus]"
-            case "controller": indicatorPrefix = "🎮 [Pilot]"
-            case "researcher": indicatorPrefix = "🔍 [Oracle]"
-            case "linter": indicatorPrefix = "🧹 [Auditor]"
-            case "uidesigner": indicatorPrefix = "🎨 [Aura]"
-            case "planner": indicatorPrefix = "📅 [Chronos]"
-            default:
-                let displayName = agent.name.prefix(1).uppercased() + agent.name.dropFirst()
-                indicatorPrefix = "🤖 [\(displayName)]"
-            }
-            let startMessage = "\(indicatorPrefix) is starting task:\n> \(arguments.taskDescription)\n\n"
-            
-            // 1. Create the session and append the initial chat message on the MainActor
-            let (session, messageId) = await MainActor.run {
-                let chatMsg = ChatMessage(role: .assistant, content: startMessage, isStreaming: true)
-                let msgId = chatMsg.id
-                orchestrator.appendMessage(chatMsg)
+        guard Self.activeDelegationDepth < 2 else {
+            return "ERROR: Maximum delegation depth reached. Please execute your specialized sub-task directly using your tools without delegating further."
+        }
+        return try await Self.$activeDelegationDepth.withValue(Self.activeDelegationDepth + 1) {
+            try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+                let orchestrator = await self.orchestrator.orchestrator
                 
-                let s = createSubAgentSession(
-                    agent: agent,
-                    preference: orchestrator.modelPreference,
-                    instructions: agent.systemPrompt
+                let agentName = arguments.agentType.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                guard let agent = AgentRegistry.shared.resolve(name: agentName) else {
+                    return "ERROR: Invalid agentType '\(arguments.agentType)'."
+                }
+                
+                let indicatorPrefix: String
+                switch agent.name.lowercased() {
+                case "developer": indicatorPrefix = "💻 [Codex]"
+                case "executor": indicatorPrefix = "⚙️ [Nexus]"
+                case "controller": indicatorPrefix = "🎮 [Pilot]"
+                case "researcher": indicatorPrefix = "🔍 [Oracle]"
+                case "linter": indicatorPrefix = "🧹 [Auditor]"
+                case "uidesigner": indicatorPrefix = "🎨 [Aura]"
+                case "planner": indicatorPrefix = "📅 [Chronos]"
+                default:
+                    let displayName = agent.name.prefix(1).uppercased() + agent.name.dropFirst()
+                    indicatorPrefix = "🤖 [\(displayName)]"
+                }
+                let startMessage = "\(indicatorPrefix) is starting task:\n> \(arguments.taskDescription)\n\n"
+                
+                // 1. Create the session and append the initial chat message on the MainActor
+                let (session, messageId) = await MainActor.run {
+                    let chatMsg = ChatMessage(role: .assistant, content: startMessage, isStreaming: true)
+                    let msgId = chatMsg.id
+                    orchestrator.appendMessage(chatMsg)
+                    
+                    let s = createSubAgentSession(
+                        agent: agent,
+                        preference: orchestrator.modelPreference,
+                        instructions: agent.systemPrompt
+                    )
+                    s.prewarm(promptPrefix: Prompt("Execute the following task"))
+                    return (s, msgId)
+                }
+                
+                // 2. Generate the sub-agent response.
+                let response = try await session.respond(
+                    to: Prompt(arguments.taskDescription),
+                    options: GenerationOptions(toolCallingMode: .allowed)
                 )
-                s.prewarm(promptPrefix: Prompt("Execute the following task"))
-                return (s, msgId)
-            }
-            
-            // 2. Generate the sub-agent response.
-            let response = try await session.respond(
-                to: Prompt(arguments.taskDescription),
-                options: GenerationOptions(toolCallingMode: .allowed)
-            )
-            let finalContent = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                let finalContent = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
 
-            // 3. Update the assistant bubble on the MainActor.
-            await MainActor.run {
-                orchestrator.updateMessage(id: messageId, content: startMessage + finalContent)
-                orchestrator.updateMessage(id: messageId, isStreaming: false)
-                let displayName = agent.name.prefix(1).uppercased() + agent.name.dropFirst()
-                let trace = AgentTraceLog(
-                    sourceAgent: "Supervisor",
-                    targetAgent: displayName,
-                    action: "delegate_task",
-                    details: "Delegated sub-task: \(arguments.taskDescription.prefix(150))"
+                // 3. Update the assistant bubble on the MainActor.
+                await MainActor.run {
+                    orchestrator.updateMessage(id: messageId, content: startMessage + finalContent)
+                    orchestrator.updateMessage(id: messageId, isStreaming: false)
+                    let displayName = agent.name.prefix(1).uppercased() + agent.name.dropFirst()
+                    let trace = AgentTraceLog(
+                        sourceAgent: "Supervisor",
+                        targetAgent: displayName,
+                        action: "delegate_task",
+                        details: "Delegated sub-task: \(arguments.taskDescription.prefix(150))"
+                    )
+                    orchestrator.coordinationTraces.append(trace)
+                }
+
+                // WS1.5 reconciliation: record the structured handoff result so the
+                // orchestrator / dashboard can reconcile sub-agent work without
+                // re-parsing the free-text response. Non-breaking — the String
+                // return below is unchanged.
+                let handoff = TaskResult(
+                    taskId: UUID().uuidString,
+                    status: finalContent.isEmpty ? "failed" : "completed",
+                    resultSummary: finalContent.prefix(2000).description,
+                    errorDetails: finalContent.isEmpty ? "Sub-agent returned no content" : nil
                 )
-                orchestrator.coordinationTraces.append(trace)
+                await AgentRegistry.shared.recordHandoff(handoff)
+
+                let returnSummary = finalContent.count > 2500 ? String(finalContent.prefix(2500)) + "\n[... sub-agent report truncated ...]" : finalContent
+                return returnSummary
             }
-
-            // WS1.5 reconciliation: record the structured handoff result so the
-            // orchestrator / dashboard can reconcile sub-agent work without
-            // re-parsing the free-text response. Non-breaking — the String
-            // return below is unchanged.
-            let handoff = TaskResult(
-                taskId: UUID().uuidString,
-                status: finalContent.isEmpty ? "failed" : "completed",
-                resultSummary: finalContent.prefix(2000).description,
-                errorDetails: finalContent.isEmpty ? "Sub-agent returned no content" : nil
-            )
-            await AgentRegistry.shared.recordHandoff(handoff)
-
-            return finalContent
         }
     }
 
@@ -105,11 +113,13 @@ struct DelegateTaskTool: Tool {
         preference: AgentModelPreference,
         instructions: String
     ) -> LanguageModelSession {
+        // Ensure subagents never inherit recursive delegation tools
+        let safeTools = agent.allowedTools.filter { $0 != "delegate_task" && $0 != "convene_meeting" }
         return orchestrator.orchestrator.sessionForAgent(
             agent: agent,
             preference: preference,
             instructions: instructions,
-            allowedTools: agent.allowedTools,
+            allowedTools: safeTools,
             toolCallingMode: .allowed,
             reasoningLevel: apexConfiguredReasoningLevel(),
             maxResponseTokens: apexConfiguredMaxResponseTokens()

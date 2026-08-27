@@ -155,6 +155,8 @@ final class BotManager {
             isPinned: bot.isPinned
         )
         copy.isChiefOfStaff = bot.isChiefOfStaff
+        copy.modelProviderRaw = bot.modelProviderRaw
+        copy.ollamaModelOverride = bot.ollamaModelOverride
         saveBot(copy)
         let session = makeSession(for: copy)
         sessions[copy.id] = session
@@ -303,12 +305,40 @@ final class BotManager {
         }
 
         if bots.isEmpty {
-            _ = createBot(
+            let apex = createBot(
                 name: "Apex",
                 title: "General Assistant",
-                descriptionText: "You are Apex, a helpful AI assistant running on this Mac. You can read files, run commands, search the web, and automate tasks. Be concise and helpful."
+                descriptionText: "You are Apex, a helpful AI assistant running on this Mac. You can read files, run commands, search the web, and automate tasks. Be concise and helpful.",
+                avatarName: "bolt.fill"
+            )
+            let cos = createBot(
+                name: "Chief of Staff",
+                title: "Executive Coordinator",
+                descriptionText: "You coordinate complex multi-bot workflows, delegate tasks to specialist bots, and synthesize outcomes for the user.",
+                avatarName: "person.crop.square.fill"
+            )
+            cos.isChiefOfStaff = true
+            
+            _ = createBot(
+                name: "Code Architect",
+                title: "Senior Engineer",
+                descriptionText: "You specialize in code review, architecture planning, debugging, and Swift/macOS development.",
+                avatarName: "chevron.left.forwardslash.chevron.right"
+            )
+            _ = createBot(
+                name: "Researcher",
+                title: "Deep Research Specialist",
+                descriptionText: "You perform web search, technical analysis, documentation lookups, and structured reporting.",
+                avatarName: "magnifyingglass"
+            )
+            _ = createBot(
+                name: "Automator",
+                title: "macOS System Automator",
+                descriptionText: "You run terminal commands, execute AppleScript/Shortcuts, manage files, and automate desktop tasks.",
+                avatarName: "terminal.fill"
             )
             try? modelContext?.save()
+            activeBotId = apex.id
         }
     }
 
@@ -339,5 +369,73 @@ final class BotManager {
 
     func botByName(_ name: String) -> BotProfile? {
         bots.first { $0.name.lowercased() == name.lowercased() }
+    }
+
+    // MARK: - Team Playbook Import / Export
+
+    /// Exports the given bots (or all bots) as a portable TeamPlaybook.
+    func exportPlaybook(name: String = "ApexAgent Team", description: String = "", bots subset: [BotProfile]? = nil) -> TeamPlaybook {
+        let targets = subset ?? allBots
+        let playbookBots = targets.map { bot in
+            PlaybookBot(
+                name: bot.name,
+                title: bot.title,
+                description: bot.descriptionText,
+                avatarName: bot.avatarName,
+                isChiefOfStaff: bot.isChiefOfStaff,
+                modelProvider: bot.modelProviderRaw,
+                ollamaModel: bot.ollamaModelOverride,
+                memory: bot.memory.isEmpty ? nil : bot.memory
+            )
+        }
+        return TeamPlaybook(
+            name: name,
+            description: description.isEmpty ? "Exported from ApexAgent" : description,
+            bots: playbookBots
+        )
+    }
+
+    /// Imports a TeamPlaybook, creating BotProfiles for each bot definition.
+    /// Returns the created profiles. Skips bots whose names already exist.
+    @discardableResult
+    func importPlaybook(_ playbook: TeamPlaybook) -> [BotProfile] {
+        var created: [BotProfile] = []
+        for pb in playbook.bots {
+            // Skip if a bot with this name already exists
+            if botByName(pb.name) != nil { continue }
+
+            let bot = createBot(
+                name: pb.name,
+                title: pb.title,
+                descriptionText: pb.description,
+                avatarName: pb.avatarName.isEmpty ? "person.fill" : pb.avatarName
+            )
+            bot.isChiefOfStaff = pb.isChiefOfStaff
+            bot.modelProviderRaw = pb.modelProvider
+            bot.ollamaModelOverride = pb.ollamaModel
+            if let memory = pb.memory, !memory.isEmpty {
+                bot.memory = memory
+            }
+            try? modelContext?.save()
+            created.append(bot)
+        }
+        return created
+    }
+
+    /// Imports a TeamPlaybook from a remote URL (e.g. a GitHub raw URL).
+    func importPlaybookFromURL(_ url: URL) async throws -> [BotProfile] {
+        let (data, _) = try await URLSession.shared.data(from: url)
+
+        // Try JSON first, then Markdown
+        let playbook: TeamPlaybook
+        if let jsonPlaybook = try? TeamPlaybook.decode(from: data) {
+            playbook = jsonPlaybook
+        } else if let markdown = String(data: data, encoding: .utf8) {
+            playbook = try TeamPlaybook.decodeFromMarkdown(markdown)
+        } else {
+            throw NSError(domain: "BotManager", code: -1,
+                          userInfo: [NSLocalizedDescriptionKey: "Could not parse playbook from URL."])
+        }
+        return importPlaybook(playbook)
     }
 }

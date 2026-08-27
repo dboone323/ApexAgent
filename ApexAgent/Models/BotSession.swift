@@ -29,6 +29,7 @@ final class BotSession {
     var activeAssistantMessageId: UUID?
     var activePlan: [PlanStep] = []
     var pendingAttachments: [NSImage] = []
+    var pendingAsyncContinuation: CheckedContinuation<String?, Never>?
 
     // MARK: - Model State
     var modelPreference: AgentModelPreference = .localSystem
@@ -99,6 +100,16 @@ final class BotSession {
 
     // MARK: - Message Management
 
+    /// Sends a message and awaits the final assistant response.
+    /// Uses a continuation to bridge the callback-based generation flow.
+    func sendMessageAsync(_ text: String, attachments: [NSImage] = []) async -> String? {
+        guard !isGenerating else { return nil }
+        return await withCheckedContinuation { continuation in
+            self.pendingAsyncContinuation = continuation
+            self.sendMessage(text, attachments: attachments)
+        }
+    }
+
     func appendMessage(_ message: ChatMessage) {
         messages.append(message)
     }
@@ -158,7 +169,10 @@ final class BotSession {
         case .disabled: .disallowed
         }
         let transcript = Transcript(entries: [])
-        session = makeSession(model: orchestrator!.resolveModelForSession(), instructions: instructions, mode: mode, transcript: transcript)
+        // Per-bot model: use the bot's own provider when set, otherwise
+        // fall back to the global provider via ModelRegistry.
+        let resolvedModel = ModelRegistry.model(for: bot)
+        session = makeSession(model: resolvedModel, instructions: instructions, mode: mode, transcript: transcript)
         session?.prewarm(promptPrefix: Prompt("Analyze the following"))
     }
 

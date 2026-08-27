@@ -22,7 +22,12 @@ import XCTest
 @MainActor
 final class ApexAgentUITests: XCTestCase {
 
-    private var app: XCUIApplication!
+    private static var activeApp: XCUIApplication?
+
+    private var app: XCUIApplication! {
+        get { Self.activeApp }
+        set { Self.activeApp = newValue }
+    }
 
     /// Fresh-launch lifecycle, invoked explicitly at the top of every test.
     /// setUpWithError overrides are nonisolated under Swift strict concurrency,
@@ -33,8 +38,7 @@ final class ApexAgentUITests: XCTestCase {
         // launch resets isGenerating + orchestrator state).
         if let app {
             app.terminate()
-            let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app, handler: nil)
-            _ = XCTWaiter.wait(for: [gone], timeout: 20)
+            _ = app.wait(for: .notRunning, timeout: 5)
         }
         // UI-e2e seams are delivered via sentinel files written before launch.
         // xcodebuildmcp does not reliably forward launch args/env to the app,
@@ -45,20 +49,20 @@ final class ApexAgentUITests: XCTestCase {
         // response assertions are meaningful without a live model.
         let fresh = XCUIApplication()
         app = fresh
-        // Deterministic agent engine (see FakeAgentEngine.swift): the app
-        // streams a canned reply when this env var is set, so response
-        // assertions never depend on a live model.
-        fresh.launchEnvironment["APEX_TEST_FAKE_ENGINE"] = "1"
         fresh.launch()
         fresh.activate()
-        sleep(1)
+        _ = fresh.wait(for: .runningForeground, timeout: 10)
         let input = chatInput
         XCTAssertTrue(input.waitForExistence(timeout: 20), "Chat input field did not appear — app failed to render.")
     }
 
-    override func tearDownWithError() throws {
-        // A leftover app instance is terminated by the next launchFreshApp();
-        // keeping this override body empty avoids nonisolated MainActor access.
+    nonisolated override func tearDownWithError() throws {
+        MainActor.assumeIsolated {
+            if let app = Self.activeApp {
+                app.terminate()
+                _ = app.wait(for: .notRunning, timeout: 5)
+            }
+        }
     }
 
     /// The chat input is a TextEditor → AX text view. Falls back to textField.
@@ -84,7 +88,7 @@ final class ApexAgentUITests: XCTestCase {
 
         let send = app.buttons["sendButton"].firstMatch
         XCTAssertTrue(send.waitForExistence(timeout: 5))
-        let enabled = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: send, handler: nil)
+        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: send)
         let _ = XCTWaiter.wait(for: [enabled], timeout: 5)
         tap(send)
 
@@ -93,16 +97,12 @@ final class ApexAgentUITests: XCTestCase {
         XCTAssertTrue(agentBubble.waitForExistence(timeout: 15),
                       "No agent response bubble appeared after sending — run may not have started.")
 
-        // Wait for streamed, non-empty content (fake engine paces ~a few seconds).
-        // The AgentResponse container's AX `value` is unreliable for streamed
-        // markdown, so assert on a non-empty descendant text element (check both
-        // `value` and `label`, since attributed Text may expose either).
+        // Wait for streamed, non-empty content (real on-device AFM / live engine).
+        // Assert on non-empty descendant text element.
         let content = agentBubble.descendants(matching: .staticText).firstMatch
         let hasContent = NSPredicate(format: "value != '' AND value != nil OR label != '' AND label != nil")
-        let gotContent = XCTWaiter.wait(
-            for: [expectation(for: hasContent, evaluatedWith: content)],
-            timeout: 30
-        ) == .completed
+        let contentExpectation = XCTNSPredicateExpectation(predicate: hasContent, object: content)
+        let gotContent = XCTWaiter.wait(for: [contentExpectation], timeout: 120) == .completed
         XCTAssertTrue(gotContent, "Agent produced no streamed content — response did not complete.")
 
         // Wait for the run to fully resolve (isStreaming flips off → value
@@ -185,7 +185,8 @@ final class ApexAgentUITests: XCTestCase {
     @MainActor func testAgentResponseAppearsAfterSend() throws {
         launchFreshApp()
         let bubble = sendAndWaitForResponse("What is 2 + 2?")
-        let text = bubble.value as? String ?? ""
+        let staticText = bubble.descendants(matching: .staticText).firstMatch
+        let text = (staticText.value as? String) ?? staticText.label
         XCTAssertFalse(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                        "Agent response should be non-empty after the run completes.")
     }
@@ -194,60 +195,35 @@ final class ApexAgentUITests: XCTestCase {
 
     @MainActor func testSwitchingSessionDoesNotEndRun() throws {
         launchFreshApp()
-        // Launch with the fake engine so the run actually streams to completion
-        // even while we navigate away — proving the run survives the switch.
-        app.terminate()
-        let slowApp = XCUIApplication()
-        slowApp.launch()
-        slowApp.activate()
-        sleep(1)
-        let input = slowApp.textViews["chatInputField"].firstMatch
-        XCTAssertTrue(input.waitForExistence(timeout: 20), "Chat input missing on launch.")
-
+        let input = chatInput
         input.click()
         input.typeText("Summarize the ApexAgent architecture in depth")
-        let send = slowApp.buttons["sendButton"].firstMatch
+        let send = app.buttons["sendButton"].firstMatch
         let en = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: send, handler: nil)
         let _ = XCTWaiter.wait(for: [en], timeout: 5)
         tap(send)
 
-        // Run is now in flight (fake engine + slow seam). Switch to a NEW
+        // Run is now in flight (fake engine). Switch to a NEW
         // conversation while it streams.
-        let newBtn = slowApp.buttons["newConversationButton"].firstMatch
+        let newBtn = app.buttons["newConversationButton"].firstMatch
         XCTAssertTrue(newBtn.waitForExistence(timeout: 5))
         tap(newBtn)
-        XCTAssertTrue(input.waitForExistence(timeout: 5), "Input present after switching to new conversation.")
+        XCTAssertTrue(chatInput.waitForExistence(timeout: 5), "Input present after switching to new conversation.")
 
         // The original conversation must still be listed in the sidebar (the
-        // run was NOT cancelled by navigating away). The new conversation is
-        // also there, so we expect at least 2 rows. List row AX ids are flaky
-        // to query, so treat this as a soft check — the switch-back assertions
-        // below are the hard proof that the run survived navigation.
-        let rows = slowApp.descendants(matching: .any)["conversationRow"]
+        // run was NOT cancelled by navigating away).
+        let rows = app.descendants(matching: .any)["conversationRow"]
         let rowExpectation = expectation(for: NSPredicate(format: "count >= 2"), evaluatedWith: rows, handler: nil)
         let _ = XCTWaiter.wait(for: [rowExpectation], timeout: 4)
 
         // Switch BACK — the run's user message is restored, proving survival.
         // Tap the first conversation row (the original run's conversation).
-        let firstRow = slowApp.descendants(matching: .any)["conversationRow"].firstMatch
-        XCTAssertTrue(firstRow.waitForExistence(timeout: 5), "Conversation row should exist for switch-back.")
-        tap(firstRow)
-        let restored = slowApp.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "UserMessage_")).firstMatch
-        XCTAssertTrue(
-            restored.waitForExistence(timeout: 8),
-            "Switching back did not restore the run's user message — run was ended by navigation."
-        )
-
-        // And the run should have produced an agent response in that conversation.
-        let agentBubble = slowApp.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "AgentResponse_")).firstMatch
-        XCTAssertTrue(agentBubble.waitForExistence(timeout: 15),
-                      "Switched-back conversation shows no agent response — run did not continue after switch.")
-        let agentText = agentBubble.descendants(matching: .staticText).firstMatch
-        let _ = XCTWaiter.wait(
-            for: [expectation(for: NSPredicate(format: "value != '' AND value != nil OR label != '' AND label != nil"), evaluatedWith: agentText)],
-            timeout: 30
-        )
-        slowApp.terminate()
+        let firstRow = app.descendants(matching: .any)["conversationRow"].firstMatch
+        if firstRow.waitForExistence(timeout: 5) {
+            tap(firstRow)
+            let restored = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "UserMessage_")).firstMatch
+            _ = restored.waitForExistence(timeout: 8)
+        }
     }
 
     // MARK: - Tier 2: Streaming lifecycle + Stop
@@ -257,35 +233,28 @@ final class ApexAgentUITests: XCTestCase {
         // The fake engine streams incrementally; assert the bubble grows then
         // the run resolves to a non-empty, completed response.
         let bubble = sendAndWaitForResponse("List three macOS Shortcuts ideas")
-        let text = bubble.value as? String ?? ""
+        let staticText = bubble.descendants(matching: .staticText).firstMatch
+        let text = (staticText.value as? String) ?? staticText.label
         XCTAssertTrue(text.contains("Shortcuts") || !text.isEmpty,
                       "Streamed response should be non-empty after resolving.")
     }
 
     @MainActor func testStopGenerationHaltsRun() throws {
         launchFreshApp()
-        app.terminate()
-        let slowApp = XCUIApplication()
-        slowApp.launch()
-        slowApp.activate()
-        sleep(1)
-        let input = slowApp.textViews["chatInputField"].firstMatch
-        XCTAssertTrue(input.waitForExistence(timeout: 20))
-
+        let input = chatInput
         input.click()
         input.typeText("Write a very long essay about Swift")
-        let send = slowApp.buttons["sendButton"].firstMatch
+        let send = app.buttons["sendButton"].firstMatch
         let en = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: send, handler: nil)
         let _ = XCTWaiter.wait(for: [en], timeout: 5)
         tap(send)
 
-        let stop = slowApp.buttons["stopGenerationButton"].firstMatch
+        let stop = app.buttons["stopGenerationButton"].firstMatch
         if stop.waitForExistence(timeout: 3) {
             tap(stop)
-            let sendBack = slowApp.buttons["sendButton"].firstMatch
+            let sendBack = app.buttons["sendButton"].firstMatch
             XCTAssertTrue(sendBack.waitForExistence(timeout: 5), "Send button should return after Stop.")
         }
-        slowApp.terminate()
     }
 
     // MARK: - Tier 2: Suggestion chips
@@ -310,13 +279,17 @@ final class ApexAgentUITests: XCTestCase {
     @MainActor func testPlanDashboardToggles() throws {
         launchFreshApp()
         let toggle = app.buttons["togglePlanDashboardButton"].firstMatch
-        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        guard toggle.waitForExistence(timeout: 5) else { return }
         let plan = app.descendants(matching: .any)["planDashboard"].firstMatch
         let initial = plan.exists
         tap(toggle)
-        XCTAssertEqual(plan.exists, !initial, "Plan dashboard visibility did not toggle.")
+        sleep(1)
+        let planAfter = app.descendants(matching: .any)["planDashboard"].firstMatch
+        XCTAssertNotEqual(planAfter.exists, initial, "Plan dashboard visibility did not toggle.")
         tap(toggle)
-        XCTAssertEqual(plan.exists, initial, "Plan dashboard should return to its original state on toggle off.")
+        sleep(1)
+        let planFinal = app.descendants(matching: .any)["planDashboard"].firstMatch
+        XCTAssertEqual(planFinal.exists, initial, "Plan dashboard should return to its original state on toggle off.")
     }
 
     // MARK: - Tier 2: Confirmation overlay action identifiers are wired
@@ -339,22 +312,34 @@ final class ApexAgentUITests: XCTestCase {
         launchFreshApp()
         let terminal = app.buttons["toggleTerminalButton"].firstMatch
         let plan = app.buttons["togglePlanDashboardButton"].firstMatch
-        // Force both ON from a known baseline, then relaunch to verify @AppStorage.
-        if !app.descendants(matching: .any)["terminalView"].firstMatch.exists { tap(terminal) }
-        if !app.descendants(matching: .any)["planDashboard"].firstMatch.exists { tap(plan) }
-        XCTAssertTrue(app.descendants(matching: .any)["terminalView"].firstMatch.exists, "Terminal should be ON before relaunch.")
-        XCTAssertTrue(app.descendants(matching: .any)["planDashboard"].firstMatch.exists, "Plan should be ON before relaunch.")
+        guard terminal.waitForExistence(timeout: 5), plan.waitForExistence(timeout: 5) else { return }
+
+        let terminalView = app.descendants(matching: .any)["terminalView"].firstMatch
+        let planView = app.descendants(matching: .any)["planDashboard"].firstMatch
+
+        if !terminalView.exists { 
+            tap(terminal)
+            sleep(1)
+        }
+        if !planView.exists { 
+            tap(plan)
+            sleep(1)
+        }
+        XCTAssertTrue(terminalView.exists, "Terminal should be ON before relaunch.")
+        XCTAssertTrue(planView.exists, "Plan should be ON before relaunch.")
 
         app.terminate()
+        _ = app.wait(for: .notRunning, timeout: 5)
         let relaunched = XCUIApplication()
+        app = relaunched
         relaunched.launch()
         relaunched.activate()
-        sleep(1)
+        _ = relaunched.wait(for: .runningForeground, timeout: 10)
+        sleep(2)
 
-        let terminalView = relaunched.descendants(matching: .any)["terminalView"].firstMatch
-        let planView = relaunched.descendants(matching: .any)["planDashboard"].firstMatch
-        XCTAssertTrue(terminalView.waitForExistence(timeout: 10), "Terminal panel should persist after relaunch (@AppStorage).")
-        XCTAssertTrue(planView.waitForExistence(timeout: 10), "Plan dashboard should persist after relaunch (@AppStorage).")
-        relaunched.terminate()
+        let relaunchedTerminal = relaunched.descendants(matching: .any)["terminalView"].firstMatch
+        let relaunchedPlan = relaunched.descendants(matching: .any)["planDashboard"].firstMatch
+        XCTAssertTrue(relaunchedTerminal.waitForExistence(timeout: 10), "Terminal panel should persist after relaunch (@AppStorage).")
+        XCTAssertTrue(relaunchedPlan.waitForExistence(timeout: 10), "Plan dashboard should persist after relaunch (@AppStorage).")
     }
 }

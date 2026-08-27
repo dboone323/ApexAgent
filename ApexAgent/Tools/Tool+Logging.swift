@@ -62,10 +62,11 @@ extension Tool {
         do {
             var result = try await body()
 
-            // Centralized Tool Output Truncation to optimize token usage
-            let maxLength = 8000
+            // Centralized Tool Output Truncation to optimize token usage and prevent
+            // DecoderModelError context exhaustion on on-device models.
+            let maxLength = 3000
             if result.count > maxLength {
-                result = String(result.prefix(maxLength)) + "\n\n[... output truncated at \(maxLength) characters to optimize token usage ...]"
+                result = String(result.prefix(maxLength)) + "\n\n[... output truncated at \(maxLength) characters to stay within context budget ...]"
             }
 
             // Indirect prompt-injection defense: tool results are untrusted

@@ -26,4 +26,7 @@ struct TraceEvent: Codable, Sendable, Identifiable {
         self.durationMs = durationMs
         self.metadata = metadata
     }
+
+    var category: String { source }
+    var message: String { detail }
 }

@@ -113,16 +113,29 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             let effectiveReasoning = reasoningLevel ?? configuredReasoningLevel
             let effectiveMaxTokens = maxResponseTokens ?? configuredMaxResponseTokens
             let transcript: Transcript = history ?? Transcript(entries: [])
-            let profile = SupervisorAgentProfile(
-                instructions: instructions,
-                model: model,
-                toolCallingMode: toolCallingMode,
-                orchestrator: self,
-                reasoningLevel: effectiveReasoning,
-                maxResponseTokens: effectiveMaxTokens
-            )
-            return LanguageModelSession(profile: profile, history: transcript)
+            if agent.name.lowercased() == "supervisor" {
+                let profile = SupervisorAgentProfile(
+                    instructions: instructions,
+                    model: model,
+                    toolCallingMode: toolCallingMode,
+                    orchestrator: self,
+                    reasoningLevel: effectiveReasoning,
+                    maxResponseTokens: effectiveMaxTokens
+                )
+                return LanguageModelSession(profile: profile, history: transcript)
+            } else {
+                let profile = SpecializedAgentProfile(
+                    instructions: instructions,
+                    model: model,
+                    toolCallingMode: toolCallingMode,
+                    orchestrator: self,
+                    allowedTools: allowedTools,
+                    reasoningLevel: effectiveReasoning,
+                    maxResponseTokens: effectiveMaxTokens
+                )
+                return LanguageModelSession(profile: profile, history: transcript)
             }
+        }
 
         switch preference {
         case .localSystem:
@@ -968,34 +981,20 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 // @Observable tracking and froze the chat UI on "thinking".)
                 onStateChanged?()
             }
-            let engine: any AgentEngine
-            if ProcessInfo.processInfo.environment["APEX_TEST_FAKE_ENGINE"] == "1" {
-                // Deterministic e2e/UI-test engine (see FakeAgentEngine.swift):
-                // streams a canned reply so the always-green suite never needs
-                // a live model.
-                engine = FakeAgentEngine(orchestrator: self)
-            } else if self.modelPreference == .localOllama {
-                // Direct-HTTP Ollama path: the FoundationModels
-                // LanguageModelExecutorGenerationChannel pump crashes on
-                // macOS 27.0 26A5388g, so we stream from Ollama's local
-                // /api/chat directly and run tools through allTools.
-                engine = OllamaAgentEngine(orchestrator: self)
-            } else if self.modelPreference == .localMLX {
-                // Direct-HTTP MLX-LM path (OpenAI-compatible SSE) — same
-                // FoundationModels channel bypass rationale as Ollama.
-                engine = MLXAgentEngine(orchestrator: self)
-            } else {
-                // .localSystem / .privateCloud / .cloudGemini / .hybrid
-                engine = NativeAppleEngine(orchestrator: self)
+            let semanticContext = self.getSemanticContext(for: text)
+            var finalInstructions = self.agentInstructions + semanticContext
+            if !self.proactiveAuditResult.isEmpty {
+                finalInstructions += "\n\n\(self.proactiveAuditResult)\nUse the above proactive audit report to suggest improvements, tasks, and fixes (e.g. missing tests or TODOs) when requested or appropriate."
             }
 
-            do {
-                let semanticContext = self.getSemanticContext(for: text)
-                var finalInstructions = self.agentInstructions + semanticContext
-                if !self.proactiveAuditResult.isEmpty {
-                    finalInstructions += "\n\n\(self.proactiveAuditResult)\nUse the above proactive audit report to suggest improvements, tasks, and fixes (e.g. missing tests or TODOs) when requested or appropriate."
-                }
+            let engine = ModelRegistry.resolveEngine(
+                prompt: text,
+                history: self.messages,
+                instructions: finalInstructions,
+                orchestrator: self
+            )
 
+            do {
                 Logger.agent.info("Generation started (provider: \(self.modelPreference.rawValue, privacy: .public))")
                 let generationSpan = AgentSignpost.begin("Generate", detail: self.modelPreference.rawValue)
                 defer { AgentSignpost.end("Generate", generationSpan) }

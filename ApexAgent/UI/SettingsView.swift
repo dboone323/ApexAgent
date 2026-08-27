@@ -52,6 +52,7 @@ struct SettingsView: View {
     @Environment(AgentOrchestrator.self) private var orchestrator
     @Environment(\.dismiss) private var dismiss
     @State private var braveAPIKey: String = ""
+    @State private var tavilyAPIKey: String = ""
     @State private var geminiAPIKey: String = ""
     @State private var geminiModel: String = "gemini-2.0-flash"
     @State private var ollamaHostURL: String = "http://localhost:11434"
@@ -65,6 +66,7 @@ struct SettingsView: View {
     @State private var newServerCommand = ""
     @State private var newServerArgs = ""
     @State private var braveSaveTask: Task<Void, Never>? = nil
+    @State private var tavilySaveTask: Task<Void, Never>? = nil
     @State private var geminiSaveTask: Task<Void, Never>? = nil
     @State private var ollamaURLSaveTask: Task<Void, Never>? = nil
     @State private var sandboxStateDescription: String = "Stopped"
@@ -177,6 +179,22 @@ struct SettingsView: View {
                         .onSubmit {
                             braveSaveTask?.cancel()
                             KeychainManager.save(key: "braveSearchAPIKey", value: braveAPIKey)
+                        }
+
+                    SecureField("Tavily Search API Key", text: $tavilyAPIKey)
+                        .font(AppTheme.Font.mono(13))
+                        .accessibilityLabel("Tavily Search API Key")
+                        .onChange(of: tavilyAPIKey) {
+                            tavilySaveTask?.cancel()
+                            tavilySaveTask = Task {
+                                try? await Task.sleep(for: .seconds(0.5))
+                                guard !Task.isCancelled else { return }
+                                KeychainManager.save(key: "tavilyAPIKey", value: tavilyAPIKey)
+                            }
+                        }
+                        .onSubmit {
+                            tavilySaveTask?.cancel()
+                            KeychainManager.save(key: "tavilyAPIKey", value: tavilyAPIKey)
                         }
 
                     SecureField("Gemini API Key", text: $geminiAPIKey)
@@ -579,6 +597,7 @@ struct SettingsView: View {
             }
             .onAppear {
                  braveAPIKey = KeychainManager.get(key: "braveSearchAPIKey") ?? ""
+                 tavilyAPIKey = KeychainManager.get(key: "tavilyAPIKey") ?? ""
                  geminiAPIKey = KeychainManager.get(key: "geminiAPIKey") ?? ""
                  geminiModel = UserDefaults.standard.string(forKey: "apex.geminiModel") ?? "gemini-2.0-flash"
                  ollamaHostURL = UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434"
@@ -616,7 +635,7 @@ struct SettingsView: View {
     private var modelPrivacyIcon: String {
         switch orchestrator.modelPreference {
         case .localSystem: return "lock.shield"
-        case .privateCloud: return "cloud.shield"
+        case .privateCloud: return "lock.icloud"
         case .cloudGemini: return "icloud"
         case .localOllama: return "cpu"
         case .localMLX: return "memorychip"

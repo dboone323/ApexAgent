@@ -28,11 +28,12 @@ final class RoutineManager: Observable {
     /// All persisted routines, refreshed from disk on demand.
     var routines: [Routine] = []
 
-    // MARK: - Timer scheduler for time-interval routines
+    // MARK: - Timer scheduler for time-interval and cron routines
 
     /// The backing timer used by `startScheduledRoutines` / `stopScheduledRoutines`.
-    private var schedulerTimer: Timer?
+    private var cronHeartbeatTimer: Timer?
     private var scheduledRoutines: [Routine] = []
+    private var lastRunTimes: [String: Date] = [:]
 
     // MARK: - Load / Persist / Toggle / Delete
 
@@ -106,25 +107,9 @@ final class RoutineManager: Observable {
 
         guard !prompt.isEmpty else { return nil }
 
-        // Open a session for the target bot if one doesn't exist, send the
-        // message (fire-and-forget), then poll for the assistant response.
-        botManager.openConversation(with: targetBot)
-        botManager.sendMessageTo(targetBot, text: prompt)
-
-        // Poll for the assistant message to land (generation ~7s on-device).
-        // This is a Phase 2c simplification — the real async path uses the
-        // session's message stream / onUpdate callback.
-        let pollInterval = TimeInterval(4)
-        let maxPolls = 8
-        for _ in 0..<maxPolls {
-            try? await Task.sleep(for: .seconds(pollInterval))
-            let session = botManager.session(for: targetBot)
-            if let lastMsg = session.messages.last(where: { $0.role == .assistant }),
-               !lastMsg.content.isEmpty && !lastMsg.isStreaming {
-                return lastMsg.content
-            }
-        }
-        return nil
+        let session = botManager.session(for: targetBot)
+        let response = await session.sendMessageAsync(prompt)
+        return response
     }
 
     func runNow(_ routine: Routine) async {
@@ -133,28 +118,50 @@ final class RoutineManager: Observable {
 
     // MARK: - Scheduled execution
 
-    /// Starts the Timer-based scheduler for all enabled `.timeInterval` routines.
+    /// Starts the Timer-based scheduler for all enabled time-interval and cron routines.
     func startScheduledRoutines() {
-        scheduledRoutines = routines.filter { $0.enabled && $0.trigger == .timeInterval && $0.scheduledMinutes > 0 }
+        scheduledRoutines = routines.filter { $0.enabled && ($0.trigger == .timeInterval || $0.trigger == .cron) }
         guard !scheduledRoutines.isEmpty else { return }
-        runScheduledTick()
-        let interval = Double(scheduledRoutines.map { $0.scheduledMinutes }.min() ?? 15) * 60.0
-        schedulerTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+        
+        let now = Date()
+        for routine in scheduledRoutines {
+            if lastRunTimes[routine.name] == nil {
+                lastRunTimes[routine.name] = now
+            }
+        }
+        
+        cronHeartbeatTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                self?.runScheduledTick()
+                self?.evaluateHeartbeat()
             }
         }
     }
 
     func stopScheduledRoutines() {
-        schedulerTimer?.invalidate()
-        schedulerTimer = nil
+        cronHeartbeatTimer?.invalidate()
+        cronHeartbeatTimer = nil
         scheduledRoutines = []
     }
 
-    private func runScheduledTick() {
+    private func evaluateHeartbeat() {
+        let now = Date()
         for routine in scheduledRoutines where routine.enabled {
-            Task { _ = await self.execute(routine) }
+            if routine.trigger == .timeInterval {
+                guard routine.scheduledMinutes > 0 else { continue }
+                let interval = TimeInterval(routine.scheduledMinutes * 60)
+                let lastRun = lastRunTimes[routine.name] ?? Date.distantPast
+                if now.timeIntervalSince(lastRun) >= interval {
+                    lastRunTimes[routine.name] = now
+                    Task { _ = await self.execute(routine) }
+                }
+            } else if routine.trigger == .cron {
+                guard let cronExpr = routine.cronExpression,
+                      let schedule = try? CronSchedule(expression: cronExpr) else { continue }
+                if schedule.matches(date: now) {
+                    lastRunTimes[routine.name] = now
+                    Task { _ = await self.execute(routine) }
+                }
+            }
         }
     }
 

@@ -40,5 +40,19 @@
 	<string>Apex Agent can access your Desktop to save files and screenshots.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
 	<string>Apex Agent can access your Downloads folder to manage files.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Apex Agent uses your location for weather forecasts and local search.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Apex Agent uses your location for weather forecasts and local search.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Apex Agent can read and create calendar events to help manage your schedule.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Apex Agent can read and create calendar events to help manage your schedule.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>Apex Agent can read and create reminders to help track your tasks.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Apex Agent can read and create reminders to help track your tasks.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Apex Agent uses speech recognition for voice commands.</string>
 </dict>
 </plist>

@@ -12,6 +12,8 @@ struct CreateBotSheet: View {
     @State private var title = ""
     @State private var descriptionText = ""
     @State private var avatarName = "person.fill"
+    @State private var selectedModelProvider: ModelProvider? = nil
+    @State private var ollamaModelBinding = ""
 
     private let avatarOptions: [String] = [
         "person.fill", "robot", "brain.head.profile", "gear",
@@ -82,6 +84,23 @@ struct CreateBotSheet: View {
                     .padding(.vertical, 4)
                 }
 
+                Section("Model Override") {
+                    Picker("Model Provider", selection: $selectedModelProvider) {
+                        Text("Use Global Default").tag(nil as ModelProvider?)
+                        ForEach(ModelProvider.allCases, id: \.self) { provider in
+                            Text(provider.displayName).tag(provider as ModelProvider?)
+                        }
+                    }
+
+                    if selectedModelProvider == .localOllama {
+                        TextField("Ollama Model", text: $ollamaModelBinding, prompt: Text("gemma4:12bmlx (global default)"))
+                    }
+
+                    Text("When set to Apple On-Device or Global Default, tasks estimated over 4k tokens automatically tier to Private Cloud Compute, then Local Ollama (gemma4:12bmlx).")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+
                 Section {
                     Button("Create Bot") {
                         createBot()
@@ -114,6 +133,9 @@ struct CreateBotSheet: View {
             descriptionText: descriptionText.trimmingCharacters(in: .whitespacesAndNewlines),
             avatarName: avatarName
         )
+        bot.modelProvider = selectedModelProvider
+        let trimmedOllama = ollamaModelBinding.trimmingCharacters(in: .whitespacesAndNewlines)
+        bot.ollamaModelOverride = trimmedOllama.isEmpty ? nil : trimmedOllama
         bm.openConversation(with: bot)
         dismiss()
     }
@@ -159,6 +181,8 @@ struct EditBotSheet: View {
     @State private var avatarName: String
     @State private var memory: String
     @State private var showingMemoryEditor = false
+    @State private var selectedModelProvider: ModelProvider?
+    @State private var ollamaModelBinding: String
 
     private let avatarOptions: [String] = [
         "person.fill", "robot", "brain.head.profile", "gear",
@@ -176,6 +200,8 @@ struct EditBotSheet: View {
         _descriptionText = State(initialValue: bot.descriptionText)
         _avatarName = State(initialValue: bot.avatarName)
         _memory = State(initialValue: bot.memory)
+        _selectedModelProvider = State(initialValue: bot.modelProvider)
+        _ollamaModelBinding = State(initialValue: bot.ollamaModelOverride ?? "")
     }
 
     var body: some View {
@@ -240,6 +266,23 @@ struct EditBotSheet: View {
                     }
                 }
 
+                Section("Model Override") {
+                    Picker("Model Provider", selection: $selectedModelProvider) {
+                        Text("Use Global Default").tag(nil as ModelProvider?)
+                        ForEach(ModelProvider.allCases, id: \.self) { provider in
+                            Text(provider.displayName).tag(provider as ModelProvider?)
+                        }
+                    }
+
+                    if selectedModelProvider == .localOllama {
+                        TextField("Ollama Model", text: $ollamaModelBinding, prompt: Text("gemma4:12bmlx (global default)"))
+                    }
+
+                    Text("When set to Apple On-Device or Global Default, tasks estimated over 4k tokens automatically tier to Private Cloud Compute, then Local Ollama (gemma4:12bmlx).")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+
                 Section {
                     Button("Save Changes") {
                         saveChanges()
@@ -280,6 +323,9 @@ struct EditBotSheet: View {
             avatarName: avatarName,
             memory: memory.trimmingCharacters(in: .whitespacesAndNewlines)
         )
+        bot.modelProvider = selectedModelProvider
+        let trimmedOllama = ollamaModelBinding.trimmingCharacters(in: .whitespacesAndNewlines)
+        bot.ollamaModelOverride = trimmedOllama.isEmpty ? nil : trimmedOllama
         dismiss()
     }
 }

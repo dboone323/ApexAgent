@@ -34,6 +34,30 @@ final class BotProfile {
     /// (Grok-style "chief of staff") so it can coordinate specialists.
     var isChiefOfStaff: Bool = false
 
+    /// Per-bot model provider override. When nil, the bot uses the global
+    /// `ModelRegistry.activeProvider()`. Set to a `ModelProvider.rawValue`
+    /// string to assign a specific provider to this bot (e.g. one bot on
+    /// Ollama while another uses Apple on-device). Defaults keep SwiftData
+    /// lightweight migration working for existing stores.
+    var modelProviderRaw: String? = nil
+
+    /// Per-bot Ollama model name override (e.g. "deepseek-r1:14b" vs the
+    /// global "gemma4:12b"). Only used when this bot's provider is
+    /// `.localOllama`. Nil = use the global `apex.ollamaModel` default.
+    var ollamaModelOverride: String? = nil
+
+    /// Type-safe accessor for the per-bot model provider.
+    /// Returns nil when the bot should use the global default.
+    var modelProvider: ModelProvider? {
+        get {
+            guard let raw = modelProviderRaw else { return nil }
+            return ModelProvider(rawValue: raw)
+        }
+        set {
+            modelProviderRaw = newValue?.rawValue
+        }
+    }
+
     /// Default initializer for SwiftData insertion.
     init(
         id: UUID = UUID(),

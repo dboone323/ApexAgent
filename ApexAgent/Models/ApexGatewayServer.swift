@@ -62,6 +62,10 @@ public final class ApexGatewayServer {
             conn.cancel()
         }
         connections.removeAll()
+        for continuation in pendingConfirmations.values {
+            continuation.resume(returning: false)
+        }
+        pendingConfirmations.removeAll()
         print("📡 [ApexGatewayServer] Daemon stopped.")
     }
     

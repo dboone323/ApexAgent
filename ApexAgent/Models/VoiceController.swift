@@ -2,8 +2,13 @@ import Foundation
 import Speech
 import AVFoundation
 
+public enum TTSProvider: String, CaseIterable, Sendable {
+    case system = "System (macOS)"
+    case elevenLabs = "ElevenLabs"
+}
+
 @MainActor
-class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, AVSpeechSynthesizerDelegate {
+class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate {
     static let shared = VoiceController()
     
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
@@ -14,6 +19,9 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
     
     @Published private(set) var isRecording = false
     @Published private(set) var isSpeaking = false
+    
+    @Published var selectedProvider: TTSProvider = .system
+    private var audioPlayer: AVAudioPlayer?
     
     override init() {
         super.init()
@@ -120,7 +128,15 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         // Clean speech text (strip markdown format)
         let cleanText = stripMarkdown(text)
         
-        let utterance = AVSpeechUtterance(string: cleanText)
+        if selectedProvider == .elevenLabs, let key = UserDefaults.standard.string(forKey: "apex.elevenLabsKey"), !key.isEmpty {
+            speakWithElevenLabs(text: cleanText, key: key)
+        } else {
+            speakWithSystem(text: cleanText)
+        }
+    }
+    
+    private func speakWithSystem(text: String) {
+        let utterance = AVSpeechUtterance(string: text)
         let localeId = UserDefaults.standard.string(forKey: "apex.voiceLocale") ?? "en-US"
         utterance.voice = AVSpeechSynthesisVoice(language: localeId) ?? AVSpeechSynthesisVoice(language: "en-US")
         
@@ -129,6 +145,39 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         
         speechSynthesizer.speak(utterance)
         isSpeaking = true
+    }
+    
+    private func speakWithElevenLabs(text: String, key: String) {
+        let voiceId = UserDefaults.standard.string(forKey: "apex.elevenLabsVoiceId") ?? "21m00Tcm4TlvDq8ikWAM" // Default voice
+        guard let url = URL(string: "https://api.elevenlabs.io/v1/text-to-speech/\(voiceId)") else {
+            speakWithSystem(text: text)
+            return
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(key, forHTTPHeaderField: "xi-api-key")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["text": text, "model_id": "eleven_turbo_v2_5"]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        
+        isSpeaking = true
+        Task {
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                if let httpResp = response as? HTTPURLResponse, httpResp.statusCode == 200 {
+                    self.audioPlayer = try AVAudioPlayer(data: data)
+                    self.audioPlayer?.delegate = self
+                    self.audioPlayer?.play()
+                } else {
+                    print("[VoiceController] ElevenLabs HTTP Error. Falling back to system TTS.")
+                    self.speakWithSystem(text: text)
+                }
+            } catch {
+                print("[VoiceController] ElevenLabs Network Error: \(error). Falling back to system TTS.")
+                self.speakWithSystem(text: text)
+            }
+        }
     }
     
     private func stripMarkdown(_ text: String) -> String {
@@ -197,6 +246,7 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         if speechSynthesizer.isSpeaking {
             speechSynthesizer.stopSpeaking(at: .immediate)
         }
+        audioPlayer?.stop()
         isSpeaking = false
     }
     
@@ -209,6 +259,14 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
     }
     
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        Task { @MainActor in
+            VoiceController.shared.isSpeaking = false
+        }
+    }
+    
+    // MARK: - AVAudioPlayerDelegate
+    
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
             VoiceController.shared.isSpeaking = false
         }

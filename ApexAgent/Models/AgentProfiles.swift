@@ -274,6 +274,27 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
             if allowedTools.contains("run_shell_command") {
                 ShellTool(orchestrator: orchestrator)
             }
+            if allowedTools.contains("get_weather") {
+                WeatherTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("map_search") {
+                MapSearchTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("get_directions") {
+                DirectionsTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("calendar") {
+                CalendarTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("reminders") {
+                ReminderTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("translate") {
+                TranslateTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("extract_entities") {
+                EntityExtractTool(orchestrator: orchestrator)
+            }
         }
         return profile
             .apexAuditHooks()

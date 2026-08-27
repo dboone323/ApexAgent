@@ -17,6 +17,9 @@ import AppKit
 @MainActor
 struct OllamaAgentEngine: AgentEngine {
     let orchestrator: AgentOrchestrator
+    /// Per-bot Ollama model override. When set, this bot's
+    /// `ollamaModelOverride` takes priority over the global default.
+    var bot: BotProfile? = nil
 
     func streamResponse(
         prompt: String,
@@ -33,7 +36,15 @@ struct OllamaAgentEngine: AgentEngine {
         // Default to gemma4:12b when unset: a strong local model for Apple
         // Silicon on macOS 27 (Gemma 4 family, ~7.6GB). Falls back to a clear
         // "model not pulled" error from Ollama if it isn't available.
-        let model = (UserDefaults.standard.string(forKey: "apex.ollamaModel") ?? "gemma4:12b").trimmingCharacters(in: .whitespacesAndNewlines)
+        // Per-bot override takes priority when set.
+        let model: String
+        if let botOverride = bot?.ollamaModelOverride,
+           !botOverride.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            model = botOverride.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            model = (UserDefaults.standard.string(forKey: "apex.ollamaModel") ?? "gemma4:12b")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
         let useTools = toolCallingMode != .disabled
 
         // Map history + system instructions + new prompt into Ollama messages.

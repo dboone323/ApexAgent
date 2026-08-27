@@ -1,6 +1,7 @@
 import Foundation
 import FoundationModels
 import AppKit
+import Vision
 
 // MARK: - Multimodal Reader Profile
 
@@ -73,18 +74,69 @@ struct AnalyzeImageTool: Tool {
             }
             
             guard isMultimodalAttachmentSupported() else {
-                return "ERROR: On-device multimodal vision is not supported on this macOS build."
+                return await performOnDeviceVisionAnalysis(imagePath: expandedPath, query: arguments.query)
             }
             
-            var finalContent = ""
-            let stream = session.streamResponse(options: GenerationOptions()) {
-                arguments.query
-                Attachment(image)
+            do {
+                var finalContent = ""
+                let stream = session.streamResponse(options: GenerationOptions()) {
+                    arguments.query
+                    Attachment(image)
+                }
+                for try await response in stream {
+                    finalContent = response.content
+                }
+                return finalContent.isEmpty ? await performOnDeviceVisionAnalysis(imagePath: expandedPath, query: arguments.query) : finalContent
+            } catch {
+                return await performOnDeviceVisionAnalysis(imagePath: expandedPath, query: arguments.query)
             }
-            for try await response in stream {
-                finalContent = response.content
+        }
+    }
+
+    private func performOnDeviceVisionAnalysis(imagePath: String, query: String) async -> String {
+        let url = URL(fileURLWithPath: imagePath)
+        let handler = VNImageRequestHandler(url: url, options: [:])
+        
+        var results: [String] = []
+
+        // 1. Text OCR
+        let textRequest = VNRecognizeTextRequest()
+        textRequest.recognitionLevel = .accurate
+        
+        // 2. Barcodes / QR
+        let barcodeRequest = VNDetectBarcodesRequest()
+
+        // 3. Faces
+        let faceRequest = VNDetectFaceRectanglesRequest()
+
+        do {
+            try handler.perform([textRequest, barcodeRequest, faceRequest])
+
+            if let textResults = textRequest.results, !textResults.isEmpty {
+                let text = textResults.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+                if !text.isEmpty {
+                    results.append("📝 **Recognized Text (OCR)**:\n\(text)")
+                }
             }
-            return finalContent
+
+            if let barcodes = barcodeRequest.results, !barcodes.isEmpty {
+                let codes = barcodes.compactMap { $0.payloadStringValue }
+                if !codes.isEmpty {
+                    results.append("📦 **Barcodes / QR Codes**: \(codes.joined(separator: ", "))")
+                }
+            }
+
+            if let faces = faceRequest.results, !faces.isEmpty {
+                results.append("👤 **Detected Faces**: \(faces.count) face(s) located in image")
+            }
+
+            if results.isEmpty {
+                return "🖼️ Vision analysis complete: Image loaded successfully at '\(imagePath)', but no prominent text, barcodes, or faces were detected."
+            }
+
+            return "👁️ **Apple Vision Analysis** for \"\(query)\":\n\n" + results.joined(separator: "\n\n")
+        } catch {
+            return "❌ Vision processing failed: \(error.localizedDescription)"
         }
     }
 

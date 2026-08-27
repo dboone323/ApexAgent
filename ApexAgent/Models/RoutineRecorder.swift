@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import Observation
+import Vision
 
 // MARK: - RecordedStep: one discrete action captured during a demo
 
@@ -15,15 +16,28 @@ struct RecordedStep: Identifiable, Equatable, Sendable {
     let detail: String
     let occurredAt: Date
 
-    init(action: String, detail: String, occurredAt: Date = Date()) {
+    var windowTitle: String? = nil
+    var ocrSummary: String? = nil
+    var screenshotImage: NSImage? = nil
+
+    init(action: String, detail: String, occurredAt: Date = Date(), windowTitle: String? = nil, ocrSummary: String? = nil, screenshotImage: NSImage? = nil) {
         self.action = action
         self.detail = detail
         self.occurredAt = occurredAt
+        self.windowTitle = windowTitle
+        self.ocrSummary = ocrSummary
+        self.screenshotImage = screenshotImage
     }
 
     /// A short human-readable line for the recipe/prompt.
     var summaryLine: String {
-        "[\(action)] \(detail)"
+        var base = "[\(action)] \(detail)"
+        if let windowTitle = windowTitle, !windowTitle.isEmpty {
+            base += " (\"\(windowTitle)\")"
+        } else if let ocrSummary = ocrSummary, !ocrSummary.isEmpty {
+            base += " (\"\(ocrSummary)\")"
+        }
+        return base
     }
 }
 
@@ -80,6 +94,11 @@ final class RoutineRecorder {
         guard !isRecording else { return }
         steps = []
         isRecording = true
+        
+        Task {
+            await ScreenStreamer.shared.startCapture()
+        }
+        
         activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification,
             object: nil,
@@ -89,7 +108,9 @@ final class RoutineRecorder {
             guard let app = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication),
                   let name = app.localizedName,
                   !name.isEmpty else { return }
-            self.capture(step: RecordedStep(action: "open_app", detail: name))
+                  
+            let image = ScreenStreamer.shared.getLatestFrame()
+            self.capture(step: RecordedStep(action: "open_app", detail: name, screenshotImage: image))
         }
     }
 
@@ -101,6 +122,7 @@ final class RoutineRecorder {
             NSWorkspace.shared.notificationCenter.removeObserver(activationObserver)
             self.activationObserver = nil
         }
+        ScreenStreamer.shared.stopCapture()
         return steps
     }
 
@@ -130,6 +152,29 @@ final class RoutineRecorder {
         let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
         guard isRecording, !trimmed.isEmpty else { return }
         capture(step: RecordedStep(action: "note", detail: trimmed))
+    }
+
+    func captureSnapshot(note: String? = nil) {
+        let image = ScreenStreamer.shared.getLatestFrame()
+        var ocrSummary: String? = nil
+        
+        if let cgImage = image?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
+            let request = VNRecognizeTextRequest()
+            request.recognitionLevel = .fast
+            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+            try? handler.perform([request])
+            
+            if let results = request.results {
+                let texts = results.compactMap { $0.topCandidates(1).first?.string }
+                if !texts.isEmpty {
+                    ocrSummary = Array(texts.prefix(5)).joined(separator: ", ")
+                }
+            }
+        }
+        
+        let detail = note ?? "Visual Snapshot"
+        let step = RecordedStep(action: "snapshot", detail: detail, windowTitle: nil, ocrSummary: ocrSummary, screenshotImage: image)
+        capture(step: step)
     }
 
     // MARK: - Corrections (user reviewing the demo)

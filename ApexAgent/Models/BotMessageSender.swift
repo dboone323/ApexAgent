@@ -23,6 +23,11 @@ extension BotSession {
             defer {
                 self.isGenerating = false
                 self.activeAssistantMessageId = nil
+                if let continuation = self.pendingAsyncContinuation {
+                    let finalResponse = self.messages.last(where: { $0.role == .assistant })?.content
+                    continuation.resume(returning: finalResponse)
+                    self.pendingAsyncContinuation = nil
+                }
             }
 
             // 1. Create or reset the model session with this Bot's instructions
@@ -40,7 +45,13 @@ extension BotSession {
 
             // 4. Launch generation
             do {
-                let engine = self.makeEngine()
+                let engine = ModelRegistry.resolveEngine(
+                    for: self.bot,
+                    prompt: trimmedText,
+                    history: self.messages,
+                    instructions: self.systemInstructions,
+                    orchestrator: self.orchestrator ?? AgentOrchestrator()
+                )
                 try await engine.streamResponse(
                     prompt: trimmedText,
                     attachments: attachments,
@@ -83,9 +94,15 @@ extension BotSession {
 
     /// Creates the appropriate AgentEngine for this Bot's model preference.
     private func makeEngine() -> any AgentEngine {
-        guard let orchestrator = orchestrator else {
-            return NativeAppleEngine(orchestrator: AgentOrchestrator())
+        let orch = orchestrator ?? AgentOrchestrator()
+        let provider = ModelRegistry.effectiveProvider(for: bot)
+        switch provider {
+        case .localOllama:
+            return OllamaAgentEngine(orchestrator: orch)
+        case .localMLX:
+            return MLXAgentEngine(orchestrator: orch)
+        case .appleOnDevice, .applePCC, .fmCLI, .cloudGemini:
+            return NativeAppleEngine(orchestrator: orch)
         }
-        return NativeAppleEngine(orchestrator: orchestrator)
     }
 }

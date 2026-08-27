@@ -68,7 +68,7 @@ public struct ApexAgentApp: App {
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
-        .modelContainer(for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self])
+        .modelContainer(for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self])
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Conversation") {
@@ -316,7 +316,7 @@ private func runDaemonMode() async {
     print("=== RUNNING DAEMON MODE ===")
     let orchestrator = AgentOrchestrator()
     do {
-        let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self)
+        let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self)
         orchestrator.modelContext = ModelContext(container)
         if let url = container.configurations.first?.url {
             print("🧠 SwiftData Store URL: \(url.path)")
