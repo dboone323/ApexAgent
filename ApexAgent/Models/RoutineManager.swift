@@ -20,7 +20,7 @@ final class RoutineManager: Observable {
     static let shared = RoutineManager()
 
     /// The SwiftData context used to persist routine definitions.
-    weak var modelContext: ModelContext?
+    var modelContext: ModelContext?
 
     /// The BotManager used to route routine execution messages.
     weak var botManager: BotManager?
@@ -45,7 +45,7 @@ final class RoutineManager: Observable {
         do {
             routines = try context.fetch(descriptor)
         } catch {
-            print("⚠️ [RoutineManager] Failed to load routines: \\(error.localizedDescription)")
+            print("⚠️ [RoutineManager] Failed to load routines: \(error.localizedDescription)")
             routines = []
         }
     }
@@ -83,7 +83,7 @@ final class RoutineManager: Observable {
     /// - Returns: the assistant's response text, or `nil` if execution failed.
     func execute(_ routine: Routine) async -> String? {
         guard let botManager = botManager else {
-            print("⚠️ [RoutineManager] No BotManager — cannot execute routine '\\(routine.name)'")
+            print("⚠️ [RoutineManager] No BotManager — cannot execute routine '\(routine.name)'")
             return nil
         }
 
@@ -188,7 +188,7 @@ final class RoutineManager: Observable {
         guard let routine = routines.first(where: {
             $0.enabled && $0.trigger == .webhook && $0.name == routineName
         }) else {
-            print("⚠️ [RoutineManager] No enabled .webhook routine named '\\(routineName)'")
+            print("⚠️ [RoutineManager] No enabled .webhook routine named '\(routineName)'")
             return nil
         }
         return await execute(routine)

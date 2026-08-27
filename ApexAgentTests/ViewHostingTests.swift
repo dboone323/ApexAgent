@@ -26,7 +26,9 @@ enum ViewHost {
         window.contentView = hosting
         hosting.layoutSubtreeIfNeeded()
         hosting.displayIfNeeded()
-        RunLoop.current.run(until: Date(timeIntervalSinceNow: pump))
+        if pump > 0 {
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: pump))
+        }
         window.orderOut(nil)
         return hosting
     }

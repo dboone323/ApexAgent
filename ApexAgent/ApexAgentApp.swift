@@ -317,7 +317,8 @@ private func runDaemonMode() async {
     let orchestrator = AgentOrchestrator()
     do {
         let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self)
-        orchestrator.modelContext = ModelContext(container)
+        let mainContext = ModelContext(container)
+        orchestrator.modelContext = mainContext
         if let url = container.configurations.first?.url {
             print("🧠 SwiftData Store URL: \(url.path)")
         }
@@ -326,9 +327,9 @@ private func runDaemonMode() async {
         // keeps running while the GUI is closed.
         let computer = Computer()
         let botManager = BotManager(orchestrator: orchestrator, computer: computer)
-        botManager.modelContext = ModelContext(container)
+        botManager.modelContext = mainContext
         botManager.loadBotsFromDisk()
-        RoutineManager.shared.modelContext = ModelContext(container)
+        RoutineManager.shared.modelContext = mainContext
         RoutineManager.shared.botManager = botManager
         RoutineManager.shared.loadRoutines()
         RoutineManager.shared.startScheduledRoutines()

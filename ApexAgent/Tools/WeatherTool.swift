@@ -2,6 +2,7 @@ import Foundation
 import FoundationModels
 import WeatherKit
 import CoreLocation
+import MapKit
 
 // MARK: - Weather Tool (WeatherKit + CoreLocation + Fallback)
 
@@ -64,10 +65,13 @@ struct WeatherTool: Tool {
             return CLLocation(latitude: lat, longitude: lon)
         }
 
-        let geocoder = CLGeocoder()
+        let searchRequest = MKLocalSearch.Request()
+        searchRequest.naturalLanguageQuery = trimmed
+        searchRequest.resultTypes = [.address, .pointOfInterest]
+        let search = MKLocalSearch(request: searchRequest)
         do {
-            let placemarks = try await geocoder.geocodeAddressString(trimmed)
-            return placemarks.first?.location
+            let response = try await search.start()
+            return response.mapItems.first?.location
         } catch {
             return nil
         }

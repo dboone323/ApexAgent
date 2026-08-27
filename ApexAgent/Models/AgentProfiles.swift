@@ -318,6 +318,10 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
             if allowedTools.contains("deep_link") {
                 DeepLinkTool(orchestrator: orchestrator)
             }
+            // Tier 3: Computer use (raw CGEvent input; pairs with control_accessibility)
+            if allowedTools.contains("computer_use") {
+                ComputerUseTool(orchestrator: orchestrator)
+            }
         }
         return profile
             .apexAuditHooks()

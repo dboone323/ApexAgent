@@ -32,17 +32,17 @@ struct DirectionsTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
-            // 1. Geocode Origin and Destination
-            guard let originPlacemark = await resolvePlacemark(for: arguments.from) else {
+            // 1. Geocode Origin and Destination via MapKit LocalSearch
+            guard let originItem = await resolveMapItem(for: arguments.from) else {
                 return "❌ Unable to resolve starting address: \"\(arguments.from)\""
             }
-            guard let destPlacemark = await resolvePlacemark(for: arguments.to) else {
+            guard let destItem = await resolveMapItem(for: arguments.to) else {
                 return "❌ Unable to resolve destination address: \"\(arguments.to)\""
             }
 
             let request = MKDirections.Request()
-            request.source = MKMapItem(placemark: MKPlacemark(placemark: originPlacemark))
-            request.destination = MKMapItem(placemark: MKPlacemark(placemark: destPlacemark))
+            request.source = originItem
+            request.destination = destItem
 
             let mode = (arguments.transportType ?? "driving").lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
             switch mode {
@@ -89,11 +89,14 @@ struct DirectionsTool: Tool {
         }
     }
 
-    private func resolvePlacemark(for query: String) async -> CLPlacemark? {
-        let geocoder = CLGeocoder()
+    private func resolveMapItem(for query: String) async -> MKMapItem? {
+        let searchRequest = MKLocalSearch.Request()
+        searchRequest.naturalLanguageQuery = query
+        searchRequest.resultTypes = [.address, .pointOfInterest]
+        let search = MKLocalSearch(request: searchRequest)
         do {
-            let placemarks = try await geocoder.geocodeAddressString(query)
-            return placemarks.first
+            let response = try await search.start()
+            return response.mapItems.first
         } catch {
             return nil
         }

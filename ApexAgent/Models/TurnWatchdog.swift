@@ -26,7 +26,7 @@ public struct WatchedTurn: Sendable {
     }
 }
 
-public final class TurnWatchdog {
+public final class TurnWatchdog: @unchecked Sendable {
 
     public struct Options: @unchecked Sendable {
         public var stallMs: TimeInterval
@@ -44,6 +44,7 @@ public final class TurnWatchdog {
     }
 
     private let options: Options
+    private let lock = NSLock()
     private var turns: [String: WatchedTurn] = [:]
     private var timer: Timer?
 
@@ -58,6 +59,8 @@ public final class TurnWatchdog {
     // MARK: Lifecycle
 
     public func start() {
+        lock.lock()
+        defer { lock.unlock() }
         guard timer == nil else { return }
         let timer = Timer(timeInterval: options.checkMs / 1000.0, repeats: true) { [weak self] _ in
             self?.sweep()
@@ -67,6 +70,8 @@ public final class TurnWatchdog {
     }
 
     public func stop() {
+        lock.lock()
+        defer { lock.unlock() }
         timer?.invalidate()
         timer = nil
         turns.removeAll()
@@ -77,32 +82,55 @@ public final class TurnWatchdog {
     /// A turn was dispatched on this thread.
     public func watch(threadId: String, botId: String) {
         let at = now()
+        lock.lock()
+        defer { lock.unlock() }
         turns[threadId] = WatchedTurn(threadId: threadId, botId: botId, startedAt: at, lastEventAt: at, waitingOnHuman: false)
     }
 
     /// Any event for the thread proves the turn is alive.
     public func touch(threadId: String) {
+        let at = now()
+        lock.lock()
+        defer { lock.unlock() }
         guard var turn = turns[threadId] else { return }
-        turn.lastEventAt = now()
+        turn.lastEventAt = at
         turns[threadId] = turn
     }
 
     /// request.opened → true (a human is deciding; not a stall however long they
     /// take); request.resolved → false (the clock restarts).
     public func setWaitingOnHuman(threadId: String, waiting: Bool) {
+        let at = now()
+        lock.lock()
+        defer { lock.unlock() }
         guard var turn = turns[threadId] else { return }
         turn.waitingOnHuman = waiting
-        turn.lastEventAt = now()
+        turn.lastEventAt = at
         turns[threadId] = turn
     }
 
     /// The turn settled normally — stop watching it.
     public func settle(threadId: String) {
+        lock.lock()
+        defer { lock.unlock() }
         turns.removeValue(forKey: threadId)
     }
 
+    /// Alias for settle.
+    public func unwatch(threadId: String) {
+        settle(threadId: threadId)
+    }
+
     public func isWatching(threadId: String) -> Bool {
-        turns[threadId] != nil
+        lock.lock()
+        defer { lock.unlock() }
+        return turns[threadId] != nil
+    }
+
+    public func isWaitingOnHuman(threadId: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return turns[threadId]?.waitingOnHuman ?? false
     }
 
     // MARK: Sweep
@@ -110,9 +138,17 @@ public final class TurnWatchdog {
     /// Visible for tests; the timer calls this on its interval.
     public func sweep() {
         let at = now()
+        var stalledTurns: [WatchedTurn] = []
+
+        lock.lock()
         for turn in turns.values where !turn.waitingOnHuman {
             if at - turn.lastEventAt < options.stallMs { continue }
             turns.removeValue(forKey: turn.threadId)
+            stalledTurns.append(turn)
+        }
+        lock.unlock()
+
+        for turn in stalledTurns {
             options.onStall(turn)
         }
     }

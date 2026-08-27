@@ -50,6 +50,8 @@ class CollaborativeServer: NSObject, ObservableObject {
         }
     }
 
+    /// Starts the server. `port: 0` asks the OS for an ephemeral port; the
+    /// bound port is published via `self.port` once the listener reports ready.
     func start(port: UInt16 = 1337) {
         guard !isRunning else { return }
         self.port = port
@@ -59,7 +61,9 @@ class CollaborativeServer: NSObject, ObservableObject {
             let bindHost = lanModeEnabled ? "0.0.0.0" : "127.0.0.1"
 
             let parameters = NWParameters.tcp
-            parameters.requiredLocalEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(bindHost), port: NWEndpoint.Port(rawValue: port)!)
+            if port != 0 {
+                parameters.requiredLocalEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(bindHost), port: NWEndpoint.Port(rawValue: port)!)
+            }
             let listener = try NWListener(using: parameters)
             self.listener = listener
 
@@ -69,6 +73,10 @@ class CollaborativeServer: NSObject, ObservableObject {
                     switch state {
                     case .ready:
                         self.isRunning = true
+                        // Publish the OS-assigned port for ephemeral binds.
+                        if let bound = listener.port?.rawValue, bound != 0 {
+                            self.port = bound
+                        }
                     case .failed(let error):
                         print("⚠️ Collaborative server failed: \(error)")
                         self.stop()

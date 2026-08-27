@@ -104,13 +104,14 @@ final class RoutineRecorder {
             object: nil,
             queue: .main
         ) { [weak self] note in
-            guard let self, self.isRecording else { return }
-            guard let app = (note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication),
-                  let name = app.localizedName,
-                  !name.isEmpty else { return }
-                  
-            let image = ScreenStreamer.shared.getLatestFrame()
-            self.capture(step: RecordedStep(action: "open_app", detail: name, screenshotImage: image))
+            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            guard let name = app?.localizedName, !name.isEmpty else { return }
+            
+            MainActor.assumeIsolated {
+                guard let self, self.isRecording else { return }
+                let image = ScreenStreamer.shared.getLatestFrame()
+                self.capture(step: RecordedStep(action: "open_app", detail: name, screenshotImage: image))
+            }
         }
     }
 

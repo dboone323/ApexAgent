@@ -17,19 +17,20 @@ import ApexAgentCore
 
 @main
 struct SandboxCtl {
+    @MainActor
     static func main() async {
-        let manager = await ContainerManager.shared
+        let manager = ContainerManager.shared
         do {
-            print("[sandboxctl] starting container (image: \(await manager.appleContainerImage))…")
+            print("[sandboxctl] starting container (image: \(manager.appleContainerImage))…")
             try await manager.startContainer()
-            print("[sandboxctl] state: \(await manager.stateDescription)")
+            print("[sandboxctl] state: \(manager.stateDescription)")
 
             // Probe 1: guest root as cwd ("/" always exists in the guest).
             let (output, code) = try await manager.exec("echo APEX_SANDBOX_OK")
             print("[sandboxctl] exec exit=\(code) output=\(output)")
 
             try await manager.stopContainer()
-            print("[sandboxctl] stopped. state: \(await manager.stateDescription)")
+            print("[sandboxctl] stopped. state: \(manager.stateDescription)")
 
             if output.contains("APEX_SANDBOX_OK") && code == 0 {
                 print("APEX_SANDBOX_OK")

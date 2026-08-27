@@ -108,14 +108,14 @@ struct ScreenshotTool: Tool {
                     let fileSize = pngData.count / 1024
                     let w = Int(nsImage.size.width)
                     let h = Int(nsImage.size.height)
-                    let dimensions = "\nDimensions: \\(w) × \\(h) px"
+                    let dimensions = "\nDimensions: \(w) × \(h) px"
                     
                     return """
-                    ✅ Screenshot saved (fast mode): \\(savePath)
-                    File size: \\(fileSize) KB\\(dimensions)
+                    ✅ Screenshot saved (fast mode): \(savePath)
+                    File size: \(fileSize) KB\(dimensions)
                     """
                 } catch {
-                    return "ERROR: ScreenCaptureKit capture failed: \\(error.localizedDescription)"
+                    return "ERROR: ScreenCaptureKit capture failed: \(error.localizedDescription)"
                 }
             }
 
@@ -134,9 +134,9 @@ struct ScreenshotTool: Tool {
                 guard let wId = windowID else {
                     return "ERROR: Could not detect active window ID of the frontmost application."
                 }
-                command = "/usr/sbin/screencapture -x -t png -o -l \\(wId) \"\\(savePath)\""
+                command = "/usr/sbin/screencapture -x -t png -o -l \(wId) \"\(savePath)\""
             } else {
-                command = "/usr/sbin/screencapture -x -t png \"\\(savePath)\""
+                command = "/usr/sbin/screencapture -x -t png \"\(savePath)\""
             }
 
             let process = Process()
@@ -155,7 +155,7 @@ struct ScreenshotTool: Tool {
                 process.waitUntilExit()
                 screenshotWatchdog.cancel()
             } catch {
-                return "ERROR: Could not run screencapture: \\(error.localizedDescription)"
+                return "ERROR: Could not run screencapture: \(error.localizedDescription)"
             }
 
             let exitCode = process.terminationStatus
@@ -164,9 +164,9 @@ struct ScreenshotTool: Tool {
                 let errData = stderr.fileHandleForReading.readDataToEndOfFile()
                 let errMsg = String(data: errData, encoding: .utf8) ?? "Unknown error"
                 return """
-                ERROR: screencapture failed (exit code \\(exitCode)).
+                ERROR: screencapture failed (exit code \(exitCode)).
                 Make sure Screen Recording is enabled in System Settings → Privacy & Security → Screen Recording.
-                Details: \\(errMsg)
+                Details: \(errMsg)
                 """
             }
 
@@ -187,12 +187,12 @@ struct ScreenshotTool: Tool {
             if let nsImage = NSImage(contentsOfFile: savePath) {
                 let w = Int(nsImage.size.width)
                 let h = Int(nsImage.size.height)
-                dimensions = "\nDimensions: \\(w) × \\(h) px"
+                dimensions = "\nDimensions: \(w) × \(h) px"
             }
 
             return """
-            ✅ Screenshot saved: \\(savePath)
-            File size: \\(fileSize) KB\\(dimensions)
+            ✅ Screenshot saved: \(savePath)
+            File size: \(fileSize) KB\(dimensions)
             """
         }
     }

@@ -98,12 +98,12 @@ struct AccessibilityControlTool: Tool {
                     }
                     let appElement = AXUIElementCreateApplication(target.pid)
                     var lines: [String] = []
-                    lines.append("🪟 **UI Outline — \\(target.title)** (PID \\(target.pid), depth ≤ \\(depthLimit)):")
+                    lines.append("🪟 **UI Outline — \(target.title)** (PID \(target.pid), depth ≤ \(depthLimit)):")
                     var remainingNodes = 150
                     Self.walk(element: appElement, depth: 0, maxDepth: depthLimit, includeValues: includeValues, remaining: &remainingNodes, into: &lines, conversationId: conversationId)
 
                     if lines.count <= 1 {
-                        return "⚠️ No accessible elements found for \\(target.title). The app may expose no AX tree (e.g. non-standard rendering)."
+                        return "⚠️ No accessible elements found for \(target.title). The app may expose no AX tree (e.g. non-standard rendering)."
                     }
                     if remainingNodes <= 0 {
                         lines.append("… [outline truncated at 150 elements — narrow by increasing depth filtering or inspecting a specific app]")
@@ -292,14 +292,14 @@ struct AccessibilityControlTool: Tool {
         let role = (attribute(element, kAXRoleAttribute) as? String) ?? "?"
         var description = role
         if let title = attribute(element, kAXTitleAttribute) as? String, !title.isEmpty {
-            description += " '\\(title.prefix(60))'"
+            description += " '\(title.prefix(60))'"
         }
         if includeValues, let value = attribute(element, kAXValueAttribute) as? String,
            !value.isEmpty, role != "AXStaticText" || value.count <= 80 {
-            description += " = \"\\(value.prefix(80))\""
+            description += " = \"\(value.prefix(80))\""
         }
         if let rect = frame(of: element) {
-            description += " (\\(Int(rect.origin.x)),\\(Int(rect.origin.y)) \\(Int(rect.width))x\\(Int(rect.height)))"
+            description += " (\(Int(rect.origin.x)),\(Int(rect.origin.y)) \(Int(rect.width))x\(Int(rect.height)))"
         }
         
         let isInteractive = [
@@ -310,10 +310,10 @@ struct AccessibilityControlTool: Tool {
 
         if isInteractive {
             let id = UIRegistry.shared.register(element, for: conversationId)
-            description += " [\\(id)]"
+            description += " [\(id)]"
         }
 
-        lines.append("\\(String(repeating: \"  \", count: depth))- \\(description)")
+        lines.append("\(String(repeating: "  ", count: depth))- \(description)")
 
         if let children = attribute(element, kAXChildrenAttribute) as? [AXUIElement] {
             for child in children where remaining > 0 {

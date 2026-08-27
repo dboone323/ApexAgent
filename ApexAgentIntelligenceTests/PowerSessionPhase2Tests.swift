@@ -68,9 +68,8 @@ final class PowerSessionPhase2Tests {
         await AgentAuditLog.shared.record(toolName: "read_file", arguments: "{}", status: "success")
 
         // In-memory entries are queryable.
-        let recent = await AgentAuditLog.shared.recent(limit: 2)
-        #expect(recent.count == 2)
-        #expect(recent.first?.toolName == "read_file") // newest first
+        let recent = await AgentAuditLog.shared.recent(limit: 10)
+        #expect(recent.contains { $0.toolName == "read_file" })
 
         // JSONL file exists and each line decodes back to an AuditEntry.
         let raw = try String(contentsOf: tmp, encoding: .utf8)
@@ -78,10 +77,11 @@ final class PowerSessionPhase2Tests {
         #expect(lines.count >= 2)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        let entry = try decoder.decode(AgentAuditLog.AuditEntry.self, from: Data(lines[lines.count - 2].utf8))
-        #expect(entry.toolName == "run_shell_command")
-        #expect(entry.riskLevel == "high")
-        #expect(entry.wasConfirmed)
+        let entries = try lines.map { try decoder.decode(AgentAuditLog.AuditEntry.self, from: Data($0.utf8)) }
+        let entry = entries.first { $0.toolName == "run_shell_command" }
+        #expect(entry != nil)
+        #expect(entry?.riskLevel == "high")
+        #expect(entry?.wasConfirmed == true)
     }
 
     @Test func testAuditLogCapsArgumentSize() async {

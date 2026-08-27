@@ -36,7 +36,7 @@ public actor AgentRegistry {
             Use tools like `run_shell_command`, `run_applescript`, `control_app`, and `control_accessibility` to run tasks on this Mac. \
             Confirm results and return stdout/stderr/exit codes to Apex Prime.
             """,
-            allowedTools: ["run_shell_command", "run_applescript", "control_app", "control_accessibility", "inspect_ui", "calendar", "reminders", "run_shortcut", "query_logs", "watch_paths", "network_diagnostics", "simctl", "mail_automation", "deep_link"]
+            allowedTools: ["run_shell_command", "run_applescript", "control_app", "control_accessibility", "computer_use", "calendar", "reminders", "run_shortcut", "query_logs", "watch_paths", "network_diagnostics", "simctl", "mail_automation", "deep_link"]
         ),
         "controller": RegisteredAgent(
             name: "controller",
@@ -45,7 +45,7 @@ public actor AgentRegistry {
             Use tools like `control_browser`, `take_screenshot`, `read_clipboard`, `write_clipboard`, `get_frontmost_app`, `get_running_processes`, and `send_notification`. \
             Return findings to Apex Prime.
             """,
-            allowedTools: ["get_frontmost_app", "get_running_processes", "read_clipboard", "write_clipboard", "send_notification", "system_info", "control_accessibility", "control_app", "control_browser", "get_weather", "map_search", "get_directions", "inspect_ui", "run_shortcut", "network_diagnostics", "simctl", "mail_automation", "deep_link"]
+            allowedTools: ["get_frontmost_app", "get_running_processes", "read_clipboard", "write_clipboard", "send_notification", "system_info", "control_accessibility", "control_app", "control_browser", "get_weather", "map_search", "get_directions", "computer_use", "run_shortcut", "network_diagnostics", "simctl", "mail_automation", "deep_link"]
         ),
         "researcher": RegisteredAgent(
             name: "researcher",

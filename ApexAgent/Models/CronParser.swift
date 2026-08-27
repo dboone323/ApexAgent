@@ -45,7 +45,7 @@ public struct CronSchedule: Sendable, Equatable {
                     throw NSError(domain: "CronParser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid step"])
                 }
                 results.formUnion(stride(from: min, through: max, by: step))
-            } else if let rangeDashIndex = s.firstIndex(of: "-") {
+            } else if s.contains("-") {
                 if let slashIndex = s.firstIndex(of: "/") {
                     let rangeStr = s[..<slashIndex]
                     let stepStr = s[s.index(after: slashIndex)...]

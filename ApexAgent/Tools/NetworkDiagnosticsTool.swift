@@ -116,7 +116,11 @@ struct NetworkDiagnosticsTool: Tool {
                         while let info = ptr {
                             var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
                             getnameinfo(info.pointee.ai_addr, info.pointee.ai_addrlen, &hostname, socklen_t(hostname.count), nil, 0, NI_NUMERICHOST)
-                            ips.append(String(cString: hostname))
+                            hostname.withUnsafeBufferPointer { ptr in
+                                if let base = ptr.baseAddress {
+                                    ips.append(String(cString: base))
+                                }
+                            }
                             ptr = info.pointee.ai_next
                         }
                         

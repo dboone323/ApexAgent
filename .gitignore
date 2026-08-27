@@ -44,3 +44,8 @@ Tools/benchmark-repro/
 results/
 *.xcresult
 DerivedData/
+.build_challenger/
+.clang-cache/
+.swiftpm-cache/
+.tmp/
+ORIGINAL_REQUEST.md

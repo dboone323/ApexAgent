@@ -899,11 +899,11 @@ extension SettingsView {
         let controller = LaunchAgentController()
         if isDaemonInstalled {
             controller.bootoutNow()
-            try? controller.uninstall()
+            _ = try? controller.uninstall()
         } else {
             let appPath = Bundle.main.bundlePath
             let execPath = Bundle.main.executablePath ?? "\(appPath)/Contents/MacOS/ApexAgent"
-            try? controller.install(programPath: execPath)
+            _ = try? controller.install(programPath: execPath)
             controller.bootstrapNow()
         }
         refreshDaemonStatus()

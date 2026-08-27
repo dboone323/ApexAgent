@@ -7,10 +7,14 @@ final class TraceBus: @unchecked Sendable {
 
     private(set) var events: [TraceEvent] = []
     private var continuations: [UUID: AsyncStream<TraceEvent>.Continuation] = [:]
-    private let maxEvents: Int = 400
+    private let maxEvents: Int
     private let queue = DispatchQueue(label: "com.apexagent.tracebus", attributes: .concurrent)
 
-    private init() {}
+    /// Injectable capacity so tests can run against an isolated instance;
+    /// `shared` keeps the production default of 400.
+    init(maxEvents: Int = 400) {
+        self.maxEvents = maxEvents
+    }
 
     func append(_ event: TraceEvent) {
         queue.async(flags: .barrier) { [weak self] in

@@ -61,18 +61,14 @@ struct MapSearchTool: Tool {
                         output += "   • Category: \(cleanCategory)\n"
                     }
                     
-                    let address = item.placemark.title ?? item.placemark.formattedAddress
-                    if !address.isEmpty {
-                        output += "   • Address: \(address)\n"
-                    }
                     if let phone = item.phoneNumber, !phone.isEmpty {
                         output += "   • Phone: \(phone)\n"
                     }
                     if let url = item.url {
                         output += "   • Website: \(url.absoluteString)\n"
                     }
-                    let coord = item.placemark.coordinate
-                    output += String(format: "   • Coordinates: %.5f, %.5f\n\n", coord.latitude, coord.longitude)
+                    let location = item.location
+                    output += String(format: "   • Coordinates: %.5f, %.5f\n\n", location.coordinate.latitude, location.coordinate.longitude)
                 }
                 return output.trimmingCharacters(in: .whitespacesAndNewlines)
             } catch {
@@ -82,35 +78,15 @@ struct MapSearchTool: Tool {
     }
 
     private func resolveLocation(for query: String) async -> CLLocation? {
-        let geocoder = CLGeocoder()
+        let searchRequest = MKLocalSearch.Request()
+        searchRequest.naturalLanguageQuery = query
+        searchRequest.resultTypes = [.address, .pointOfInterest]
+        let search = MKLocalSearch(request: searchRequest)
         do {
-            let placemarks = try await geocoder.geocodeAddressString(query)
-            return placemarks.first?.location
+            let response = try await search.start()
+            return response.mapItems.first?.location
         } catch {
             return nil
         }
-    }
-}
-
-// MARK: - Placemark Formatting Helper
-
-fileprivate extension CLPlacemark {
-    var formattedAddress: String {
-        var parts: [String] = []
-        if let subThoroughfare = subThoroughfare, let thoroughfare = thoroughfare {
-            parts.append("\(subThoroughfare) \(thoroughfare)")
-        } else if let thoroughfare = thoroughfare {
-            parts.append(thoroughfare)
-        }
-        if let locality = locality {
-            parts.append(locality)
-        }
-        if let administrativeArea = administrativeArea {
-            parts.append(administrativeArea)
-        }
-        if let postalCode = postalCode {
-            parts.append(postalCode)
-        }
-        return parts.joined(separator: ", ")
     }
 }

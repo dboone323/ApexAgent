@@ -54,7 +54,9 @@ public struct ComputerUseStep: Identifiable, Sendable, Equatable {
     /// True when this process holds the Accessibility trust required to post
     /// synthetic keyboard/mouse events (System Settings › Privacy & Security ›
     /// Accessibility). Input actions surface an actionable error when missing.
-    public static var hasAccessibilityPermission: Bool {
+    /// `nonisolated` on purpose: AXIsProcessTrusted is thread-safe, and tools
+    /// need the check before hopping to the main actor.
+    public nonisolated static var hasAccessibilityPermission: Bool {
         AXIsProcessTrusted()
     }
 
