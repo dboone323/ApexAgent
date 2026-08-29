@@ -423,16 +423,38 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
 
         let expanded = NSString(string: path).expandingTildeInPath
+        let rawStandardized = URL(fileURLWithPath: expanded).standardized.path
         let resolvedURL = URL(fileURLWithPath: expanded).resolvingSymlinksInPath()
         let standardized = resolvedURL.path
 
         let fm = FileManager.default
         let homeDir = fm.homeDirectoryForCurrentUser.standardized.path
 
+        let destinationOfSymlink: String?
+        do {
+            let rawDest = try fm.destinationOfSymbolicLink(atPath: path)
+            destinationOfSymlink = NSString(string: rawDest).expandingTildeInPath
+        } catch {
+            destinationOfSymlink = nil
+        }
+        // Helper: does `p` land inside any forbidden home-relative directory?
+        func isForbiddenHomeSubpath(_ p: String) -> Bool {
+            let sensitiveNames = [".ssh", ".aws", ".gnupg", ".config"]
+            for name in sensitiveNames {
+                let forbidden = (homeDir as NSString).appendingPathComponent(name)
+                if p == forbidden || p.hasPrefix(forbidden + "/") { return true }
+            }
+            return false
+        }
+
         let desktopPath = (homeDir as NSString).appendingPathComponent("Desktop")
         let documentsPath = (homeDir as NSString).appendingPathComponent("Documents")
         let downloadsPath = (homeDir as NSString).appendingPathComponent("Downloads")
         let musicPath = (homeDir as NSString).appendingPathComponent("Music")
+        let sshPath = (homeDir as NSString).appendingPathComponent(".ssh")
+        let awsPath = (homeDir as NSString).appendingPathComponent(".aws")
+        let gnupgPath = (homeDir as NSString).appendingPathComponent(".gnupg")
+        let configPath = (homeDir as NSString).appendingPathComponent(".config")
 
         if !permissions.desktopFolderAllowed && (standardized == desktopPath || standardized.hasPrefix(desktopPath + "/")) {
             throw .desktopFolderRestricted
@@ -446,13 +468,35 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         if !permissions.musicFolderAllowed && (standardized == musicPath || standardized.hasPrefix(musicPath + "/")) {
             throw .musicFolderRestricted
         }
+        if standardized == sshPath || standardized.hasPrefix(sshPath + "/") {
+            throw .pathViolation(path)
+        }
+        if standardized == awsPath || standardized.hasPrefix(awsPath + "/") {
+            throw .pathViolation(path)
+        }
+        if standardized == gnupgPath || standardized.hasPrefix(gnupgPath + "/") {
+            throw .pathViolation(path)
+        }
+        if standardized == configPath || standardized.hasPrefix(configPath + "/") {
+            throw .pathViolation(path)
+        }
+
+        // Forbidden-directory check on the raw symlink destination.
+        if let dest = destinationOfSymlink, isForbiddenHomeSubpath(dest) {
+            throw .symlinkTraversal(path)
+        }
+
+        // Host system root enforcement
+        if standardized == "/" {
+            throw .pathViolation(path)
+        }
+
         if accessSandboxBookmark(for: standardized) != nil {
             return
         }
 
         // STRENGTHENED SANDBOX: Enforce workspace boundary checks
         let resolvedWorkspace = URL(fileURLWithPath: wsPath).resolvingSymlinksInPath().path
-
         let isInWorkspace = standardized == resolvedWorkspace || standardized.hasPrefix(resolvedWorkspace + "/")
 
         let tempDir = NSTemporaryDirectory()
@@ -460,10 +504,21 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         let isInTemp = standardized == resolvedTemp || standardized.hasPrefix(resolvedTemp + "/")
 
         let skillsDir = (homeDir as NSString).appendingPathComponent(".apex/skills")
-        let isInSkills = standardized == skillsDir || standardized.hasPrefix(skillsDir + "/")
+        let resolvedSkills = URL(fileURLWithPath: skillsDir).resolvingSymlinksInPath().path
+        let isInSkills = standardized == resolvedSkills || standardized.hasPrefix(resolvedSkills + "/")
 
-        if !isInWorkspace && !isInTemp && !isInSkills {
-            throw .pathViolation(path)
+        if isInWorkspace || isInTemp || isInSkills {
+            // Check if a symlink inside workspace resolved into a dangerous system directory
+            let forbiddenSystemPrefixes = ["/System", "/Library", "/etc", "/private/etc", "/usr", "/bin", "/sbin", "/dev", "/Volumes"]
+            for forbidden in forbiddenSystemPrefixes {
+                if standardized == forbidden || standardized.hasPrefix(forbidden + "/") {
+                    if rawStandardized != standardized {
+                        throw .symlinkTraversal(path)
+                    }
+                    throw .pathViolation(path)
+                }
+            }
+            return
         }
     }
 

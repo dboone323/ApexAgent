@@ -410,26 +410,80 @@ public final class ContainerManager: ContainerManagerProtocol {
         guard state == .running, let active = container else {
             throw NSError(domain: "ContainerManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Container is not running"])
         }
-        
+
         let collector = DataCollector()
-        
+
         var processConfig = LinuxProcessConfiguration()
         processConfig.arguments = ["/bin/sh", "-c", command]
         processConfig.workingDirectory = workingDirectory ?? FileManager.default.currentDirectoryPath
         processConfig.terminal = false
         processConfig.stdout = collector
         processConfig.stderr = collector
-        
+
         let process = try await active.exec(UUID().uuidString, configuration: processConfig)
         try await process.start()
-        
+
         let exitStatus = try await process.wait()
         let output = collector.string()
         return (output: output, exitCode: Int32(exitStatus.exitCode))
     }
-}
 
-// MARK: - Interactive Shell Session Helper
+    // MARK: - Workspace Mount Safety Guard
+
+    public func verifyWorkspaceMountSafety(_ workspace: String) throws {
+        let expanded = NSString(string: workspace).expandingTildeInPath
+        let resolvedURL = URL(fileURLWithPath: expanded).resolvingSymlinksInPath()
+        let standardized = resolvedURL.path
+
+        let forbiddenRoots: Set<String> = [
+            "/",
+            "/System",
+            "/Library",
+            "/usr",
+            "/bin",
+            "/sbin",
+            "/etc",
+            "/var",
+            "/private",
+            "/private/etc",
+            "/private/var",
+            "/dev",
+            "/Volumes"
+        ]
+
+        if forbiddenRoots.contains(standardized) {
+            throw SecuritySandboxError.pathViolation("Mounting system directory '\(standardized)' as container workspace is prohibited.")
+        }
+        // Prefix-based check: catch paths that live UNDER a forbidden root
+        // (e.g. /System/Library, /private/etc/...) even when the exact path
+        // isn't in the set.
+        for root in forbiddenRoots {
+            if standardized.hasPrefix(root) && standardized != root {
+                throw SecuritySandboxError.pathViolation("Mounting system directory '\(standardized)' as container workspace is prohibited.")
+            }
+        }
+
+        let fm = FileManager.default
+        let homeDir = fm.homeDirectoryForCurrentUser.resolvingSymlinksInPath().path
+        if standardized == homeDir {
+            throw SecuritySandboxError.pathViolation("Mounting user home directory '\(homeDir)' directly as container workspace is prohibited.")
+        }
+
+        let sensitiveUserDirs: Set<String> = [
+            (homeDir as NSString).appendingPathComponent("Desktop"),
+            (homeDir as NSString).appendingPathComponent("Documents"),
+            (homeDir as NSString).appendingPathComponent("Downloads"),
+            (homeDir as NSString).appendingPathComponent("Music"),
+            (homeDir as NSString).appendingPathComponent(".ssh"),
+            (homeDir as NSString).appendingPathComponent(".aws"),
+            (homeDir as NSString).appendingPathComponent(".gnupg")
+        ]
+
+        if sensitiveUserDirs.contains(standardized) {
+            throw SecuritySandboxError.pathViolation("Mounting protected user directory '\(standardized)' directly as container workspace is prohibited.")
+        }
+    }
+}
 
 public struct InteractiveSession: Sendable {
     private let pipe: PipeReaderStream
