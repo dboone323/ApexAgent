@@ -214,7 +214,7 @@ struct ModelCapacityRoutingTests {
             isPCCAvailable: false
         )
         #expect(provider == .localOllama)
-        #expect(reason?.contains("gemma4:12bmlx") == true)
+        #expect(reason?.contains("Local Ollama") == true)
     }
 
     @Test("Explicit model preference overrides automatic tiering")
