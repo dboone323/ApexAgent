@@ -133,6 +133,9 @@ struct MarkdownText: View {
                     Text(makeAttributedString(from: text))
                         .font(.system(size: 14))
                         .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityLabel(text)
+                        .accessibilityValue(text)
+                        .accessibilityIdentifier("agentBubbleText")
                 }
             }
         }

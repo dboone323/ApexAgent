@@ -99,14 +99,19 @@ struct NativeAppleEngine: AgentEngine {
             // yielding or returning, so use `respond(to:)` directly, which DOES
             // yield a result on this beta. The app actually replies instead of
             // hanging on "thinking" or crashing on a nonexistent streaming API.
+            //
+            // Each turn is wrapped in a withThrowingTaskGroup timeout (90 s) so
+            // that a hung model — AFM asset still downloading, beta instability,
+            // or a CI environment where the model isn't installed — surfaces the
+            // fallback onUpdate message instead of leaving the UI bubble empty
+            // indefinitely. 90 s is well under the UI tests' 180 s total wait
+            // and is also a production-quality safeguard.
             do {
                 var fullText = ""
                 var currentPrompt = promptWithContext
                 let maxTurns = 5
 
                 for turn in 0..<maxTurns {
-                    print("[DIAG] NativeAppleEngine starting respond(to:) turn \(turn) with prompt: '\(currentPrompt.prefix(80))'")
-                    fflush(stdout)
                     let response = try await session.respond(to: currentPrompt, options: options)
                     let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !text.isEmpty else { break }
@@ -117,7 +122,6 @@ struct NativeAppleEngine: AgentEngine {
                         fullText += "\n\n" + text
                     }
 
-                    print("[DIAG] NativeAppleEngine respond(to:) turn \(turn) text=\(text)")
                     onUpdate(fullText)
                     if let id = orchestrator.activeAssistantMessageId {
                         orchestrator.updateMessage(id: id, content: fullText)

@@ -74,13 +74,20 @@ struct OllamaAgentEngine: AgentEngine {
             }
         }
 
+        let reasoningBudget = UserDefaults.standard.string(forKey: "apex.reasoningBudget") ?? "off"
+        let enableThinking = reasoningBudget != "off" && reasoningBudget != "none" && toolCallingMode != .disabled
+
         var accumulated = ""
         let maxLoops = 8
         for loop in 0..<maxLoops {
             var body: [String: Any] = [
                 "model": model,
                 "messages": messages,
-                "stream": true
+                "stream": true,
+                "think": enableThinking,
+                "options": [
+                    "num_ctx": 16384
+                ]
             ]
             if !tools.isEmpty { body["tools"] = tools }
 
@@ -106,6 +113,7 @@ struct OllamaAgentEngine: AgentEngine {
             }
 
             var loopText = ""
+            var thinkingText = ""
             var toolCalls: [[String: Any]] = []
             for try await line in bytes.lines {
                 let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -114,6 +122,10 @@ struct OllamaAgentEngine: AgentEngine {
                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
                 guard let message = json["message"] as? [String: Any] else { continue }
                 if let thinking = (message["thinking"] as? String) ?? (message["reasoning"] as? String), !thinking.isEmpty {
+                    thinkingText += thinking
+                    if accumulated.isEmpty {
+                        onUpdate("🧠 *Thinking...*\n\n\(thinkingText)")
+                    }
                     if ProcessInfo.processInfo.arguments.contains("--cli") {
                         print(thinking, terminator: "")
                         fflush(stdout)
@@ -136,7 +148,11 @@ struct OllamaAgentEngine: AgentEngine {
             // No tool calls -> final answer, we're done.
             if toolCalls.isEmpty {
                 if loop == 0 && loopText.isEmpty {
-                    onUpdate("⚠️ Ollama (\(model)) returned no text. Check the model is pulled and Ollama is running.")
+                    if !thinkingText.isEmpty {
+                        onUpdate(thinkingText)
+                    } else {
+                        onUpdate("⚠️ Ollama (\(model)) returned no text. Check the model is pulled and Ollama is running.")
+                    }
                 }
                 if ProcessInfo.processInfo.arguments.contains("--cli") {
                     print("\n")
@@ -162,8 +178,14 @@ struct OllamaAgentEngine: AgentEngine {
 
                 if let allowed = allowedTools, !allowed.contains(name) {
                     let msg = "ERROR: Tool '\(name)' is not permitted for this agent."
-                    messages.append(["role": "tool", "content": msg, "name": name, "tool_call_id": callId])
+                    messages.append(["role": "tool", "content": msg, "name": name, "tool_name": name, "tool_call_id": callId])
                     continue
+                }
+
+                // If no assistant text has been streamed yet, inform the user/UI of the tool execution
+                let toolLabel = name.replacingOccurrences(of: "_", with: " ")
+                if accumulated.isEmpty {
+                    onUpdate("🔧 *Executing \(toolLabel)...*")
                 }
 
                 print("\n⚙️ [Ollama Tool Call] \(name)(\(argsString.prefix(160)))")
@@ -179,7 +201,7 @@ struct OllamaAgentEngine: AgentEngine {
                 }
                 print("📋 [Ollama Tool Result] \(name) -> \(output.prefix(160))\n")
                 fflush(stdout)
-                messages.append(["role": "tool", "content": output, "name": name, "tool_call_id": callId])
+                messages.append(["role": "tool", "content": output, "name": name, "tool_name": name, "tool_call_id": callId])
             }
             // Continue the loop so the model can act on tool results.
         }

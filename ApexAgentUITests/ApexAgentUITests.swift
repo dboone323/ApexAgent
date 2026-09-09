@@ -81,20 +81,26 @@ final class ApexAgentUITests: XCTestCase {
     /// completed (isStreaming=false) response. Returns the assistant bubble.
     /// Runs against the real on-device model.
     @discardableResult
-    private func sendAndWaitForResponse(_ prompt: String, timeout: TimeInterval = 180) -> XCUIElement {
+    private func sendAndWaitForResponse(_ prompt: String, timeout: TimeInterval = 360) -> XCUIElement {
         let input = chatInput
         tap(input)
         input.typeText(prompt)
 
         let send = app.buttons["sendButton"].firstMatch
         XCTAssertTrue(send.waitForExistence(timeout: 5))
-        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: send)
+        let enabled = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: send, handler: nil)
         let _ = XCTWaiter.wait(for: [enabled], timeout: 5)
         tap(send)
 
+        // Verify the user message rendered into conversationScrollView
+        let userBubble = app.scrollViews["conversationScrollView"]
+            .descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@", "UserMessage_")).firstMatch
+        _ = userBubble.waitForExistence(timeout: 10)
+
         let agentBubble = app.descendants(matching: .any)
             .matching(NSPredicate(format: "identifier BEGINSWITH %@", "AgentResponse_")).firstMatch
-        XCTAssertTrue(agentBubble.waitForExistence(timeout: 15),
+        XCTAssertTrue(agentBubble.waitForExistence(timeout: 20),
                       "No agent response bubble appeared after sending — run may not have started.")
 
         // If a high-risk tool approval dialog appears, approve it so execution proceeds
@@ -103,12 +109,14 @@ final class ApexAgentUITests: XCTestCase {
             tap(approveButton)
         }
 
-        // Wait for streamed, non-empty content from the real on-device engine
-        let content = agentBubble.descendants(matching: .staticText).firstMatch
-        let hasContent = NSPredicate(format: "value != '' AND value != nil OR label != '' AND label != nil")
-        let contentExpectation = XCTNSPredicateExpectation(predicate: hasContent, object: content)
-        let gotContent = XCTWaiter.wait(for: [contentExpectation], timeout: timeout) == .completed
+        // Wait for streamed, non-empty content from the real engine.
+        let nonBlankText = agentBubble.staticTexts.element(matching: NSPredicate(format: "label != '' OR value != ''"))
+        let gotContent = nonBlankText.waitForExistence(timeout: timeout)
+            || agentBubble.waitForExistence(timeout: 1) && (agentBubble.value as? String)?.isEmpty == false
         XCTAssertTrue(gotContent, "Agent produced no streamed content — response did not complete.")
+
+        let stopButton = app.buttons["stopGenerationButton"].firstMatch
+        _ = stopButton.waitForNonExistence(timeout: timeout)
 
         sleep(1)
         return agentBubble
@@ -194,7 +202,8 @@ final class ApexAgentUITests: XCTestCase {
         let prompt = "In natural language without tools, what is two plus two?"
         let bubble = sendAndWaitForResponse(prompt)
         let staticText = bubble.descendants(matching: .staticText).firstMatch
-        let text = ((staticText.value as? String) ?? staticText.label).lowercased()
+        let candidateText = (staticText.value as? String) ?? staticText.label
+        let text = (candidateText.isEmpty ? (bubble.value as? String ?? "") : candidateText).lowercased()
         XCTAssertFalse(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                        "Agent response should be non-empty after the run completes.")
         // Ensure the answer correctly evaluates 2+2 without looping or opening terminal

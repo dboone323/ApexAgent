@@ -1320,16 +1320,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                     toolCallingMode: effectiveToolCallingMode,
                     onUpdate: { @MainActor partialContent in
                         if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
-                            // Reassign the whole array (not just a nested
-                            // `messages[idx].content =`) so @Observable tracks
-                            // the change and SwiftUI re-renders the streaming
-                            // bubble. A nested struct mutation does NOT trigger
-                            // @Observable, which left the UI stuck on "thinking".
                             var copy = self.messages
                             copy[idx].content = partialContent
                             self.messages = copy
-                        } else {
-                            Logger.agent.info("[DIAG-onUpdate] assistant id not found in messages (idx miss)")
                         }
                     }
                 )

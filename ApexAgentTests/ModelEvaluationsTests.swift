@@ -88,6 +88,16 @@ struct ModelEvaluationsTests {
 
     @Test("Registry activeProvider defaults to on-device when unset")
     func registryDefaultsToOnDevice() {
+        let key = ModelRegistry.providerKey
+        let previous = UserDefaults.standard.object(forKey: key)
+        UserDefaults.standard.removeObject(forKey: key)
+        defer {
+            if let previous {
+                UserDefaults.standard.set(previous, forKey: key)
+            } else {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
         let model = ModelRegistry.model(for: .automatic, apiKey: "")
         #expect(model is SystemLanguageModel)
     }
@@ -206,6 +216,12 @@ struct ModelEvaluationsTests {
     @Test("ShellTool executes commands and returns clean stdout within deadline")
     func shellToolExecutionSpeed() async throws {
         let orchestrator = await MainActor.run { AgentOrchestrator() }
+        // Unit tests run without a SwiftData ModelContext, so loadOrCreatePermissions
+        // never fires and permissions stays nil. isCommandOrScriptAllowed returns false
+        // for all commands when permissions is nil (guarded by design). Assign a real
+        // AppPermissions instance — matching the default values created on first app
+        // launch — so the command-safety path-checks run instead of the nil early-exit.
+        await MainActor.run { orchestrator.permissions = AppPermissions() }
         let shellTool = ShellTool(orchestrator: orchestrator)
         let result = try await shellTool.call(arguments: ShellTool.Arguments(command: "echo 'APEX_AGENT_PTY_OK'", timeoutSeconds: 5))
         #expect(result.contains("APEX_AGENT_PTY_OK"))
