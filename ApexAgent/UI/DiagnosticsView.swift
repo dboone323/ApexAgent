@@ -41,6 +41,7 @@ struct DiagnosticsView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
+                        .accessibilityIdentifier("diagnosticsDoneButton")
                 }
                 ToolbarItem(placement: .primaryAction) {
                     HStack {
@@ -70,6 +71,7 @@ struct DiagnosticsView: View {
             .onAppear { runDiagnostics() }
             .frame(minWidth: 520, minHeight: 480)
         }
+        .accessibilityIdentifier("diagnosticsSheet")
     }
 
     private var runningState: some View {

@@ -116,16 +116,6 @@ struct ChatView: View {
 
             // Input area
             ChatInputBar(inputText: $inputText, isInputFocused: $isInputFocused)
-                .allowsHitTesting(!orchestrator.isGenerating)
-                .overlay(
-                    Group {
-                        if orchestrator.isGenerating {
-                            Color.black.opacity(0.02)
-                        } else {
-                            Color.clear
-                        }
-                    }
-                )
         }
         .background(Color(nsColor: .controlBackgroundColor))
         .onAppear { isInputFocused = true }

@@ -37,6 +37,33 @@ import SwiftData
         let disconnected = await withTimeout(seconds: 3) { !(client.isConnected) }
         #expect(disconnected, "Client should report !isConnected after disconnect()")
     }
+
+    @Test func testServerReachabilityPreflight() async throws {
+        let testPort: UInt16 = 27999
+        // 1. Port is closed — must report false
+        #expect(!ApexGatewayClient.isServerReachable(port: testPort))
+
+        // 2. Start real server on port — must report true
+        let orchestrator = AgentOrchestrator()
+        let server = ApexGatewayServer(port: testPort, orchestrator: orchestrator)
+        try server.start()
+
+        // Allow socket listener to bind
+        var reachable = false
+        for _ in 0..<20 {
+            if ApexGatewayClient.isServerReachable(port: testPort) {
+                reachable = true
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        #expect(reachable, "Preflight reachability probe should return true when server is listening")
+
+        // 3. Stop server — must return to false
+        server.stop()
+        try? await Task.sleep(for: .milliseconds(100))
+        #expect(!ApexGatewayClient.isServerReachable(port: testPort), "Preflight probe should return false once server is stopped")
+    }
 }
 
 extension ApexGatewayClientTests {

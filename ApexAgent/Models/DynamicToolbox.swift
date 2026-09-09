@@ -41,16 +41,15 @@ class DynamicToolbox {
         // 2. Load dynamically created skills
         loadScriptsFromDir(skillsDir)
 
-        // 3. Load MCP tools asynchronously (skipped in test mode so MCP child
-        // processes don't keep the test helper resident; driven by APEX_DISABLE_FS_WATCHER=1)
+        // 3. Load MCP tools asynchronously (skipped in test mode so background
+        // tasks and MCP child processes don't collide or corrupt runloop autorelease pools)
         loadMCPToolsTask?.cancel()
-        #if DEBUG
-        if getenv("APEX_ENABLE_FS_WATCHER").flatMap({ String(cString: $0) }) != "1" {
+        let isTesting = getenv("APEX_TEST_MODE") != nil
+            || ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest")
+            || NSClassFromString("XCTestCase") != nil
+        if !isTesting {
             loadMCPToolsTask = Task { await loadMCPTools() }
         }
-        #else
-        loadMCPToolsTask = Task { await loadMCPTools() }
-        #endif
     }
 
     private func loadScriptsFromDir(_ dir: URL) {
@@ -249,6 +248,13 @@ class DynamicToolbox {
             let inputPipe = Pipe()
             process.standardInput = inputPipe
 
+            let outputTask = Task.detached {
+                outputPipe.fileHandleForReading.readDataToEndOfFile()
+            }
+            let errorTask = Task.detached {
+                errorPipe.fileHandleForReading.readDataToEndOfFile()
+            }
+
             try process.run()
 
             if let data = jsonArguments.data(using: .utf8) {
@@ -256,10 +262,10 @@ class DynamicToolbox {
             }
             try? inputPipe.fileHandleForWriting.close()
 
-            let outputData = try outputPipe.fileHandleForReading.readToEnd() ?? Data()
-            let errorData = try errorPipe.fileHandleForReading.readToEnd() ?? Data()
-
             process.waitUntilExit()
+
+            let outputData = await outputTask.value
+            let errorData = await errorTask.value
 
             let outputStr = String(data: outputData, encoding: .utf8) ?? ""
             let errorStr = String(data: errorData, encoding: .utf8) ?? ""

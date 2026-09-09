@@ -32,8 +32,8 @@ final class BotManager {
     var modelContext: ModelContext?
 
     // MARK: - Bot Registry
-    private var bots: [BotProfile] = []
-    private var sessions: [UUID: BotSession] = [:]  // botId → active session
+    public var bots: [BotProfile] = []
+    public var sessions: [UUID: BotSession] = [:]  // botId → active session
 
     // MARK: - Active Bot
     var activeBotId: UUID?
@@ -277,7 +277,7 @@ final class BotManager {
 
     // MARK: - Persistence
 
-    private func saveBot(_ bot: BotProfile) {
+    func saveBot(_ bot: BotProfile) {
         bots.append(bot)
         if let context = modelContext {
             context.insert(bot)
@@ -294,9 +294,11 @@ final class BotManager {
                 if sessions[bot.id] == nil {
                     let session = makeSession(for: bot)
                     session.modelContext = context
+                    session.loadConversationFromDisk()
                     sessions[bot.id] = session
                 } else {
                     sessions[bot.id]?.modelContext = context
+                    sessions[bot.id]?.loadConversationFromDisk()
                 }
             }
         } catch {
@@ -437,5 +439,21 @@ final class BotManager {
                           userInfo: [NSLocalizedDescriptionKey: "Could not parse playbook from URL."])
         }
         return importPlaybook(playbook)
+    }
+
+    // MARK: - Collaboration Playbooks
+
+    public var playbookHistory: [PlaybookExecutionReport] = []
+
+    @discardableResult
+    public func executeCollaborationPlaybook(
+        preset: PlaybookPresetKind,
+        context: String
+    ) async throws -> PlaybookExecutionReport {
+        let playbook = CollaborationPlaybook.preset(for: preset)
+        let runner = PlaybookRunner(playbook: playbook, availableBots: allBots)
+        let report = try await runner.execute(contextInput: context)
+        playbookHistory.append(report)
+        return report
     }
 }

@@ -144,6 +144,15 @@ struct AnalyzeImageTool: Tool {
     private func createVisualSession(preference: AgentModelPreference, instructions: String) -> LanguageModelSession {
         let transcript = Transcript(entries: [])
         switch preference {
+        case .autoPicker:
+            let apiKey = ModelRegistry.geminiAPIKey()
+            if !apiKey.isEmpty {
+                let model = CloudGeminiLanguageModel(apiKey: apiKey)
+                return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
+            } else {
+                let model = SystemLanguageModel.default
+                return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)
+            }
         case .localSystem:
             let model = SystemLanguageModel.default
             return LanguageModelSession(profile: MultimodalReaderProfile(instructions: instructions, model: model, reasoningLevel: apexConfiguredReasoningLevel(), maxResponseTokens: apexConfiguredMaxResponseTokens()), history: transcript)

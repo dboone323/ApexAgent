@@ -8,6 +8,8 @@ struct MCPServerConfig: Codable, Identifiable, Equatable {
     var name: String
     var command: String
     var arguments: [String]
+    var transport: String = "stdio"
+    var endpointURL: String? = nil
 }
 
 @Observable
@@ -132,6 +134,21 @@ final class MCPManager: OrchestratorProvider {
         if let client = clients[id] {
             await client.resetCircuit()
         }
+    }
+
+    /// Restart a previously-started MCP server by stopping and re-starting its client.
+    func restartServer(id: UUID) async throws {
+        guard let server = servers.first(where: { $0.id == id }) else {
+            throw MCPError.connectionFailed("No MCP server found for id \(id)")
+        }
+        if let client = clients[id] {
+            await client.stop()
+            await client.resetCircuit()
+            clients.removeValue(forKey: id)
+        }
+        // Re-create and start via getClient so it picks up any config changes.
+        let newClient = getClient(for: server)
+        try await newClient.start()
     }
     
     func getClient(for config: MCPServerConfig) -> MCPClient {

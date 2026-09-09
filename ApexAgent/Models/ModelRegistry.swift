@@ -3,33 +3,35 @@ import FoundationModels
 
 /// Central, single-Swift-API model selector for ApexAgent.
 ///
-/// ApexAgent already conforms to Apple's `LanguageModel` protocol for several
-/// providers (Apple on-device, Apple Private Cloud Compute, Cloud Gemini,
-/// Local Ollama, Local MLX). The individual tools historically duplicated the
-/// same `UserDefaults`-keyed fallback chain inline. `ModelRegistry` unifies that
-/// logic behind one API so every caller can swap providers with a single call,
-/// matching the WWDC26 "one Swift API for any LLM" direction.
+/// ApexAgent conforms to Apple's `LanguageModel` protocol across multiple
+/// providers:
+/// 1. Apple On-Device (AFM 3 via FoundationModels)
+/// 2. Cloud Gemini (Flash / Pro via Google Generative AI API)
+/// 3. Local Ollama (gemma4:12bmlx / llama / qwen on localhost:11434)
+/// 4. Local MLX (gemma4:12bmlx on localhost:8080)
+/// 5. Apple Private Cloud Compute (PCC)
+/// 6. fm CLI (Apple on-device CLI)
 ///
-/// New in macOS 27: the `fm` command-line tool (`/usr/bin/fm`) exposes the
-/// on-device Apple Foundation Model and the Private Cloud Compute server model.
-/// `FMCLILanguageModel` (see FMCLILanguageModel.swift) conforms to the same
-/// `LanguageModel` protocol by shelling out to `fm`, so it slots into this
-/// registry like any other provider.
+/// The Auto Model Picker dynamically resolves the best LLM on each turn
+/// based on context token size, task complexity, tool count, vision attachments,
+/// and provider availability.
 public enum ModelProvider: String, CaseIterable, Sendable {
+    case autoPicker
     case appleOnDevice
     case applePCC
+    case cloudGemini
     case localOllama
     case localMLX
-    case cloudGemini
     case fmCLI
 
     public var displayName: String {
         switch self {
-        case .appleOnDevice: "Apple On-Device (Auto-tiers to PCC / Ollama >4k)"
+        case .autoPicker: "Auto Model Picker (Native → Gemini Flash → Ollama)"
+        case .appleOnDevice: "Apple On-Device (AFM 3)"
         case .applePCC: "Apple Private Cloud Compute"
+        case .cloudGemini: "Cloud Gemini (Flash / Pro)"
         case .localOllama: "Local Ollama (gemma4:12bmlx)"
         case .localMLX: "Local MLX (gemma4:12bmlx)"
-        case .cloudGemini: "Cloud Gemini"
         case .fmCLI: "fm CLI (Apple)"
         }
     }
@@ -38,26 +40,43 @@ public enum ModelProvider: String, CaseIterable, Sendable {
 public enum ModelSelectionStrategy: Sendable {
     /// Use exactly the requested provider.
     case explicit(ModelProvider)
-    /// Replicate the fallback chain used by the tools:
-    /// on-device (<=4k) → PCC (>4k) → Ollama gemma4:12bmlx → MLX.
+    /// Replicate the fallback chain: on-device (<=4k) → Gemini Flash (>4k / High-complexity) → Ollama → MLX.
     case automatic
 }
 
 public struct ModelRegistry {
 
-    /// Keys mirrored from the existing tool implementations.
+    /// Keys mirrored from Settings & Keychain implementations.
     private static let geminiKeyKey = "apex.geminiKey"
+    private static let geminiModelKey = "apex.geminiModel"
     private static let ollamaModelKey = "apex.ollamaModel"
     private static let mlxHostKey = "apex.mlxHost"
     private static let mlxModelKey = "apex.mlxModel"
     public static let providerKey = "apex.modelProvider"
 
+    /// Retrieves the Gemini API Key from Keychain (preferred), environment, or UserDefaults.
     public static func geminiAPIKey() -> String {
-        UserDefaults.standard.string(forKey: geminiKeyKey) ?? ""
+        if let key = KeychainManager.get(key: "geminiAPIKey"), !key.isEmpty {
+            return key
+        }
+        if let key = KeychainManager.get(key: geminiKeyKey), !key.isEmpty {
+            return key
+        }
+        if let envKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"], !envKey.isEmpty {
+            return envKey
+        }
+        return UserDefaults.standard.string(forKey: geminiKeyKey)
+            ?? UserDefaults.standard.string(forKey: "geminiAPIKey")
+            ?? ""
+    }
+
+    /// Default Gemini model to the latest Flash version (gemini-3.5-flash).
+    public static func geminiModel() -> String {
+        UserDefaults.standard.string(forKey: geminiModelKey) ?? "gemini-3.5-flash"
     }
 
     public static func ollamaModel() -> String {
-        UserDefaults.standard.string(forKey: ollamaModelKey) ?? "gemma4:12bmlx"
+        UserDefaults.standard.string(forKey: ollamaModelKey) ?? "gemma4:12b"
     }
 
     public static func mlxModel() -> String {
@@ -70,78 +89,177 @@ public struct ModelRegistry {
     }
 
     /// Resolve the active provider from `UserDefaults` (`apex.modelProvider`),
-    /// falling back to `.appleOnDevice`.
+    /// falling back to `.autoPicker`.
     public static func activeProvider() -> ModelProvider {
         if let raw = UserDefaults.standard.string(forKey: providerKey),
            let provider = ModelProvider(rawValue: raw) {
             return provider
         }
-        return .appleOnDevice
+        return .autoPicker
     }
 
-    /// Estimates the token count for a prompt, history, and instructions (~4 characters per token).
-    static func estimateTokenCount(prompt: String, history: [ChatMessage] = [], instructions: String = "") -> Int {
+    /// Estimates the token count for a prompt, history, instructions, and tool definitions (~4 characters per token + ~180 tokens per tool schema).
+    static func estimateTokenCount(prompt: String, history: [ChatMessage] = [], instructions: String = "", tools: [String] = []) -> Int {
         let historyChars = history.reduce(0) { $0 + $1.content.count }
         let totalChars = prompt.count + historyChars + instructions.count
-        return max(1, totalChars / 4)
+        let toolTokens = tools.count * 180
+        return max(1, (totalChars / 4) + toolTokens)
     }
 
-    /// Resolves the optimal `ModelProvider` given the task size, user preference, and system capabilities.
+    /// Resolves the optimal `ModelProvider` given task size, complexity, user preference, and system capabilities.
     ///
-    /// Fallback hierarchy when a task exceeds on-device Apple Foundation Model 4k limit (~3,800 tokens):
-    /// 1. Try Apple Private Cloud Compute (`.applePCC`) if available.
-    /// 2. Third option: Local Ollama (`.localOllama`, running `gemma4:12bmlx` for macOS 27).
-    /// 3. Local MLX (`.localMLX`, running `gemma4:12bmlx`).
+    /// Auto Model Picker Cascade:
+    /// 1. Apple Native On-Device (AFM) for standard tasks (<= 3,200 tokens, quick conversational, local tools).
+    /// 2. Cloud Gemini Flash / Pro (for large context >3,200 tokens, deep coding/refactoring, vision attachments).
+    /// 3. Local Ollama (fallback when offline, unkeyed, or explicitly configured).
+    /// 4. Apple PCC / Local MLX / fm CLI.
     static func resolveProviderForTask(
         preferred: ModelProvider?,
         prompt: String,
         history: [ChatMessage] = [],
         instructions: String = "",
+        tools: [String] = [],
+        hasAttachments: Bool = false,
         isPCCAvailable: Bool? = nil
     ) -> (provider: ModelProvider, reason: String?) {
         let targetProvider = preferred ?? activeProvider()
-        let tokens = estimateTokenCount(prompt: prompt, history: history, instructions: instructions)
+        let tokens = estimateTokenCount(prompt: prompt, history: history, instructions: instructions, tools: tools)
+        let hasGeminiKey = !geminiAPIKey().isEmpty
         let pccAvailable = isPCCAvailable ?? AgentOrchestrator.isPrivateCloudComputeAvailable()
 
-        // Only auto-tier when set to on-device or default
-        if targetProvider == .appleOnDevice && tokens > 3800 {
-            if pccAvailable {
-                return (.applePCC, "Task context is ~\(tokens) tokens (>4k limit). Auto-tiering to Apple Private Cloud Compute.")
+        // If explicitly requested a specific fixed provider, honor it
+        if targetProvider != .autoPicker && targetProvider != .appleOnDevice {
+            return (targetProvider, nil)
+        }
+
+        // 1. Multimodal / Image attachments
+        if hasAttachments {
+            if hasGeminiKey {
+                return (.cloudGemini, "Multimodal task with attachments. Auto-routing to Cloud Gemini Flash (high-fidelity vision).")
+            }
+            return (.appleOnDevice, "Multimodal task with attachments. Routing to Apple On-Device Vision.")
+        }
+
+        // 2. Context Window & Size overflow (>3,200 tokens exceeds on-device AFM 4k limit)
+        if tokens > 3200 {
+            if hasGeminiKey {
+                let model = geminiModel()
+                return (.cloudGemini, "Task context is ~\(tokens) tokens (>4k safe limit). Auto-tiering to Cloud Gemini (\(model)).")
+            } else if pccAvailable {
+                return (.applePCC, "Task context is ~\(tokens) tokens (>4k safe limit). Auto-tiering to Apple Private Cloud Compute.")
             } else {
-                return (.localOllama, "Task context is ~\(tokens) tokens (>4k limit) and PCC is unavailable. Auto-tiering to Local Ollama (gemma4:12bmlx).")
+                return (.localOllama, "Task context is ~\(tokens) tokens (>4k safe limit) and Cloud Gemini is unkeyed. Auto-tiering to Local Ollama (\(ollamaModel())).")
             }
         }
 
+        // 3. Mathematical & Analytical Calculation (auto-routes to cloud or deep local model when in autoPicker)
+        if targetProvider == .autoPicker && isTaskMathOrAnalytical(prompt: prompt) {
+            if hasGeminiKey {
+                let model = geminiModel()
+                return (.cloudGemini, "Mathematical calculation detected. Auto-routing to Cloud Gemini (\(model)) for AI reasoning.")
+            } else if pccAvailable {
+                return (.applePCC, "Mathematical calculation detected. Auto-routing to Apple Private Cloud Compute.")
+            } else {
+                return (.localOllama, "Mathematical calculation detected. Auto-routing to Local Ollama (\(ollamaModel())) for AI reasoning.")
+            }
+        }
+
+        // 4. Complexity heuristic (deep coding / large multi-file refactoring / heavy playbook orchestration)
+        if targetProvider == .autoPicker && isTaskHighComplexity(prompt: prompt, instructions: instructions, tools: tools) {
+            if hasGeminiKey {
+                let model = geminiModel()
+                return (.cloudGemini, "High-complexity architecture/code task detected. Auto-routing to Cloud Gemini (\(model)) for deep reasoning.")
+            }
+        }
+
+        // 5. Default Tier 1: Apple Native on-device
+        if targetProvider == .autoPicker || targetProvider == .appleOnDevice {
+            return (.appleOnDevice, nil)
+        }
+
         return (targetProvider, nil)
+    }
+
+    /// Evaluates if the task involves mathematical calculations, arithmetic, or analytical reasoning.
+    public static func isTaskMathOrAnalytical(prompt: String) -> Bool {
+        let text = prompt.lowercased()
+        let mathKeywords = [
+            "calculate", "arithmetic", "equation", "formula", "integral", "derivative",
+            "algebra", "two plus two", "2+2", "2 + 2", "plus", "minus",
+            "multiplied by", "divided by", "square root", "factorial"
+        ]
+        return mathKeywords.contains { text.contains($0) }
+    }
+
+    /// Evaluates if the task has high architectural or reasoning complexity.
+    public static func isTaskHighComplexity(prompt: String, instructions: String = "", tools: [String] = []) -> Bool {
+        let text = (prompt + " " + instructions).lowercased()
+        let complexityKeywords = [
+            "refactor", "architecture", "playbook", "security review",
+            "full pr review", "migration", "benchmark", "multi-agent", "convene_meeting",
+            "optimize performance", "debug crash", "codebase overhaul"
+        ]
+        let matches = complexityKeywords.filter { text.contains($0) }
+        return matches.count >= 2 || tools.count > 12
     }
 
     /// Creates the appropriate `AgentEngine` with automatic context-overflow routing.
     @MainActor
     static func resolveEngine(
         for bot: BotProfile? = nil,
+        preferredProvider: ModelProvider? = nil,
         prompt: String = "",
         history: [ChatMessage] = [],
         instructions: String = "",
+        tools: [String] = [],
+        hasAttachments: Bool = false,
+        session: LanguageModelSession? = nil,
         orchestrator: AgentOrchestrator
     ) -> any AgentEngine {
-        let preferred = bot?.modelProvider ?? activeProvider()
+        let preferred = preferredProvider ?? bot?.modelProvider ?? activeProvider()
         let (resolved, reason) = resolveProviderForTask(
             preferred: preferred,
             prompt: prompt,
             history: history,
-            instructions: instructions
+            instructions: instructions,
+            tools: tools,
+            hasAttachments: hasAttachments
         )
         if let reason = reason {
-            print("🧠 [ModelRegistry] \(reason)")
+            print("🧠 [Auto Model Picker] \(reason)")
         }
 
         switch resolved {
+        case .autoPicker, .appleOnDevice, .applePCC, .fmCLI:
+            return NativeAppleEngine(orchestrator: orchestrator, customSession: session)
+        case .cloudGemini:
+            if !geminiAPIKey().isEmpty {
+                // Build a LanguageModelSession backed by CloudGeminiLanguageModel and
+                // pass it as customSession so NativeAppleEngine calls the Gemini REST API
+                // instead of the on-device AFM model.
+                let geminiModel = CloudGeminiLanguageModel(apiKey: geminiAPIKey())
+                let geminiSession: LanguageModelSession
+                if let existingSession = session {
+                    geminiSession = existingSession
+                } else {
+                    let profile = SupervisorAgentProfile(
+                        instructions: "",
+                        model: geminiModel,
+                        toolCallingMode: .allowed,
+                        orchestrator: orchestrator,
+                        reasoningLevel: nil,
+                        maxResponseTokens: nil
+                    )
+                    geminiSession = LanguageModelSession(profile: profile, history: Transcript(entries: []))
+                }
+                return NativeAppleEngine(orchestrator: orchestrator, customSession: geminiSession)
+            } else {
+                return OllamaAgentEngine(orchestrator: orchestrator, bot: bot)
+            }
         case .localOllama:
             return OllamaAgentEngine(orchestrator: orchestrator, bot: bot)
         case .localMLX:
             return MLXAgentEngine(orchestrator: orchestrator)
-        case .appleOnDevice, .applePCC, .fmCLI, .cloudGemini:
-            return NativeAppleEngine(orchestrator: orchestrator)
         }
     }
 
@@ -156,14 +274,15 @@ public struct ModelRegistry {
         }
 
         switch provider {
-        case .appleOnDevice:
+        case .autoPicker, .appleOnDevice:
             return SystemLanguageModel.default
         case .applePCC:
             return PrivateCloudComputeLanguageModel()
         case .cloudGemini:
             return CloudGeminiLanguageModel(apiKey: apiKey ?? geminiAPIKey())
         case .localOllama:
-            return LocalOllamaLanguageModel(hostURL: URL(string: "http://localhost:11434")!)
+            let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434") ?? URL(string: "http://localhost:11434")!
+            return LocalOllamaLanguageModel(hostURL: host)
         case .localMLX:
             return LocalMLXLanguageModel(hostURL: mlxHost())
         case .fmCLI:
@@ -190,10 +309,24 @@ public struct ModelRegistry {
     public static func automaticChain() -> [any LanguageModel] {
         [
             SystemLanguageModel.default,
-            PrivateCloudComputeLanguageModel(),
             CloudGeminiLanguageModel(apiKey: geminiAPIKey()),
-            LocalOllamaLanguageModel(hostURL: URL(string: "http://localhost:11434")!),
+            LocalOllamaLanguageModel(hostURL: URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434") ?? URL(string: "http://localhost:11434")!),
+            PrivateCloudComputeLanguageModel(),
             LocalMLXLanguageModel(hostURL: mlxHost()),
         ]
+    }
+}
+
+extension AgentModelPreference {
+    public var toModelProvider: ModelProvider {
+        switch self {
+        case .autoPicker: .autoPicker
+        case .localSystem: .appleOnDevice
+        case .privateCloud: .applePCC
+        case .cloudGemini: .cloudGemini
+        case .localOllama: .localOllama
+        case .localMLX: .localMLX
+        case .hybrid: .applePCC
+        }
     }
 }

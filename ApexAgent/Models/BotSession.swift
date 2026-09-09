@@ -63,7 +63,15 @@ final class BotSession {
     // MARK: - System Instructions (dynamic, includes memory + chief roster)
 
     var systemInstructions: String {
-        guard bot.isChiefOfStaff, let botManager else { return bot.systemInstructions }
+        var baseInstructions = bot.systemInstructions
+        
+        // Inject Cognitive Memory (episodes, facts, procedures)
+        let memorySummary = CognitiveMemoryEngine.shared.buildContextSummary(forBotId: bot.id, maxLength: 800)
+        if !memorySummary.isEmpty && memorySummary.contains(":\n") {
+            baseInstructions += "\n\n### Cognitive Memory Context:\n" + memorySummary
+        }
+        
+        guard bot.isChiefOfStaff, let botManager else { return baseInstructions }
         // Chief of staff: append a live roster so the commander knows who it
         // can delegate to. Caps/clipping live in ChiefOfStaff itself.
         let members = botManager.allBots.map { profile in
@@ -80,7 +88,7 @@ final class BotSession {
             chiefId: bot.id.uuidString,
             bots: members,
             canDelegate: true)
-        return bot.systemInstructions + "\n\n" + rosterPrompt
+        return baseInstructions + "\n\n" + rosterPrompt
     }
 
     // MARK: - Reset / New Conversation
@@ -112,11 +120,17 @@ final class BotSession {
 
     func appendMessage(_ message: ChatMessage) {
         messages.append(message)
+        persistMessage(message)
     }
 
     func updateMessage(id: UUID, content: String) {
         if let idx = messages.firstIndex(where: { $0.id == id }) {
             messages[idx].content = content
+            if let conv = currentConversation,
+               let persistedMsg = conv.messages.first(where: { $0.id == id }) {
+                persistedMsg.content = content
+                try? modelContext?.save()
+            }
         }
     }
 
@@ -126,11 +140,88 @@ final class BotSession {
         }
     }
 
-    // MARK: - Tool Execution (delegates to shared orchestrator)
+    func loadConversationFromDisk() {
+        guard let context = modelContext else { return }
+        let botId = bot.id
+        var descriptor = FetchDescriptor<Conversation>(
+            predicate: #Predicate { $0.botProfileId == botId },
+            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+
+        if let existing = try? context.fetch(descriptor).first {
+            self.currentConversation = existing
+            self.messages = existing.messages.sorted(by: { $0.timestamp < $1.timestamp }).map { m in
+                ChatMessage(
+                    id: m.id,
+                    role: m.role,
+                    content: m.content,
+                    timestamp: m.timestamp,
+                    attachments: m.attachments
+                )
+            }
+        }
+    }
+
+    private func persistMessage(_ message: ChatMessage) {
+        guard let context = modelContext else { return }
+        let conv: Conversation
+        if let current = currentConversation {
+            conv = current
+        } else {
+            conv = Conversation(title: "Chat with \(bot.name)", botProfileId: bot.id)
+            context.insert(conv)
+            self.currentConversation = conv
+        }
+        conv.updatedAt = Date()
+
+        let msg = Message(
+            role: message.role,
+            content: message.content,
+            attachmentsData: message.attachments.compactMap { $0.pngData }
+        )
+        msg.id = message.id
+        msg.timestamp = message.timestamp
+        msg.conversation = conv
+        context.insert(msg)
+        try? context.save()
+        
+        // Record Episodic Memory turn for this bot
+        let summary = String(message.content.prefix(200))
+        if !summary.isEmpty {
+            CognitiveMemoryEngine.shared.recordEpisode(
+                CognitiveMemoryEngine.EpisodicEntry(
+                    botId: bot.id,
+                    eventType: message.role == .user ? "user_prompt" : "assistant_response",
+                    summary: summary
+                )
+            )
+        }
+    }
+
+    // MARK: - Tool Execution (delegates to shared orchestrator, enforces per-bot allowlist)
+
+    /// When non-empty, this Bot may only execute tools whose names appear here.
+    /// Empty = no restriction (the bot inherits whatever the orchestrator allows).
+    var effectiveToolAllowlist: Set<String> {
+        guard !bot.allowedToolNames.isEmpty else { return [] }
+        return Set(bot.allowedToolNames)
+    }
 
     func executeTool(name: String, arguments: String) async throws -> String {
         guard let orchestrator else {
             return "ERROR: No orchestrator available."
+        }
+        if !effectiveToolAllowlist.isEmpty && !effectiveToolAllowlist.contains(name) {
+            return "ERROR: Tool '\(name)' is not permitted for bot '\(bot.name)' under least-privilege security policy."
+        }
+        if let dynamicTool = DynamicToolbox.shared.dynamicTools[name],
+           let mcpId = dynamicTool.mcpServerId,
+           !bot.allowedMCPServers.isEmpty {
+            let serverName = MCPManager.shared.servers.first(where: { $0.id == mcpId })?.name ?? mcpId.uuidString
+            if !bot.allowedMCPServers.contains(serverName) && !bot.allowedMCPServers.contains(mcpId.uuidString) {
+                return "ERROR: MCP tool '\(name)' from server '\(serverName)' is not permitted for bot '\(bot.name)'."
+            }
         }
         return try await orchestrator.executeToolByName(name: name, jsonArguments: arguments)
     }
@@ -173,7 +264,14 @@ final class BotSession {
         // fall back to the global provider via ModelRegistry.
         let resolvedModel = ModelRegistry.model(for: bot)
         session = makeSession(model: resolvedModel, instructions: instructions, mode: mode, transcript: transcript)
-        session?.prewarm(promptPrefix: Prompt("Analyze the following"))
+        let isTesting = getenv("APEX_TEST_MODE") != nil
+            || ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest")
+            || NSClassFromString("XCTestCase") != nil
+            || CommandLine.arguments.contains("--cli")
+            || CommandLine.arguments.contains("--daemon")
+        if !isTesting {
+            session?.prewarm(promptPrefix: Prompt("Analyze the following"))
+        }
     }
 
     private func makeSession<M: LanguageModel>(
@@ -182,11 +280,17 @@ final class BotSession {
         mode: GenerationOptions.ToolCallingMode,
         transcript: Transcript
     ) -> LanguageModelSession {
-        let profile = ApexAgentProfile(
+        let allowedTools: [String] = bot.allowedToolNames.isEmpty
+            ? (AgentRegistry.builtInDefaults[bot.name.lowercased()]?.allowedTools
+               ?? ["read_file", "write_file", "patch_file", "git_operation", "list_directory", "file_search", "web_search", "search_memory", "store_memory", "get_system_info", "send_notification"])
+            : bot.allowedToolNames
+
+        let profile = SpecializedAgentProfile(
             instructions: instructions,
             model: model,
             toolCallingMode: mode,
             orchestrator: orchestrator!,
+            allowedTools: allowedTools,
             reasoningLevel: orchestrator!.configuredReasoningLevel,
             maxResponseTokens: orchestrator!.configuredMaxResponseTokens
         )

@@ -114,44 +114,22 @@ struct DiagnosticManager {
     }
 
     private static func checkCommandExists(_ command: String, isFolderAccessRestricted: Bool) async -> Bool {
-        return await Task.detached(priority: .background) {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            process.arguments = ["-c", command]
-
-            var env = ProcessInfo.processInfo.environment
-            let currentPath = env["PATH"] ?? ""
-            env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + currentPath
-
-            if isFolderAccessRestricted {
-                let fm = FileManager.default
-                let homeDir = fm.homeDirectoryForCurrentUser
-                let sandboxDir = homeDir.appendingPathComponent(".apex/sandbox")
-                try? fm.createDirectory(at: sandboxDir, withIntermediateDirectories: true)
-                env["HOME"] = sandboxDir.path
+        let binaryName = command.components(separatedBy: " ").last ?? command
+        let fm = FileManager.default
+        let searchPaths = ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"]
+        if command.hasPrefix("xcode-select") {
+            return fm.fileExists(atPath: "/Applications/Xcode.app")
+                || fm.fileExists(atPath: "/Applications/Xcode-beta.app")
+                || fm.fileExists(atPath: "/Library/Developer/CommandLineTools")
+                || fm.isExecutableFile(atPath: "/usr/bin/xcode-select")
+        }
+        for dir in searchPaths {
+            let fullPath = (dir as NSString).appendingPathComponent(binaryName)
+            if fm.isExecutableFile(atPath: fullPath) {
+                return true
             }
-
-            process.environment = env
-
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = pipe
-
-            do {
-                try process.run()
-                let deadline = Date(timeIntervalSinceNow: 2)
-                while Date() < deadline, process.isRunning {
-                    try? await Task.sleep(nanoseconds: 50_000_000)
-                }
-                if process.isRunning {
-                    process.terminate()
-                }
-                process.waitUntilExit()
-                return process.terminationStatus == 0
-            } catch {
-                return false
-            }
-        }.value
+        }
+        return false
     }
 
     private static func checkScreenRecordingAccess() -> Bool {

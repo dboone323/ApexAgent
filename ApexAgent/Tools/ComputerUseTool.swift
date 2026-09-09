@@ -83,11 +83,19 @@ struct ComputerUseTool: Tool {
                     return "❌ Error: 'click' requires x and y coordinates (inspect_ui gives element frames)."
                 }
                 computerAction = .click(x: x, y: y)
+                await MainActor.run {
+                    GhostCursorController.shared.showCursor(at: CGPoint(x: CGFloat(x), y: CGFloat(y)))
+                    GhostCursorController.shared.animateClick()
+                }
             case "double_click", "doubleclick":
                 guard let x = arguments.x, let y = arguments.y else {
                     return "❌ Error: 'double_click' requires x and y coordinates."
                 }
                 computerAction = .doubleClick(x: x, y: y)
+                await MainActor.run {
+                    GhostCursorController.shared.showCursor(at: CGPoint(x: CGFloat(x), y: CGFloat(y)))
+                    GhostCursorController.shared.animateClick()
+                }
             case "type":
                 guard let text = arguments.text, !text.isEmpty else {
                     return "❌ Error: 'type' requires non-empty text."

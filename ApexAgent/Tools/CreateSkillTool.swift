@@ -119,7 +119,7 @@ struct CreateSkillTool: Tool {
                 DynamicToolbox.shared.loadTools()
             }
 
-            return "SUCCESS: Skill '\(sanitizedName)' successfully created and loaded into the toolbox! You can now call it like a regular tool in subsequent turns."
+            return "SUCCESS: Skill '\(sanitizedName)' successfully created and loaded at \(scriptPath.path)! To run it, execute it via the `execute_dynamic_tool` tool with toolName: '\(sanitizedName)', or run it directly with `run_shell_command` using the full path '\(scriptPath.path)'."
         }
     }
 }

@@ -20,39 +20,19 @@ public struct ApexAgentApp: App {
     public init() {
         self.computer = Computer()
         self.botManager = BotManager(orchestrator: orchestrator, computer: computer)
+        orchestrator.botManager = botManager
         ContainerBridge.shared = ContainerManager.shared
         let args = CommandLine.arguments
-        if args.contains("--daemon") {
-            let semaphore = DispatchSemaphore(value: 0)
-            Task {
-                await runDaemonMode()
-                semaphore.signal()
-            }
-            semaphore.wait()
-            exit(0)
-        }
-
-        if let cliIndex = args.firstIndex(of: "--cli"), cliIndex + 1 < args.count {
-            let prompt = args[cliIndex + 1]
-            let semaphore = DispatchSemaphore(value: 0)
-            Task {
-                await AppDelegate.runCLIMode(prompt: prompt)
-                semaphore.signal()
-            }
-            semaphore.wait()
-            exit(0)
-        } else {
-            // Attempt to connect to background daemon gateway. Deferred to a
-            // separate task so the resulting observable state mutation
-            // (connect -> refused -> isConnected=false) does not race the
-            // app's initial view-update transaction ("Publishing changes from
-            // within view updates"). The gateway server is a separate process
-            // the app does not auto-start, so a refused connection is expected
-            // and handled by ApexGatewayClient's capped retry.
+        // Attempt to connect to background daemon gateway if explicitly requested or reachable.
+            // Probing reachability avoids Network.framework ECONNREFUSED socket error noise when
+            // running in standalone GUI mode without the daemon.
             Task { @MainActor in
-                ApexGatewayClient.shared.connect()
+                let shouldConnect = UserDefaults.standard.bool(forKey: "apex.connectGateway")
+                    || ProcessInfo.processInfo.arguments.contains("--connect-gateway")
+                if shouldConnect || ApexGatewayClient.isServerReachable() {
+                    ApexGatewayClient.shared.connect()
+                }
             }
-        }
     }
 
     public var body: some Scene {
@@ -65,6 +45,9 @@ public struct ApexAgentApp: App {
                 .environment(skillManager)
                 .environment(routineManager)
                 .frame(minWidth: 960, minHeight: 640)
+                .onAppear {
+                    GlobalCommandPaletteController.shared.registerHotKey()
+                }
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
@@ -81,8 +64,8 @@ public struct ApexAgentApp: App {
 }
 
 @MainActor
-class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
-    static var sharedOrchestrator = AgentOrchestrator()
+public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
+    public static var sharedOrchestrator = AgentOrchestrator()
     var orchestrator: AgentOrchestrator {
         return AppDelegate.sharedOrchestrator
     }
@@ -116,7 +99,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
     var quickPromptPanel: QuickPromptPanel?
     private var webhookServer: WebhookServer?
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
+    public func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
         setupGlobalHotkey()
         setupShortcuts()
@@ -156,7 +139,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
         // Probe that `fm` actually responds (it is gated behind `sudo fm license` on macOS 27).
         let process = Process()
         process.executableURL = URL(fileURLWithPath: fmPath)
-        process.arguments = ["version"]
+        process.arguments = ["available"]
         let out = Pipe()
         let err = Pipe()
         process.standardOutput = out
@@ -206,8 +189,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
 
     private func setupShortcuts() {
         if #available(macOS 13.0, *) {
-            // Donate the ApexAgent App Intents to Siri / Shortcuts.
-            ApexAgentShortcuts.updateAppShortcutParameters()
+            // AppShortcut registration with linkd requires a valid installed app bundle with CFBundleIdentifier.
+            // When running headless in tests, CLI mode, or unbundled debug builds, linkd rejects the XPC service connection (Cocoa error 4097).
+            let isAppBundle = Bundle.main.bundleURL.pathExtension == "app"
+            let isTestOrCLI = ProcessInfo.processInfo.arguments.contains { $0.contains("test") || $0.contains("xctest") || $0 == "--cli" || $0 == "-c" } || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1"
+            guard isAppBundle && !isTestOrCLI else { return }
+
+            // Donate the ApexAgent App Intents to Siri / Shortcuts asynchronously once launch completes
+            Task.detached(priority: .utility) {
+                try? await Task.sleep(for: .seconds(2))
+                ApexAgentShortcuts.updateAppShortcutParameters()
+            }
         } else {
             print("[Apex] Shortcut setup skipped: macOS 13+ required for App Intents integration.")
         }
@@ -222,53 +214,31 @@ class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
     }
 
     private func setupGlobalHotkey() {
-        let hotKeyID = EventHotKeyID(signature: 0x41504558, id: 1) // "APEX"
-        var hotKeyRef: EventHotKeyRef?
-        let optionModifier = UInt32(optionKey)
-
-        var eventType = EventTypeSpec(
-            eventClass: OSType(kEventClassKeyboard),
-            eventKind: UInt32(kEventHotKeyPressed)
-        )
-
-        let handlerUPP: EventHandlerUPP = { nextHandler, event, userData in
-            DispatchQueue.main.async {
-                if let delegate = NSApplication.shared.delegate as? AppDelegate {
-                    delegate.toggleQuickPrompt()
-                }
-            }
-            return noErr
-        }
-
-        InstallEventHandler(GetApplicationEventTarget(), handlerUPP, 1, &eventType, nil, nil)
-        RegisterEventHotKey(49, optionModifier, hotKeyID, GetApplicationEventTarget(), 0, &hotKeyRef)
+        GlobalCommandPaletteController.shared.registerHotKey()
     }
 
     func toggleQuickPrompt() {
-        if quickPromptPanel == nil {
-            let orchestrator = self.orchestrator
-            quickPromptPanel = QuickPromptPanel(orchestrator: orchestrator)
-        }
-
-        guard let panel = quickPromptPanel else { return }
-
-        if panel.isVisible {
-            panel.orderOut(nil)
-        } else {
-            panel.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-        }
+        GlobalCommandPaletteController.shared.toggle()
     }
 
     @MainActor
-    fileprivate static func runCLIMode(prompt: String) async {
+    public static func runCLIMode(prompt: String) async {
+        setbuf(stdout, nil)
+        setbuf(stderr, nil)
         print("=== RUNNING CLI TEST ===")
         print("Prompt: \(prompt)")
 
         let orchestrator = AgentOrchestrator()
+        let computer = Computer()
+        let botManager = BotManager(orchestrator: orchestrator, computer: computer)
+        orchestrator.botManager = botManager
+
         do {
-            let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self)
-            orchestrator.modelContext = ModelContext(container)
+            let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self)
+            let mainContext = ModelContext(container)
+            orchestrator.modelContext = mainContext
+            botManager.modelContext = mainContext
+            botManager.loadBotsFromDisk()
             if let url = container.configurations.first?.url {
                 print("🧠 SwiftData Store URL: \(url.path)")
             }
@@ -276,16 +246,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
             print("⚠️ Failed to initialize SwiftData model context: \(error)")
         }
 
-        // Wait a brief moment to ensure SystemLanguageModel is ready/loaded
-        try? await Task.sleep(for: .seconds(2))
-
-        orchestrator.sendMessage(prompt)
-
-        // Wait for generation to start and then complete
-        try? await Task.sleep(for: .milliseconds(500))
-        while orchestrator.isGenerating {
-            try? await Task.sleep(for: .milliseconds(100))
+        orchestrator.autoApproveToolCalls = true
+        if let perms = orchestrator.permissions {
+            perms.desktopFolderAllowed = true
+            perms.documentsFolderAllowed = true
+            perms.downloadsFolderAllowed = true
+            perms.musicFolderAllowed = true
+            try? orchestrator.modelContext?.save()
         }
+        // Wait a brief moment to ensure SystemLanguageModel is ready/loaded
+        try? await Task.sleep(for: .seconds(1))
+
+        await orchestrator.sendMessageAndWait(prompt)
 
         print("\n=== TOOL EVENTS ===")
         if orchestrator.toolEvents.isEmpty {
@@ -312,7 +284,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider {
 }
 
 @MainActor
-private func runDaemonMode() async {
+public func runDaemonMode() async {
     print("=== RUNNING DAEMON MODE ===")
     let orchestrator = AgentOrchestrator()
     do {
@@ -327,6 +299,7 @@ private func runDaemonMode() async {
         // keeps running while the GUI is closed.
         let computer = Computer()
         let botManager = BotManager(orchestrator: orchestrator, computer: computer)
+        orchestrator.botManager = botManager
         botManager.modelContext = mainContext
         botManager.loadBotsFromDisk()
         RoutineManager.shared.modelContext = mainContext

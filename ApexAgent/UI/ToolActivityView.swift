@@ -21,6 +21,7 @@ struct ToolActivityView: View {
                             .foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("clearActivityLogButton")
                     .help("Clear activity log")
                 }
             }
@@ -43,6 +44,7 @@ struct ToolActivityView: View {
             } else {
                 List(orchestrator.toolEvents) { event in
                     ToolEventRow(event: event)
+                        .accessibilityIdentifier("toolEventRow_\(event.toolName)")
                         .listRowInsets(EdgeInsets(top: 6, leading: 8, bottom: 6, trailing: 8))
                         .listRowBackground(
                             selectedEvent?.id == event.id
@@ -69,6 +71,7 @@ struct ToolEventRow: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 StatusIcon(status: event.status)
+                    .accessibilityIdentifier("toolStatusIcon_\(event.status)")
 
                 VStack(alignment: .leading, spacing: 1) {
                     Text(event.toolName)

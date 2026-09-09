@@ -21,25 +21,73 @@ struct FileReadTool: Tool {
         var maxLines: Int?
     }
 
+    private func resolveExistingFilePath(_ inputPath: String) -> String? {
+        let expanded = NSString(string: inputPath).expandingTildeInPath
+        if FileManager.default.fileExists(atPath: expanded) {
+            return expanded
+        }
+        
+        let cwd = FileManager.default.currentDirectoryPath
+        let relCwd = (cwd as NSString).appendingPathComponent(inputPath)
+        if FileManager.default.fileExists(atPath: relCwd) {
+            return relCwd
+        }
+        
+        // Check if the path missed an inner directory with the same name (common in Xcode projects like ApexAgent/ApexAgent/...)
+        let expandedURL = URL(fileURLWithPath: expanded)
+        let filename = expandedURL.lastPathComponent
+        let parentURL = expandedURL.deletingLastPathComponent()
+        let parentDirName = parentURL.lastPathComponent
+        let candidateInSubdir = parentURL.appendingPathComponent(parentDirName).appendingPathComponent(filename).path
+        if FileManager.default.fileExists(atPath: candidateInSubdir) {
+            return candidateInSubdir
+        }
+
+        // Check workspace candidates
+        let workspaceCandidates = [
+            UserDefaults.standard.string(forKey: "apex.workspacePath"),
+            ProcessInfo.processInfo.environment["APEX_WORKSPACE"],
+            cwd
+        ].compactMap { $0 }.filter { !$0.isEmpty }
+
+        for ws in workspaceCandidates {
+            let direct = (ws as NSString).appendingPathComponent(inputPath)
+            if FileManager.default.fileExists(atPath: direct) {
+                return direct
+            }
+            let wsName = (ws as NSString).lastPathComponent
+            let sub = (ws as NSString).appendingPathComponent(wsName)
+            let inSub = (sub as NSString).appendingPathComponent(inputPath)
+            if FileManager.default.fileExists(atPath: inSub) {
+                return inSub
+            }
+            let directFilename = (sub as NSString).appendingPathComponent(filename)
+            if FileManager.default.fileExists(atPath: directFilename) {
+                return directFilename
+            }
+        }
+        return nil
+    }
+
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
-            let expandedPath = NSString(string: arguments.path).expandingTildeInPath
-            let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(expandedPath) }
+            let effectivePath = resolveExistingFilePath(arguments.path) ?? NSString(string: arguments.path).expandingTildeInPath
+            let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(effectivePath) }
             guard isAllowed else {
-                return "ERROR: Access to path is disabled in settings: \(expandedPath)"
+                return "ERROR: Access to path is disabled in settings: \(effectivePath)"
             }
-            let url = URL(fileURLWithPath: expandedPath)
+            let url = URL(fileURLWithPath: effectivePath)
 
-            guard FileManager.default.fileExists(atPath: expandedPath) else {
-                return "ERROR: File not found at path: \(expandedPath)"
+            guard FileManager.default.fileExists(atPath: effectivePath) else {
+                return "ERROR: File not found at path: \(effectivePath)"
             }
 
-            guard FileManager.default.isReadableFile(atPath: expandedPath) else {
-                return "ERROR: File is not readable: \(expandedPath)"
+            guard FileManager.default.isReadableFile(atPath: effectivePath) else {
+                return "ERROR: File is not readable: \(effectivePath)"
             }
 
             // Check file size — refuse to load > 10MB text files
-            let attrs = try FileManager.default.attributesOfItem(atPath: expandedPath)
+            let attrs = try FileManager.default.attributesOfItem(atPath: effectivePath)
             let size = attrs[.size] as? Int64 ?? 0
             if size > 10_000_000 {
                 return "ERROR: File too large (\(size) bytes). Maximum is 10MB. Use shell tool with `head` or `tail` for large files."
@@ -48,7 +96,7 @@ struct FileReadTool: Tool {
             guard let content = try? String(contentsOf: url, encoding: .utf8) else {
                 // Try reading as binary and describe
                 let data = try Data(contentsOf: url)
-                return "BINARY FILE: \(expandedPath)\nSize: \(data.count) bytes\nFirst 128 bytes (hex): \(data.prefix(128).map { String(format: "%02x", $0) }.joined(separator: " "))"
+                return "BINARY FILE: \(effectivePath)\nSize: \(data.count) bytes\nFirst 128 bytes (hex): \(data.prefix(128).map { String(format: "%02x", $0) }.joined(separator: " "))"
             }
 
             if let maxLines = arguments.maxLines {

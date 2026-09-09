@@ -15,7 +15,16 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
     private var recognitionTask: SFSpeechRecognitionTask?
     private let audioEngine = AVAudioEngine()
     
-    private let speechSynthesizer = AVSpeechSynthesizer()
+    private var _speechSynthesizer: AVSpeechSynthesizer?
+    private var speechSynthesizer: AVSpeechSynthesizer {
+        if let synth = _speechSynthesizer {
+            return synth
+        }
+        let synth = AVSpeechSynthesizer()
+        synth.delegate = self
+        _speechSynthesizer = synth
+        return synth
+    }
     
     @Published private(set) var isRecording = false
     @Published private(set) var isSpeaking = false
@@ -25,7 +34,6 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
     
     override init() {
         super.init()
-        speechSynthesizer.delegate = self
     }
     
     @Published private(set) var permissionGranted: Bool = false
@@ -180,7 +188,7 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         }
     }
     
-    private func stripMarkdown(_ text: String) -> String {
+    func stripMarkdown(_ text: String) -> String {
         var clean = text
         
         // 1. Strip code blocks completely (e.g. ```swift ... ```)
@@ -243,8 +251,8 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
     }
     
     func stopSpeaking() {
-        if speechSynthesizer.isSpeaking {
-            speechSynthesizer.stopSpeaking(at: .immediate)
+        if let synth = _speechSynthesizer, synth.isSpeaking {
+            synth.stopSpeaking(at: .word)
         }
         audioPlayer?.stop()
         isSpeaking = false

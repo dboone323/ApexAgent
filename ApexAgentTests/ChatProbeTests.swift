@@ -29,6 +29,22 @@ struct ChatProbeTests {
 
     @Test("real Ollama chat returns a response")
     func realOllamaChat() async throws {
+        // Probe Ollama reachability before running the test
+        let host = UserDefaults.standard.string(forKey: "apex.ollamaHost") ?? "http://localhost:11434"
+        guard let url = URL(string: "\(host)/api/tags") else { return }
+        var isReachable = false
+        do {
+            let (_, response) = try await URLSession.shared.data(from: url)
+            if let http = response as? HTTPURLResponse, http.statusCode == 200 {
+                isReachable = true
+            }
+        } catch {}
+
+        guard isReachable else {
+            print("[PROBE] Ollama daemon is not currently running at \(host); skipping live chat test.")
+            return
+        }
+
         print("[PROBE] step 1: constructing AgentOrchestrator")
         let orch = AgentOrchestrator()
         orch.modelPreference = .localOllama

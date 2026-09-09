@@ -18,6 +18,7 @@ struct SkillsSection: View {
     /// Tracking state for the two confirmation dialogs.
     @State private var isConfirmingDelete: Bool = false
     @State private var isConfirmingDisable: Bool = false
+    @State private var isAddingSkill: Bool = false
 
     /// The skill currently being operated on (nil = none / cancelled).
     @State private var pendingSkill: Skill? = nil
@@ -33,7 +34,7 @@ struct SkillsSection: View {
             }
 
             Button("Add Custom Skill") {
-                // TODO(p2c): wire a CreateSkillSheet; for now no-op.
+                isAddingSkill = true
             }
         }
         .confirmationDialog(
@@ -52,6 +53,9 @@ struct SkillsSection: View {
             }
         } message: {
             Text("This permanently removes the skill from the registry and all bots. This cannot be undone.")
+        }
+        .sheet(isPresented: $isAddingSkill) {
+            CreateSkillSheet()
         }
     }
 }

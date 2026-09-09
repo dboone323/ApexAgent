@@ -24,6 +24,7 @@ protocol AgentEngine {
 @MainActor
 struct NativeAppleEngine: AgentEngine {
     let orchestrator: AgentOrchestrator
+    var customSession: LanguageModelSession? = nil
 
     func streamResponse(
         prompt: String,
@@ -33,13 +34,23 @@ struct NativeAppleEngine: AgentEngine {
         toolCallingMode: AgentToolCallingMode,
         onUpdate: @MainActor @escaping (String) -> Void
     ) async throws {
-        // NativeAppleEngine uses the active LanguageModelSession managed by AgentOrchestrator
-        guard let session = orchestrator.session else {
+        // NativeAppleEngine uses customSession (from BotSession) if provided, otherwise orchestrator's session
+        guard let session = customSession ?? orchestrator.session else {
             throw NSError(domain: "NativeAppleEngine", code: -1, userInfo: [NSLocalizedDescriptionKey: "LanguageModelSession is not initialized."])
         }
 
+        let lowerPrompt = prompt.lowercased()
+        let explicitlyNoTools = lowerPrompt.contains("without tools")
+            || lowerPrompt.contains("without running tools")
+            || lowerPrompt.contains("without using tools")
+            || lowerPrompt.contains("no tools")
+            || lowerPrompt.contains("don't use tools")
+            || lowerPrompt.contains("do not use tools")
+            || lowerPrompt.contains("without running any tools")
+
         var options = GenerationOptions()
-        options.toolCallingMode = switch toolCallingMode {
+        let effectiveMode: AgentToolCallingMode = explicitlyNoTools ? .disabled : toolCallingMode
+        options.toolCallingMode = switch effectiveMode {
         case .auto: .allowed
         case .required: .required
         case .disabled: .disallowed
@@ -89,21 +100,66 @@ struct NativeAppleEngine: AgentEngine {
             // yield a result on this beta. The app actually replies instead of
             // hanging on "thinking" or crashing on a nonexistent streaming API.
             do {
-                let response = try await session.respond(to: promptWithContext, options: options)
-                let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !text.isEmpty {
-                    print("[DIAG] NativeAppleEngine respond(to:) text=\(text)")
-                    onUpdate(text)
+                var fullText = ""
+                var currentPrompt = promptWithContext
+                let maxTurns = 5
+
+                for turn in 0..<maxTurns {
+                    print("[DIAG] NativeAppleEngine starting respond(to:) turn \(turn) with prompt: '\(currentPrompt.prefix(80))'")
+                    fflush(stdout)
+                    let response = try await session.respond(to: currentPrompt, options: options)
+                    let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !text.isEmpty else { break }
+
+                    if fullText.isEmpty {
+                        fullText = text
+                    } else {
+                        fullText += "\n\n" + text
+                    }
+
+                    print("[DIAG] NativeAppleEngine respond(to:) turn \(turn) text=\(text)")
+                    onUpdate(fullText)
                     if let id = orchestrator.activeAssistantMessageId {
-                        orchestrator.updateMessage(id: id, content: text)
+                        orchestrator.updateMessage(id: id, content: fullText)
+                    }
+
+                    // Check if model emitted text announcing future delegation without having executed it
+                    let lower = text.lowercased()
+                    let announcesFutureDelegation = lower.contains("will now delegate")
+                        || lower.contains("delegate these tasks")
+                        || lower.contains("i will delegate")
+                        || lower.contains("proceed to delegate")
+                        || lower.contains("delegating these tasks")
+                        || (lower.contains("delegate") && lower.contains("now"))
+                        || (lower.contains("delegat") && lower.contains("action"))
+
+                    if announcesFutureDelegation && turn < maxTurns - 1 {
+                        currentPrompt = "Proceed to execute the delegation immediately using `delegate_task` or `convene_meeting`. Do not merely state what you will do in text; invoke the tool call now."
+                        continue
+                    } else {
+                        break
+                    }
+                }
+
+                if !fullText.isEmpty {
+                    if let id = orchestrator.activeAssistantMessageId {
+                        orchestrator.updateMessage(id: id, content: fullText)
                         orchestrator.updateMessage(id: id, isStreaming: false)
                     }
-                    AgentSignpost.event("NativeGenerate.Complete", detail: "chars=\(text.count) (respond-direct)")
+                    AgentSignpost.event("NativeGenerate.Complete", detail: "chars=\(fullText.count) (respond-direct)")
                     return
                 }
+            } catch is CancellationError {
+                Logger.provider.info("Native respond(to:) was cancelled.")
+                return
             } catch {
+                if Task.isCancelled {
+                    Logger.provider.info("Native respond(to:) was cancelled during execution.")
+                    return
+                }
                 Logger.provider.error("Native respond(to:) failed: \(error.localizedDescription, privacy: .public)")
             }
+            guard !Task.isCancelled else { return }
             onUpdate("⚠️ The on-device model returned no output. This usually means its model asset is still downloading (enable Apple Intelligence in Settings → Siri and wait), or isn't available on this macOS build. Switch Model Provider to “Local Ollama” (if Ollama is running) or “Cloud Gemini” to continue.")
         }
     }

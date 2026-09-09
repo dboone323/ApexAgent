@@ -14,6 +14,7 @@ struct RoutinesSection: View {
     @State private var isConfirmingDelete: Bool = false
     @State private var pendingRoutine: Routine? = nil
     @State private var isRecordingRoutine: Bool = false
+    @State private var isAddingRoutine: Bool = false
 
     var body: some View {
         Section("Routines") {
@@ -30,7 +31,7 @@ struct RoutinesSection: View {
 
             HStack(spacing: 12) {
                 Button("Add Routine") {
-                    // TODO(p2c): wire a CreateRoutineSheet; for now no-op.
+                    isAddingRoutine = true
                 }
                 
                 Button("Teach a Bot (Record Routine)") {
@@ -57,6 +58,9 @@ struct RoutinesSection: View {
         }
         .sheet(isPresented: $isRecordingRoutine) {
             RoutineRecordingSheet()
+        }
+        .sheet(isPresented: $isAddingRoutine) {
+            CreateRoutineSheet()
         }
     }
 }

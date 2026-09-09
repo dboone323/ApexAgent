@@ -56,8 +56,9 @@ struct ChatMessage: Identifiable {
     let timestamp: Date
     var isStreaming: Bool = false
     var attachments: [NSImage] = []
+    var botName: String? = nil
 
-    init(id: UUID = UUID(), role: MessageRole, content: String, toolEvents: [ToolEvent] = [], timestamp: Date = Date(), isStreaming: Bool = false, attachments: [NSImage] = []) {
+    init(id: UUID = UUID(), role: MessageRole, content: String, toolEvents: [ToolEvent] = [], timestamp: Date = Date(), isStreaming: Bool = false, attachments: [NSImage] = [], botName: String? = nil) {
         self.id = id
         self.role = role
         self.content = content
@@ -65,6 +66,7 @@ struct ChatMessage: Identifiable {
         self.timestamp = timestamp
         self.isStreaming = isStreaming
         self.attachments = attachments
+        self.botName = botName
     }
 }
 
@@ -81,9 +83,10 @@ enum AgentToolCallingMode: String, CaseIterable, Identifiable, Codable {
 // MARK: - Model Preference
 
 enum AgentModelPreference: String, CaseIterable, Identifiable, Codable {
+    case autoPicker = "Auto (Native → Gemini Flash → Ollama)"
     case localSystem = "Local System (AFM 3)"
     case privateCloud = "Private Cloud Compute"
-    case cloudGemini = "Cloud Gemini"
+    case cloudGemini = "Cloud Gemini (Flash / Pro)"
     case localOllama = "Local Ollama"
     case localMLX = "Local MLX"
     case hybrid = "Hybrid (On-Device + PCC Fallback)"
@@ -96,6 +99,8 @@ enum AgentModelPreference: String, CaseIterable, Identifiable, Codable {
 @Observable
 @MainActor
 public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
+    let contextCompactor = ContextCompactor.shared
+    let speculativeExecutor = SpeculativeToolExecutor.shared
 
     // MARK: - OrchestratorProvider conformance
 
@@ -108,6 +113,30 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         reasoningLevel: ContextOptions.ReasoningLevel? = nil,
         maxResponseTokens: Int? = nil,
         history: Transcript? = nil
+    ) -> LanguageModelSession {
+        sessionForAgent(
+            agent: agent,
+            preference: preference,
+            instructions: instructions,
+            allowedTools: allowedTools,
+            toolCallingMode: toolCallingMode,
+            reasoningLevel: reasoningLevel,
+            maxResponseTokens: maxResponseTokens,
+            history: history,
+            prompt: ""
+        )
+    }
+
+    func sessionForAgent(
+        agent: RegisteredAgent,
+        preference: AgentModelPreference,
+        instructions: String,
+        allowedTools: [String],
+        toolCallingMode: GenerationOptions.ToolCallingMode,
+        reasoningLevel: ContextOptions.ReasoningLevel? = nil,
+        maxResponseTokens: Int? = nil,
+        history: Transcript? = nil,
+        prompt: String
     ) -> LanguageModelSession {
         func makeSession<M: LanguageModel>(_ model: M) -> LanguageModelSession {
             let effectiveReasoning = reasoningLevel ?? configuredReasoningLevel
@@ -138,6 +167,32 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
 
         switch preference {
+        case .autoPicker:
+            let (resolved, _) = ModelRegistry.resolveProviderForTask(
+                preferred: .autoPicker,
+                prompt: prompt,
+                instructions: instructions,
+                tools: allowedTools
+            )
+            switch resolved {
+            case .cloudGemini:
+                let apiKey = ModelRegistry.geminiAPIKey()
+                return makeSession(CloudGeminiLanguageModel(apiKey: apiKey))
+            case .localOllama:
+                let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? AgentOrchestrator.defaultOllamaURLString) ?? URL(string: AgentOrchestrator.defaultOllamaURLString)!
+                return makeSession(LocalOllamaLanguageModel(hostURL: host))
+            case .localMLX:
+                let host = URL(string: UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString) ?? URL(string: LocalMLXLanguageModel.defaultHostURLString)!
+                return makeSession(LocalMLXLanguageModel(hostURL: host))
+            case .applePCC:
+                if Self.isPrivateCloudComputeAvailable() {
+                    return makeSession(PrivateCloudComputeLanguageModel())
+                } else {
+                    return makeSession(localSystemModel())
+                }
+            default:
+                return makeSession(localSystemModel())
+            }
         case .localSystem:
             return makeSession(localSystemModel())
         case .privateCloud:
@@ -147,7 +202,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 return makeSession(localSystemModel())
             }
         case .cloudGemini:
-            let apiKey = KeychainManager.get(key: "geminiAPIKey") ?? ""
+            let apiKey = ModelRegistry.geminiAPIKey()
             return makeSession(CloudGeminiLanguageModel(apiKey: apiKey))
         case .localOllama:
             let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? AgentOrchestrator.defaultOllamaURLString) ?? URL(string: AgentOrchestrator.defaultOllamaURLString)!
@@ -216,19 +271,26 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     var agentInstructions: String = AgentSystemPrompt.default
     var proactiveAuditResult: String = ""
     var toolCallingMode: AgentToolCallingMode = .auto
-    var modelPreference: AgentModelPreference = .localSystem
-    // Default is .localSystem (on-device Apple Foundation Models) because the
-    // native path works on macOS 27 beta 5 (build 26A5406g/26A5406e): a runtime
-    // probe confirms `SystemLanguageModel.default.respond(to:)` returns real
-    // text (~7s) with no SIGSEGV and no empty output. OllamaAgentEngine /
-    // MLXAgentEngine remain selectable fallbacks via the Settings provider
-    // picker for when a local model server (Ollama/MLX-LM) is preferred. Earlier
-    // betas (26A5388g) SIGSEGV'd the executor channel, which is why the default
-    // was temporarily .localOllama — that workaround is no longer needed.
-    // model server over HTTP and run the same tool pipeline, so the agent
-    // works end-to-end on this beta too.
+    var modelPreference: AgentModelPreference = {
+        if let saved = UserDefaults.standard.string(forKey: "apex.modelPreference"),
+           let pref = AgentModelPreference(rawValue: saved) {
+            return pref
+        }
+        return .autoPicker
+    }() {
+        didSet {
+            UserDefaults.standard.set(modelPreference.rawValue, forKey: "apex.modelPreference")
+            UserDefaults.standard.set(modelPreference.toModelProvider.rawValue, forKey: ModelRegistry.providerKey)
+        }
+    }
+    // Default is .autoPicker (Native on-device <=3,200 tokens -> Cloud Gemini Flash -> Local Ollama).
+    // The Auto Model Picker dynamically resolves the best engine per turn and per agent,
+    // avoiding the 4k hardware context ceiling on AFM by auto-tiering to Local Ollama (gemma4:12b)
+    // or Cloud Gemini Flash when token thresholds are exceeded.
     var pendingAttachments: [NSImage] = []
     private(set) var activeTurnToolCallCount: Int = 0
+    private(set) var activeTurnDelegationsByAgent: [String: Int] = [:]
+    private(set) var totalTurnDelegations: Int = 0
     var activeTerminalOutput: String = ""
     private(set) var activePlan: [PlanStep] = []
     var multiAgentModeEnabled: Bool = UserDefaults.standard.bool(forKey: "apex.multiAgentModeEnabled")
@@ -251,7 +313,13 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     public var onStateChanged: (() -> Void)?
     public var confirmationGateway: ((String, String, String) async -> Bool)?
 
+    // MARK: - Bot Manager (multi-bot registry)
+    /// Set by the app after both the orchestrator and botManager are created.
+    /// Weak reference — does not extend the orchestrator's lifetime.
+    weak var botManager: BotManager?
+
     private(set) var session: LanguageModelSession?
+    private var compactionSession: LanguageModelSession?
     @ObservationIgnored private nonisolated(unsafe) var currentTask: Task<Void, Never>?
     @ObservationIgnored private nonisolated(unsafe) var auditTask: Task<Void, Never>?
     @ObservationIgnored private nonisolated(unsafe) var confirmationTimeoutTask: Task<Void, Never>?
@@ -491,35 +559,72 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             throw .pathViolation(path)
         }
 
-        if accessSandboxBookmark(for: standardized) != nil {
-            return
-        }
-
-        // STRENGTHENED SANDBOX: Enforce workspace boundary checks
         let resolvedWorkspace = URL(fileURLWithPath: wsPath).resolvingSymlinksInPath().path
         let isInWorkspace = standardized == resolvedWorkspace || standardized.hasPrefix(resolvedWorkspace + "/")
 
         let tempDir = NSTemporaryDirectory()
         let resolvedTemp = URL(fileURLWithPath: tempDir).resolvingSymlinksInPath().path
-        let isInTemp = standardized == resolvedTemp || standardized.hasPrefix(resolvedTemp + "/")
+        let isSystemTmp = standardized == "/tmp" || standardized.hasPrefix("/tmp/")
+            || standardized == "/private/tmp" || standardized.hasPrefix("/private/tmp/")
+        let isInTemp = standardized == resolvedTemp || standardized.hasPrefix(resolvedTemp + "/") || isSystemTmp
 
         let skillsDir = (homeDir as NSString).appendingPathComponent(".apex/skills")
         let resolvedSkills = URL(fileURLWithPath: skillsDir).resolvingSymlinksInPath().path
-        let isInSkills = standardized == resolvedSkills || standardized.hasPrefix(resolvedSkills + "/")
+        let dotApexDir = (homeDir as NSString).appendingPathComponent(".apex")
+        let resolvedDotApex = URL(fileURLWithPath: dotApexDir).resolvingSymlinksInPath().path
+        let apexDir = (homeDir as NSString).appendingPathComponent("apex")
+        let resolvedApex = URL(fileURLWithPath: apexDir).resolvingSymlinksInPath().path
+        let userTmpDir = (homeDir as NSString).appendingPathComponent("tmp")
+        let resolvedUserTmp = URL(fileURLWithPath: userTmpDir).resolvingSymlinksInPath().path
 
-        if isInWorkspace || isInTemp || isInSkills {
-            // Check if a symlink inside workspace resolved into a dangerous system directory
-            let forbiddenSystemPrefixes = ["/System", "/Library", "/etc", "/private/etc", "/usr", "/bin", "/sbin", "/dev", "/Volumes"]
+        let isInSkills = standardized == resolvedSkills || standardized.hasPrefix(resolvedSkills + "/")
+            || standardized == resolvedDotApex || standardized.hasPrefix(resolvedDotApex + "/")
+            || standardized == resolvedApex || standardized.hasPrefix(resolvedApex + "/")
+            || standardized == resolvedUserTmp || standardized.hasPrefix(resolvedUserTmp + "/")
+
+        let forbiddenSystemPrefixes = [
+            "/System", "/Library", "/etc", "/private/etc", "/usr", "/bin", "/sbin", "/var", "/private/var", "/dev", "/Volumes"
+        ]
+
+        // 1. Symlink Traversal Detection:
+        let isSymlink = (destinationOfSymlink != nil) || (rawStandardized != standardized)
+        if isSymlink {
             for forbidden in forbiddenSystemPrefixes {
                 if standardized == forbidden || standardized.hasPrefix(forbidden + "/") {
-                    if rawStandardized != standardized {
+                    throw .symlinkTraversal(path)
+                }
+            }
+            if let dest = destinationOfSymlink {
+                for forbidden in forbiddenSystemPrefixes {
+                    if dest == forbidden || dest.hasPrefix(forbidden + "/") {
                         throw .symlinkTraversal(path)
                     }
+                }
+            }
+            let rawInWorkspace = rawStandardized == wsPath || rawStandardized.hasPrefix(wsPath + "/") || rawStandardized == resolvedWorkspace || rawStandardized.hasPrefix(resolvedWorkspace + "/")
+            if rawInWorkspace && !isInWorkspace {
+                throw .symlinkTraversal(path)
+            }
+        }
+
+        // 2. Direct system directory access
+        for forbidden in forbiddenSystemPrefixes {
+            if standardized == forbidden || standardized.hasPrefix(forbidden + "/") {
+                if !isInTemp {
                     throw .pathViolation(path)
                 }
             }
+        }
+
+        if accessSandboxBookmark(for: standardized) != nil {
             return
         }
+
+        if isInWorkspace || isInTemp || isInSkills {
+            return
+        }
+
+        throw .pathViolation(path)
     }
 
     @MainActor
@@ -550,16 +655,21 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         let downloadsPath = (homeDir as NSString).appendingPathComponent("Downloads")
         let musicPath = (homeDir as NSString).appendingPathComponent("Music")
 
-        if !permissions.desktopFolderAllowed && input.contains(desktopPath) {
+        let desktopAllowed = permissions.desktopFolderAllowed
+        let documentsAllowed = permissions.documentsFolderAllowed
+        let downloadsAllowed = permissions.downloadsFolderAllowed
+        let musicAllowed = permissions.musicFolderAllowed
+
+        if !desktopAllowed && (input.contains(desktopPath) || input.contains("~/Desktop")) {
             return false
         }
-        if !permissions.documentsFolderAllowed && input.contains(documentsPath) {
+        if !documentsAllowed && (input.contains(documentsPath) || input.contains("~/Documents")) {
             return false
         }
-        if !permissions.downloadsFolderAllowed && input.contains(downloadsPath) {
+        if !downloadsAllowed && (input.contains(downloadsPath) || input.contains("~/Downloads")) {
             return false
         }
-        if !permissions.musicFolderAllowed && input.contains(musicPath) {
+        if !musicAllowed && (input.contains(musicPath) || input.contains("~/Music")) {
             return false
         }
 
@@ -632,6 +742,31 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     func createModelInstance() -> any LanguageModel {
         switch modelPreference {
+        case .autoPicker:
+            let (resolved, _) = ModelRegistry.resolveProviderForTask(
+                preferred: .autoPicker,
+                prompt: "",
+                instructions: agentInstructions
+            )
+            switch resolved {
+            case .cloudGemini:
+                let apiKey = ModelRegistry.geminiAPIKey()
+                return CloudGeminiLanguageModel(apiKey: apiKey)
+            case .localOllama:
+                let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? AgentOrchestrator.defaultOllamaURLString) ?? URL(string: AgentOrchestrator.defaultOllamaURLString)!
+                return LocalOllamaLanguageModel(hostURL: host)
+            case .localMLX:
+                let host = URL(string: UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString) ?? URL(string: LocalMLXLanguageModel.defaultHostURLString)!
+                return LocalMLXLanguageModel(hostURL: host)
+            case .applePCC:
+                if Self.isPrivateCloudComputeAvailable() {
+                    return PrivateCloudComputeLanguageModel()
+                } else {
+                    return localSystemModel()
+                }
+            default:
+                return localSystemModel()
+            }
         case .localSystem:
             return localSystemModel()
         case .privateCloud:
@@ -641,7 +776,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 return localSystemModel()
             }
         case .cloudGemini:
-            let apiKey = KeychainManager.get(key: "geminiAPIKey") ?? ""
+            let apiKey = ModelRegistry.geminiAPIKey()
             return CloudGeminiLanguageModel(apiKey: apiKey)
         case .localOllama:
             let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? AgentOrchestrator.defaultOllamaURLString) ?? URL(string: AgentOrchestrator.defaultOllamaURLString)!
@@ -757,7 +892,47 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
         // Warm the KV cache with a likely first-prompt prefix to cut
         // first-token latency (native session.prewarm(promptPrefix:)).
-        session?.prewarm(promptPrefix: Prompt("Analyze the following"))
+        // Skipped in test mode so background prewarm XPC tasks don't collide
+        // with immediate synchronous generation calls.
+        let isTesting = getenv("APEX_TEST_MODE") != nil
+            || ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest")
+            || NSClassFromString("XCTestCase") != nil
+            || CommandLine.arguments.contains("--cli")
+            || CommandLine.arguments.contains("--daemon")
+        if !isTesting {
+            session?.prewarm(promptPrefix: Prompt("Analyze the following"))
+        }
+    }
+
+    let repeatDetector = RepeatDetector(thresholds: [3, 5])
+
+    func checkRepeat(tool: String, arguments: String?) -> String? {
+        if tool == "delegate_task" && totalTurnDelegations >= 3 {
+            return "Loop detected: Maximum delegations (3) reached for this turn. Do not call delegate_task again. Formulate your final response to the user now."
+        }
+        if tool == "convene_meeting" && activeTurnToolCallCount >= 4 {
+            return "Loop detected: Maximum meeting invocations reached for this turn. Synthesize findings and respond to the user."
+        }
+        guard let key = RepeatCallKey.make(tool: tool, arguments: arguments) else { return nil }
+        let callCount = repeatDetector.record(thread: "default", key: key)
+        if callCount.count >= 5 {
+            return "Loop detected: Tool '\(tool)' was invoked repeatedly with identical arguments."
+        }
+        return nil
+    }
+
+    func recordDelegation(to agent: String) -> (allowed: Bool, message: String?) {
+        let agentKey = agent.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        if totalTurnDelegations >= 3 {
+            return (false, "DELEGATION LIMIT REACHED: Maximum total delegations (3) reached for this turn. Do not call delegate_task again. Formulate your final response to the user now.")
+        }
+        let count = activeTurnDelegationsByAgent[agentKey] ?? 0
+        if count >= 2 {
+            return (false, "DELEGATION LIMIT REACHED: Specialist '\(agent)' has already completed 2 tasks this turn. Do not call delegate_task again. Formulate your final response to the user now.")
+        }
+        activeTurnDelegationsByAgent[agentKey] = count + 1
+        totalTurnDelegations += 1
+        return (true, nil)
     }
 
     var allTools: [AnyExecutableTool] {
@@ -785,6 +960,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             AnyExecutableTool(SearchMemoryTool(orchestrator: self)),
             AnyExecutableTool(ApplicationControlTool(orchestrator: self)),
             AnyExecutableTool(AccessibilityControlTool(orchestrator: self)),
+            AnyExecutableTool(AccessibilityOmniTargeter(orchestrator: self)),
+            AnyExecutableTool(DifferentialScreenPerception(orchestrator: self)),
+            AnyExecutableTool(CaptureWindowImageTool(orchestrator: self)),
             AnyExecutableTool(BrowserAutomationTool(orchestrator: self)),
             AnyExecutableTool(UpdatePlanTool(orchestrator: self)),
             AnyExecutableTool(ProjectAuditTool(orchestrator: self)),
@@ -797,7 +975,26 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             AnyExecutableTool(FileSearchTool(orchestrator: self)),
             AnyExecutableTool(SpotlightSearchTool(orchestrator: self)),
             AnyExecutableTool(DynamicToolCallTool(orchestrator: self)),
-            AnyExecutableTool(DailyBriefingTool(orchestrator: self))
+            AnyExecutableTool(DailyBriefingTool(orchestrator: self)),
+            AnyExecutableTool(AskBotTool(botManager: botManager)),
+            AnyExecutableTool(ConfirmCompletionTool(orchestrator: self)),
+            AnyExecutableTool(SaveReviewSessionTool(orchestrator: self)),
+            AnyExecutableTool(ListReviewSessionsTool(orchestrator: self)),
+            AnyExecutableTool(WeatherTool(orchestrator: self)),
+            AnyExecutableTool(MapSearchTool(orchestrator: self)),
+            AnyExecutableTool(DirectionsTool(orchestrator: self)),
+            AnyExecutableTool(CalendarTool(orchestrator: self)),
+            AnyExecutableTool(ReminderTool(orchestrator: self)),
+            AnyExecutableTool(TranslateTool(orchestrator: self)),
+            AnyExecutableTool(EntityExtractTool(orchestrator: self)),
+            AnyExecutableTool(AppleShortcutsTool(orchestrator: self)),
+            AnyExecutableTool(OSLogQueryTool(orchestrator: self)),
+            AnyExecutableTool(WatchPathsTool(orchestrator: self)),
+            AnyExecutableTool(NetworkDiagnosticsTool(orchestrator: self)),
+            AnyExecutableTool(ScreenPerceptionTool(orchestrator: self)),
+            AnyExecutableTool(FilePatchTool(orchestrator: self)),
+            AnyExecutableTool(GitOperationsTool(orchestrator: self)),
+            AnyExecutableTool(DispatchSwarmTool(botManager: botManager))
         ]
         _allTools = tools
         return tools
@@ -853,18 +1050,25 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     func updateMessage(id: UUID, content: String) {
         if let idx = messages.firstIndex(where: { $0.id == id }) {
-            messages[idx].content = content
+            var copy = messages
+            copy[idx].content = content
+            messages = copy
         }
     }
 
     func updateMessage(id: UUID, isStreaming: Bool) {
         if let idx = messages.firstIndex(where: { $0.id == id }) {
-            messages[idx].isStreaming = isStreaming
+            var copy = messages
+            copy[idx].isStreaming = isStreaming
+            messages = copy
         }
     }
 
     func resetActiveTurnToolCallCount() {
         activeTurnToolCallCount = 0
+        activeTurnDelegationsByAgent.removeAll()
+        totalTurnDelegations = 0
+        repeatDetector.settle(thread: "default")
     }
 
     // MARK: Send Message
@@ -877,6 +1081,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         // Stop any active text-to-speech playback
         VoiceController.shared.stopSpeaking()
         activeTurnToolCallCount = 0
+        activeTurnDelegationsByAgent.removeAll()
+        totalTurnDelegations = 0
+        repeatDetector.settle(thread: "default")
         isGenerating = true
 
         let spanID = AgentSignpost.begin("SendMessage", detail: trimmedText.prefix(64).description)
@@ -901,17 +1108,49 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
     }
 
+    func sendMessageAndWait(_ text: String) async {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty || !pendingAttachments.isEmpty else { return }
+        guard !isGenerating else { return }
+
+        VoiceController.shared.stopSpeaking()
+        activeTurnToolCallCount = 0
+        activeTurnDelegationsByAgent.removeAll()
+        totalTurnDelegations = 0
+        repeatDetector.settle(thread: "default")
+        isGenerating = true
+
+        let spanID = AgentSignpost.begin("SendMessage", detail: trimmedText.prefix(64).description)
+        TraceBus.shared.append(TraceEvent(source: "orchestrator", operation: "sendMessageAndWait", detail: String(trimmedText.prefix(120))))
+        defer {
+            AgentSignpost.end("SendMessage", spanID)
+            TraceBus.shared.append(TraceEvent(source: "orchestrator", operation: "sendMessageAndWait", detail: "complete"))
+            self.isGenerating = false
+            self.activeAssistantMessageId = nil
+        }
+
+        await compactContextIfNeeded()
+        resetSession()
+        await runMessageGeneration(text: trimmedText)
+    }
+
+    private struct CompactionProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile {
+        let instructions: String
+        let model: Model
+
+        var body: some LanguageModelSession.DynamicProfile {
+            LanguageModelSession.Profile {
+                Instructions(instructions)
+            }
+            .model(model)
+            .toolCallingMode(.disallowed)
+        }
+    }
+
     @MainActor
     private func createCompactionSession(model: any LanguageModel, instructions: String) -> LanguageModelSession {
         func helper<M: LanguageModel>(_ m: M) -> LanguageModelSession {
-            let profile = SupervisorAgentProfile(
-                instructions: instructions,
-                model: m,
-                toolCallingMode: .disallowed,
-                orchestrator: self,
-                reasoningLevel: configuredReasoningLevel,
-                maxResponseTokens: configuredMaxResponseTokens
-            )
+            let profile = CompactionProfile(instructions: instructions, model: m)
             return LanguageModelSession(profile: profile, history: Transcript(entries: []))
         }
         return helper(model)
@@ -934,8 +1173,21 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             compactionText += "[\(roleName)]: \(msg.content)\n\n"
         }
 
-        let model = createModelInstance()
-        let session = createCompactionSession(model: model, instructions: "Summarize chat logs concisely. Focus on facts, status, file paths, and results.")
+        // AFM 3 on-device context window is 4k tokens (~16k chars total including prompt and system instructions).
+        // Cap the summarization input to 4,000 characters to ensure safe tokenization and avoid Metal buffer overflow.
+        if compactionText.count > 4000 {
+            compactionText = String(compactionText.prefix(4000)) + "\n[... truncated for summarization context limit ...]"
+        }
+
+        let session: LanguageModelSession
+        if let existing = compactionSession {
+            session = existing
+        } else {
+            let model = createModelInstance()
+            let newSession = createCompactionSession(model: model, instructions: "Summarize chat logs concisely. Focus on facts, status, file paths, and results.")
+            compactionSession = newSession
+            session = newSession
+        }
 
         do {
             let response = try await session.respond(to: compactionText)
@@ -1013,43 +1265,45 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         let assistantMsg = ChatMessage(role: .assistant, content: "", isStreaming: true)
         messages.append(assistantMsg)
         activeAssistantMessageId = assistantMsg.id
-        // Capture the id in a local let. The `currentTask` defer (below) and
-        // sendMessage's defer both nil `activeAssistantMessageId` on teardown,
-        // which races `onUpdate` and left it nil at streaming time (blank
-        // bubble). Using the captured id decouples the update from teardown.
+        // Capture the id in a local let.
         let assistantId = assistantMsg.id
 
         Task {
-            // Only capture the screen when the collaborative/sharing server is
-            // active — ScreenCaptureKit streams (1024x768 @1fps) are RAM-heavy
-            // and were being started on EVERY generation, pushing an already
-            // memory-pressured system into CriticalMemoryPressure (which makes
-            // on-device FM inference fail or thrash). Screen frames are only
-            // consumed by CollaborativeServer, so don't capture for plain chat.
             if UserDefaults.standard.bool(forKey: "apex.collaborativeServerEnabled") {
                 await ScreenStreamer.shared.startCapture()
             }
         }
 
-        currentTask = Task {
-            defer {
-                isGenerating = false
-                activeAssistantMessageId = nil
-                // Legacy remote-gateway bridge: push final state. (Replaces the
-                // former didSet on isGenerating/messages, which defeated
-                // @Observable tracking and froze the chat UI on "thinking".)
-                onStateChanged?()
-            }
-            let semanticContext = self.getSemanticContext(for: text)
-            var finalInstructions = self.agentInstructions + semanticContext
-            if !self.proactiveAuditResult.isEmpty {
+        defer {
+            onStateChanged?()
+        }
+        let semanticContext = self.getSemanticContext(for: text)
+        var finalInstructions = self.agentInstructions + semanticContext
+        let lowerText = text.lowercased()
+            let isAuditRequested = lowerText.contains("audit")
+                || lowerText.contains("todo")
+                || lowerText.contains("health")
+                || lowerText.contains("missing test")
+            if !self.proactiveAuditResult.isEmpty && isAuditRequested {
                 finalInstructions += "\n\n\(self.proactiveAuditResult)\nUse the above proactive audit report to suggest improvements, tasks, and fixes (e.g. missing tests or TODOs) when requested or appropriate."
             }
 
+            let explicitlyNoTools = lowerText.contains("without tools")
+                || lowerText.contains("without running tools")
+                || lowerText.contains("without using tools")
+                || lowerText.contains("no tools")
+                || lowerText.contains("don't use tools")
+                || lowerText.contains("do not use tools")
+                || lowerText.contains("without running any tools")
+
+            let effectiveToolCallingMode: AgentToolCallingMode = explicitlyNoTools ? .disabled : self.toolCallingMode
+
             let engine = ModelRegistry.resolveEngine(
+                preferredProvider: self.modelPreference.toModelProvider,
                 prompt: text,
                 history: self.messages,
                 instructions: finalInstructions,
+                tools: self.allTools.map { $0.name },
                 orchestrator: self
             )
 
@@ -1063,7 +1317,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                     attachments: userMsg.attachments,
                     history: historyMessages,
                     instructions: finalInstructions,
-                    toolCallingMode: self.toolCallingMode,
+                    toolCallingMode: effectiveToolCallingMode,
                     onUpdate: { @MainActor partialContent in
                         if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
                             // Reassign the whole array (not just a nested
@@ -1147,7 +1401,6 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             self.activeAssistantMessageId = nil
             self.isGenerating = false
             ScreenStreamer.shared.stopCapture()
-        }
     }
 
     func cancelGeneration() {
@@ -1284,13 +1537,52 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     }
 
     func executeToolByName(name: String, jsonArguments: String) async throws -> String {
-        if let tool = allTools.first(where: { $0.name == name }) {
-            return try await tool.execute(jsonArguments: jsonArguments)
+        do {
+            // Enterprise zero-trust capability validation
+            if !AgentSecurity.validateCapabilityToken(for: name, botName: nil) {
+                throw NSError(domain: "AgentSecurity", code: 403, userInfo: [NSLocalizedDescriptionKey: "Enterprise Security: Missing or expired capability token for high-risk tool '\(name)'"])
+            }
+            
+            let result: String
+            if let speculativeResult = await SpeculativeToolExecutor.shared.resolve(toolName: name, jsonArguments: jsonArguments) {
+                result = speculativeResult
+            } else if let tool = allTools.first(where: { $0.name == name }) {
+                result = try await tool.execute(jsonArguments: jsonArguments)
+            } else if DynamicToolbox.shared.dynamicTools[name] != nil {
+                result = try await DynamicToolbox.shared.executeTool(name: name, jsonArguments: jsonArguments)
+            } else {
+                throw NSError(domain: "AgentOrchestrator", code: -2, userInfo: [NSLocalizedDescriptionKey: "Unknown tool: \(name)"])
+            }
+            
+            // Invalidate cache if a write tool executes
+            let speculableToolNames: Set<String> = [
+                "read_file", "file_search", "list_directory",
+                "get_system_info", "search_memory", "query_logs"
+            ]
+            if !speculableToolNames.contains(name) {
+                await SpeculativeToolExecutor.shared.invalidateAll()
+            }
+            
+            // Audit log
+            CryptographicAuditChain.shared.record(
+                toolName: name,
+                input: jsonArguments,
+                output: String(result.prefix(500)),
+                status: "success",
+                botName: nil
+            )
+            
+            return result
+        } catch {
+            CryptographicAuditChain.shared.record(
+                toolName: name,
+                input: jsonArguments,
+                output: error.localizedDescription,
+                status: "error",
+                botName: nil
+            )
+            throw error
         }
-        if DynamicToolbox.shared.dynamicTools[name] != nil {
-            return try await DynamicToolbox.shared.executeTool(name: name, jsonArguments: jsonArguments)
-        }
-        throw NSError(domain: "AgentOrchestrator", code: -2, userInfo: [NSLocalizedDescriptionKey: "Unknown tool: \(name)"])
     }
 
     @MainActor
@@ -1444,7 +1736,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         newContent: String? = nil,
         filePath: String? = nil
     ) async -> Bool {
-        let isTesting = ProcessInfo.processInfo.arguments.contains { $0.contains("test") || $0.contains("xctest") } || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1"
+        let isTesting = ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest")
+            || getenv("APEX_TEST_MODE") != nil
+            || NSClassFromString("XCTestCase") != nil
+            || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || ProcessInfo.processInfo.arguments.contains { $0.localizedCaseInsensitiveContains("test") }
+            || Bundle.main.bundleURL.pathExtension == "xctest"
         if isTesting {
             return true
         }
@@ -1495,6 +1792,16 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 continuation: continuation
             )
             pendingConfirmation = request
+            
+            // Relay confirmation request to paired Remote Companion (iPhone / iPad)
+            let companionEvent = CompanionApprovalRelayEvent(
+                requestId: request.id.uuidString,
+                stageId: "orchestrator_tool",
+                stageName: toolName,
+                summary: riskDescription,
+                riskLevel: "high"
+            )
+            RemoteCompanionGateway.shared.postApprovalRelay(companionEvent)
 
             // Auto-deny after timeout
             confirmationTimeoutTask = Task { [weak self] in
@@ -1515,6 +1822,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         confirmationTimeoutTask?.cancel()
         confirmationTimeoutTask = nil
         guard let pending = pendingConfirmation else { return }
+        _ = RemoteCompanionGateway.shared.resolveApprovalRelay(requestId: pending.id.uuidString, allow: approved)
         pending.continuation?.resume(returning: approved)
         pendingConfirmation = nil
     }

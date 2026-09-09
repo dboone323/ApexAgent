@@ -81,16 +81,6 @@ struct BotChatView: View {
                 inputText: $inputText,
                 isInputFocused: $isInputFocused
             )
-            .allowsHitTesting(!session.isGenerating)
-            .overlay(
-                Group {
-                    if session.isGenerating {
-                        Color.black.opacity(0.02)
-                    } else {
-                        Color.clear
-                    }
-                }
-            )
         }
         .background(Color(nsColor: .controlBackgroundColor))
         .onAppear { isInputFocused = true }
@@ -156,6 +146,7 @@ struct BotChatHeader: View {
     
     private var modelLabel: String {
         switch session.modelPreference {
+        case .autoPicker: return "Auto"
         case .localSystem: return "AFM 3"
         case .privateCloud: return "PCC"
         case .cloudGemini: return "Gemini"

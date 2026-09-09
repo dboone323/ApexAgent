@@ -114,4 +114,100 @@ struct ModelEvaluationsTests {
             #expect(!provider.displayName.isEmpty)
         }
     }
+
+    @Test("Auto-Picker token estimation correctly accounts for tool schema footprint")
+    func autoPickerTokenEstimation() {
+        let emptyTokens = ModelRegistry.estimateTokenCount(prompt: "Hello", history: [], instructions: "Be brief", tools: [])
+        #expect(emptyTokens < 50)
+
+        // 10 tools should add 1,800 tokens to the estimate
+        let tenToolsTokens = ModelRegistry.estimateTokenCount(prompt: "Hello", history: [], instructions: "Be brief", tools: Array(repeating: "tool", count: 10))
+        #expect(tenToolsTokens >= 1800)
+    }
+
+    @Test("Auto-Picker tiers tasks exceeding 3,200 tokens to Local Ollama or Gemini")
+    func autoPickerContextOverflowTiering() {
+        // Unkeyed environment with large prompt (>3,200 tokens)
+        let largePrompt = String(repeating: "Large prompt content for system analysis. ", count: 500)
+        let (provider, reason) = ModelRegistry.resolveProviderForTask(
+            preferred: .autoPicker,
+            prompt: largePrompt,
+            instructions: "Detailed instructions",
+            tools: ["read_file", "run_shell_command"],
+            isPCCAvailable: false
+        )
+        // If Gemini is unkeyed and PCC is unavailable, it must auto-tier to Local Ollama
+        if ModelRegistry.geminiAPIKey().isEmpty {
+            #expect(provider == .localOllama)
+            #expect(reason?.contains("safe limit") == true || reason?.contains("Auto-tiering") == true)
+        } else {
+            #expect(provider == .cloudGemini)
+        }
+    }
+
+    @Test("ModelRegistry default Ollama model is gemma4:12b")
+    func ollamaDefaultModelIsGemma4() {
+        #expect(ModelRegistry.ollamaModel().contains("gemma4"))
+    }
+
+    @Test("AgentModelPreference correctly maps to ModelProvider")
+    func preferenceToProviderMapping() {
+        #expect(AgentModelPreference.autoPicker.toModelProvider == .autoPicker)
+        #expect(AgentModelPreference.localSystem.toModelProvider == .appleOnDevice)
+        #expect(AgentModelPreference.localOllama.toModelProvider == .localOllama)
+        #expect(AgentModelPreference.cloudGemini.toModelProvider == .cloudGemini)
+    }
+
+    @Test("FileReadTool resolves files located in subdirectories of workspace root")
+    func fileReadToolWorkspaceResolution() async throws {
+        let orchestrator = await MainActor.run { AgentOrchestrator() }
+        let tool = FileReadTool(orchestrator: orchestrator)
+        // Check reading AgentOrchestrator.swift through its root path (~/Developer/ApexAgent/AgentOrchestrator.swift)
+        // or directly via relative path
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let testPath = "\(home)/Developer/ApexAgent/AgentOrchestrator.swift"
+        if FileManager.default.fileExists(atPath: "\(home)/Developer/ApexAgent/ApexAgent/AgentOrchestrator.swift") {
+            let result = try await tool.call(arguments: FileReadTool.Arguments(path: testPath, maxLines: 5))
+            #expect(!result.contains("File not found"))
+            #expect(result.contains("import Foundation") || result.contains("AgentOrchestrator"))
+        }
+    }
+
+    @Test("DispatchSwarmTool Arguments decodes both JSON arrays and delimited strings")
+    func dispatchSwarmArgumentsDecoding() throws {
+        // Test 1: Array of strings (as sent by LLM)
+        let jsonArray = """
+        {
+            "targetBots": ["Codex", "Nexus", "Auditor", "Oracle"],
+            "taskPrompts": [
+                "Perform a comprehensive review of the codebase.",
+                "Check the build status.",
+                "Perform a comprehensive linting.",
+                "Verify capabilities."
+            ]
+        }
+        """.data(using: .utf8)!
+        let args1 = try JSONDecoder().decode(DispatchSwarmTool.Arguments.self, from: jsonArray)
+        #expect(args1.targetBots.contains("Codex") && args1.targetBots.contains("Oracle"))
+        #expect(args1.taskPrompts.contains("Perform a comprehensive review") && args1.taskPrompts.contains("Verify capabilities"))
+
+        // Test 2: Standard comma/newline-delimited string
+        let jsonString = """
+        {
+            "targetBots": "Codex, Nexus, Auditor, Oracle",
+            "taskPrompts": "Task 1\\nTask 2\\nTask 3\\nTask 4"
+        }
+        """.data(using: .utf8)!
+        let args2 = try JSONDecoder().decode(DispatchSwarmTool.Arguments.self, from: jsonString)
+        #expect(args2.targetBots.contains("Nexus"))
+        #expect(args2.taskPrompts.contains("Task 2"))
+    }
+
+    @Test("ShellTool executes commands and returns clean stdout within deadline")
+    func shellToolExecutionSpeed() async throws {
+        let orchestrator = await MainActor.run { AgentOrchestrator() }
+        let shellTool = ShellTool(orchestrator: orchestrator)
+        let result = try await shellTool.call(arguments: ShellTool.Arguments(command: "echo 'APEX_AGENT_PTY_OK'", timeoutSeconds: 5))
+        #expect(result.contains("APEX_AGENT_PTY_OK"))
+    }
 }

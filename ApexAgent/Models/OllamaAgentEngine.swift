@@ -20,6 +20,9 @@ struct OllamaAgentEngine: AgentEngine {
     /// Per-bot Ollama model override. When set, this bot's
     /// `ollamaModelOverride` takes priority over the global default.
     var bot: BotProfile? = nil
+    /// Optional allowed tool names. When set (e.g. for a delegated sub-agent),
+    /// only tools in this list are offered to the model or permitted for execution.
+    var allowedTools: [String]? = nil
 
     func streamResponse(
         prompt: String,
@@ -29,7 +32,7 @@ struct OllamaAgentEngine: AgentEngine {
         toolCallingMode: AgentToolCallingMode,
         onUpdate: @MainActor @escaping (String) -> Void
     ) async throws {
-        let hostString = UserDefaults.standard.string(forKey: "apex.ollamaHost") ?? "http://localhost:11434"
+        let hostString = UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434"
         guard let baseURL = URL(string: hostString) else {
             throw NSError(domain: "OllamaAgentEngine", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid Ollama host URL: \(hostString)"])
         }
@@ -63,7 +66,10 @@ struct OllamaAgentEngine: AgentEngine {
         var tools: [[String: Any]] = []
         if useTools {
             for schema in getParsedSchemas() {
-                guard schema["name"] is String else { continue }
+                guard let name = schema["name"] as? String else { continue }
+                if let allowed = allowedTools, !allowed.contains(name) {
+                    continue
+                }
                 tools.append(["type": "function", "function": schema])
             }
         }
@@ -85,7 +91,7 @@ struct OllamaAgentEngine: AgentEngine {
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = httpBody
-            request.timeoutInterval = 120
+            request.timeoutInterval = 300
 
             let bytes: URLSession.AsyncBytes
             let response: URLResponse
@@ -107,10 +113,20 @@ struct OllamaAgentEngine: AgentEngine {
                       let data = trimmed.data(using: .utf8),
                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
                 guard let message = json["message"] as? [String: Any] else { continue }
+                if let thinking = (message["thinking"] as? String) ?? (message["reasoning"] as? String), !thinking.isEmpty {
+                    if ProcessInfo.processInfo.arguments.contains("--cli") {
+                        print(thinking, terminator: "")
+                        fflush(stdout)
+                    }
+                }
                 if let content = message["content"] as? String, !content.isEmpty {
                     loopText += content
                     accumulated += content
                     onUpdate(accumulated)
+                    if ProcessInfo.processInfo.arguments.contains("--cli") {
+                        print(content, terminator: "")
+                        fflush(stdout)
+                    }
                 }
                 if let calls = message["tool_calls"] as? [[String: Any]] {
                     toolCalls.append(contentsOf: calls)
@@ -121,6 +137,10 @@ struct OllamaAgentEngine: AgentEngine {
             if toolCalls.isEmpty {
                 if loop == 0 && loopText.isEmpty {
                     onUpdate("⚠️ Ollama (\(model)) returned no text. Check the model is pulled and Ollama is running.")
+                }
+                if ProcessInfo.processInfo.arguments.contains("--cli") {
+                    print("\n")
+                    fflush(stdout)
                 }
                 return
             }
@@ -140,17 +160,25 @@ struct OllamaAgentEngine: AgentEngine {
                 let rawArgs = function["arguments"] as? [String: Any] ?? [:]
                 let argsString = (try? JSONSerialization.data(withJSONObject: rawArgs)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
 
-                guard let tool = orchestrator.allTools.first(where: { $0.name == name }) else {
-                    let msg = "ERROR: Tool '\(name)' is not registered."
+                if let allowed = allowedTools, !allowed.contains(name) {
+                    let msg = "ERROR: Tool '\(name)' is not permitted for this agent."
                     messages.append(["role": "tool", "content": msg, "name": name, "tool_call_id": callId])
                     continue
                 }
+
+                print("\n⚙️ [Ollama Tool Call] \(name)(\(argsString.prefix(160)))")
+                fflush(stdout)
                 let output: String
                 do {
-                    output = try await tool.execute(jsonArguments: argsString)
+                    // Route through executeToolByName so logToolStart/logToolEnd fire,
+                    // populating the Activity panel and Plan dashboard — matching the
+                    // behavior users see with AFM/Gemini turns.
+                    output = try await orchestrator.executeToolByName(name: name, jsonArguments: argsString)
                 } catch {
                     output = "ERROR: Tool '\(name)' failed: \(error.localizedDescription)"
                 }
+                print("📋 [Ollama Tool Result] \(name) -> \(output.prefix(160))\n")
+                fflush(stdout)
                 messages.append(["role": "tool", "content": output, "name": name, "tool_call_id": callId])
             }
             // Continue the loop so the model can act on tool results.

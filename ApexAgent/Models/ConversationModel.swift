@@ -10,15 +10,17 @@ final class Conversation {
     var title: String
     var createdAt: Date
     var updatedAt: Date
+    var botProfileId: UUID?
 
     @Relationship(deleteRule: .cascade)
     var messages: [Message]
 
-    init(title: String = "New Conversation") {
+    init(title: String = "New Conversation", botProfileId: UUID? = nil) {
         self.id = UUID()
         self.title = title
         self.createdAt = Date()
         self.updatedAt = Date()
+        self.botProfileId = botProfileId
         self.messages = []
     }
 }

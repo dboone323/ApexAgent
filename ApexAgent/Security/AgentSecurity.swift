@@ -63,12 +63,28 @@ enum AgentSecurity {
         "create_skill":           .high,
         "control_app":            .high,
         "control_accessibility":  .high,
-        "control_browser":        .high
+        "control_browser":        .high,
+        "patch_file":             .high,
+        "git_operation":          .medium,
+        "dispatch_swarm":         .medium,
+        "ax_target_element":      .low,
+        "capture_differential_screen": .low,
+        "capture_window_image":   .low
     ]
 
     /// Risk level for a tool name (unknown tools are `.medium`).
     static func riskLevel(for toolName: String) -> ToolRiskLevel {
         toolRiskMap[toolName] ?? .medium
+    }
+
+    /// Verifies if tool execution is authorized under enterprise capability policies.
+    /// In strict enterprise mode, high-risk tools require an ephemeral capability token.
+    @MainActor
+    static func validateCapabilityToken(for toolName: String, botName: String?) -> Bool {
+        guard riskLevel(for: toolName) == .high else { return true }
+        let strictEnterpriseMode = UserDefaults.standard.bool(forKey: "apex.enterprise.strictCapabilityTokens")
+        guard strictEnterpriseMode else { return true }
+        return EphemeralCapabilityManager.shared.hasValidToken(botName: botName, toolName: toolName)
     }
 
     /// Whether a tool requires explicit user confirmation before executing.

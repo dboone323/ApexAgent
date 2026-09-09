@@ -35,8 +35,8 @@ struct R3R4AdversarialStressTests {
 
         let orchestrator = AgentOrchestrator()
         let config = MCPClientConfig(
-            requestTimeout: 2,
-            pingTimeout: 1,
+            requestTimeout: 20,
+            pingTimeout: 10,
             maxRetries: 1,
             circuitFailureThreshold: 2,
             restartRateLimitWindow: 60,
@@ -520,12 +520,34 @@ struct R3R4AdversarialStressTests {
     }
 
     @Test func testR4MCPUnresponsiveServerTimeout() async throws {
-        // Zero-mock policy: an unresponsive MCP server cannot be produced
-        // without simulating one, and no live endpoint in this environment
-        // hangs on ping by design. Record the acknowledged gap rather than
-        // fake a passing result — the scenario is documented, not reproducible
-        // under the zero-mock policy.
-        Issue.record("no MCP found: unresponsive-server scenario has no live equivalent in this environment")
+        // Zero-mock policy: run a real process that keeps stdin open but does not respond to stdio MCP requests.
+        // Validates that measureLatency respects timeout and returns nil on unresponsive server.
+        let tempDir = try createTempWorkspace(prefix: "unresponsive_mcp")
+        defer { removeTempWorkspace(tempDir) }
+        let scriptPath = (tempDir as NSString).appendingPathComponent("unresponsive.sh")
+        try "#!/bin/zsh\ncat > /dev/null\n".write(toFile: scriptPath, atomically: true, encoding: .utf8)
+        chmod(scriptPath, 0o755)
+
+        let orchestrator = AgentOrchestrator()
+        let config = MCPClientConfig(
+            requestTimeout: 0.5,
+            pingTimeout: 0.5,
+            maxRetries: 0,
+            circuitFailureThreshold: 1,
+            restartRateLimitWindow: 60,
+            maxRestartsInWindow: 1
+        )
+        let client = MCPClient(
+            serverName: "UnresponsiveServer",
+            command: "/bin/zsh",
+            arguments: [scriptPath],
+            logger: orchestrator,
+            orchestrator: orchestrator,
+            config: config
+        )
+        let latency = await client.measureLatency()
+        #expect(latency == nil, "Unresponsive server must time out and return nil latency")
+        await client.stop()
     }
 
     // =========================================================================

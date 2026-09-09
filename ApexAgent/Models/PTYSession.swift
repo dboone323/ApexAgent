@@ -45,16 +45,58 @@ class PTYSession: @unchecked Sendable {
     private var pendingContinuation: CheckedContinuation<String, any Error>?
     private var accumulatedOutput = ""
     private var currentMarker = ""
+    private var pendingCommand = ""
     
     // Native Container Sandbox Session
     private var activeContainerSession: (any ContainerInteractiveSession)?
     private var isContainerMode: Bool = false
     
+    private func cleanTerminalOutput(_ raw: String, originalCommand: String) -> String {
+        // Strip ANSI escape sequences
+        let ansiPattern = #"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])"#
+        var text = raw.replacingOccurrences(of: ansiPattern, with: "", options: .regularExpression)
+        
+        // Normalize line breaks
+        text = text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+        
+        var lines = text.components(separatedBy: "\n")
+        
+        // Remove lines that correspond to shell prompt or wrapper invocation echo
+        // e.g. "{", "}", "echo ...", zsh prompt lines like "% user@host path %"
+        let cmdLines = Set(originalCommand.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
+        
+        while let first = lines.first {
+            let trimmed = first.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || trimmed == "{" || trimmed == "}" || trimmed.hasPrefix("echo \"") || trimmed.contains("____APEX_CMD_DONE_") || cmdLines.contains(trimmed) || (trimmed.contains("%") && trimmed.contains("@")) {
+                lines.removeFirst()
+            } else {
+                break
+            }
+        }
+        
+        while let last = lines.last {
+            let trimmed = last.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty || trimmed == "}" || trimmed.hasPrefix("echo \"") || trimmed.contains("____APEX_CMD_DONE_") {
+                lines.removeLast()
+            } else {
+                break
+            }
+        }
+        
+        return lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private func processContinuationOutput(_ str: String) {
         if self.pendingContinuation != nil {
             self.accumulatedOutput += str
             
-            if let range = self.accumulatedOutput.range(of: self.currentMarker) {
+            // Fast tail search: the marker is appended only when the command completes,
+            // so it will always appear near the end of accumulated output.
+            // Bounding the search window avoids O(N^2) grapheme cluster scanning on high-throughput output.
+            let lookback = min(self.accumulatedOutput.count, str.count + self.currentMarker.count + 256)
+            let searchStartIndex = self.accumulatedOutput.index(self.accumulatedOutput.endIndex, offsetBy: -lookback)
+            
+            if let range = self.accumulatedOutput.range(of: self.currentMarker, options: .backwards, range: searchStartIndex..<self.accumulatedOutput.endIndex) {
                 let outputBeforeMarker = String(self.accumulatedOutput[..<range.lowerBound])
                 let outputAfterMarker = String(self.accumulatedOutput[range.upperBound...])
                 
@@ -63,12 +105,14 @@ class PTYSession: @unchecked Sendable {
                 let exitCodeStr = cleanAfter.components(separatedBy: .whitespacesAndNewlines).first ?? "0"
                 let exitCode = Int32(exitCodeStr) ?? 0
                 
-                let finalOutput = outputBeforeMarker.trimmingCharacters(in: .whitespacesAndNewlines)
+                let cleaned = cleanTerminalOutput(outputBeforeMarker, originalCommand: self.pendingCommand)
+                let finalOutput = cleaned.isEmpty ? outputBeforeMarker.trimmingCharacters(in: .whitespacesAndNewlines) : cleaned
                 let continuation = self.pendingContinuation
                 
                 self.pendingContinuation = nil
                 self.currentMarker = ""
                 self.accumulatedOutput = ""
+                self.pendingCommand = ""
                 
                 if exitCode == 0 {
                     continuation?.resume(returning: finalOutput)
@@ -78,6 +122,13 @@ class PTYSession: @unchecked Sendable {
                         "output": finalOutput
                     ]))
                 }
+            } else if self.accumulatedOutput.count > 256_000 {
+                // Keep head and tail to prevent uncontrolled memory inflation on giant commands (e.g. ls -R)
+                let keepHead = 64_000
+                let keepTail = 64_000
+                let head = self.accumulatedOutput.prefix(keepHead)
+                let tail = self.accumulatedOutput.suffix(keepTail)
+                self.accumulatedOutput = head + "\n\n[... terminal output truncated ...]\n\n" + tail
             }
         }
     }
@@ -324,25 +375,44 @@ class PTYSession: @unchecked Sendable {
         guard masterFd >= 0 else {
             throw NSError(domain: "PTYSession", code: -4, userInfo: [NSLocalizedDescriptionKey: "Shell session is not running"])
         }
-        return try await withCheckedThrowingContinuation { continuation in
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                outputQueue.async {
+                    guard self.isContainerMode || self.masterFd >= 0 else {
+                        continuation.resume(throwing: NSError(domain: "PTYSession", code: -4, userInfo: [NSLocalizedDescriptionKey: "Shell session was terminated"]))
+                        return
+                    }
+                    if let oldContinuation = self.pendingContinuation {
+                        self.pendingContinuation = nil
+                        oldContinuation.resume(throwing: NSError(domain: "PTYSession", code: -2, userInfo: [NSLocalizedDescriptionKey: "Command cancelled by subsequent execution"]))
+                    }
+                    
+                    self.accumulatedOutput = ""
+                    self.pendingCommand = command
+                    let uniqueId = UUID().uuidString.prefix(8)
+                    let markerPrefix = "____APEX_CMD_DONE_"
+                    let markerSuffix = "\(uniqueId)____"
+                    self.currentMarker = "\(markerPrefix)\(markerSuffix)"
+                    self.pendingContinuation = continuation
+                    
+                    // Write command wrapped in a block, print exit code, and trigger carriage return.
+                    // Split the marker string literal in the command payload so the terminal's command echo
+                    // does not prematurely match the currentMarker before the command actually executes.
+                    let fullCommand = "\n{\n" + command + "\n}\necho \"\\n\(markerPrefix)\"\"\(markerSuffix) $?\"\n"
+                    self.write(command: fullCommand)
+                }
+            }
+        } onCancel: {
             outputQueue.async {
-                guard self.isContainerMode || self.masterFd >= 0 else {
-                    continuation.resume(throwing: NSError(domain: "PTYSession", code: -4, userInfo: [NSLocalizedDescriptionKey: "Shell session was terminated"]))
-                    return
-                }
-                if let oldContinuation = self.pendingContinuation {
+                // Send SIGINT (Ctrl+C) to terminate the running command in the PTY
+                self.write(command: "\u{0003}")
+                if let continuation = self.pendingContinuation {
                     self.pendingContinuation = nil
-                    oldContinuation.resume(throwing: NSError(domain: "PTYSession", code: -2, userInfo: [NSLocalizedDescriptionKey: "Command cancelled by subsequent execution"]))
+                    self.currentMarker = ""
+                    self.accumulatedOutput = ""
+                    self.pendingCommand = ""
+                    continuation.resume(throwing: CancellationError())
                 }
-                
-                self.accumulatedOutput = ""
-                let uniqueId = UUID().uuidString.prefix(8)
-                self.currentMarker = "____APEX_CMD_DONE_\(uniqueId)____"
-                self.pendingContinuation = continuation
-                
-                // Write command wrapped in a block, print exit code, and trigger carriage return
-                let fullCommand = "\n{\n" + command + "\n}\necho \"\\n\(self.currentMarker) $?\"\n"
-                self.write(command: fullCommand)
             }
         }
     }

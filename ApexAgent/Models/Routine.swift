@@ -18,6 +18,7 @@ final class Routine {
     var trigger: RoutineTrigger
     var scheduledMinutes: Int          // used when trigger == .timeInterval
     var cronExpression: String?        // used when trigger == .cron
+    var messageFilter: String? = nil   // used when trigger == .onMessage (match filter)
     var enabled: Bool
     var createdAt: Date
     var updatedAt: Date
@@ -28,6 +29,7 @@ final class Routine {
         trigger: RoutineTrigger = .manual,
         scheduledMinutes: Int = 0,
         cronExpression: String? = nil,
+        messageFilter: String? = nil,
         enabled: Bool = true
     ) {
         self.name = name
@@ -35,6 +37,7 @@ final class Routine {
         self.trigger = trigger
         self.scheduledMinutes = scheduledMinutes
         self.cronExpression = cronExpression
+        self.messageFilter = messageFilter
         self.enabled = enabled
         self.createdAt = Date()
         self.updatedAt = Date()
@@ -45,6 +48,12 @@ final class Routine {
             return (try? CronSchedule(expression: cron).humanReadableDescription) ?? trigger.rawValue
         } else if trigger == .timeInterval {
             return "Every \(scheduledMinutes) min"
+        } else if trigger == .onMessage {
+            if let filter = messageFilter, !filter.isEmpty {
+                return "On message: \"\(filter)\""
+            } else {
+                return "On any message"
+            }
         }
         return trigger.rawValue
     }
@@ -52,12 +61,12 @@ final class Routine {
 
 // MARK: - RoutineTrigger: when a Routine fires
 
-enum RoutineTrigger: String, Codable, CaseIterable {
+public enum RoutineTrigger: String, Codable, CaseIterable, Sendable {
     case manual              = "Manual"                  // user presses "Run now"
     case timeInterval        = "Every N minutes"         // Timer-based; scheduledMinutes > 0
     case cron                = "Cron expression"         // cron-based trigger
     case onError             = "When build/tool fails"   // reaction to a failure signal
     case onSuccess           = "When build/tool succeeds"// reaction to a success signal
-    case onMessage           = "On specific message"     // (placeholder — Phase 3 hook)
+    case onMessage           = "On specific message"     // reaction to incoming chat message
     case webhook             = "Webhook"                 // triggered by an external POST
 }

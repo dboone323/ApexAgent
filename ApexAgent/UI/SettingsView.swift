@@ -54,7 +54,7 @@ struct SettingsView: View {
     @State private var braveAPIKey: String = ""
     @State private var tavilyAPIKey: String = ""
     @State private var geminiAPIKey: String = ""
-    @State private var geminiModel: String = "gemini-2.0-flash"
+    @State private var geminiModel: String = "gemini-3.5-flash"
     @State private var ollamaHostURL: String = "http://localhost:11434"
     @State private var ollamaModel: String = "qwen2.5-coder:latest"
     @State private var localInstructions: String = ""
@@ -115,6 +115,7 @@ struct SettingsView: View {
     @AppStorage("apex.maxResponseTokens") private var maxResponseTokens: Int = 4096
     @AppStorage("apex.autoApproveToolCalls") private var autoApproveToolCalls: Bool = false
     @State private var isDaemonInstalled: Bool = false
+    @State private var proactiveScheduler = ProactiveScheduler.shared
     @State private var alwaysAllowKeys: [String] = []
 
     var body: some View {
@@ -489,6 +490,21 @@ struct SettingsView: View {
                     CollaborativeServerSettingsSection()
                 }
 
+                // MARK: A2A Interoperability
+                Section("A2A Interoperability") {
+                    A2ASettingsSection()
+                }
+
+                // MARK: Cognitive Memory & Recall
+                Section("Cognitive Memory & Knowledge Graph") {
+                    CognitiveMemorySettingsSection()
+                }
+
+                // MARK: Enterprise Security & Virtualization
+                Section("Enterprise Security & Virtualization") {
+                    EnterpriseSecuritySettingsSection()
+                }
+
                 // MARK: Model Context Protocol (MCP) Registry
                 Section("Model Context Protocol (MCP) Servers") {
                     DynamicToolboxManagerSection()
@@ -556,6 +572,32 @@ struct SettingsView: View {
                             Text("Authorization: Bearer <apex.webhookSecret> or ?secret=<key>")
                                 .font(AppTheme.Font.caption(10))
                                 .foregroundStyle(AppTheme.Palette.textSecondary)
+                        }
+                    }
+                    .padding(.vertical, AppTheme.Spacing.xs)
+                }
+
+                // MARK: Autonomous Bot Proactivity
+                Section("Autonomous Bot Proactivity") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle("Autonomous Handoff & Confirmation Monitoring", isOn: $proactiveScheduler.isEnabled)
+                            .font(AppTheme.Font.headline(13, weight: .semibold))
+
+                        Text("Proactively monitors stalled bot handoffs, unresolved approval gates, and routine execution errors to nudge teammates and prevent blocked workflows.")
+                            .font(AppTheme.Font.caption(11))
+                            .foregroundStyle(AppTheme.Palette.textSecondary)
+
+                        if proactiveScheduler.isEnabled {
+                            HStack {
+                                Text("Active Proactive Findings: \(proactiveScheduler.activeFindings.count)")
+                                    .font(AppTheme.Font.caption(11))
+                                    .foregroundStyle(proactiveScheduler.activeFindings.isEmpty ? AppTheme.Palette.textSecondary : Color.orange)
+                                Spacer()
+                                Button("Run Scan Now") {
+                                    Task { await proactiveScheduler.evaluateNow() }
+                                }
+                                .font(AppTheme.Font.caption(11))
+                            }
                         }
                     }
                     .padding(.vertical, AppTheme.Spacing.xs)
@@ -662,9 +704,9 @@ struct SettingsView: View {
                  braveAPIKey = KeychainManager.get(key: "braveSearchAPIKey") ?? ""
                  tavilyAPIKey = KeychainManager.get(key: "tavilyAPIKey") ?? ""
                  geminiAPIKey = KeychainManager.get(key: "geminiAPIKey") ?? ""
-                 geminiModel = UserDefaults.standard.string(forKey: "apex.geminiModel") ?? "gemini-2.0-flash"
+                 geminiModel = UserDefaults.standard.string(forKey: "apex.geminiModel") ?? "gemini-3.5-flash"
                  ollamaHostURL = UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434"
-                 ollamaModel = UserDefaults.standard.string(forKey: "apex.ollamaModel") ?? "qwen2.5-coder:latest"
+                 ollamaModel = UserDefaults.standard.string(forKey: "apex.ollamaModel") ?? "gemma4:12b"
                  localInstructions = orchestrator.agentInstructions
                  orchestrator.multiAgentModeEnabled = multiAgentModeEnabled
                  startSandboxStatusPolling()
@@ -688,6 +730,7 @@ struct SettingsView: View {
 
     private var modelPrivacyText: String {
         switch orchestrator.modelPreference {
+        case .autoPicker: return "Auto (Native AFM 3 → Cloud Gemini Flash → Local Ollama)"
         case .localSystem: return "On-device (private, offline)"
         case .privateCloud: return "Apple Private Cloud Compute (encrypted)"
         case .cloudGemini: return "Google Gemini Cloud Service"
@@ -699,6 +742,7 @@ struct SettingsView: View {
     
     private var modelPrivacyIcon: String {
         switch orchestrator.modelPreference {
+        case .autoPicker: return "sparkles"
         case .localSystem: return "lock.shield"
         case .privateCloud: return "lock.icloud"
         case .cloudGemini: return "icloud"
@@ -917,3 +961,200 @@ extension SettingsView {
         refreshAlwaysAllowKeys()
     }
 }
+
+struct A2ASettingsSection: View {
+    @AppStorage("apex.a2aServerEnabled") private var a2aServerEnabled: Bool = false
+    @AppStorage("apex.a2aDiscoveryEnabled") private var a2aDiscoveryEnabled: Bool = false
+    @State private var discoveredCount = 0
+
+    var body: some View {
+        Toggle(isOn: $a2aServerEnabled) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Enable A2A Server (port 1338)")
+                Text("Allows other agents to connect to this instance via Agent-to-Agent protocol.")
+                    .font(AppTheme.Font.caption(11))
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+            }
+        }
+        .onChange(of: a2aServerEnabled) { _, newValue in
+            if newValue {
+                try? A2AServer.shared.start()
+            } else {
+                A2AServer.shared.stop()
+            }
+        }
+        
+        Toggle(isOn: $a2aDiscoveryEnabled) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Enable Peer Discovery (Bonjour)")
+                Text("Discover other A2A-capable agents on the local network.")
+                    .font(AppTheme.Font.caption(11))
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+            }
+        }
+        .onChange(of: a2aDiscoveryEnabled) { _, newValue in
+            if newValue {
+                let serviceName = "ApexAgent-\(UUID().uuidString.prefix(4))"
+                try? A2APeerDiscovery.shared.startDiscovery(serviceName: serviceName)
+            } else {
+                A2APeerDiscovery.shared.stopDiscovery()
+            }
+        }
+        
+        if a2aDiscoveryEnabled {
+            Text("\(A2APeerDiscovery.shared.discoveredPeers.count) peers found")
+                .font(AppTheme.Font.caption(11))
+                .foregroundStyle(AppTheme.Palette.textSecondary)
+                .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
+                    discoveredCount = A2APeerDiscovery.shared.discoveredPeers.count
+                }
+        }
+    }
+}
+
+// MARK: - Cognitive Memory Settings Section
+
+struct CognitiveMemorySettingsSection: View {
+    @Environment(AgentOrchestrator.self) private var orchestrator
+    @State private var isConsolidating = false
+    @State private var consolidationMessage: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            Text("Multi-Tier Cognitive Architecture")
+                .font(AppTheme.Font.headline(12, weight: .semibold))
+
+            Text("Provides Working, Episodic, Semantic, and Procedural memory tiers. Past interactions and tool successes form durable knowledge graphs.")
+                .font(AppTheme.Font.caption(11))
+                .foregroundStyle(AppTheme.Palette.textSecondary)
+
+            let bots = orchestrator.botManager?.allBots ?? []
+            let totalEpisodes = bots.reduce(0) { $0 + CognitiveMemoryEngine.shared.allEpisodes(forBotId: $1.id).count }
+            let allSemanticFacts = CognitiveMemoryEngine.shared.queryFacts(subject: nil, predicate: nil, object: nil)
+
+            HStack(spacing: AppTheme.Spacing.md) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(totalEpisodes)")
+                        .font(AppTheme.Font.headline(14, weight: .bold))
+                    Text("Episodic Memories")
+                        .font(AppTheme.Font.caption(10))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                }
+
+                Divider()
+                    .frame(height: 24)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(allSemanticFacts.count)")
+                        .font(AppTheme.Font.headline(14, weight: .bold))
+                    Text("Semantic Facts")
+                        .font(AppTheme.Font.caption(10))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                }
+
+                Spacer()
+
+                Button(action: {
+                    guard !isConsolidating else { return }
+                    isConsolidating = true
+                    Task {
+                        for bot in bots {
+                            await CognitiveMemoryEngine.shared.runConsolidationCycle(forBotId: bot.id)
+                        }
+                        consolidationMessage = "Consolidated \(bots.count) bot(s)"
+                        isConsolidating = false
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        if isConsolidating {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "moon.stars.fill")
+                        }
+                        Text("Trigger Dream Cycle")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(isConsolidating)
+            }
+            .padding(.vertical, 4)
+
+            if let message = consolidationMessage {
+                Text(message)
+                    .font(AppTheme.Font.caption(10))
+                    .foregroundStyle(AppTheme.Palette.accent)
+            }
+        }
+        .padding(.vertical, AppTheme.Spacing.xs)
+    }
+}
+
+// MARK: - Enterprise Security Settings Section
+
+struct EnterpriseSecuritySettingsSection: View {
+    @AppStorage("apex.enterprise.strictCapabilityTokens") private var strictCapabilityTokens: Bool = false
+    @AppStorage("apex.microvmSandboxEnabled") private var microvmSandboxEnabled: Bool = false
+    @State private var exportedLedgerStatus: String?
+    @State private var isExporting = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+            Toggle(isOn: $strictCapabilityTokens) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Strict Capability Tokens (Zero-Trust)")
+                    Text("Enforces cryptographic HMAC-signed capability tokens for dangerous system tools (shell, delete, git).")
+                        .font(AppTheme.Font.caption(11))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                }
+            }
+
+            Toggle(isOn: $microvmSandboxEnabled) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Virtualization MicroVM & APFS Sandbox")
+                    Text("Routes shell and terminal executions through ephemeral APFS copy-on-write sandboxes with automatic rollback.")
+                        .font(AppTheme.Font.caption(11))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                }
+            }
+
+            Divider()
+                .padding(.vertical, 2)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Cryptographic Audit Chain")
+                        .font(AppTheme.Font.headline(12, weight: .semibold))
+                    Text("Tamper-evident SHA-256 hash-chained ledger. Currently \(CryptographicAuditChain.shared.entries.count) signed entries.")
+                        .font(AppTheme.Font.caption(11))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                }
+
+                Spacer()
+
+                Button(action: {
+                    do {
+                        let data = try CryptographicAuditChain.shared.exportChain()
+                        let homeDir = FileManager.default.homeDirectoryForCurrentUser
+                        let exportURL = homeDir.appendingPathComponent("ApexAgent_Audit_Export.json")
+                        try data.write(to: exportURL)
+                        exportedLedgerStatus = "Exported to ~/ApexAgent_Audit_Export.json"
+                    } catch {
+                        exportedLedgerStatus = "Export failed: \(error.localizedDescription)"
+                    }
+                }) {
+                    Label("Export Audit Ledger", systemImage: "arrow.down.doc")
+                }
+                .buttonStyle(.bordered)
+            }
+
+            if let status = exportedLedgerStatus {
+                Text(status)
+                    .font(AppTheme.Font.caption(10))
+                    .foregroundStyle(AppTheme.Palette.accent)
+            }
+        }
+        .padding(.vertical, AppTheme.Spacing.xs)
+    }
+}
+

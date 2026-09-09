@@ -44,6 +44,7 @@ enum ApprovalVerdictSource: String, Sendable {
     case sensitiveGuard = "sensitive-guard"
     case unattendedBlock = "unattended-block"
     case localComputerBlock = "local-computer-block"
+    case governanceBlock = "governance-block"
     case noGrant = "no-grant"
     /// The human answered a card themselves (decision-log attribution only —
     /// never produced by `ApprovalPolicy.verdict`).
@@ -118,6 +119,60 @@ enum ApprovalPolicy {
             .split(separator: "/").last?
             .replacingOccurrences(of: #"[^\w.-]"#, with: "", options: .regularExpression) ?? ""
         return program.isEmpty ? tool : "\(tool):\(program)"
+    }
+
+    /// Decide whether a permission request may be auto-answered, using a
+    /// SecurityGovernanceProfile preset (hostStrict, containerStandard, etc.).
+    /// - Parameter governanceProfile: the profile whose scope, sandbox flag, and
+    ///   guard booleans drive the verdict. Mapped to the underlying alwaysAllow /
+    ///   autoApprove / unattended / localScope / isContainerSandboxed switches.
+    static func verdict(
+        tool: String,
+        summary: String,
+        governanceProfile: SecurityGovernanceProfile
+    ) -> ApprovalVerdict {
+        // 1. Sensitive file guards check (highest priority: reading keys/secrets must return sensitiveGuard)
+        if governanceProfile.blockSensitiveFileAccess && looksSensitive(summary) {
+            let matched = matchFirst(ApprovalRule.sensitive, in: summary)
+            return ApprovalVerdict(approve: nil, source: .sensitiveGuard, rule: matched)
+        }
+
+        // 2. Destructive guards check
+        if governanceProfile.blockDestructiveHostCommands && looksDestructive(summary) {
+            let hostDiskDestructive = matchFirst([
+                try! NSRegularExpression(pattern: #"\bdiskutil\s+erase|\bdd\s+[^|]*\bof=/dev/(r?disk|nvme)"#, options: [.caseInsensitive]),
+                try! NSRegularExpression(pattern: #"\bmkfs\b"#, options: [.caseInsensitive]),
+                try! NSRegularExpression(pattern: #"\brm\s+(-[a-z]*\s+)*-[a-z]*[rf]"#, options: [.caseInsensitive])
+            ], in: summary)
+            return ApprovalVerdict(approve: nil, source: .destructiveGuard, rule: hostDiskDestructive ?? destructiveGuardRuleName)
+        }
+
+        // 3. Host Strict or profiles disabling network: block network attempts
+        if !governanceProfile.allowNetwork {
+            let networkPatterns = [
+                try! NSRegularExpression(pattern: #"(?:^|[|;&\s])(curl|wget|nc|netcat|ssh|scp|sftp|ping|telnet)\b"#, options: [.caseInsensitive]),
+                try! NSRegularExpression(pattern: #"https?://"#, options: [.caseInsensitive])
+            ]
+            if let matched = matchFirst(networkPatterns, in: summary) {
+                return ApprovalVerdict(approve: nil, source: .governanceBlock, rule: matched)
+            }
+        }
+
+        // 4. Container sandbox auto-approval
+        if governanceProfile.scope == .container && governanceProfile.autoApprovePackageInstall {
+            return ApprovalVerdict(approve: "auto-approved in Apple Container sandbox", source: .containerSandbox, rule: nil)
+        }
+
+        // 5. Fallback for host scope
+        let autoApprove: Bool = governanceProfile.scope == .container
+            && governanceProfile.autoApprovePackageInstall
+        let isContainerSandboxed: Bool = governanceProfile.scope == .container
+        return verdict(
+            tool: tool,
+            summary: summary,
+            autoApprove: autoApprove,
+            isContainerSandboxed: isContainerSandboxed
+        )
     }
 
     /// Decide whether a permission request may be auto-answered.

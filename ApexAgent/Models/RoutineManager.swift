@@ -177,6 +177,28 @@ final class RoutineManager: Observable {
         }
     }
 
+    // MARK: - Message-reactive dispatch
+
+    /// Evaluates and executes any enabled `.onMessage` routines matching the incoming text.
+    @discardableResult
+    func dispatchOnMessage(text: String, fromBotId: UUID? = nil) async -> [String] {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        loadRoutines()
+        let candidates = routines.filter { $0.enabled && $0.trigger == .onMessage }
+        var outputs: [String] = []
+        for routine in candidates {
+            if let filter = routine.messageFilter, !filter.isEmpty {
+                let matches = trimmed.localizedCaseInsensitiveContains(filter)
+                if !matches { continue }
+            }
+            if let out = await execute(routine) {
+                outputs.append(out)
+            }
+        }
+        return outputs
+    }
+
     // MARK: - Webhook dispatch (O5)
 
     /// Fire the enabled `.webhook` routine matching `routineName`. Returns the

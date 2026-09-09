@@ -142,17 +142,25 @@ actor MCPClient {
     /// Readiness gate: wait until the spawned Node server has attached its
     /// JSON-RPC stdio transport (signalled by its "running on stdio" stderr
     /// line, captured by the stderr read loop) before sending `initialize`.
-    /// Blocking-read line stream for a child process pipe. Yields one String
-    /// per newline-delimited frame; finishes at EOF. The blocking
-    /// `availableData` call runs on a utility queue, never on an executor.
-    private static func makeLineStream(handle: FileHandle) -> AsyncStream<String> {
+    /// Blocking-read line stream for a child process pipe descriptor. Yields one String
+    /// per newline-delimited frame; finishes at EOF. Uses pure scalar POSIX `read` on the
+    /// file descriptor to completely prevent background thread capture or cross-thread
+    /// deallocation of Objective-C `NSFileHandle` objects (which causes `objc_release` EXC_BAD_ACCESS).
+    private static func makeLineStream(fileDescriptor: Int32) -> AsyncStream<String> {
         AsyncStream { continuation in
             DispatchQueue.global(qos: .utility).async {
+                guard fileDescriptor >= 0 else {
+                    continuation.finish()
+                    return
+                }
                 var buffer = Data()
+                var raw = [UInt8](repeating: 0, count: 4096)
                 while true {
-                    let chunk = handle.availableData
-                    if chunk.isEmpty { break } // EOF: write end closed
-                    buffer.append(chunk)
+                    let count = raw.withUnsafeMutableBytes { ptr in
+                        read(fileDescriptor, ptr.baseAddress!, 4096)
+                    }
+                    if count <= 0 { break } // EOF (0) or error (<0, e.g. closed pipe)
+                    buffer.append(raw, count: count)
                     while let nl = buffer.firstIndex(of: 0x0A) {
                         let lineData = buffer.subdata(in: buffer.startIndex..<nl)
                         buffer.removeSubrange(buffer.startIndex...nl)
@@ -194,7 +202,7 @@ actor MCPClient {
         transportReady = true
     }
     // Hardening configurations
-    private let maxRetries = 5
+    private var maxRetries: Int { config.maxRetries }
     private var failureCount = 0
     private var circuitOpen = false
     private var lastRestartTime = Date.distantPast
@@ -239,7 +247,10 @@ actor MCPClient {
         
         // Wrap command in zsh shell execution to support environment loading and paths
         // Use exec to replace the shell process image with the child process, so signals propagate correctly.
-        let shellArgs = ["-c", "exec \(command) " + arguments.joined(separator: " ")]
+        let quotedArgs = arguments.map { arg in
+            "'" + arg.replacingOccurrences(of: "'", with: "'\\''") + "'"
+        }.joined(separator: " ")
+        let shellArgs = ["-c", "exec \(command) \(quotedArgs)"]
         proc.arguments = shellArgs
         
         var env = ProcessInfo.processInfo.environment
@@ -298,8 +309,8 @@ actor MCPClient {
         // stopped delivering pipe data inside the XCTest host on Xcode 27:
         // requests were written and the child replied, but no line ever reached
         // the reader. A plain blocking read loop is regression-proof.)
-        let stdoutLines = MCPClient.makeLineStream(handle: stdout.fileHandleForReading)
-        let stderrLines = MCPClient.makeLineStream(handle: stderr.fileHandleForReading)
+        let stdoutLines = MCPClient.makeLineStream(fileDescriptor: stdout.fileHandleForReading.fileDescriptor)
+        let stderrLines = MCPClient.makeLineStream(fileDescriptor: stderr.fileHandleForReading.fileDescriptor)
 
         Task { [weak self] in
             guard let self else { return }
@@ -425,20 +436,29 @@ actor MCPClient {
     }
 
     func stop() {
-        process?.terminationHandler = nil
+        guard let proc = process else {
+            cleanupPipes()
+            return
+        }
+        proc.terminationHandler = nil
 
-        // Kill the entire process group (negative PID) so that children like
-        // `node` spawned by `npx` or `zsh` spawned by the exec wrapper are
-        // also reaped. Without this, orchestrated MCP servers leave orphaned
-        // processes that block the test host exit (xcode27-dev skill finding).
-        if let proc = process {
-            let pid = proc.processIdentifier
-            // kill(-pid, SIGTERM) targets the process group rooted at `pid`.
-            kill(-pid, SIGTERM)
+        if proc.isRunning {
+            proc.terminate()
+            for _ in 0..<20 {
+                if !proc.isRunning { break }
+                usleep(50_000) // 50ms * 20 = up to 1s
+            }
         }
 
-        process?.terminate()
+        cleanupPipes()
         process = nil
+    }
+
+    private func cleanupPipes() {
+        try? stdinPipe?.fileHandleForWriting.close()
+        try? stdoutPipe?.fileHandleForReading.close()
+        try? stderrPipe?.fileHandleForReading.close()
+
         stdinPipe = nil
         stdoutPipe = nil
         stderrPipe = nil
@@ -462,7 +482,7 @@ actor MCPClient {
         )
     }
 
-    nonisolated var maxRetryCount: Int { maxRetries }
+    nonisolated var maxRetryCount: Int { config.maxRetries }
 
     private func handleIncomingMessage(_ data: Data) {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -540,12 +560,13 @@ actor MCPClient {
             
             let dataToShare = fullData
             let stdinToShare = stdin
+            let pingTimeoutSec = config.pingTimeout
             let responseData = try await withThrowingTaskGroup(of: Data.self) { group in
                 group.addTask { [id, dataToShare, stdinToShare] in
                     try await self.registerAndWrite(id: id, data: dataToShare, stdin: stdinToShare)
                 }
                 group.addTask {
-                    try await Task.sleep(for: .seconds(3))
+                    try await Task.sleep(for: .seconds(pingTimeoutSec))
                     throw MCPError.timeout("Ping timeout")
                 }
                 guard let result = try await group.next() else {
@@ -571,7 +592,17 @@ actor MCPClient {
             try await startWithRetry()
         }
 
-        return try await sendRequestInternal(method: method, params: params)
+        do {
+            let result: Result = try await sendRequestInternal(method: method, params: params)
+            failureCount = 0
+            return result
+        } catch {
+            failureCount += 1
+            if failureCount >= config.circuitFailureThreshold {
+                circuitOpen = true
+            }
+            throw error
+        }
     }
 
     private func sendRequestInternal<Params: Codable, Result: Codable>(method: String, params: Params) async throws -> Result {
@@ -590,6 +621,7 @@ actor MCPClient {
         fullData.append(10) // '\n'
         let dataToShare = fullData
         let stdinToShare = stdin
+        let timeoutSec = self.config.requestTimeout
         let responseData: Data = try await Tracing.span("mcp.request", source: "MCPClient", metadata: ["method": method]) {
             try await withThrowingTaskGroup(of: Data.self) { group in
                 group.addTask { [id, dataToShare, stdinToShare] in
@@ -597,13 +629,13 @@ actor MCPClient {
                 }
 
                 group.addTask {
-                    try await Task.sleep(for: .seconds(60))
+                    try await Task.sleep(for: .seconds(timeoutSec))
                     // Force-resume the suspended continuation so an unresponsive
                     // server cannot hang the caller forever. removeValue is atomic,
                     // so the real response path and this timeout path cannot both
                     // resume the same continuation (which would crash).
                     await self.resumeOnTimeout(id: id)
-                    throw MCPError.timeout("Request timed out after 60 seconds.")
+                    throw MCPError.timeout("Request timed out after \(timeoutSec) seconds.")
                 }
 
                 guard let resultData = try await group.next() else {
@@ -618,14 +650,14 @@ actor MCPClient {
         let response = try decoder.decode(JSONRPCResponse<Result>.self, from: responseData)
         if let error = response.error {
             failureCount += 1
-            if failureCount >= 3 {
+            if failureCount >= config.circuitFailureThreshold {
                 circuitOpen = true
             }
             throw MCPError.protocolError(error.message)
         }
         guard let result = response.result else {
             failureCount += 1
-            if failureCount >= 3 {
+            if failureCount >= config.circuitFailureThreshold {
                 circuitOpen = true
             }
             throw MCPError.protocolError("Empty result from MCP server.")
@@ -649,6 +681,31 @@ actor MCPClient {
         return response.tools
     }
 
+    /// Public alias used by MCPServerDashboardTests for tool catalog discovery.
+    func listRegisteredTools() async throws -> [MCPToolDefinition] {
+        return try await listTools()
+    }
+
+    /// Measures the round-trip latency (in milliseconds) of a single `tools/list`
+    /// request to the running MCP server. Returns nil when the server is unavailable,
+    /// the handshake fails, or no process is running.
+    func measureLatency() async -> Double? {
+        if !isRunning() {
+            do {
+                try await start()
+            } catch {
+                return nil
+            }
+        }
+        let deadline = Date()
+        do {
+            _ = try await listTools()
+            return Date().timeIntervalSince(deadline) * 1000.0
+        } catch {
+            return nil
+        }
+    }
+
     struct CallToolParams: Codable {
         let name: String
         let arguments: [String: AnyCodable]
@@ -658,6 +715,85 @@ actor MCPClient {
         let params = CallToolParams(name: name, arguments: arguments)
         let result: MCPToolCallResult = try await sendRequest(method: "tools/call", params: params)
         return result
+    }
+
+    // MARK: - Dynamic Script Execution
+
+    /// Executes a local shell script and captures its exit code, stdout, stderr, and
+    /// wall-clock duration. Used by the dynamic script editor / test harness.
+    public func executeDynamicScript(
+        scriptPath: String,
+        jsonArguments: String,
+        environment: [String: String]? = nil
+    ) async throws -> DynamicScriptResult {
+        try await ApexAgentCore.executeDynamicScript(
+            scriptPath: scriptPath,
+            jsonArguments: jsonArguments,
+            environment: environment
+        )
+    }
+}
+
+/// Executes a local shell script and captures its exit code, stdout, stderr, and
+/// wall-clock duration. Used by the dynamic script editor / test harness.
+public func executeDynamicScript(
+    scriptPath: String,
+    jsonArguments: String,
+    environment: [String: String]? = nil
+) async throws -> DynamicScriptResult {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+    process.arguments = [scriptPath]
+
+    var env = ProcessInfo.processInfo.environment
+    env["APEX_ARGS"] = jsonArguments
+    if let customEnv = environment {
+        for (k, v) in customEnv {
+            env[k] = v
+        }
+    }
+    process.environment = env
+
+    let stdout = Pipe()
+    let stderr = Pipe()
+    process.standardOutput = stdout
+    process.standardError = stderr
+
+    let stdoutTask = Task.detached {
+        stdout.fileHandleForReading.readDataToEndOfFile()
+    }
+    let stderrTask = Task.detached {
+        stderr.fileHandleForReading.readDataToEndOfFile()
+    }
+
+    let start = Date()
+    try process.run()
+    process.waitUntilExit()
+    let duration = Date().timeIntervalSince(start)
+
+    let stdoutBytes = await stdoutTask.value
+    let stderrBytes = await stderrTask.value
+
+    return DynamicScriptResult(
+        exitCode: process.terminationStatus,
+        stdout: String(decoding: stdoutBytes, as: UTF8.self),
+        stderr: String(decoding: stderrBytes, as: UTF8.self),
+        duration: duration
+    )
+}
+
+/// Result of executing a dynamic shell script for testing / dynamic tool editor.
+public struct DynamicScriptResult: Sendable, Equatable {
+    public let exitCode: Int32
+    public let stdout: String
+    public let stderr: String
+    public let duration: TimeInterval
+
+    public init(exitCode: Int32, stdout: String, stderr: String, duration: TimeInterval) {
+        self.exitCode = exitCode
+        self.stdout = stdout
+        self.stderr = stderr
+        self.duration = duration
     }
 }
 

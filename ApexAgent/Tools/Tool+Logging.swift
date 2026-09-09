@@ -19,6 +19,24 @@ extension Tool {
         defer { AgentSignpost.end("ToolCall", signpostID, detail: toolName) }
         Logger.tools.debug("Tool called: \(toolName, privacy: .public)")
 
+        // Check for infinite tool loops with RepeatDetector
+        if let repeatWarning = await orchestrator.orchestrator.checkRepeat(tool: toolName, arguments: argsString) {
+            await orchestrator.orchestrator.logToolEnd(name: toolName, result: repeatWarning, status: .failed("Loop detected"))
+            return repeatWarning
+        }
+
+        // Check if tool calling mode is disabled
+        let isToolDisabled = await MainActor.run {
+            orchestrator.orchestrator.toolCallingMode == .disabled
+        }
+        if isToolDisabled {
+            let disabledMsg = "Tool execution rejected: Tool calling mode is disabled."
+            await MainActor.run {
+                orchestrator.orchestrator.logToolEnd(name: toolName, result: disabledMsg, status: .denied)
+            }
+            return disabledMsg
+        }
+
         // Log starting of the tool
         await orchestrator.orchestrator.logToolStart(name: toolName, arguments: argsString)
 
@@ -76,6 +94,12 @@ extension Tool {
             // phrasing before the result re-enters the transcript so a tool
             // cannot hijack the agent loop.
             result = sanitizeForPromptInjection(result)
+
+            if result.hasPrefix("ERROR:") {
+                await orchestrator.orchestrator.logToolEnd(name: toolName, result: result, status: .failed(result))
+                await AgentAuditLog.shared.record(toolName: toolName, arguments: argsString, wasConfirmed: needsConfirm, status: "failed")
+                return result
+            }
 
             await orchestrator.orchestrator.logToolEnd(name: toolName, result: result, status: .success)
             await AgentAuditLog.shared.record(toolName: toolName, arguments: argsString, wasConfirmed: needsConfirm, status: "success")

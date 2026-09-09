@@ -142,7 +142,7 @@ struct BotSessionTests {
 
     @Test func systemInstructionsFollowsProfile() {
         let (session, _) = makeSession()
-        #expect(session.systemInstructions == session.bot.systemInstructions)
+        #expect(session.systemInstructions.contains(session.bot.systemInstructions))
         #expect(session.systemInstructions.contains("Account Health"))
     }
 

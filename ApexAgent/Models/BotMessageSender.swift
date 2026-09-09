@@ -37,6 +37,12 @@ extension BotSession {
             let userMsg = ChatMessage(role: .user, content: trimmedText, attachments: attachments)
             self.appendMessage(userMsg)
 
+            // Evaluate any onMessage triggered routines
+            let currentBotId = self.bot.id
+            Task { @MainActor in
+                await RoutineManager.shared.dispatchOnMessage(text: trimmedText, fromBotId: currentBotId)
+            }
+
             // 3. Add placeholder assistant message
             let assistantMsg = ChatMessage(role: .assistant, content: "", isStreaming: true)
             self.appendMessage(assistantMsg)
@@ -50,6 +56,7 @@ extension BotSession {
                     prompt: trimmedText,
                     history: self.messages,
                     instructions: self.systemInstructions,
+                    session: self.session,
                     orchestrator: self.orchestrator ?? AgentOrchestrator()
                 )
                 try await engine.streamResponse(
@@ -98,11 +105,11 @@ extension BotSession {
         let provider = ModelRegistry.effectiveProvider(for: bot)
         switch provider {
         case .localOllama:
-            return OllamaAgentEngine(orchestrator: orch)
+            return OllamaAgentEngine(orchestrator: orch, bot: bot)
         case .localMLX:
             return MLXAgentEngine(orchestrator: orch)
-        case .appleOnDevice, .applePCC, .fmCLI, .cloudGemini:
-            return NativeAppleEngine(orchestrator: orch)
+        case .autoPicker, .appleOnDevice, .applePCC, .fmCLI, .cloudGemini:
+            return NativeAppleEngine(orchestrator: orch, customSession: session)
         }
     }
 }

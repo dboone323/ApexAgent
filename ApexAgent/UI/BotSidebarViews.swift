@@ -327,6 +327,7 @@ struct BotSidebarItem: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("botSidebarItem_\(bot.name)")
         .contextMenu {
             Button {
                 onTogglePin()
@@ -382,6 +383,8 @@ struct BotStatusBadge: View {
     
     private func statusColor(for preference: AgentModelPreference, availability: SystemLanguageModel.Availability) -> Color {
         switch preference {
+        case .autoPicker:
+            return .green
         case .localSystem:
             return availability == .available ? .green : .red
         case .privateCloud:
@@ -397,6 +400,8 @@ struct BotStatusBadge: View {
     
     private func statusText(for session: BotSession) -> String {
         switch session.modelPreference {
+        case .autoPicker:
+            return "Auto"
         case .localSystem:
             return session.modelAvailability == .available ? "AFM 3" : "Offline"
         case .privateCloud:

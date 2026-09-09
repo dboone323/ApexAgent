@@ -7,25 +7,68 @@ import SwiftUI
 /// registry so stale tools disappear from the toolbox immediately.
 struct DynamicToolboxManagerSection: View {
     @State private var mcpManager = MCPManager.shared
+    @State private var showDashboard = false
+    @State private var showScriptEditor = false
 
     var body: some View {
-        ForEach(mcpManager.servers) { config in
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(config.name)
-                        .fontWeight(.medium)
-                    Text("\(config.command) \(config.arguments.joined(separator: " "))")
-                        .font(AppTheme.Font.mono(10))
-                        .foregroundStyle(AppTheme.Palette.textSecondary)
+        VStack(spacing: 8) {
+            ForEach(mcpManager.servers) { config in
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(config.name)
+                            .fontWeight(.medium)
+                        Text("\(config.command) \(config.arguments.joined(separator: " "))")
+                            .font(AppTheme.Font.mono(10))
+                            .foregroundStyle(AppTheme.Palette.textSecondary)
+                    }
+                    Spacer()
+                    Button(role: .destructive) {
+                        mcpManager.removeServer(id: config.id)
+                        DynamicToolbox.shared.loadTools()
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.plain)
                 }
-                Spacer()
-                Button(role: .destructive) {
-                    mcpManager.removeServer(id: config.id)
-                    DynamicToolbox.shared.loadTools()
+            }
+
+            Divider()
+                .padding(.vertical, 4)
+
+            HStack(spacing: 12) {
+                Button {
+                    showDashboard = true
                 } label: {
-                    Image(systemName: "trash")
+                    Label("MCP Dashboard", systemImage: "server.rack")
                 }
-                .buttonStyle(.plain)
+
+                Button {
+                    showScriptEditor = true
+                } label: {
+                    Label("Script Editor", systemImage: "terminal")
+                }
+
+                Spacer()
+            }
+        }
+        .sheet(isPresented: $showDashboard) {
+            VStack {
+                HStack {
+                    Spacer()
+                    Button("Close") { showDashboard = false }
+                        .padding()
+                }
+                MCPServerDashboardView()
+            }
+        }
+        .sheet(isPresented: $showScriptEditor) {
+            VStack {
+                HStack {
+                    Spacer()
+                    Button("Close") { showScriptEditor = false }
+                        .padding()
+                }
+                DynamicScriptEditorView()
             }
         }
     }

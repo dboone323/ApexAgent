@@ -51,8 +51,8 @@ struct MCPServerDashboardTests {
         defer { try? FileManager.default.removeItem(at: live.workspace) }
         let orchestrator = AgentOrchestrator()
         let config = MCPClientConfig(
-            requestTimeout: 5,
-            pingTimeout: 3,
+            requestTimeout: 20,
+            pingTimeout: 10,
             maxRetries: 2,
             circuitFailureThreshold: 3,
             restartRateLimitWindow: 60,

@@ -33,6 +33,17 @@ struct SystemToolsTests {
         )
         let result = try await tool.call(arguments: args)
         #expect(!result.isEmpty)
+        
+        let errorLevelArgs = OSLogQueryTool.Arguments(
+            subsystem: nil,
+            category: nil,
+            level: "error",
+            lastSeconds: 60,
+            searchText: nil,
+            limit: 5
+        )
+        let errorResult = try await tool.call(arguments: errorLevelArgs)
+        #expect(!errorResult.isEmpty)
     }
 
     @Test("WatchPathsTool start, check, and stop lifecycle")

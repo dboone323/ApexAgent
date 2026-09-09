@@ -129,7 +129,8 @@ struct AccessibilityControlTool: Tool {
                     }
                     let axWindow = windowElement as! AXUIElement
                     var output = "UI Elements in active window of \(frontmostApp.localizedName ?? ""):\n"
-                    output += traverse(element: axWindow, depth: 0, maxDepth: 15, conversationId: conversationId)
+                    var remaining = 100
+                    output += traverse(element: axWindow, depth: 0, maxDepth: 8, remaining: &remaining, conversationId: conversationId)
                     return output
                     
                 case "click":
@@ -138,6 +139,11 @@ struct AccessibilityControlTool: Tool {
                     }
                     guard let element = UIRegistry.shared.get(elementId, for: conversationId) else {
                         return "ERROR: Element \(elementId) not found in registry. Run list_elements first to refresh."
+                    }
+                    if let rect = Self.frame(of: element) {
+                        let center = CGPoint(x: rect.midX, y: rect.midY)
+                        GhostCursorController.shared.showCursor(at: center)
+                        GhostCursorController.shared.animateClick()
                     }
                     let err = AXUIElementPerformAction(element, kAXPressAction as CFString)
                     if err == .success {
@@ -158,9 +164,9 @@ struct AccessibilityControlTool: Tool {
                     }
                     let err = AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, textValue as CFTypeRef)
                     if err == .success {
-                        return "✅ Successfully set text on \(elementId) to '\(textValue)'"
+                        return "✅ Successfully set text on element \(elementId)"
                     } else {
-                        return "ERROR: Failed to set text value: error \(err.rawValue)"
+                        return "ERROR: Failed to set text on element: error \(err.rawValue)"
                     }
                     
                 case "focus":
@@ -185,8 +191,9 @@ struct AccessibilityControlTool: Tool {
     }
     
     @MainActor
-    private func traverse(element: AXUIElement, depth: Int, maxDepth: Int = 15, conversationId: UUID) -> String {
-        guard depth <= maxDepth else { return "" }
+    private func traverse(element: AXUIElement, depth: Int, maxDepth: Int = 8, remaining: inout Int, conversationId: UUID) -> String {
+        guard depth <= maxDepth, remaining > 0 else { return "" }
+        remaining -= 1
         
         var output = ""
         let role = getAttribute(element, attribute: kAXRoleAttribute) as? String ?? "Unknown"
@@ -217,8 +224,8 @@ struct AccessibilityControlTool: Tool {
         output += line
         
         let children = getChildren(element)
-        for child in children {
-            output += traverse(element: child, depth: depth + 1, maxDepth: maxDepth, conversationId: conversationId)
+        for child in children where remaining > 0 {
+            output += traverse(element: child, depth: depth + 1, maxDepth: maxDepth, remaining: &remaining, conversationId: conversationId)
         }
         
         return output

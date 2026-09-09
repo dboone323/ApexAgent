@@ -69,7 +69,7 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor, DynamicTo
         model: LocalOllamaLanguageModel,
         streamingInto channel: LanguageModelExecutorGenerationChannel
     ) async throws {
-        let savedModel = UserDefaults.standard.string(forKey: "apex.ollamaModel") ?? "qwen2.5-coder:latest"
+        let savedModel = UserDefaults.standard.string(forKey: "apex.ollamaModel") ?? "gemma4:12b"
         
         var ollamaMessages: [[String: Any]] = []
         for entry in request.transcript {

@@ -98,6 +98,7 @@ struct ContentView: View {
                 }
                 .pickerStyle(.menu)
                 .help("Tool Calling Mode")
+                .accessibilityIdentifier("toolCallingModePicker")
                 
                 Button {
                     showCreateBotSheet = true
@@ -252,6 +253,8 @@ struct ModelStatusBadge: View {
 
     private var statusText: String {
         switch orchestrator.modelPreference {
+        case .autoPicker:
+            return "Auto (AFM → Gemini → Ollama)"
         case .localSystem:
             return orchestrator.modelAvailability == .available ? "Local AFM 3" : "Model Offline"
         case .privateCloud:

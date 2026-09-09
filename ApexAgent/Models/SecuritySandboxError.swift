@@ -1,6 +1,6 @@
 import Foundation
 
-public enum SecuritySandboxError: Error, CustomStringConvertible {
+public enum SecuritySandboxError: Error, CustomStringConvertible, Equatable {
     case pathViolation(String)
     case symlinkTraversal(String)
     case desktopFolderRestricted

@@ -84,6 +84,7 @@ let package = Package(
             exclude: [
                 "ApexAgent.entitlements",
                 "Info.plist",
+                "Assets.xcassets",
             ],
             resources: [
                 .process("Resources")
@@ -184,9 +185,6 @@ let package = Package(
                 "MCPKit",
             ],
             path: "ApexAgentTests",
-            resources: [
-                .copy("mock_mcp_server.sh"),
-            ],
             linkerSettings: [
                 .unsafeFlags([
                     "-Xlinker", "-weak_framework", "-Xlinker", "FoundationModels",

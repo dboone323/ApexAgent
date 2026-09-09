@@ -30,6 +30,7 @@ struct CreateBotSheet: View {
                 Section("Identity") {
                     TextField("Bot Name (e.g. Piper)", text: $name)
                         .accessibilityLabel("Bot Name")
+                        .accessibilityIdentifier("botNameTextField")
 
                     TextField("Short Title / Role (e.g. Product Performance)", text: $title)
                         .accessibilityLabel("Bot Title")
@@ -96,7 +97,7 @@ struct CreateBotSheet: View {
                         TextField("Ollama Model", text: $ollamaModelBinding, prompt: Text("gemma4:12bmlx (global default)"))
                     }
 
-                    Text("When set to Apple On-Device or Global Default, tasks estimated over 4k tokens automatically tier to Private Cloud Compute, then Local Ollama (gemma4:12bmlx).")
+                    Text("When set to Auto Model Picker or Global Default, tasks are automatically routed: Apple On-Device for standard context (<=4k), Cloud Gemini Flash for high-complexity/large context (>4k), and Local Ollama (gemma4:12bmlx) for offline fallback.")
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                 }
@@ -107,6 +108,7 @@ struct CreateBotSheet: View {
                     }
                     .font(.system(size: 14, weight: .semibold))
                     .frame(maxWidth: .infinity)
+                    .accessibilityIdentifier("saveBotButton")
                     .disabled(name.isEmpty)
                 }
             }
@@ -124,6 +126,7 @@ struct CreateBotSheet: View {
                 }
             }
         }
+        .accessibilityIdentifier("createBotSheet")
     }
 
     private func createBot() {
@@ -278,7 +281,7 @@ struct EditBotSheet: View {
                         TextField("Ollama Model", text: $ollamaModelBinding, prompt: Text("gemma4:12bmlx (global default)"))
                     }
 
-                    Text("When set to Apple On-Device or Global Default, tasks estimated over 4k tokens automatically tier to Private Cloud Compute, then Local Ollama (gemma4:12bmlx).")
+                    Text("When set to Auto Model Picker or Global Default, tasks are automatically routed: Apple On-Device for standard context (<=4k), Cloud Gemini Flash for high-complexity/large context (>4k), and Local Ollama (gemma4:12bmlx) for offline fallback.")
                         .font(.system(size: 10))
                         .foregroundStyle(.secondary)
                 }

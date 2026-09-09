@@ -184,7 +184,11 @@ struct ConveneMeetingTool: Tool {
             preference: preference,
             instructions: instructions,
             allowedTools: agent.allowedTools,
-            toolCallingMode: .allowed
+            toolCallingMode: .allowed,
+            reasoningLevel: nil,
+            maxResponseTokens: nil,
+            history: nil,
+            prompt: topic
         )
         
         session.prewarm()

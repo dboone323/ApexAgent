@@ -27,6 +27,30 @@ final class ApexGatewayClient {
     
     init() {}
     
+    /// Quickly checks if a gateway server is listening before opening a full NWConnection,
+    /// avoiding noisy Network.framework ECONNREFUSED logs when running standalone.
+    public static func isServerReachable(host: String = "127.0.0.1", port: UInt16 = 1337) -> Bool {
+        let sock = Darwin.socket(AF_INET, SOCK_STREAM, 0)
+        guard sock >= 0 else { return false }
+        defer { Darwin.close(sock) }
+        
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = in_port_t(port).bigEndian
+        addr.sin_addr.s_addr = inet_addr(host)
+        
+        var tv = timeval(tv_sec: 0, tv_usec: 150_000) // 150ms
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+        
+        let res = withUnsafePointer(to: &addr) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Darwin.connect(sock, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        return res == 0
+    }
+    
     public func connect(host: String = "127.0.0.1", port: UInt16 = 1337) {
         guard connection == nil else { return }
         
@@ -49,7 +73,7 @@ final class ApexGatewayClient {
                     if case .posix(let code) = error, code == .ECONNREFUSED {
                         isRefused = true
                     }
-                    if self.retryAttempt < 3 {
+                    if !isRefused && self.retryAttempt < 3 {
                         print("📡 [ApexGatewayClient] Connection failed: \(error)")
                     }
                     self.handleDisconnect(for: connection, isConnectionRefused: isRefused)
@@ -81,9 +105,9 @@ final class ApexGatewayClient {
         Task { @MainActor in
             guard self.connection === connection else { return }
             
+            self.connection = nil
             self.isConnected = false
             self.isGenerating = false
-            self.connection = nil
             
             // Bypass background reconnect in test mode to prevent task leaks
             let isTesting = ProcessInfo.processInfo.arguments.contains { $0.contains("test") || $0.contains("xctest") } || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1"
@@ -91,11 +115,11 @@ final class ApexGatewayClient {
             
             if isConnectionRefused {
                 self.refusedAttempts += 1
-                if self.refusedAttempts > self.maxRefusedAttempts {
+                if self.refusedAttempts >= self.maxRefusedAttempts {
                     // Gateway server isn't running (this app doesn't start it).
                     // Stop hammering the port; surface one clear message and stay
                     // disconnected. The user can start the gateway separately.
-                    if self.refusedAttempts == self.maxRefusedAttempts + 1 {
+                    if self.refusedAttempts == self.maxRefusedAttempts {
                         print("📡 [ApexGatewayClient] Gateway server not reachable at 127.0.0.1:1337 — peer coordination disabled (start ApexGatewayServer to enable).")
                     }
                     return
@@ -168,7 +192,7 @@ final class ApexGatewayClient {
                     if case .posix(let code) = error, code == .ECONNREFUSED {
                         isRefused = true
                     }
-                    if self.retryAttempt < 3 {
+                    if !isRefused && self.retryAttempt < 3 {
                         print("📡 [ApexGatewayClient] Receive error: \(error)")
                     }
                     self.handleDisconnect(for: connection, isConnectionRefused: isRefused)
@@ -195,7 +219,7 @@ final class ApexGatewayClient {
                         if case .posix(let code) = bodyError, code == .ECONNREFUSED {
                             isRefused = true
                         }
-                        if self.retryAttempt < 3 {
+                        if !isRefused && self.retryAttempt < 3 {
                             print("📡 [ApexGatewayClient] Body receive error: \(bodyError)")
                         }
                         self.handleDisconnect(for: connection, isConnectionRefused: isRefused)

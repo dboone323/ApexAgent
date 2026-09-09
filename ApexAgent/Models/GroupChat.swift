@@ -211,7 +211,7 @@ final class GroupChatSession {
                     guard let self else { return }
                     if let idx = self.messages.firstIndex(where: { $0.id == thinkingId }) {
                         var copy = self.messages
-                        copy[idx].content = partialContent
+                        copy[idx].content = SecretRedactor.redact(text: partialContent)
                         self.messages = copy
                     }
                 }
@@ -292,7 +292,7 @@ final class GroupChatSession {
         return msg
     }
 
-    private func buildGroupContext(for bot: BotProfile) -> String {
+    func buildGroupContext(for bot: BotProfile) -> String {
         var context = "You are \(bot.name), participating in a group chat called '\(name)'.\n\n"
         context += "Here is the conversation so far:\n\n"
         for msg in messages {
@@ -303,7 +303,7 @@ final class GroupChatSession {
                 if msg.content.hasPrefix("[") && msg.content.hasSuffix("]") {
                     continue
                 }
-                roleLabel = "Assistant"
+                roleLabel = msg.botName ?? "Assistant"
             case .system: roleLabel = "System"
             }
             context += "[\(roleLabel)] \(msg.content)\n\n"

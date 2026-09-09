@@ -52,8 +52,9 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
         model: CloudGeminiLanguageModel,
         streamingInto channel: LanguageModelExecutorGenerationChannel
     ) async throws {
-        guard !configuration.apiKey.isEmpty else {
-            throw NSError(domain: "CloudGeminiLanguageModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Gemini API Key is missing."])
+        let effectiveKey = configuration.apiKey.isEmpty ? ModelRegistry.geminiAPIKey() : configuration.apiKey
+        guard !effectiveKey.isEmpty else {
+            throw NSError(domain: "CloudGeminiLanguageModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "Gemini API Key is missing. Please enter your Gemini API Key in Settings or set GEMINI_API_KEY."])
         }
         
         var geminiContents: [[String: Any]] = []
@@ -163,7 +164,27 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
             }
         }
         
-        var currentContents = geminiContents
+        var currentContents: [[String: Any]] = []
+        for content in geminiContents {
+            guard let role = content["role"] as? String,
+                  let parts = content["parts"] as? [[String: Any]],
+                  !parts.isEmpty else {
+                continue
+            }
+            if let lastIdx = currentContents.indices.last,
+               let lastRole = currentContents[lastIdx]["role"] as? String,
+               lastRole == role,
+               var lastParts = currentContents[lastIdx]["parts"] as? [[String: Any]] {
+                lastParts.append(contentsOf: parts)
+                currentContents[lastIdx]["parts"] = lastParts
+            } else {
+                currentContents.append(["role": role, "parts": parts])
+            }
+        }
+
+        if let first = currentContents.first, let role = first["role"] as? String, role != "user" {
+            currentContents.insert(["role": "user", "parts": [["text": "Continue task."]]], at: 0)
+        }
         var loopCount = 0
         let maxLoops = 8
         
@@ -206,7 +227,7 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                 throw NSError(domain: "CloudGeminiLanguageModel", code: -2, userInfo: [NSLocalizedDescriptionKey: "Failed to serialize Gemini request payload."])
             }
             
-            let modelName = UserDefaults.standard.string(forKey: "apex.geminiModel") ?? "gemini-2.0-flash"
+            let modelName = UserDefaults.standard.string(forKey: "apex.geminiModel") ?? "gemini-3.5-flash"
             let urlStr = "https://generativelanguage.googleapis.com/v1beta/models/\(modelName):streamGenerateContent?alt=sse"
             guard let url = URL(string: urlStr) else {
                 throw NSError(domain: "CloudGeminiLanguageModel", code: -3, userInfo: [NSLocalizedDescriptionKey: "Invalid Gemini URL configuration."])
@@ -215,7 +236,7 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
             var urlRequest = URLRequest(url: url)
             urlRequest.httpMethod = "POST"
             urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            urlRequest.setValue(configuration.apiKey, forHTTPHeaderField: "x-goog-api-key")
+            urlRequest.setValue(effectiveKey, forHTTPHeaderField: "x-goog-api-key")
             urlRequest.httpBody = jsonData
             urlRequest.timeoutInterval = 60
             
@@ -298,6 +319,7 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                         "parts": parts
                     ])
                     
+                    var functionResponses: [[String: Any]] = []
                     for tc in dynamicToolCalls {
                         let output = await executeDynamicTool(name: tc.name, argumentsString: tc.argumentsString)
                         
@@ -307,14 +329,18 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                             respObj = dict
                         }
                         
+                        functionResponses.append([
+                            "functionResponse": [
+                                "name": tc.name,
+                                "response": respObj
+                            ]
+                        ])
+                    }
+                    
+                    if !functionResponses.isEmpty {
                         currentContents.append([
                             "role": "function",
-                            "parts": [[
-                                "functionResponse": [
-                                    "name": tc.name,
-                                    "response": respObj
-                                ]
-                            ]]
+                            "parts": functionResponses
                         ])
                     }
                 }

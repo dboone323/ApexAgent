@@ -14,6 +14,14 @@ public enum GovernanceProfileKind: String, Sendable, Codable, CaseIterable {
     case containerStrict = "container-strict"
 }
 
+public enum ContainerIsolationLevel: String, Sendable, Codable, CaseIterable, Identifiable {
+    case strict = "strict"
+    case standard = "standard"
+    case ephemeralOverlay = "overlay"
+
+    public var id: String { rawValue }
+}
+
 public struct SecurityGovernanceProfile: Sendable, Codable, Equatable, Identifiable {
     public let id: String
     public let name: String
@@ -171,75 +179,78 @@ public struct SecurityGovernanceProfile: Sendable, Codable, Equatable, Identifia
 
     public func validateFilesystemAccess(path: String, isContainerSandboxed: Bool = false) throws(SecuritySandboxError) {
         let expanded = NSString(string: path).expandingTildeInPath
-        let resolvedURL = URL(fileURLWithPath: expanded).resolvingSymlinksInPath()
-        let standardized = resolvedURL.path
+        let standardized = (expanded as NSString).standardizingPath
+        let resolvedURL = URL(fileURLWithPath: standardized).resolvingSymlinksInPath()
+        let resolved = resolvedURL.path
 
         let fm = FileManager.default
         let homeDir = fm.homeDirectoryForCurrentUser.resolvingSymlinksInPath().path
 
-        // Tilde-traversal guard: if the original path started inside the home
-        // directory but the resolved path landed outside it, the caller is
-        // using `~/.../..` to escape — reject unconditionally.
-        if expanded.hasPrefix("~/") || expanded.hasPrefix(homeDir + "/") || expanded == homeDir {
-            if !standardized.hasPrefix(homeDir + "/") && standardized != homeDir {
-                throw .pathViolation(path)
+        for candidate in [standardized, resolved] {
+            // Tilde-traversal guard: if the original path started inside the home
+            // directory but the candidate landed outside it, the caller is
+            // using `~/.../..` to escape — reject unconditionally.
+            if expanded.hasPrefix("~/") || expanded.hasPrefix(homeDir + "/") || expanded == homeDir {
+                if !candidate.hasPrefix(homeDir + "/") && candidate != homeDir {
+                    throw .pathViolation(path)
+                }
             }
-        }
 
-        let desktopPath = (homeDir as NSString).appendingPathComponent("Desktop")
-        let documentsPath = (homeDir as NSString).appendingPathComponent("Documents")
-        let downloadsPath = (homeDir as NSString).appendingPathComponent("Downloads")
-        let musicPath = (homeDir as NSString).appendingPathComponent("Music")
-        let sshPath = (homeDir as NSString).appendingPathComponent(".ssh")
-        let awsPath = (homeDir as NSString).appendingPathComponent(".aws")
-        let gnupgPath = (homeDir as NSString).appendingPathComponent(".gnupg")
-        let configPath = (homeDir as NSString).appendingPathComponent(".config")
+            let desktopPath = (homeDir as NSString).appendingPathComponent("Desktop")
+            let documentsPath = (homeDir as NSString).appendingPathComponent("Documents")
+            let downloadsPath = (homeDir as NSString).appendingPathComponent("Downloads")
+            let musicPath = (homeDir as NSString).appendingPathComponent("Music")
+            let sshPath = (homeDir as NSString).appendingPathComponent(".ssh")
+            let awsPath = (homeDir as NSString).appendingPathComponent(".aws")
+            let gnupgPath = (homeDir as NSString).appendingPathComponent(".gnupg")
+            let configPath = (homeDir as NSString).appendingPathComponent(".config")
 
-        // In strict mode or host mode, check restricted paths
-        if scope == .host || !isContainerSandboxed {
-            if standardized == desktopPath || standardized.hasPrefix(desktopPath + "/") {
-                throw .desktopFolderRestricted
+            // In strict mode or host mode, check restricted paths
+            if scope == .host || !isContainerSandboxed {
+                if candidate == desktopPath || candidate.hasPrefix(desktopPath + "/") {
+                    throw .desktopFolderRestricted
+                }
+                if candidate == documentsPath || candidate.hasPrefix(documentsPath + "/") {
+                    throw .documentsFolderRestricted
+                }
+                if candidate == downloadsPath || candidate.hasPrefix(downloadsPath + "/") {
+                    throw .downloadsFolderRestricted
+                }
+                if candidate == musicPath || candidate.hasPrefix(musicPath + "/") {
+                    throw .musicFolderRestricted
+                }
+                if candidate == sshPath || candidate.hasPrefix(sshPath + "/") {
+                    throw .pathViolation(path)
+                }
+                if candidate == awsPath || candidate.hasPrefix(awsPath + "/") {
+                    throw .pathViolation(path)
+                }
+                if candidate == gnupgPath || candidate.hasPrefix(gnupgPath + "/") {
+                    throw .pathViolation(path)
+                }
+                if candidate == configPath || candidate.hasPrefix(configPath + "/") {
+                    throw .pathViolation(path)
+                }
             }
-            if standardized == documentsPath || standardized.hasPrefix(documentsPath + "/") {
-                throw .documentsFolderRestricted
-            }
-            if standardized == downloadsPath || standardized.hasPrefix(downloadsPath + "/") {
-                throw .downloadsFolderRestricted
-            }
-            if standardized == musicPath || standardized.hasPrefix(musicPath + "/") {
-                throw .musicFolderRestricted
-            }
-            if standardized == sshPath || standardized.hasPrefix(sshPath + "/") {
-                throw .pathViolation(path)
-            }
-            if standardized == awsPath || standardized.hasPrefix(awsPath + "/") {
-                throw .pathViolation(path)
-            }
-            if standardized == gnupgPath || standardized.hasPrefix(gnupgPath + "/") {
-                throw .pathViolation(path)
-            }
-            if standardized == configPath || standardized.hasPrefix(configPath + "/") {
-                throw .pathViolation(path)
-            }
-        }
 
-        // Check system root restrictions
-        let systemRoots = ["/System", "/Library", "/etc", "/var", "/usr", "/bin", "/sbin", "/private"]
-        if standardized == "/" {
-            throw .pathViolation(path)
-        }
-        for sys in systemRoots {
-            if standardized == sys || standardized.hasPrefix(sys + "/") {
+            // Check system root restrictions
+            let systemRoots = ["/System", "/Library", "/etc", "/var", "/usr", "/bin", "/sbin", "/private"]
+            if candidate == "/" {
                 throw .pathViolation(path)
             }
-        }
+            for sys in systemRoots {
+                if candidate == sys || candidate.hasPrefix(sys + "/") {
+                    throw .pathViolation(path)
+                }
+            }
 
-        // Check configured restricted paths
-        for restricted in restrictedHostPaths {
-            let expRestricted = NSString(string: restricted).expandingTildeInPath
-            let stdRestricted = URL(fileURLWithPath: expRestricted).standardized.path
-            if standardized == stdRestricted || standardized.hasPrefix(stdRestricted + "/") {
-                throw .pathViolation(path)
+            // Check configured restricted paths
+            for restricted in restrictedHostPaths {
+                let expRestricted = NSString(string: restricted).expandingTildeInPath
+                let stdRestricted = URL(fileURLWithPath: expRestricted).standardized.path
+                if candidate == stdRestricted || candidate.hasPrefix(stdRestricted + "/") {
+                    throw .pathViolation(path)
+                }
             }
         }
     }

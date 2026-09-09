@@ -58,6 +58,17 @@ final class BotProfile {
         }
     }
 
+    /// Ordered list of tool names this Bot is permitted to execute.
+    /// Empty = bot inherits the default group allowlist (web_search, read_file,
+    /// list_directory, file_search, search_memory, store_memory, get_system_info,
+    /// send_notification). A non-empty set enforces least-privilege RBAC: any
+    /// tool not in the list is rejected with an error from BotSession.executeTool.
+    var allowedToolNames: [String] = []
+
+    /// Scoped list of MCP server names or IDs permitted for this Bot.
+    /// Empty = inherits all globally configured MCP servers.
+    var allowedMCPServers: [String] = []
+
     /// Default initializer for SwiftData insertion.
     init(
         id: UUID = UUID(),
@@ -109,14 +120,16 @@ final class BotMemoryEntry {
     var source: String       // how this was learned (e.g. "user instruction", "demonstrated")
     var createdAt: Date
     var botProfileId: UUID   // back-reference to the owning Bot
+    var embeddingData: Data? // Serialized semantic embedding vector for vector search
 
-    init(key: String, value: String, source: String = "user instruction", botProfileId: UUID) {
+    init(key: String, value: String, source: String = "user instruction", botProfileId: UUID, embeddingData: Data? = nil) {
         self.id = UUID()
         self.key = key
         self.value = value
         self.source = source
         self.createdAt = Date()
         self.botProfileId = botProfileId
+        self.embeddingData = embeddingData
     }
 }
 

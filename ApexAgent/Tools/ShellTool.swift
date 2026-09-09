@@ -11,7 +11,7 @@ struct ShellTool: Tool {
     }
 
     let name = "run_shell_command"
-    let description = "Runs a zsh shell command. Returns stdout, stderr, and exit code. Use for any terminal task."
+    let description = "Runs a zsh shell command. Returns stdout, stderr, and exit code. Use for terminal tasks, testing, or building. For exploring files or project directories, prefer targeted tools like directory_tree, list_directory, or find_by_name rather than unbounded recursive commands like `ls -R`."
 
     @Generable
     struct Arguments: Decodable {
@@ -54,6 +54,20 @@ struct ShellTool: Tool {
                 // Securely transition to target directory using single-quote escaping to prevent command injection
                 let escapedDir = "'" + expandedDir.replacingOccurrences(of: "'", with: "'\\''") + "'"
                 finalCommand = "cd \(escapedDir) && \(finalCommand)"
+            }
+            
+            let isMicroVMSandbox = UserDefaults.standard.bool(forKey: "apex.microvmSandboxEnabled")
+            if isMicroVMSandbox {
+                do {
+                    let sandboxResult = try await VirtualizationMicroVMSandbox.shared.executeInIsolatedSandbox(
+                        command: finalCommand,
+                        timeoutSeconds: Double(arguments.timeoutSeconds ?? 30)
+                    )
+                    let output = sandboxResult.stdout + (sandboxResult.stderr.isEmpty ? "" : "\nSTDERR:\n" + sandboxResult.stderr)
+                    return output.isEmpty ? "[Command executed successfully with no output in microVM sandbox]" : output
+                } catch {
+                    return "ERROR in microVM sandbox: \(error.localizedDescription)"
+                }
             }
             
             let conversationId = await MainActor.run {
@@ -100,7 +114,7 @@ struct ShellTool: Tool {
                 }
                 
                 if isBuildCommand {
-                    outputMsg += "\n\n[SYSTEM INSTRUCTION: The build failed. Please read the error log above, identify the failing lines in the code, use the appropriate tools to fix the code, and rerun the build command. Do not give up.]"
+                    outputMsg += "\n\n[REMEDIATION GUIDANCE: The build failed. Please read the error log above, identify the failing lines in the code, use the appropriate tools to fix the code, and rerun the build command. Do not give up.]"
                 }
                 return outputMsg
             }

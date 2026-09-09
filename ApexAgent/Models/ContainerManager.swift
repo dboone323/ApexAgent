@@ -8,10 +8,105 @@ import Logging
 
 extension InteractiveSession: ContainerInteractiveSession {}
 
+/// Snapshot of a container's on-disk state, used for rollback testing.
+public struct ContainerSnapshotRecord: Sendable, Equatable, Identifiable, Codable {
+    public let id: String
+    public let name: String
+    public let description: String
+    public let containerId: String
+    public let createdAt: Date
+    public var imageRef: String?
+    public var sizeInBytes: Int?
+    public var isolationLevel: ContainerIsolationLevel?
+
+    public init(id: String, name: String, containerId: String, imageRef: String? = nil, createdAt: Date = Date(), sizeInBytes: Int? = nil, isolationLevel: ContainerIsolationLevel? = nil, description: String = "") {
+        self.id = id
+        self.name = name
+        self.containerId = containerId
+        self.imageRef = imageRef
+        self.createdAt = createdAt
+        self.sizeInBytes = sizeInBytes
+        self.isolationLevel = isolationLevel
+        self.description = description
+    }
+
+    public init(id: String, name: String, description: String, containerId: String, createdAt: Date = Date(), imageRef: String? = nil, sizeInBytes: Int? = nil, isolationLevel: ContainerIsolationLevel? = nil) {
+        self.id = id
+        self.name = name
+        self.description = description
+        self.containerId = containerId
+        self.createdAt = createdAt
+        self.imageRef = imageRef
+        self.sizeInBytes = sizeInBytes
+        self.isolationLevel = isolationLevel
+    }
+}
+
+/// System and hardware capability diagnostics for Apple Virtualization and containers.
+public struct ContainerHostDiagnostics: Sendable, Codable, Equatable {
+    public let isAppleSilicon: Bool
+    public let isVirtualizationSupported: Bool
+    public let macOSVersionString: String
+    public let availableDiskSpaceBytes: Int64
+    public let vmnetAvailable: Bool
+    public let statusMessage: String
+
+    public init(
+        isAppleSilicon: Bool,
+        isVirtualizationSupported: Bool,
+        macOSVersionString: String,
+        availableDiskSpaceBytes: Int64,
+        vmnetAvailable: Bool,
+        statusMessage: String
+    ) {
+        self.isAppleSilicon = isAppleSilicon
+        self.isVirtualizationSupported = isVirtualizationSupported
+        self.macOSVersionString = macOSVersionString
+        self.availableDiskSpaceBytes = availableDiskSpaceBytes
+        self.vmnetAvailable = vmnetAvailable
+        self.statusMessage = statusMessage
+    }
+}
+
 @Observable
 @MainActor
 public final class ContainerManager: ContainerManagerProtocol {
     public static let shared = ContainerManager()
+
+    public static func checkHostCapabilities() -> ContainerHostDiagnostics {
+        #if arch(arm64)
+        let isArm = true
+        #else
+        let isArm = false
+        #endif
+
+        let osVer = ProcessInfo.processInfo.operatingSystemVersion
+        let osString = "\(osVer.majorVersion).\(osVer.minorVersion).\(osVer.patchVersion)"
+
+        var freeBytes: Int64 = 0
+        if let attrs = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()),
+           let free = attrs[.systemFreeSize] as? Int64 {
+            freeBytes = free
+        }
+
+        var vmnet = false
+        if #available(macOS 26, *) {
+            vmnet = true
+        }
+
+        let supported = isArm && freeBytes > 1_000_000_000
+        let status = !isArm ? "Apple Silicon (arm64) is required for native containerization."
+            : (freeBytes < 1_000_000_000 ? "Low disk space (<1GB free)." : "Host system meets all virtualization requirements.")
+
+        return ContainerHostDiagnostics(
+            isAppleSilicon: isArm,
+            isVirtualizationSupported: supported,
+            macOSVersionString: osString,
+            availableDiskSpaceBytes: freeBytes,
+            vmnetAvailable: vmnet,
+            statusMessage: status
+        )
+    }
     
     public enum State: Sendable, Equatable {
         case idle
@@ -40,6 +135,9 @@ public final class ContainerManager: ContainerManagerProtocol {
     public var stateDescription: String {
         get { self.state.description }
     }
+
+    /// Isolation level for the current container runtime (used by E2E snapshot tests).
+    public var isolationLevel: ContainerIsolationLevel = .standard
     
     // Core settings synced with UserDefaults
     public var appleContainerImage: String {
@@ -354,7 +452,114 @@ public final class ContainerManager: ContainerManagerProtocol {
             throw error
         }
     }
-    
+
+    // MARK: - Snapshot Management (E2E rollback testing)
+
+    private var snapshotStore: [String: [ContainerSnapshotRecord]] = [:]
+
+    private func snapshotsDirectory(for containerId: String) -> URL {
+        appRoot.appendingPathComponent("imagestore/snapshots").appendingPathComponent(containerId)
+    }
+
+    public func createSnapshot(name: String, description: String = "", containerId: String = "default") async throws -> ContainerSnapshotRecord {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            throw NSError(domain: "ContainerManager", code: -11, userInfo: [NSLocalizedDescriptionKey: "Snapshot name cannot be empty"])
+        }
+
+        let id = "snap-\(UUID().uuidString.prefix(8).lowercased())"
+        let record = ContainerSnapshotRecord(
+            id: id,
+            name: name,
+            description: description,
+            containerId: containerId,
+            createdAt: Date()
+        )
+        snapshotStore[containerId, default: []].append(record)
+
+        // Persist to disk under imagestore/snapshots/<containerId>/<snap-id>/snapshot.json
+        let snapDir = snapshotsDirectory(for: containerId).appendingPathComponent(id)
+        let fm = FileManager.default
+        try? fm.createDirectory(at: snapDir, withIntermediateDirectories: true)
+        let metaURL = snapDir.appendingPathComponent("snapshot.json")
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        if let data = try? encoder.encode(record) {
+            try? data.write(to: metaURL)
+        }
+
+        // Backup filesystem state from imagestore/containers/<containerId>
+        let containerDir = appRoot.appendingPathComponent("imagestore/containers/\(containerId)")
+        let backupDir = snapDir.appendingPathComponent("fs_data")
+        if fm.fileExists(atPath: containerDir.path) {
+            try? fm.copyItem(at: containerDir, to: backupDir)
+        }
+
+        return record
+    }
+
+    public func restoreSnapshot(id: String, containerId: String = "default") async throws {
+        let snapshots = await listSnapshots(containerId: containerId)
+        guard let target = snapshots.first(where: { $0.id == id || $0.name == id }) else {
+            throw NSError(domain: "ContainerManager", code: -404, userInfo: [NSLocalizedDescriptionKey: "Snapshot not found: \(id)"])
+        }
+
+        let snapDir = snapshotsDirectory(for: containerId).appendingPathComponent(target.id)
+        let backupDir = snapDir.appendingPathComponent("fs_data")
+        let containerDir = appRoot.appendingPathComponent("imagestore/containers/\(containerId)")
+        let fm = FileManager.default
+
+        if fm.fileExists(atPath: backupDir.path) {
+            if fm.fileExists(atPath: containerDir.path) {
+                try? fm.removeItem(at: containerDir)
+            }
+            try fm.copyItem(at: backupDir, to: containerDir)
+        }
+    }
+
+    public func deleteSnapshot(id: String, containerId: String = "default") async throws {
+        let snapshots = await listSnapshots(containerId: containerId)
+        guard let target = snapshots.first(where: { $0.id == id || $0.name == id }) else {
+            throw NSError(domain: "ContainerManager", code: -404, userInfo: [NSLocalizedDescriptionKey: "Snapshot not found: \(id)"])
+        }
+
+        snapshotStore[containerId]?.removeAll { $0.id == target.id }
+        let snapDir = snapshotsDirectory(for: containerId).appendingPathComponent(target.id)
+        try? FileManager.default.removeItem(at: snapDir)
+    }
+
+    public func listSnapshots(containerId: String = "default") async -> [ContainerSnapshotRecord] {
+        var results: [ContainerSnapshotRecord] = snapshotStore[containerId] ?? []
+        let snapBaseDir = snapshotsDirectory(for: containerId)
+        let fm = FileManager.default
+        if let subdirs = try? fm.contentsOfDirectory(at: snapBaseDir, includingPropertiesForKeys: nil) {
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            for dir in subdirs {
+                let metaURL = dir.appendingPathComponent("snapshot.json")
+                let pathString = metaURL.path(percentEncoded: false)
+                guard fm.fileExists(atPath: pathString) else { continue }
+                guard let data = try? Data(contentsOf: metaURL), !data.isEmpty else { continue }
+                if let record = try? decoder.decode(ContainerSnapshotRecord.self, from: data) {
+                    if !results.contains(where: { $0.id == record.id }) {
+                        results.append(record)
+                    }
+                }
+            }
+        }
+        return results
+    }
+
+    // MARK: - Snapshot overload variants (for test compatibility)
+
+    public func createSnapshot(name: String, containerId: String) async throws -> ContainerSnapshotRecord {
+        try await createSnapshot(name: name, description: "", containerId: containerId)
+    }
+
+    public func rollbackToSnapshot(nameOrId: String, containerId: String = "default") async throws {
+        try await restoreSnapshot(id: nameOrId, containerId: containerId)
+    }
+
     // MARK: - Process Execution
     
     public func startInteractiveShell(
@@ -432,55 +637,95 @@ public final class ContainerManager: ContainerManagerProtocol {
 
     public func verifyWorkspaceMountSafety(_ workspace: String) throws {
         let expanded = NSString(string: workspace).expandingTildeInPath
-        let resolvedURL = URL(fileURLWithPath: expanded).resolvingSymlinksInPath()
-        let standardized = resolvedURL.path
+        let standardized = (expanded as NSString).standardizingPath
+        let resolved = URL(fileURLWithPath: standardized).resolvingSymlinksInPath().path
 
-        let forbiddenRoots: Set<String> = [
-            "/",
-            "/System",
-            "/Library",
-            "/usr",
-            "/bin",
-            "/sbin",
-            "/etc",
-            "/var",
-            "/private",
-            "/private/etc",
-            "/private/var",
-            "/dev",
-            "/Volumes"
-        ]
+        for candidate in [standardized, resolved] {
+            if candidate == "/" {
+                throw SecuritySandboxError.pathViolation("Mounting system directory '/' as container workspace is prohibited.")
+            }
 
-        if forbiddenRoots.contains(standardized) {
-            throw SecuritySandboxError.pathViolation("Mounting system directory '\(standardized)' as container workspace is prohibited.")
-        }
-        // Prefix-based check: catch paths that live UNDER a forbidden root
-        // (e.g. /System/Library, /private/etc/...) even when the exact path
-        // isn't in the set.
-        for root in forbiddenRoots {
-            if standardized.hasPrefix(root) && standardized != root {
-                throw SecuritySandboxError.pathViolation("Mounting system directory '\(standardized)' as container workspace is prohibited.")
+            let fm = FileManager.default
+            let homeDir = fm.homeDirectoryForCurrentUser.resolvingSymlinksInPath().path
+
+            // Tilde-traversal guard: if path started with ~/ but candidate escaped home directory
+            if expanded.hasPrefix("~/") || expanded.hasPrefix(homeDir + "/") || expanded == homeDir {
+                if !candidate.hasPrefix(homeDir + "/") && candidate != homeDir {
+                    throw SecuritySandboxError.pathViolation("Escaping user home directory '\(homeDir)' is prohibited.")
+                }
+            }
+
+            if candidate == homeDir {
+                throw SecuritySandboxError.pathViolation("Mounting user home directory '\(homeDir)' directly as container workspace is prohibited.")
+            }
+
+            let sensitiveUserDirs: Set<String> = [
+                (homeDir as NSString).appendingPathComponent("Desktop"),
+                (homeDir as NSString).appendingPathComponent("Documents"),
+                (homeDir as NSString).appendingPathComponent("Downloads"),
+                (homeDir as NSString).appendingPathComponent("Music"),
+                (homeDir as NSString).appendingPathComponent(".ssh"),
+                (homeDir as NSString).appendingPathComponent(".aws"),
+                (homeDir as NSString).appendingPathComponent(".gnupg")
+            ]
+
+            if sensitiveUserDirs.contains(candidate) {
+                throw SecuritySandboxError.pathViolation("Mounting protected user directory '\(candidate)' directly as container workspace is prohibited.")
+            }
+
+            let forbiddenRoots: Set<String> = [
+                "/System",
+                "/Library",
+                "/usr",
+                "/bin",
+                "/sbin",
+                "/etc",
+                "/var",
+                "/private",
+                "/private/etc",
+                "/private/var",
+                "/dev",
+                "/Volumes"
+            ]
+
+            if forbiddenRoots.contains(candidate) {
+                throw SecuritySandboxError.pathViolation("Mounting system directory '\(candidate)' as container workspace is prohibited.")
+            }
+
+            let forbiddenPrefixes = [
+                "/System/",
+                "/Library/",
+                "/usr/",
+                "/bin/",
+                "/sbin/",
+                "/etc/",
+                "/private/etc/",
+                "/dev/",
+                "/Volumes/"
+            ]
+
+            for prefix in forbiddenPrefixes {
+                if candidate.hasPrefix(prefix) {
+                    throw SecuritySandboxError.pathViolation("Mounting system directory '\(candidate)' as container workspace is prohibited.")
+                }
+            }
+
+            // Reject /var and /private/var subpaths outside of the temporary directory (/var/folders/)
+            if candidate.hasPrefix("/var/") || candidate.hasPrefix("/private/var/") {
+                let isTempFolder = candidate.hasPrefix("/var/folders/") || candidate.hasPrefix("/private/var/folders/")
+                if !isTempFolder {
+                    throw SecuritySandboxError.pathViolation("Mounting system directory '\(candidate)' as container workspace is prohibited.")
+                }
             }
         }
 
-        let fm = FileManager.default
-        let homeDir = fm.homeDirectoryForCurrentUser.resolvingSymlinksInPath().path
-        if standardized == homeDir {
-            throw SecuritySandboxError.pathViolation("Mounting user home directory '\(homeDir)' directly as container workspace is prohibited.")
+        // Subdirectories in system temp directories are explicitly allowed as test / container workspaces
+        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory()).resolvingSymlinksInPath().path
+        if standardized != tempDir && (standardized.hasPrefix(tempDir + "/") || standardized.hasPrefix("/tmp/") || standardized.hasPrefix("/private/tmp/")) {
+            return
         }
-
-        let sensitiveUserDirs: Set<String> = [
-            (homeDir as NSString).appendingPathComponent("Desktop"),
-            (homeDir as NSString).appendingPathComponent("Documents"),
-            (homeDir as NSString).appendingPathComponent("Downloads"),
-            (homeDir as NSString).appendingPathComponent("Music"),
-            (homeDir as NSString).appendingPathComponent(".ssh"),
-            (homeDir as NSString).appendingPathComponent(".aws"),
-            (homeDir as NSString).appendingPathComponent(".gnupg")
-        ]
-
-        if sensitiveUserDirs.contains(standardized) {
-            throw SecuritySandboxError.pathViolation("Mounting protected user directory '\(standardized)' directly as container workspace is prohibited.")
+        if resolved != tempDir && (resolved.hasPrefix(tempDir + "/") || resolved.hasPrefix("/tmp/") || resolved.hasPrefix("/private/tmp/")) {
+            return
         }
     }
 }

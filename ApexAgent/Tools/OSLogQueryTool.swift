@@ -10,11 +10,11 @@ struct OSLogQueryTool: Tool {
     }
 
     let name = "query_logs"
-    let description = "Queries the unified log via OSLogStore."
+    let description = "Queries the macOS unified system log via OSLogStore (for system diagnostics, OS subsystems, and Apple unified logging). NOTE: This is NOT for compiler, Xcode build, terminal, or Swift build output. Use run_shell_command to check build or terminal logs."
 
     @Generable
     struct Arguments: Decodable {
-        @Guide(description: "Subsystem to filter by")
+        @Guide(description: "Apple OSLog subsystem (e.g. 'com.apple.dt.xcode', 'com.apex.agent'). NOT for terminal logs.")
         var subsystem: String?
         
         @Guide(description: "Category to filter by")
@@ -48,19 +48,16 @@ struct OSLogQueryTool: Tool {
                 predicates.append(NSPredicate(format: "category == %@", category))
             }
             
-            if let level = arguments.level?.lowercased() {
-                let messageType: OSLogEntryLog.Level? = switch level {
-                case "debug": .debug
-                case "info": .info
-                case "error": .error
-                case "fault": .fault
-                default: nil
+            let targetLevel: OSLogEntryLog.Level? = {
+                guard let level = arguments.level?.lowercased() else { return nil }
+                switch level {
+                case "debug": return .debug
+                case "info": return .info
+                case "error": return .error
+                case "fault": return .fault
+                default: return nil
                 }
-                
-                if let type = messageType {
-                    predicates.append(NSPredicate(format: "level == %d", type.rawValue))
-                }
-            }
+            }()
             
             let predicate = predicates.isEmpty ? nil : NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
             
@@ -74,6 +71,10 @@ struct OSLogQueryTool: Tool {
             
             for entry in entries {
                 guard let logEntry = entry as? OSLogEntryLog else { continue }
+                
+                if let target = targetLevel, logEntry.level != target {
+                    continue
+                }
                 
                 let message = logEntry.composedMessage
                 if let search = searchText, !message.lowercased().contains(search) {

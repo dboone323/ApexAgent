@@ -12,7 +12,7 @@ import Foundation
 // Run for real-world verification:
 //   APEX_LIVE_BOTS=1 swift test --filter LiveBotCommunicationTests
 @MainActor
-@Suite("LiveBotCommunicationTests")
+@Suite("LiveBotCommunicationTests", .serialized)
 struct LiveBotCommunicationTests {
 
     /// Poll until the bot produced a finished assistant reply, or time out.
@@ -86,5 +86,49 @@ struct LiveBotCommunicationTests {
 
         // The grant must now cover future asks silently.
         #expect(manager.peerDeliveryDecision(from: chief, to: researcher, message: "again") == .deliver)
+    }
+
+    @Test("bot check: specialist agents verify readiness and report status through the live model",
+          .enabled(if: ProcessInfo.processInfo.environment["APEX_LIVE_BOTS"] == "1"))
+    func liveSpecialistBotReadinessCheck() async throws {
+        let orchestrator = AgentOrchestrator()
+        let manager = BotManager(orchestrator: orchestrator, computer: Computer())
+        let codex = manager.createBot(
+            name: "Codex",
+            title: "Developer Agent",
+            descriptionText: "You are terse. Always answer with exactly one short sentence.")
+        
+        let codexSession = manager.session(for: codex)
+        let codexBaseline = codexSession.messages.count
+        manager.sendMessageTo(codex, text: "Confirm bot check readiness by saying READY.")
+        let codexReply = try await waitForReply(codexSession, afterMessageCount: codexBaseline)
+        #expect(!codexReply.isEmpty)
+        #expect(!codexReply.contains("⚠️"))
+        #expect(codexReply.lowercased().contains("ready"))
+
+        let nexus = manager.createBot(
+            name: "Nexus",
+            title: "Executor Agent",
+            descriptionText: "You are terse. Always answer with exactly one short sentence.")
+        let nexusSession = manager.session(for: nexus)
+        let nexusBaseline = nexusSession.messages.count
+        manager.sendMessageTo(nexus, text: "Confirm bot check readiness by saying READY.")
+        let nexusReply = try await waitForReply(nexusSession, afterMessageCount: nexusBaseline)
+        #expect(!nexusReply.isEmpty)
+        #expect(!nexusReply.contains("⚠️"))
+        #expect(nexusReply.lowercased().contains("ready"))
+    }
+
+    @Test("system check: executor agent executes shell check through real PTYSession without stalls",
+          .enabled(if: ProcessInfo.processInfo.environment["APEX_LIVE_BOTS"] == "1"))
+    func liveSystemToolCheck() async throws {
+        let pty = try await PTYSession()
+        defer { pty.cleanup() }
+        
+        let swVers = try await pty.runCommand("sw_vers")
+        #expect(swVers.contains("macOS") || swVers.contains("ProductName"))
+        
+        let uptime = try await pty.runCommand("uptime")
+        #expect(uptime.contains("up") || uptime.contains("load"))
     }
 }

@@ -13,8 +13,7 @@ enum AgentSystemPrompt {
     Only call tools when necessary. Call each tool AT MOST ONCE per turn: after a tool returns a result containing "Success", data, or "Error", STOP calling it and summarize the outcome to the user — do not retry or re-call the same tool. \
     State briefly what you're doing before each tool call. \
     Do not use `get_frontmost_app` unless the user explicitly asks what app is frontmost. To open/launch apps, use `run_applescript` or `run_shell_command` directly. \
-    For destructive actions (delete, overwrite), warn the user first. Handle errors gracefully. Be concise. \
-    Do not call tools for greetings ("hi", "hey", "hello"), short social messages, or any input that does not require environmental details. Respond conversationally instead.
+    Do not call tools for greetings ("hi", "hey", "hello"), short social messages, simple math or arithmetic (such as 2+2), or any request that asks for an answer in plain English, in natural language, or without tools. Answer directly using natural language text with your own AI reasoning. Never use terminal or shell tools for basic math or number calculations.
     """
 
     // Specialized modes — swap in via Settings when needed
