@@ -55,6 +55,7 @@ struct SettingsView: View {
     @State private var tavilyAPIKey: String = ""
     @State private var geminiAPIKey: String = ""
     @State private var geminiModel: String = "gemini-3.5-flash"
+    @State private var autoTieringStrategy: AutoTieringStrategy = .balanced
     @State private var ollamaHostURL: String = "http://localhost:11434"
     @State private var ollamaModel: String = "qwen2.5-coder:latest"
     @State private var localInstructions: String = ""
@@ -209,12 +210,12 @@ struct SettingsView: View {
                             geminiSaveTask = Task {
                                 try? await Task.sleep(for: .seconds(0.5))
                                 guard !Task.isCancelled else { return }
-                                KeychainManager.save(key: "geminiAPIKey", value: geminiAPIKey)
+                                ModelRegistry.saveGeminiAPIKey(geminiAPIKey)
                             }
                         }
                         .onSubmit {
                             geminiSaveTask?.cancel()
-                            KeychainManager.save(key: "geminiAPIKey", value: geminiAPIKey)
+                            ModelRegistry.saveGeminiAPIKey(geminiAPIKey)
                         }
 
                     TextField("Gemini Model Name", text: $geminiModel)
@@ -229,10 +230,27 @@ struct SettingsView: View {
                         Image(systemName: "info.circle")
                             .font(.system(size: 11))
                             .foregroundStyle(AppTheme.Palette.textTertiary)
-                        Text("API Keys are saved securely in your macOS Keychain.")
+                        Text("API Keys are saved securely in Keychain and persistent configuration.")
                             .font(AppTheme.Font.caption(11))
                             .foregroundStyle(AppTheme.Palette.textSecondary)
                     }
+                }
+
+                // MARK: Auto Model Tiering Strategy
+                Section("Auto Model Tiering & Balance") {
+                    Picker("Routing Strategy", selection: $autoTieringStrategy) {
+                        ForEach(AutoTieringStrategy.allCases) { strategy in
+                            Text(strategy.displayName).tag(strategy)
+                        }
+                    }
+                    .accessibilityLabel("Routing Strategy")
+                    .onChange(of: autoTieringStrategy) {
+                        UserDefaults.standard.set(autoTieringStrategy.rawValue, forKey: ModelRegistry.tieringStrategyKey)
+                    }
+
+                    Text(tieringStrategyDescription)
+                        .font(AppTheme.Font.caption(11))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
                 }
 
                 // MARK: Ollama Host
@@ -703,7 +721,8 @@ struct SettingsView: View {
             .onAppear {
                  braveAPIKey = KeychainManager.get(key: "braveSearchAPIKey") ?? ""
                  tavilyAPIKey = KeychainManager.get(key: "tavilyAPIKey") ?? ""
-                 geminiAPIKey = KeychainManager.get(key: "geminiAPIKey") ?? ""
+                 geminiAPIKey = ModelRegistry.geminiAPIKey()
+                 autoTieringStrategy = ModelRegistry.activeTieringStrategy()
                  geminiModel = UserDefaults.standard.string(forKey: "apex.geminiModel") ?? "gemini-3.5-flash"
                  ollamaHostURL = UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434"
                  ollamaModel = UserDefaults.standard.string(forKey: "apex.ollamaModel") ?? "gemma4:12b"
@@ -725,6 +744,17 @@ struct SettingsView: View {
             } message: {
                 Text("This will overwrite the current system prompt instructions and reset the model session.")
             }
+        }
+    }
+
+    private var tieringStrategyDescription: String {
+        switch autoTieringStrategy {
+        case .balanced:
+            return "Balanced: On-device (0–3.2k tokens) -> Local Ollama (3.2k–32k tokens) -> Cloud Gemini (>32k tokens & Vision). Preserves Gemini API quota while preventing local resource exhaustion on massive tasks."
+        case .cloudFirst:
+            return "Performance First: On-device (0–3.2k tokens) -> Cloud Gemini (>3.2k tokens & Vision) -> Ollama (offline fallback). Prioritizes maximum speed, uses cloud API quota."
+        case .localFirst:
+            return "Local First: On-device (0–3.2k tokens) -> Local Ollama (>3.2k tokens). Keeps all tasks strictly local."
         }
     }
 

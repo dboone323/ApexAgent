@@ -44,6 +44,12 @@ final class ApexAgentUITests: XCTestCase {
         // UI tests execute against the live application with the real on-device
         // engine (AFM 3 / Apple Foundation Models / Ollama).
         let fresh = XCUIApplication()
+        let envKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"]
+        let fileURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex/gemini_key")
+        let fileKey = try? String(contentsOf: fileURL, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
+        if let key = envKey ?? fileKey, !key.isEmpty {
+            fresh.launchEnvironment["GEMINI_API_KEY"] = key
+        }
         app = fresh
         fresh.launch()
         fresh.activate()

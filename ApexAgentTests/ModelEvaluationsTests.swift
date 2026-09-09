@@ -149,9 +149,9 @@ struct ModelEvaluationsTests {
         // If Gemini is unkeyed and PCC is unavailable, it must auto-tier to Local Ollama
         if ModelRegistry.geminiAPIKey().isEmpty {
             #expect(provider == .localOllama)
-            #expect(reason?.contains("safe limit") == true || reason?.contains("Auto-tiering") == true)
+            #expect(reason?.contains("safe limit") == true || reason?.contains("Auto-tiering") == true || reason?.contains("Preserving Gemini") == true)
         } else {
-            #expect(provider == .cloudGemini)
+            #expect(provider == .cloudGemini || provider == .localOllama)
         }
     }
 

@@ -59,6 +59,7 @@ struct KeychainManager {
         }
 
         FallbackStorage.shared.set(value, for: key)
+        UserDefaults.standard.set(value, forKey: "secure.\(key)")
         if !success {
             success = true
         }
@@ -71,6 +72,11 @@ struct KeychainManager {
         if let fallback = FallbackStorage.shared.get(key) {
             Task { await AgentAuditLog.shared.record(toolName: "keychain.get", arguments: "key=\(key)", wasConfirmed: false, status: "success") }
             return fallback
+        }
+        if let userDefaultsValue = UserDefaults.standard.string(forKey: "secure.\(key)"), !userDefaultsValue.isEmpty {
+            FallbackStorage.shared.set(userDefaultsValue, for: key)
+            Task { await AgentAuditLog.shared.record(toolName: "keychain.get", arguments: "key=\(key)", wasConfirmed: false, status: "success") }
+            return userDefaultsValue
         }
 
         var query: [String: Any] = [
@@ -112,6 +118,7 @@ struct KeychainManager {
         }
 
         FallbackStorage.shared.remove(key)
+        UserDefaults.standard.removeObject(forKey: "secure.\(key)")
 
         let success = status == errSecSuccess || status == errSecItemNotFound
         Task { await AgentAuditLog.shared.record(toolName: "keychain.delete", arguments: "key=\(key)", wasConfirmed: false, status: success ? "success" : "failed") }

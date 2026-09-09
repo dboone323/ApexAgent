@@ -44,6 +44,25 @@ public enum ModelSelectionStrategy: Sendable {
     case automatic
 }
 
+public enum AutoTieringStrategy: String, CaseIterable, Identifiable {
+    case balanced = "balanced"        // On-Device (0-3.2k) -> Local Ollama (3.2k-32k) -> Cloud Gemini (>32k + Vision)
+    case cloudFirst = "cloudFirst"    // On-Device (0-3.2k) -> Cloud Gemini (>3.2k) -> Ollama fallback
+    case localFirst = "localFirst"    // On-Device (0-3.2k) -> Local Ollama (>3.2k) -> Gemini fallback
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .balanced:
+            return "Balanced (Ollama 4k-32k, Gemini >32k)"
+        case .cloudFirst:
+            return "Performance First (Gemini >4k)"
+        case .localFirst:
+            return "Local First (Ollama >4k)"
+        }
+    }
+}
+
 public struct ModelRegistry {
 
     /// Keys mirrored from Settings & Keychain implementations.
@@ -53,8 +72,17 @@ public struct ModelRegistry {
     private static let mlxHostKey = "apex.mlxHost"
     private static let mlxModelKey = "apex.mlxModel"
     public static let providerKey = "apex.modelProvider"
+    public static let tieringStrategyKey = "apex.autoTieringStrategy"
 
-    /// Retrieves the Gemini API Key from Keychain (preferred), environment, or UserDefaults.
+    public static func activeTieringStrategy() -> AutoTieringStrategy {
+        if let raw = UserDefaults.standard.string(forKey: tieringStrategyKey),
+           let strategy = AutoTieringStrategy(rawValue: raw) {
+            return strategy
+        }
+        return .balanced
+    }
+
+    /// Retrieves the Gemini API Key from Keychain (preferred), environment, ~/.apex/gemini_key, or UserDefaults.
     public static func geminiAPIKey() -> String {
         if let key = KeychainManager.get(key: "geminiAPIKey"), !key.isEmpty {
             return key
@@ -65,9 +93,31 @@ public struct ModelRegistry {
         if let envKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"], !envKey.isEmpty {
             return envKey
         }
+        let fileURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex/gemini_key")
+        if let fileKey = try? String(contentsOf: fileURL, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines), !fileKey.isEmpty {
+            return fileKey
+        }
         return UserDefaults.standard.string(forKey: geminiKeyKey)
             ?? UserDefaults.standard.string(forKey: "geminiAPIKey")
             ?? ""
+    }
+
+    /// Persists the Gemini API Key across Keychain, UserDefaults, and ~/.apex/gemini_key file.
+    public static func saveGeminiAPIKey(_ key: String) {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        KeychainManager.save(key: "geminiAPIKey", value: trimmed)
+        KeychainManager.save(key: geminiKeyKey, value: trimmed)
+        UserDefaults.standard.set(trimmed, forKey: "geminiAPIKey")
+        UserDefaults.standard.set(trimmed, forKey: geminiKeyKey)
+
+        let apexDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex")
+        try? FileManager.default.createDirectory(at: apexDir, withIntermediateDirectories: true)
+        let fileURL = apexDir.appendingPathComponent("gemini_key")
+        if trimmed.isEmpty {
+            try? FileManager.default.removeItem(at: fileURL)
+        } else {
+            try? trimmed.write(to: fileURL, atomically: true, encoding: .utf8)
+        }
     }
 
     /// Default Gemini model to the latest Flash version (gemini-3.5-flash).
@@ -110,8 +160,8 @@ public struct ModelRegistry {
     ///
     /// Auto Model Picker Cascade:
     /// 1. Apple Native On-Device (AFM) for standard tasks (<= 3,200 tokens, quick conversational, local tools).
-    /// 2. Cloud Gemini Flash / Pro (for large context >3,200 tokens, deep coding/refactoring, vision attachments).
-    /// 3. Local Ollama (fallback when offline, unkeyed, or explicitly configured).
+    /// 2. Local Ollama (gemma4:12b) for mid-size tasks (3,200–32,000 tokens) in Balanced mode to preserve cloud quota.
+    /// 3. Cloud Gemini Flash / Pro for massive context (>32,000 tokens), deep multi-agent planning, and multimodal vision.
     /// 4. Apple PCC / Local MLX / fm CLI.
     static func resolveProviderForTask(
         preferred: ModelProvider?,
@@ -126,6 +176,7 @@ public struct ModelRegistry {
         let tokens = estimateTokenCount(prompt: prompt, history: history, instructions: instructions, tools: tools)
         let hasGeminiKey = !geminiAPIKey().isEmpty
         let pccAvailable = isPCCAvailable ?? AgentOrchestrator.isPrivateCloudComputeAvailable()
+        let strategy = activeTieringStrategy()
 
         // If explicitly requested a specific fixed provider, honor it
         if targetProvider != .autoPicker && targetProvider != .appleOnDevice {
@@ -142,19 +193,45 @@ public struct ModelRegistry {
 
         // 2. Context Window & Size overflow (>3,200 tokens exceeds on-device AFM 4k limit)
         if tokens > 3200 {
-            if hasGeminiKey {
-                let model = geminiModel()
-                return (.cloudGemini, "Task context is ~\(tokens) tokens (>4k safe limit). Auto-tiering to Cloud Gemini (\(model)).")
-            } else if pccAvailable {
-                return (.applePCC, "Task context is ~\(tokens) tokens (>4k safe limit). Auto-tiering to Apple Private Cloud Compute.")
-            } else {
-                return (.localOllama, "Task context is ~\(tokens) tokens (>4k safe limit) and Cloud Gemini is unkeyed. Auto-tiering to Local Ollama (\(ollamaModel())).")
+            switch strategy {
+            case .cloudFirst:
+                if hasGeminiKey {
+                    let model = geminiModel()
+                    return (.cloudGemini, "Task context is ~\(tokens) tokens (>4k safe limit). Auto-tiering to Cloud Gemini (\(model)).")
+                } else if pccAvailable {
+                    return (.applePCC, "Task context is ~\(tokens) tokens (>4k safe limit). Auto-tiering to Apple Private Cloud Compute.")
+                } else {
+                    return (.localOllama, "Task context is ~\(tokens) tokens (>4k safe limit) and Cloud Gemini is unkeyed. Auto-tiering to Local Ollama (\(ollamaModel())).")
+                }
+
+            case .balanced:
+                // Balanced mode:
+                // - High complexity or very large context (>32k tokens) routes to Cloud Gemini (fast, prevents local GPU strain).
+                // - Normal tasks in the 3.2k-32k window route to Local Ollama to preserve Gemini quota!
+                let isComplex = isTaskHighComplexity(prompt: prompt, instructions: instructions, tools: tools)
+                if (tokens > 32000 || isComplex) && hasGeminiKey {
+                    let model = geminiModel()
+                    let reason = tokens > 32000
+                        ? "Large context (~\(tokens) tokens > 32k). Auto-tiering to Cloud Gemini (\(model)) for high-speed cloud reasoning."
+                        : "High-complexity architecture task. Auto-routing to Cloud Gemini (\(model)) for deep reasoning."
+                    return (.cloudGemini, reason)
+                } else if pccAvailable && tokens > 32000 {
+                    return (.applePCC, "Task context is ~\(tokens) tokens (>32k limit). Auto-tiering to Apple Private Cloud Compute.")
+                } else {
+                    return (.localOllama, "Task context is ~\(tokens) tokens (3.2k–32k band). Preserving Gemini API quota with Local Ollama (\(ollamaModel())).")
+                }
+
+            case .localFirst:
+                if pccAvailable && tokens > 32000 {
+                    return (.applePCC, "Task context is ~\(tokens) tokens (>32k limit). Auto-tiering to Apple Private Cloud Compute.")
+                }
+                return (.localOllama, "Task context is ~\(tokens) tokens. Local First mode active (\(ollamaModel())).")
             }
         }
 
         // 3. Mathematical & Analytical Calculation (auto-routes to cloud or deep local model when in autoPicker)
         if targetProvider == .autoPicker && isTaskMathOrAnalytical(prompt: prompt) {
-            if hasGeminiKey {
+            if hasGeminiKey && strategy == .cloudFirst {
                 let model = geminiModel()
                 return (.cloudGemini, "Mathematical calculation detected. Auto-routing to Cloud Gemini (\(model)) for AI reasoning.")
             } else if pccAvailable {
@@ -200,7 +277,7 @@ public struct ModelRegistry {
             "optimize performance", "debug crash", "codebase overhaul"
         ]
         let matches = complexityKeywords.filter { text.contains($0) }
-        return matches.count >= 2 || tools.count > 12
+        return matches.count >= 2 || tools.contains("convene_meeting")
     }
 
     /// Creates the appropriate `AgentEngine` with automatic context-overflow routing.
