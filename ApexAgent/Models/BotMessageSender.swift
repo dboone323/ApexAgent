@@ -30,6 +30,9 @@ extension BotSession {
                 }
             }
 
+            // 0. Compact context if conversation history has exceeded character limits
+            await self.compactContextIfNeeded()
+
             // 1. Create or reset the model session with this Bot's instructions
             self.resetSession()
 

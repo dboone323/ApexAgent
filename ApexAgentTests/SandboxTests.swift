@@ -93,5 +93,124 @@ struct SandboxTests {
         #expect(!emptyResult.contains("ERROR: Access to path is disabled in settings"))
         #expect(emptyResult.hasPrefix("Directory:"))
     }
+
+    // MARK: - Context Compaction Real Tests (Zero-Mock)
+
+    @Test func testContextCompactionDoesNotTriggerWhenUnderThreshold() async throws {
+        let testBotId = UUID()
+        let engine = CognitiveMemoryEngine.shared
+        defer {
+            let home = FileManager.default.homeDirectoryForCurrentUser
+            let botDir = home.appendingPathComponent(".apex/memory/\(testBotId.uuidString)")
+            try? FileManager.default.removeItem(at: botDir)
+        }
+
+        let msgs = [
+            ChatMessage(role: .user, content: "Hello!"),
+            ChatMessage(role: .assistant, content: "Hi there! How can I assist you today?")
+        ]
+
+        let (compacted, archivedCount) = try await engine.compactMessages(
+            messages: msgs,
+            keepRecent: 4,
+            maxChars: 4000,
+            botId: testBotId
+        ) { _ in
+            Issue.record("Summarizer should not be called when under message count threshold")
+            return ""
+        }
+
+        #expect(archivedCount == 0)
+        #expect(compacted.count == 2)
+        #expect(compacted.first?.content == "Hello!")
+    }
+
+    @Test func testContextCompactionSummarizesOlderTurnsAndPreservesRecent() async throws {
+        let testBotId = UUID()
+        let engine = CognitiveMemoryEngine.shared
+        defer {
+            let home = FileManager.default.homeDirectoryForCurrentUser
+            let botDir = home.appendingPathComponent(".apex/memory/\(testBotId.uuidString)")
+            try? FileManager.default.removeItem(at: botDir)
+        }
+
+        var msgs: [ChatMessage] = []
+        for i in 1...4 {
+            msgs.append(ChatMessage(role: .user, content: "Question #\(i): Please check file path /Users/dev/file\(i).swift"))
+            msgs.append(ChatMessage(role: .assistant, content: "Answer #\(i): Status code is 200, file\(i) validated successfully."))
+        }
+
+        #expect(msgs.count == 8)
+
+        var summarizerInvoked = false
+        let expectedSummary = "User checked files 1 through 2. All status codes returned 200 and verified."
+
+        let (compacted, archivedCount) = try await engine.compactMessages(
+            messages: msgs,
+            keepRecent: 4,
+            maxChars: 4000,
+            botId: testBotId
+        ) { transcript in
+            summarizerInvoked = true
+            #expect(transcript.contains("file1.swift"))
+            #expect(transcript.contains("file2.swift"))
+            return expectedSummary
+        }
+
+        #expect(summarizerInvoked)
+        #expect(archivedCount == 4)
+        #expect(compacted.count == 5)
+
+        let summaryMsg = compacted.first
+        #expect(summaryMsg?.role == .system)
+        #expect(summaryMsg?.content.contains(expectedSummary) == true)
+
+        let preserved = Array(compacted.dropFirst())
+        #expect(preserved.count == 4)
+        #expect(preserved[0].content == msgs[4].content)
+        #expect(preserved[1].content == msgs[5].content)
+        #expect(preserved[2].content == msgs[6].content)
+        #expect(preserved[3].content == msgs[7].content)
+    }
+
+    @Test func testCompactedMessagesArchivedToDurableEpisodicDisk() async throws {
+        let testBotId = UUID()
+        let engine = CognitiveMemoryEngine.shared
+        defer {
+            let home = FileManager.default.homeDirectoryForCurrentUser
+            let botDir = home.appendingPathComponent(".apex/memory/\(testBotId.uuidString)")
+            try? FileManager.default.removeItem(at: botDir)
+        }
+
+        let msgs = [
+            ChatMessage(role: .user, content: "Initial audit request for security vulnerabilities"),
+            ChatMessage(role: .assistant, content: "Found 0 critical path traversal risks in SandboxTests"),
+            ChatMessage(role: .user, content: "Check PTY session allocation"),
+            ChatMessage(role: .assistant, content: "PTY allocation verified and stable"),
+            ChatMessage(role: .user, content: "Recent question 1"),
+            ChatMessage(role: .assistant, content: "Recent answer 1"),
+            ChatMessage(role: .user, content: "Recent question 2"),
+            ChatMessage(role: .assistant, content: "Recent answer 2")
+        ]
+
+        let summary = "Security audit clean, PTY allocation stable."
+
+        let (_, archivedCount) = try await engine.compactMessages(
+            messages: msgs,
+            keepRecent: 4,
+            maxChars: 4000,
+            botId: testBotId
+        ) { _ in summary }
+
+        #expect(archivedCount == 4)
+
+        let episodes = engine.recentEpisodes(forBotId: testBotId, limit: 10)
+        #expect(!episodes.isEmpty)
+
+        let compactionEpisode = episodes.first(where: { $0.eventType == "context_compaction" })
+        #expect(compactionEpisode != nil)
+        #expect(compactionEpisode?.summary == summary)
+        #expect(compactionEpisode?.metadata["compactedTurnCount"] == "4")
+    }
 }
 

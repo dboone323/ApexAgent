@@ -338,6 +338,68 @@ public final class CognitiveMemoryEngine {
         try? saveJSON(episodes, to: fileURL)
     }
     
+    // MARK: - Context Compaction (Automatic History Compression)
+    
+    /// Compacts an array of chat messages by summarizing older turns and archiving them into durable Episodic Memory.
+    /// Preserves the most recent `keepRecent` messages untouched, and replaces older messages with a single structured summary.
+    func compactMessages(
+        messages: [ChatMessage],
+        keepRecent: Int = 4,
+        maxChars: Int = 4000,
+        botId: UUID,
+        summarizer: (String) async throws -> String
+    ) async throws -> (compacted: [ChatMessage], archivedCount: Int) {
+        guard messages.count > keepRecent + 1 else {
+            return (messages, 0)
+        }
+        
+        let splitIndex = max(0, messages.count - keepRecent)
+        let olderMessages = Array(messages[..<splitIndex])
+        let recentMessages = Array(messages[splitIndex...])
+        
+        // Build transcript of older turns for summarization
+        var transcript = "Summarize the key facts, decisions, file paths, tool actions, and context from this earlier segment:\n\n"
+        for msg in olderMessages {
+            let roleStr = switch msg.role {
+            case .user: "User"
+            case .assistant: "Assistant"
+            case .system: "System"
+            }
+            transcript += "[\(roleStr)]: \(msg.content)\n"
+        }
+        
+        if transcript.count > maxChars {
+            transcript = String(transcript.prefix(maxChars)) + "\n[... truncated for compaction window ...]"
+        }
+        
+        let summaryText = try await summarizer(transcript)
+        let cleanSummary = summaryText.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !cleanSummary.isEmpty else {
+            return (messages, 0)
+        }
+        
+        // 1. Archive compacted segment into durable episodic memory
+        let episode = EpisodicEntry(
+            botId: botId,
+            eventType: "context_compaction",
+            summary: cleanSummary,
+            metadata: ["compactedTurnCount": "\(olderMessages.count)"]
+        )
+        recordEpisode(episode)
+        
+        // 2. Formulate structured summary message
+        let summaryMessage = ChatMessage(
+            role: .system,
+            content: "### 📜 Compacted Session Context (Previous Turns Summarized):\n\(cleanSummary)"
+        )
+        
+        var compactedResult: [ChatMessage] = [summaryMessage]
+        compactedResult.append(contentsOf: recentMessages)
+        
+        return (compactedResult, olderMessages.count)
+    }
+    
     // MARK: - Helper
     private func loadJSON<T: Decodable>(from url: URL) throws -> T {
         let data = try Data(contentsOf: url)

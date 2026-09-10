@@ -250,6 +250,64 @@ final class BotSession {
         orchestrator?.resolveConfirmation(approved: approved)
     }
 
+    // MARK: - Context Compaction
+    
+    public static let contextCompactionThreshold: Int = 12000
+    
+    /// Checks message history volume and compacts older turns into a structured summary
+    /// and durable episodic memory when character threshold is exceeded.
+    public func compactContextIfNeeded() async {
+        let totalChars = messages.reduce(0) { $0 + $1.content.count }
+        guard totalChars > Self.contextCompactionThreshold else { return }
+        guard messages.count > 5 else { return }
+        
+        let targetBotId = bot.id
+        
+        do {
+            let (compacted, archivedCount) = try await CognitiveMemoryEngine.shared.compactMessages(
+                messages: self.messages,
+                keepRecent: 4,
+                maxChars: 4000,
+                botId: targetBotId
+            ) { [weak self] transcript in
+                guard let self else { return "" }
+                // Use the bot's configured engine or fallback to local model
+                let model = ModelRegistry.model(for: self.bot)
+                let session = LanguageModelSession(
+                    model: model,
+                    instructions: "You are a concise context compaction assistant. Summarize earlier chat history accurately preserving file paths, error codes, and technical findings."
+                )
+                let response = try await session.respond(to: transcript)
+                return response.content
+            }
+            
+            guard archivedCount > 0 else { return }
+            
+            self.messages = compacted
+            
+            // Sync to SwiftData if conversation exists
+            if let conv = self.currentConversation, let context = self.modelContext {
+                let remainingIds = Set(compacted.map { $0.id })
+                for dbMsg in conv.messages where !remainingIds.contains(dbMsg.id) {
+                    context.delete(dbMsg)
+                }
+                
+                // If a summary message was inserted at index 0, persist it
+                if let first = compacted.first, first.role == .system {
+                    let dbSummaryMsg = Message(role: .system, content: first.content)
+                    dbSummaryMsg.id = first.id
+                    dbSummaryMsg.conversation = conv
+                    context.insert(dbSummaryMsg)
+                }
+                
+                conv.updatedAt = Date()
+                try? context.save()
+            }
+        } catch {
+            print("⚠️ [BotSession] Context compaction skipped: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Model Session Creation
 
     func resetSession() {
