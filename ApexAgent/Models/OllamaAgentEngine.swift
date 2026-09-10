@@ -160,6 +160,13 @@ struct OllamaAgentEngine: AgentEngine {
                     || lower.contains("currently mapping")
                     || lower.contains("mapping & analysis phase")
                     || lower.contains("has initiated a multi-dimensional audit")
+                    || lower.contains("active audit progress")
+                    || lower.contains("i am monitoring their progress")
+                    || lower.contains("once they have completed their respective segments")
+                    || lower.contains("auditing the \"trust boundaries\"")
+                    || lower.contains("auditing the trust boundaries")
+                    || lower.contains("running a series of \"execution paths\"")
+                    || lower.contains("running a series of execution paths")
 
                 if announcesFutureDelegation && loop < maxLoops - 1 {
                     messages.append(["role": "assistant", "content": loopText])
