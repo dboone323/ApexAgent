@@ -19,11 +19,20 @@ struct ProjectAuditTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+            let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
             let path: String
             if let provided = arguments.directoryPath, !provided.isEmpty {
-                path = provided
+                // Resolve relative paths (".", "./", etc.) against the workspace
+                let expanded = NSString(string: provided).expandingTildeInPath
+                if expanded.hasPrefix("/") {
+                    path = expanded
+                } else if expanded == "." || expanded == "./" {
+                    path = wsPath
+                } else {
+                    path = (wsPath as NSString).appendingPathComponent(expanded)
+                }
             } else {
-                path = AgentOrchestrator.proactiveAuditWorkspacePath()
+                path = wsPath.isEmpty ? AgentOrchestrator.proactiveAuditWorkspacePath() : wsPath
             }
             let auditor = await ProjectAuditor.shared
             let reports = await auditor.runWorkspaceAudit(at: path)

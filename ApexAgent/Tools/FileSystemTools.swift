@@ -1,6 +1,29 @@
 import Foundation
 import FoundationModels
 
+// MARK: - Workspace Path Resolution Helper
+
+/// Resolves a raw path argument (which may be ".", "./", empty, or relative)
+/// against the workspace path so that bot-delegated tool calls that pass
+/// relative paths get the correct absolute workspace location instead of
+/// the app bundle's CWD.
+func resolveToWorkspace(rawPath: String, workspacePath: String) -> String {
+    let expanded = NSString(string: rawPath).expandingTildeInPath
+    if expanded.hasPrefix("/") {
+        return expanded
+    }
+    if expanded.isEmpty || expanded == "." || expanded == "./" {
+        return workspacePath
+    }
+    // Relative path: anchor to workspace
+    let candidate = (workspacePath as NSString).appendingPathComponent(expanded)
+    if FileManager.default.fileExists(atPath: candidate) {
+        return candidate
+    }
+    // Fall back to anchoring anyway (path may not exist yet for write operations)
+    return candidate
+}
+
 // MARK: - File Read Tool
 
 struct FileReadTool: Tool {
@@ -71,7 +94,8 @@ struct FileReadTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
-            let effectivePath = resolveExistingFilePath(arguments.path) ?? NSString(string: arguments.path).expandingTildeInPath
+            let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
+            let effectivePath = resolveExistingFilePath(arguments.path) ?? resolveToWorkspace(rawPath: arguments.path, workspacePath: wsPath)
             let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(effectivePath) }
             guard isAllowed else {
                 return "ERROR: Access to path is disabled in settings: \(effectivePath)"

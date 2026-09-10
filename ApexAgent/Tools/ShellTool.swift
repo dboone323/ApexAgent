@@ -70,12 +70,24 @@ struct ShellTool: Tool {
                 }
             }
             
+            // Use a stable conversation ID: prefer the orchestrator's current conversation,
+            // then fall back to a deterministic "bot-shell" UUID so that bot-delegated
+            // calls share a single reusable PTY session instead of failing on nil.
+            let botShellUUID = UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!
             let conversationId = await MainActor.run {
-                orchestrator.currentConversation?.id ?? UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+                orchestrator.currentConversation?.id ?? botShellUUID
             }
             
             guard let pty = await orchestrator.ptySession(for: conversationId) else {
                 return "ERROR: Failed to allocate or initialize a terminal session (PTY allocation failed)."
+            }
+            
+            // For bot-delegated calls that don't specify workingDirectory,
+            // auto-inject workspace so commands run in the right place.
+            if arguments.workingDirectory == nil || (arguments.workingDirectory?.isEmpty ?? true) {
+                let wsPath = await MainActor.run { orchestrator.currentWorkspacePath }
+                let escapedWs = "'" + wsPath.replacingOccurrences(of: "'", with: "'\\''") + "'"
+                finalCommand = "cd \(escapedWs) && \(finalCommand)"
             }
             
             // Log the command run in the TerminalView

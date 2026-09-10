@@ -167,6 +167,12 @@ struct OllamaAgentEngine: AgentEngine {
                     || lower.contains("auditing the trust boundaries")
                     || lower.contains("running a series of \"execution paths\"")
                     || lower.contains("running a series of execution paths")
+                    || lower.contains("dispatching the following specific tasks")
+                    || lower.contains("awaiting the first wave of granular results")
+                    || lower.contains("observing the concurrent output")
+                    || lower.contains("i am now performing a direct")
+                    || lower.contains("monitoring status")
+                    || lower.contains("i am currently awaiting")
 
                 if announcesFutureDelegation && loop < maxLoops - 1 {
                     messages.append(["role": "assistant", "content": loopText])

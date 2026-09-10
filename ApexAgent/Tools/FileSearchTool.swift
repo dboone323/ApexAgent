@@ -27,13 +27,14 @@ struct FileSearchTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+            let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
             let baseDir: String
             if let dir = arguments.directory {
                 baseDir = dir
             } else {
-                baseDir = await self.orchestrator.orchestrator.currentWorkspacePath
+                baseDir = wsPath
             }
-            let expandedDir = NSString(string: baseDir).expandingTildeInPath
+            let expandedDir = resolveToWorkspace(rawPath: baseDir, workspacePath: wsPath)
             
             let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(expandedDir) }
             guard isAllowed else {

@@ -215,6 +215,7 @@ class PTYSession: @unchecked Sendable {
         
         // Pre-allocate shellPath, arguments, and environment in the parent thread.
         let cShellPath = strdup(shellPath)
+        let cWorkspacePath = workspacePath.flatMap { strdup($0) }
         
         let argsCount = shellArgs.count
         let argv = UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>.allocate(capacity: argsCount + 1)
@@ -255,6 +256,7 @@ class PTYSession: @unchecked Sendable {
         if pid < 0 {
             // Parent (Failure): Clean up pre-allocated C strings
             if let cShellPath = cShellPath { free(cShellPath) }
+            if let cWorkspacePath = cWorkspacePath { free(cWorkspacePath) }
             for i in 0..<argsCount {
                 if let ptr = argv[i] { free(ptr) }
             }
@@ -267,11 +269,16 @@ class PTYSession: @unchecked Sendable {
             
             throw NSError(domain: "PTYSession", code: Int(errno), userInfo: [NSLocalizedDescriptionKey: "forkpty failed"])
         } else if pid == 0 {
-            // Child Process: Only call async-signal-safe functions (execve, exit)
+            // Child Process: Only call async-signal-safe functions (execve, chdir, exit)
             var t = termios()
             if tcgetattr(STDIN_FILENO, &t) == 0 {
                 t.c_lflag &= ~tcflag_t(ECHO)
                 tcsetattr(STDIN_FILENO, TCSANOW, &t)
+            }
+            
+            // Set CWD to workspace so commands run in the right directory
+            if let ws = cWorkspacePath {
+                chdir(ws)
             }
             
             if let path = cShellPath {
@@ -281,6 +288,7 @@ class PTYSession: @unchecked Sendable {
         } else {
             // Parent Process (Success): Clean up parent's copy of allocated C strings
             if let cShellPath = cShellPath { free(cShellPath) }
+            if let cWorkspacePath = cWorkspacePath { free(cWorkspacePath) }
             for i in 0..<argsCount {
                 if let ptr = argv[i] { free(ptr) }
             }

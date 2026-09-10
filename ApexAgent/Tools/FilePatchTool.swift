@@ -38,7 +38,8 @@ struct FilePatchTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        let expandedPath = NSString(string: arguments.path).expandingTildeInPath
+        let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
+        let expandedPath = resolveToWorkspace(rawPath: arguments.path, workspacePath: wsPath)
         let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(expandedPath) }
         guard isAllowed else {
             return "ERROR: Access to path is disabled in settings: \(expandedPath)"

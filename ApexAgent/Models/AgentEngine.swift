@@ -148,6 +148,12 @@ struct NativeAppleEngine: AgentEngine {
                         || lower.contains("auditing the trust boundaries")
                         || lower.contains("running a series of \"execution paths\"")
                         || lower.contains("running a series of execution paths")
+                        || lower.contains("dispatching the following specific tasks")
+                        || lower.contains("awaiting the first wave of granular results")
+                        || lower.contains("observing the concurrent output")
+                        || lower.contains("i am now performing a direct")
+                        || lower.contains("monitoring status")
+                        || lower.contains("i am currently awaiting")
 
                     if announcesFutureDelegation && turn < maxTurns - 1 {
                         currentPrompt = "Proceed to execute the delegation immediately using `dispatch_swarm`, `delegate_task`, or `convene_meeting`. Do not merely state what you will do or narrate in-progress status in text; invoke the tool call now to perform the actions."
