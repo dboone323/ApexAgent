@@ -138,7 +138,14 @@ struct FileWriteTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        let expandedPath = NSString(string: arguments.path).expandingTildeInPath
+        let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
+        let expanded = NSString(string: arguments.path).expandingTildeInPath
+        let expandedPath: String
+        if expanded.hasPrefix("/") {
+            expandedPath = expanded
+        } else {
+            expandedPath = (wsPath as NSString).appendingPathComponent(expanded)
+        }
         let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(expandedPath) }
         guard isAllowed else {
             return "ERROR: Access to path is disabled in settings: \(expandedPath)"
@@ -298,7 +305,9 @@ struct CreateDirectoryTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
-            let expandedPath = NSString(string: arguments.path).expandingTildeInPath
+            let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
+            let raw = NSString(string: arguments.path).expandingTildeInPath
+            let expandedPath = raw.hasPrefix("/") ? raw : (wsPath as NSString).appendingPathComponent(raw)
             let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(expandedPath) }
             guard isAllowed else {
                 return "ERROR: Access to path is disabled in settings: \(expandedPath)"
@@ -335,7 +344,9 @@ struct DeleteFileTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Deleting a file or directory on your system") {
-            let expandedPath = NSString(string: arguments.path).expandingTildeInPath
+            let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
+            let raw = NSString(string: arguments.path).expandingTildeInPath
+            let expandedPath = raw.hasPrefix("/") ? raw : (wsPath as NSString).appendingPathComponent(raw)
             let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(expandedPath) }
             guard isAllowed else {
                 return "ERROR: Access to path is disabled in settings: \(expandedPath)"
@@ -387,8 +398,11 @@ struct MoveFileTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Moving or renaming a file or directory on your system") {
-            let srcExpanded = NSString(string: arguments.sourcePath).expandingTildeInPath
-            let dstExpanded = NSString(string: arguments.destinationPath).expandingTildeInPath
+            let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
+            let srcRaw = NSString(string: arguments.sourcePath).expandingTildeInPath
+            let dstRaw = NSString(string: arguments.destinationPath).expandingTildeInPath
+            let srcExpanded = srcRaw.hasPrefix("/") ? srcRaw : (wsPath as NSString).appendingPathComponent(srcRaw)
+            let dstExpanded = dstRaw.hasPrefix("/") ? dstRaw : (wsPath as NSString).appendingPathComponent(dstRaw)
             
             let srcAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(srcExpanded) }
             let dstAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(dstExpanded) }

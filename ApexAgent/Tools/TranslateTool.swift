@@ -54,14 +54,23 @@ struct TranslateTool: Tool {
             var sourceURL: URL? = nil
 
             if hasFilePath {
-                let url = URL(fileURLWithPath: filePath!)
+                let rawPath = filePath!
+                let expanded = NSString(string: rawPath).expandingTildeInPath
+                let effectivePath: String
+                if expanded.hasPrefix("/") {
+                    effectivePath = expanded
+                } else {
+                    let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
+                    effectivePath = (wsPath as NSString).appendingPathComponent(expanded)
+                }
+                let url = URL(fileURLWithPath: effectivePath)
                 let fm = FileManager.default
                 guard fm.fileExists(atPath: url.path) else {
-                    return "❌ Error: File not found at '\(filePath!)'."
+                    return "❌ Error: File not found at '\(effectivePath)'."
                 }
                 guard let attrs = try? fm.attributesOfItem(atPath: url.path),
                       let size = attrs[.size] as? Int else {
-                    return "❌ Error: Could not stat file '\(filePath!)'."
+                    return "❌ Error: Could not stat file '\(effectivePath)'."
                 }
                 guard size <= Self.maxFileSize else {
                     return "❌ Error: File '\(url.lastPathComponent)' is \(size / 1_024) KB; file translation is capped at \(Self.maxFileSize / 1_024) KB."

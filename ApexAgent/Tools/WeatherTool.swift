@@ -34,27 +34,29 @@ struct WeatherTool: Tool {
             let requestedType = (arguments.forecastType ?? "current").lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
             
             // 1. Resolve Location Coordinates
-            guard let clLocation = await resolveCoordinates(for: arguments.location) else {
-                return "❌ Unable to resolve geographic coordinates for location: \"\(arguments.location)\". Please check the spelling or specify coordinates."
+            guard let (clLocation, resolvedTitle) = await resolveCoordinates(for: arguments.location) else {
+                return "❌ Unable to resolve geographic coordinates for location: \"\(arguments.location)\". Please specify city and state/country (e.g., 'Springfield, IL' or 'Paris, France') or geographic coordinates (lat, lon)."
             }
+
+            let effectiveLocationName = resolvedTitle.isEmpty ? arguments.location : "\(arguments.location) (\(resolvedTitle))"
 
             // 2. Fetch from WeatherKit
             do {
                 let weather = try await WeatherService.shared.weather(for: clLocation)
-                return formatWeatherResponse(weather: weather, locationName: arguments.location, type: requestedType)
+                return formatWeatherResponse(weather: weather, locationName: effectiveLocationName, type: requestedType)
             } catch {
                 // Fallback to wttr.in if WeatherKit requires active developer entitlement/connection
                 if let fallbackResult = await fetchWttrInFallback(query: arguments.location) {
-                    return "🌤️ Weather for \"\(arguments.location)\" (Online Fallback):\n\n\(fallbackResult)"
+                    return "🌤️ Weather for \"\(effectiveLocationName)\" (Online Fallback):\n\n\(fallbackResult)"
                 }
-                return "⚠️ WeatherKit query failed for \(arguments.location): \(error.localizedDescription)"
+                return "⚠️ WeatherKit query failed for \(effectiveLocationName): \(error.localizedDescription)"
             }
         }
     }
 
     // MARK: - Geocoding
 
-    private func resolveCoordinates(for query: String) async -> CLLocation? {
+    private func resolveCoordinates(for query: String) async -> (location: CLLocation, title: String)? {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         
         // Check for direct coordinate pair (lat, lon)
@@ -62,7 +64,7 @@ struct WeatherTool: Tool {
         if parts.count == 2,
            let lat = Double(parts[0].trimmingCharacters(in: .whitespacesAndNewlines)),
            let lon = Double(parts[1].trimmingCharacters(in: .whitespacesAndNewlines)) {
-            return CLLocation(latitude: lat, longitude: lon)
+            return (CLLocation(latitude: lat, longitude: lon), "\(lat), \(lon)")
         }
 
         let searchRequest = MKLocalSearch.Request()
@@ -71,7 +73,9 @@ struct WeatherTool: Tool {
         let search = MKLocalSearch(request: searchRequest)
         do {
             let response = try await search.start()
-            return response.mapItems.first?.location
+            guard let item = response.mapItems.first else { return nil }
+            let title = item.name ?? item.placemark.title ?? ""
+            return (item.location, title)
         } catch {
             return nil
         }
