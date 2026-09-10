@@ -444,7 +444,15 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                !configured.isEmpty {
                 return NSString(string: configured).expandingTildeInPath
             }
-            return FileManager.default.currentDirectoryPath
+            let fallback = Self.proactiveAuditWorkspacePath()
+            if !fallback.isEmpty && fallback != "/" {
+                return fallback
+            }
+            let current = FileManager.default.currentDirectoryPath
+            if current != "/" && !current.isEmpty {
+                return current
+            }
+            return FileManager.default.homeDirectoryForCurrentUser.path
         }
         set {
             customWorkspacePath = newValue
@@ -1306,12 +1314,22 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
             let effectiveToolCallingMode: AgentToolCallingMode = explicitlyNoTools ? .disabled : self.toolCallingMode
 
+            // In multi-agent/supervisor mode, Apex Prime only exposes orchestration tools (delegate_task,
+            // convene_meeting, update_plan, send_notification, ask_bot, dispatch_swarm). Sub-agents receive
+            // their specialized domain tools when delegated. Scoping supervisor tools reduces token overhead
+            // from ~7,200 tokens down to ~900 tokens, allowing standard supervisor requests to stay within
+            // on-device AFM limits.
+            let supervisorTools = [
+                "delegate_task", "convene_meeting", "update_plan", "send_notification", "ask_bot", "dispatch_swarm"
+            ]
+            let resolvedTools = multiAgentModeEnabled ? supervisorTools : self.allTools.map { $0.name }
+
             let engine = ModelRegistry.resolveEngine(
                 preferredProvider: self.modelPreference.toModelProvider,
                 prompt: text,
                 history: self.messages,
                 instructions: finalInstructions,
-                tools: self.allTools.map { $0.name },
+                tools: resolvedTools,
                 orchestrator: self
             )
 

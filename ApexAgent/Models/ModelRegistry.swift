@@ -207,7 +207,8 @@ public struct ModelRegistry {
             case .balanced:
                 // Balanced mode:
                 // - High complexity or very large context (>32k tokens) routes to Cloud Gemini (fast, prevents local GPU strain).
-                // - Normal tasks in the 3.2k-32k window route to Local Ollama to preserve Gemini quota!
+                // - If Apple PCC is available, use PCC for mid-size tasks (>3.2k) before taxing local Ollama resources.
+                // - Otherwise route to Local Ollama in the 3.2k-32k window to preserve Gemini quota!
                 let isComplex = isTaskHighComplexity(prompt: prompt, instructions: instructions, tools: tools)
                 if (tokens > 32000 || isComplex) && hasGeminiKey {
                     let model = geminiModel()
@@ -215,8 +216,8 @@ public struct ModelRegistry {
                         ? "Large context (~\(tokens) tokens > 32k). Auto-tiering to Cloud Gemini (\(model)) for high-speed cloud reasoning."
                         : "High-complexity architecture task. Auto-routing to Cloud Gemini (\(model)) for deep reasoning."
                     return (.cloudGemini, reason)
-                } else if pccAvailable && tokens > 32000 {
-                    return (.applePCC, "Task context is ~\(tokens) tokens (>32k limit). Auto-tiering to Apple Private Cloud Compute.")
+                } else if pccAvailable {
+                    return (.applePCC, "Task context is ~\(tokens) tokens (>3.2k). Auto-tiering to Apple Private Cloud Compute.")
                 } else {
                     return (.localOllama, "Task context is ~\(tokens) tokens (3.2k–32k band). Preserving Gemini API quota with Local Ollama (\(ollamaModel())).")
                 }
