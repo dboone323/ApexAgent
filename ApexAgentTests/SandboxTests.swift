@@ -10,6 +10,16 @@ struct SandboxTests {
         #expect(!orchestrator.isPathAllowed("/var/denied-path"))
     }
 
+    @Test func testRelativeAndDotPathsAllowedInWorkspace() {
+        let orchestrator = AgentOrchestrator()
+        orchestrator.permissions = AppPermissions()
+        let ws = orchestrator.currentWorkspacePath
+        #expect(orchestrator.isPathAllowed("."))
+        #expect(orchestrator.isPathAllowed("./"))
+        #expect(orchestrator.isPathAllowed(""))
+        #expect(orchestrator.isPathAllowed(ws))
+    }
+
     @Test func testCommandRejectedWhenDesktopRestricted() {
         let orchestrator = AgentOrchestrator()
         let home = FileManager.default.homeDirectoryForCurrentUser.path
@@ -69,4 +79,19 @@ struct SandboxTests {
         #expect(verdict.approve == nil)
         #expect(verdict.source == .destructiveGuard)
     }
+
+    @Test func testListDirectoryWithDotAndRelativePath() async throws {
+        let orchestrator = AgentOrchestrator()
+        orchestrator.permissions = AppPermissions()
+        let tool = ListDirectoryTool(orchestrator: orchestrator)
+
+        let dotResult = try await tool.call(arguments: ListDirectoryTool.Arguments(path: ".", showHidden: false, depth: 1))
+        #expect(!dotResult.contains("ERROR: Access to path is disabled in settings"))
+        #expect(dotResult.hasPrefix("Directory:"))
+
+        let emptyResult = try await tool.call(arguments: ListDirectoryTool.Arguments(path: "", showHidden: false, depth: 1))
+        #expect(!emptyResult.contains("ERROR: Access to path is disabled in settings"))
+        #expect(emptyResult.hasPrefix("Directory:"))
+    }
 }
+

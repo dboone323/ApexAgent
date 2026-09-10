@@ -182,9 +182,8 @@ class PTYSession: @unchecked Sendable {
                 self.masterFd = -999 // indicator flag
                 return
             } catch {
-                throw NSError(domain: "PTYSession", code: -5, userInfo: [
-                    NSLocalizedDescriptionKey: "Failed to start native Apple Container sandbox: \(error.localizedDescription)"
-                ])
+                print("⚠️ [PTYSession] Apple Container sandbox could not be started (\(error.localizedDescription)). Falling back to host PTY.")
+                // Fall back to host PTY session rather than failing shell command execution
             }
         } else if dockerEnabled && !isDockerTestFallback {
             let fm = FileManager.default

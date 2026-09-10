@@ -145,8 +145,31 @@ struct OllamaAgentEngine: AgentEngine {
                 }
             }
 
-            // No tool calls -> final answer, we're done.
+            // No tool calls -> final answer, we're done (unless it hallucinated future delegation without calling tools)
             if toolCalls.isEmpty {
+                let lower = loopText.lowercased()
+                let announcesFutureDelegation = lower.contains("will now delegate")
+                    || lower.contains("delegate these tasks")
+                    || lower.contains("i will delegate")
+                    || lower.contains("proceed to delegate")
+                    || lower.contains("delegating these tasks")
+                    || (lower.contains("delegate") && lower.contains("now"))
+                    || (lower.contains("delegat") && lower.contains("action"))
+                    || lower.contains("performing a deep-dive")
+                    || lower.contains("standing by")
+                    || lower.contains("currently mapping")
+                    || lower.contains("mapping & analysis phase")
+                    || lower.contains("has initiated a multi-dimensional audit")
+
+                if announcesFutureDelegation && loop < maxLoops - 1 {
+                    messages.append(["role": "assistant", "content": loopText])
+                    messages.append([
+                        "role": "user",
+                        "content": "Proceed to execute the delegation immediately using `dispatch_swarm`, `delegate_task`, or `convene_meeting`. Do not merely state what you will do or narrate in-progress status in text; invoke the tool call now to perform the actions."
+                    ])
+                    continue
+                }
+
                 if loop == 0 && loopText.isEmpty {
                     if !thinkingText.isEmpty {
                         onUpdate(thinkingText)

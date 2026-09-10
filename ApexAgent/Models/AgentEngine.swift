@@ -127,7 +127,7 @@ struct NativeAppleEngine: AgentEngine {
                         orchestrator.updateMessage(id: id, content: fullText)
                     }
 
-                    // Check if model emitted text announcing future delegation without having executed it
+                    // Check if model emitted text announcing future delegation or pseudo-status without having executed it
                     let lower = text.lowercased()
                     let announcesFutureDelegation = lower.contains("will now delegate")
                         || lower.contains("delegate these tasks")
@@ -136,9 +136,14 @@ struct NativeAppleEngine: AgentEngine {
                         || lower.contains("delegating these tasks")
                         || (lower.contains("delegate") && lower.contains("now"))
                         || (lower.contains("delegat") && lower.contains("action"))
+                        || lower.contains("performing a deep-dive")
+                        || lower.contains("standing by")
+                        || lower.contains("currently mapping")
+                        || lower.contains("mapping & analysis phase")
+                        || lower.contains("has initiated a multi-dimensional audit")
 
                     if announcesFutureDelegation && turn < maxTurns - 1 {
-                        currentPrompt = "Proceed to execute the delegation immediately using `delegate_task` or `convene_meeting`. Do not merely state what you will do in text; invoke the tool call now."
+                        currentPrompt = "Proceed to execute the delegation immediately using `dispatch_swarm`, `delegate_task`, or `convene_meeting`. Do not merely state what you will do or narrate in-progress status in text; invoke the tool call now to perform the actions."
                         continue
                     } else {
                         break

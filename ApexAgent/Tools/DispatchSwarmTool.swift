@@ -71,12 +71,31 @@ struct DispatchSwarmTool: Tool, @unchecked Sendable {
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
-        // Split task prompts by newline or pipe if commas are ambiguous
-        let separator: Character = arguments.taskPrompts.contains("\n") ? "\n" : (arguments.taskPrompts.contains("|") ? "|" : ",")
-        let prompts = arguments.taskPrompts
-            .split(separator: separator)
-            .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+        // Split task prompts:
+        // Check for explicit delimiters (|||, \n---\n, \n===\n, or pipe |)
+        let prompts: [String]
+        let rawPrompts = arguments.taskPrompts.trimmingCharacters(in: .whitespacesAndNewlines)
+        if rawPrompts.contains("|||") {
+            prompts = rawPrompts.components(separatedBy: "|||")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        } else if rawPrompts.contains("\n---\n") {
+            prompts = rawPrompts.components(separatedBy: "\n---\n")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        } else if rawPrompts.contains("\n===\n") {
+            prompts = rawPrompts.components(separatedBy: "\n===\n")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        } else if rawPrompts.contains("|") && !rawPrompts.contains("\n") {
+            prompts = rawPrompts.components(separatedBy: "|")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        } else {
+            // If single prompt or multi-line markdown prompt without explicit delimiters,
+            // provide the full prompt to each bot rather than breaking markdown lines.
+            prompts = [rawPrompts]
+        }
 
         guard !botNames.isEmpty else {
             return "ERROR: No target bots provided."
@@ -89,8 +108,14 @@ struct DispatchSwarmTool: Tool, @unchecked Sendable {
         // Pair bots with prompts (repeat last prompt if counts mismatch)
         var assignments: [(String, String)] = []
         for (idx, name) in botNames.enumerated() {
-            let prompt = idx < prompts.count ? prompts[idx] : (prompts.last ?? "")
-            assignments.append((name, prompt))
+            let basePrompt = idx < prompts.count ? prompts[idx] : (prompts.last ?? "")
+            let botPrompt = """
+            [INSTRUCTION FOR \(name.uppercased())]:
+            You are \(name). Act immediately on the task prompt below using your available tools. Perform real analysis, inspect files, check configurations, and return your concrete findings and audit results. Do NOT merely acknowledge readiness or state what you plan to do; execute your tools and deliver the completed report.
+
+            \(basePrompt)
+            """
+            assignments.append((name, botPrompt))
         }
 
         // Execute sequentially to prevent PTY collisions, Ollama queue timeouts, and prompt cache thrashing

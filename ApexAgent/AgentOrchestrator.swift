@@ -491,8 +491,16 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
 
         let expanded = NSString(string: path).expandingTildeInPath
-        let rawStandardized = URL(fileURLWithPath: expanded).standardized.path
-        let resolvedURL = URL(fileURLWithPath: expanded).resolvingSymlinksInPath()
+        let effectivePath: String
+        if expanded.hasPrefix("/") {
+            effectivePath = expanded
+        } else if expanded.isEmpty || expanded == "." || expanded == "./" {
+            effectivePath = wsPath
+        } else {
+            effectivePath = (wsPath as NSString).appendingPathComponent(expanded)
+        }
+        let rawStandardized = URL(fileURLWithPath: effectivePath).standardized.path
+        let resolvedURL = URL(fileURLWithPath: effectivePath).resolvingSymlinksInPath()
         let standardized = resolvedURL.path
 
         let fm = FileManager.default
@@ -1472,7 +1480,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             return session
         }
         do {
-            let workspace = FileManager.default.currentDirectoryPath
+            let workspace = await MainActor.run { self.currentWorkspacePath }
             let session = try await PTYSession(workspacePath: workspace, orchestrator: self)
             ptySessions[conversationId] = session
             session.onOutput = { [weak self] output in
@@ -1483,7 +1491,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             return session
         } catch {
             print("Failed to initialize PTY session: \(error)")
-            let workspacePath = FileManager.default.currentDirectoryPath
+            let workspacePath = await MainActor.run { self.currentWorkspacePath }
             do {
                 let fallback = try await PTYSession(workspacePath: workspacePath, orchestrator: self)
                 ptySessions[conversationId] = fallback

@@ -99,10 +99,11 @@ enum SupervisorPrompt {
     7. Chronos (Planner): For structured task sheets and roadmaps.
 
     CRITICAL RULES FOR DELEGATION AND ACTION:
-    - When the user asks to perform tasks, check bots, verify systems, or run actions, you MUST invoke `delegate_task` or `convene_meeting` immediately.
-    - NEVER end your turn merely stating, planning, or promising that you will delegate (e.g. NEVER say "I will now delegate these tasks" or "I will coordinate the following actions" without immediately invoking the tool call). You must execute the delegation tools!
+    - When the user asks to perform tasks, check bots, verify systems, run actions, or audit the project across multiple areas, you MUST invoke `dispatch_swarm`, `delegate_task`, or `convene_meeting` immediately.
+    - For multi-agent audits or swarm tasks, invoke `dispatch_swarm` with targetBots (e.g. "Codex, Nexus, Auditor, Oracle") and concrete taskPrompts.
+    - NEVER end your turn merely stating, planning, or promising that you will delegate, or narrating that bots are "performing a deep-dive", "standing by", "mapping", or in an "analysis phase" without immediately invoking the tool call. You must execute the tools and present their real outputs!
     - When asked to do a "bot check" or check multiple agents, prefer invoking `convene_meeting` with participants: ["developer", "executor", "controller", "researcher", "linter", "uiDesigner", "planner"] and topic: "Agent status and readiness check", or invoke `delegate_task` instructing: "Report operational status and capability readiness directly in natural language."
-    - If you update the plan with `update_plan`, immediately invoke `delegate_task` or `convene_meeting` in the same turn to start executing the tasks.
+    - If you update the plan with `update_plan`, immediately invoke `delegate_task`, `dispatch_swarm`, or `convene_meeting` in the same turn to start executing the tasks.
     - Coordinate multiple agents sequentially or in parallel if needed to achieve the overall goal. Provide a final consolidated response to the user.
     - Solve mathematical calculations, arithmetic (such as 2+2), logic puzzles, and conversational inquiries directly using your own AI reasoning in natural language. DO NOT delegate basic math, greetings, or conversational questions to sub-agents, and NEVER invoke terminal commands or scripts (such as echo or python) to calculate or repeat answers. Answer directly in natural language.
     """

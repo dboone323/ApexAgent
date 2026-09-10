@@ -205,26 +205,37 @@ struct ListDirectoryTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
-            let expandedPath = NSString(string: arguments.path).expandingTildeInPath
-            let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(expandedPath) }
+            let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
+            let expandedRaw = NSString(string: arguments.path).expandingTildeInPath
+            let effectivePath: String
+            if expandedRaw.hasPrefix("/") {
+                effectivePath = expandedRaw
+            } else if expandedRaw.isEmpty || expandedRaw == "." || expandedRaw == "./" {
+                effectivePath = wsPath
+            } else {
+                let candidate = (wsPath as NSString).appendingPathComponent(expandedRaw)
+                effectivePath = FileManager.default.fileExists(atPath: candidate) ? candidate : expandedRaw
+            }
+
+            let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(effectivePath) }
             guard isAllowed else {
-                return "ERROR: Access to path is disabled in settings: \(expandedPath)"
+                return "ERROR: Access to path is disabled in settings: \(effectivePath)"
             }
             let showHidden = arguments.showHidden ?? false
             let depth = arguments.depth ?? 1
 
-            guard FileManager.default.fileExists(atPath: expandedPath) else {
-                return "ERROR: Directory not found: \(expandedPath)"
+            guard FileManager.default.fileExists(atPath: effectivePath) else {
+                return "ERROR: Directory not found: \(effectivePath)"
             }
 
             var isDir: ObjCBool = false
-            FileManager.default.fileExists(atPath: expandedPath, isDirectory: &isDir)
+            FileManager.default.fileExists(atPath: effectivePath, isDirectory: &isDir)
             guard isDir.boolValue else {
-                return "ERROR: Path is not a directory: \(expandedPath)"
+                return "ERROR: Path is not a directory: \(effectivePath)"
             }
 
-            var output = "Directory: \(expandedPath)\n"
-            output += listContents(at: expandedPath, indent: 0, maxDepth: depth, showHidden: showHidden)
+            var output = "Directory: \(effectivePath)\n"
+            output += listContents(at: effectivePath, indent: 0, maxDepth: depth, showHidden: showHidden)
             return output
         }
     }
