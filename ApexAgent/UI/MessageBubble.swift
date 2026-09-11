@@ -59,8 +59,7 @@ struct BubbleContent: View {
                         HStack(spacing: 8) {
                             ForEach(0..<message.attachments.count, id: \.self) { idx in
                                 Image(nsImage: message.attachments[idx])
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
+                                    .resizable().scaledToFit()
                                     .frame(maxHeight: 160)
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                                     .overlay(

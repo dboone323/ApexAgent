@@ -19,10 +19,10 @@ struct OllamaAgentEngine: AgentEngine {
     let orchestrator: AgentOrchestrator
     /// Per-bot Ollama model override. When set, this bot's
     /// `ollamaModelOverride` takes priority over the global default.
-    var bot: BotProfile? = nil
+    var bot: BotProfile?
     /// Optional allowed tool names. When set (e.g. for a delegated sub-agent),
     /// only tools in this list are offered to the model or permitted for execution.
-    var allowedTools: [String]? = nil
+    var allowedTools: [String]?
 
     func streamResponse(
         prompt: String,

@@ -274,4 +274,3 @@ struct ModelStatusBadge: View {
 extension Notification.Name {
     static let showDiagnosticsSheet = Notification.Name("showDiagnosticsSheet")
 }
-

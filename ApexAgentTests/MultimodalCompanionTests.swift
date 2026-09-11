@@ -36,7 +36,13 @@ final class MultimodalCompanionTests: XCTestCase {
         ghost.showCursor(at: CGPoint(x: 200, y: 200))
         ghost.animateClick()
         XCTAssertTrue(ghost.isClicking)
-        try await Task.sleep(nanoseconds: 700_000_000)
+        
+        // Wait up to 1.5s for click animation to complete on overloaded CI / test runners
+        var waited: TimeInterval = 0
+        while ghost.isClicking && waited < 1.5 {
+            try await Task.sleep(nanoseconds: 100_000_000)
+            waited += 0.1
+        }
         XCTAssertFalse(ghost.isClicking)
     }
     

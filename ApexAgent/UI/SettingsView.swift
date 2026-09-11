@@ -61,19 +61,19 @@ struct SettingsView: View {
     @State private var localInstructions: String = ""
     @State private var showingResetConfirm = false
     @State private var showingQuickModeConfirm = false
-    @State private var pendingQuickModeAction: (() -> Void)? = nil
+    @State private var pendingQuickModeAction: (() -> Void)?
     @State private var mcpManager = MCPManager.shared
     @State private var newServerName = ""
     @State private var newServerCommand = ""
     @State private var newServerArgs = ""
-    @State private var braveSaveTask: Task<Void, Never>? = nil
-    @State private var tavilySaveTask: Task<Void, Never>? = nil
-    @State private var geminiSaveTask: Task<Void, Never>? = nil
-    @State private var ollamaURLSaveTask: Task<Void, Never>? = nil
+    @State private var braveSaveTask: Task<Void, Never>?
+    @State private var tavilySaveTask: Task<Void, Never>?
+    @State private var geminiSaveTask: Task<Void, Never>?
+    @State private var ollamaURLSaveTask: Task<Void, Never>?
     @State private var sandboxStateDescription: String = "Stopped"
     @State private var isSandboxRunning: Bool = false
     @State private var isSandboxTransitioning: Bool = false
-    @State private var sandboxPollTask: Task<Void, Never>? = nil
+    @State private var sandboxPollTask: Task<Void, Never>?
 
     private var isolationMode: Binding<IsolationMode> {
         Binding(
@@ -870,7 +870,7 @@ struct CollaborativeServerSettingsSection: View {
                     .multilineTextAlignment(.trailing)
                     .accessibilityLabel("Sharing Port")
             }
-            .onChange(of: collaborativeServerPort) { oldValue, newValue in
+            .onChange(of: collaborativeServerPort) { _, newValue in
                 if newValue < 1 {
                     collaborativeServerPort = 1337
                 } else if newValue > 65535 {
@@ -1187,4 +1187,3 @@ struct EnterpriseSecuritySettingsSection: View {
         .padding(.vertical, AppTheme.Spacing.xs)
     }
 }
-

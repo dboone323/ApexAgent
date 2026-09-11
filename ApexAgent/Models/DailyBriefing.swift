@@ -76,7 +76,7 @@ final class DailyBriefing: Identifiable {
 
     var outlookInbox: OutlookInboxReference? {
         get {
-            (try? JSONDecoder().decode(OutlookInboxReference.self, from: outlookData ?? Data())) ?? nil
+            (try? JSONDecoder().decode(OutlookInboxReference.self, from: outlookData ?? Data()))
         }
         set {
             outlookData = try? JSONEncoder().encode(newValue)

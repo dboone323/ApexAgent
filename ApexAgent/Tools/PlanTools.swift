@@ -24,8 +24,8 @@ struct PlanStep: Codable, Identifiable {
     var id = UUID()
     let title: String
     var status: PlanStepStatus
-    var result: String? = nil
-    var error: String? = nil
+    var result: String?
+    var error: String?
     
     enum CodingKeys: String, CodingKey {
         case title

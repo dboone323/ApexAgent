@@ -9,7 +9,7 @@ struct MCPServerConfig: Codable, Identifiable, Equatable {
     var command: String
     var arguments: [String]
     var transport: String = "stdio"
-    var endpointURL: String? = nil
+    var endpointURL: String?
 }
 
 @Observable

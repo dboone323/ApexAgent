@@ -182,7 +182,6 @@ cat ~/Library/Logs/ApexAgent/traces.jsonl | jq '.[] | {name, duration_ms, attrib
 | ID | Task | Acceptance Criteria | Est. Effort |
 |----|------|---------------------|-------------|
 | 5.1 | **Enable App Sandbox**<br>Flip `com.apple.security.app-sandbox` to `true`. Add minimal entitlements: `network.client`, `files.user-selected.read-write`, `files.downloads.read-write`, `automation.apple-events`. Remove `network.server` (CollaborativeServer moves to separate helper or uses XPC). | `codesign -d --entitlements :- build/ApexAgent.app` shows sandbox=true | 2 days |
-| 5.2 | **Hardened Runtime + Notarization CI**<br>Add `OTHER_CODE_SIGN_FLAGS = --options runtime` to Xcode project. GitHub Action: `xcodebuild`, `notarytool submit`, `stapler staple`. | `spctl -a -v build/ApexAgent.app` → "accepted"; notarization ticket stapled | 1.5 days |
 | 5.3 | **Entitlement drift guard**<br>Script `scripts/check_entitlements.sh` comparing `ApexAgent.entitlements` to committed baseline. CI runs on PR. | PR changing entitlements fails with diff | 0.5 days |
 | 5.4 | **JIT guardrail**<br>Add build-time assertion: `#if ENABLE_JIT; #error "JIT not allowed"; #endif`. Document process for future JIT needs (WebAssembly, etc.). | Build fails if `com.apple.security.cs.allow-jit` accidentally enabled | 0.5 days |
 | 5.5 | **Keychain audit log**<br>Wrap `KeychainManager.get/set` to append to `~/Library/Logs/ApexAgent/keychain-audit.log` (key, operation, success, caller stack). | Log entries for every API key access | 0.5 days |
@@ -194,7 +193,6 @@ cat ~/Library/Logs/ApexAgent/traces.jsonl | jq '.[] | {name, duration_ms, attrib
 # Sandbox check
 codesign -d --entitlements :- build/ApexAgent.app | grep app-sandbox
 
-# Notarization
 xcrun notarytool info build/ApexAgent.app --keychain-profile "notary"
 
 # Tool permissions
@@ -248,10 +246,8 @@ xcrun notarytool info build/ApexAgent.app --keychain-profile "notary"
 
 | ID | Task | Acceptance Criteria |
 |----|------|---------------------|
-| CI.1 | **GitHub Actions matrix**<br>macOS-latest (xcode 16.x), test on PR + nightly | All tests pass on PR; nightly catches regressions |
 | CI.2 | **Integration test harness**<br>`ApexAgentIntegrationTests` target with real `AgentOrchestrator` (no mocks) | Tests exercise full multi-agent flows |
 | CI.3 | **Snapshot testing for traces**<br>Golden JSONL files for known workflows; diff on change | `swift test` fails if trace shape changes unexpectedly |
-| CI.4 | **Security scan**<br>`osv-scanner` + `trivy` on dependencies; `codesign` verification | PR fails on new vulns or entitlement drift |
 
 ---
 
@@ -284,7 +280,6 @@ graph TD
     W --> X[4.6 Traces API]
     X --> Y[4.7 Metrics]
 
-    Z[5.1 Sandbox] --> AA[5.2 Notarization CI]
     AA --> AB[5.3 Entitlement Guard]
     AB --> AC[5.4 JIT Guard]
     AC --> AD[5.5 Keychain Audit]
@@ -329,7 +324,6 @@ A task is **only** marked complete when:
 | App Sandbox breaks file access (PTY, screenshots, automation) | High | High | Phase 5.1: test each entitlement incrementally; fallback to user-selected directories |
 | DI refactor breaks SwiftUI `@Observable` bindings | Medium | High | Keep `AgentOrchestrator` `@Observable`; pass provider via `@Environment` |
 | Tracing overhead affects LLM streaming latency | Low | Medium | Benchmark; use sampling (100% for errors, 10% for normal) |
-| Notarization CI flaky on GitHub runners | Medium | Medium | Cache notarization tickets; retry with backoff |
 | MCP process supervision conflicts with user's own MCP managers | Low | Medium | Opt-in supervision; detect existing process on port |
 
 ---
@@ -350,7 +344,7 @@ A task is **only** marked complete when:
 
 ## Next Steps
 
-1. **Create GitHub Issues** for each task (use `gh issue create --repo dboone323/fleet.workspace ...`)
+1. **Create GitHub Issues** for each task (use `gh issue create --repo dboone323/ApexAgent ...`)
 2. **Branch per workstream**: `feat/ws1-generic-agents`, `feat/ws3-di-refactor`, etc.
 3. **Assign owner** per workstream
 4. **Weekly sync** to review progress against this plan

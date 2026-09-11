@@ -18,7 +18,7 @@ final class Routine {
     var trigger: RoutineTrigger
     var scheduledMinutes: Int          // used when trigger == .timeInterval
     var cronExpression: String?        // used when trigger == .cron
-    var messageFilter: String? = nil   // used when trigger == .onMessage (match filter)
+    var messageFilter: String?   // used when trigger == .onMessage (match filter)
     var enabled: Bool
     var createdAt: Date
     var updatedAt: Date

@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import Synchronization
 import SwiftData
 import Network
 @testable import ApexAgentCore
@@ -140,26 +141,19 @@ final class Milestone1ChallengerConcurrencyStressTests {
     // MARK: - 2. TurnWatchdog Concurrency, Stall Sweeping & Timer Cleanup
 
     @Test func testTurnWatchdogConcurrentLifecycleAndTouchContention() async {
-        final class SafeStallCollector: @unchecked Sendable {
-            private let lock = NSLock()
-            private var items: [WatchedTurn] = []
+        final class SafeStallCollector: Sendable {
+            private let items = Mutex<[WatchedTurn]>([])
 
             func add(_ item: WatchedTurn) {
-                lock.lock()
-                defer { lock.unlock() }
-                items.append(item)
+                items.withLock { $0.append(item) }
             }
 
             var count: Int {
-                lock.lock()
-                defer { lock.unlock() }
-                return items.count
+                items.withLock { $0.count }
             }
 
             var allItems: [WatchedTurn] {
-                lock.lock()
-                defer { lock.unlock() }
-                return items
+                items.withLock { $0 }
             }
         }
 

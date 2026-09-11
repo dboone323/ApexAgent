@@ -6,7 +6,7 @@ import Carbon
 public final class GlobalCommandPaletteController {
     public static let shared = GlobalCommandPaletteController()
     private var panel: NSPanel?
-    private var eventHandler: EventHandlerRef? = nil
+    private var eventHandler: EventHandlerRef?
     public var isVisible: Bool = false
     
     public func registerHotKey(keyCode: UInt32 = 49, modifiers: UInt32 = UInt32(optionKey)) {
@@ -71,7 +71,7 @@ public final class GlobalCommandPaletteController {
 public struct CommandPaletteView: View {
     @State private var inputText: String = ""
     @State private var recentCommands: [String] = []
-    public var onSubmit: ((String) -> Void)? = nil
+    public var onSubmit: ((String) -> Void)?
     
     private let suggestedBots = ["@DevOpsBot", "@CoderBot", "@ResearcherBot", "@ChiefOfStaffBot"]
     

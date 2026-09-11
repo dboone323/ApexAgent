@@ -50,5 +50,3 @@ struct APEXWritingToolsIntegration {
         return true
     }
 }
-
-

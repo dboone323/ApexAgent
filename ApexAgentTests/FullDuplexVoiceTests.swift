@@ -101,6 +101,6 @@ final class FullDuplexVoiceTests: XCTestCase {
         let hostingController = NSHostingController(rootView: view)
 
         XCTAssertNotNil(hostingController.view)
-        XCTAssertEqual(hostingController.view.subviews.count >= 0, true)
+        XCTAssertEqual(hostingController.view.subviews.isEmpty, true)
     }
 }

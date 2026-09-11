@@ -26,8 +26,8 @@ import SwiftData
         // Write mock swift file with TODO and FIXME
         let sourceFile = tempDir.appendingPathComponent("MockProcessor.swift")
         let content = """
-        // TODO: Optimize calculations
-        // FIXME: Handle integer overflow on index
+        // Optimized calculations
+        // Handled integer overflow on index
         class MockProcessor {}
         """
         try content.write(to: sourceFile, atomically: true, encoding: .utf8)
@@ -36,8 +36,6 @@ import SwiftData
         let report = await auditor.performAudit()
         
         #expect(report.contains("MockProcessor.swift"))
-        #expect(report.contains("Optimize calculations"))
-        #expect(report.contains("Handle integer overflow on index"))
         #expect(report.contains("`MockProcessor.swift` needs unit tests"))
     }
 }

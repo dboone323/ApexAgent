@@ -12,7 +12,7 @@ struct CreateBotSheet: View {
     @State private var title = ""
     @State private var descriptionText = ""
     @State private var avatarName = "person.fill"
-    @State private var selectedModelProvider: ModelProvider? = nil
+    @State private var selectedModelProvider: ModelProvider?
     @State private var ollamaModelBinding = ""
 
     private let avatarOptions: [String] = [

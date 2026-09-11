@@ -39,8 +39,8 @@ struct AccessibilityOmniTargeter: Tool {
             let err = AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &frontWindowRef)
             
             let targetElement: AXUIElement
-            if err == .success, let frontWindow = frontWindowRef {
-                targetElement = frontWindow as! AXUIElement
+            if err == .success, let frontWindow = frontWindowRef, CFGetTypeID(frontWindow) == AXUIElementGetTypeID() {
+                targetElement = unsafeBitCast(frontWindow, to: AXUIElement.self)
             } else {
                 targetElement = appElement
             }
@@ -48,7 +48,7 @@ struct AccessibilityOmniTargeter: Tool {
             let maxDepth = arguments.maxDepth ?? 6
             let cappedDepth = min(maxDepth, 10)
             
-            var filterRolesArray: [String]? = nil
+            var filterRolesArray: [String]?
             if let filterRoles = arguments.filterRoles, !filterRoles.isEmpty {
                 filterRolesArray = filterRoles.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
             }

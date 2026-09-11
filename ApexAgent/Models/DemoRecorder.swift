@@ -134,8 +134,8 @@ public final class DemoRecorder {
             let buttonName = event.type == .leftMouseDown ? "Left" : "Right"
 
             // Inspect accessibility attributes at click location if available
-            var role: String? = nil
-            var title: String? = nil
+            var role: String?
+            var title: String?
             let systemWide = AXUIElementCreateSystemWide()
             var elementRef: AXUIElement?
             if AXUIElementCopyElementAtPosition(systemWide, Float(loc.x), Float(loc.y), &elementRef) == .success,
@@ -183,10 +183,7 @@ public final class DemoRecorder {
             let modStr = mods.isEmpty ? "" : mods.joined(separator: "+") + "+"
 
             let displayChar: String
-            if chars == "\r" { displayChar = "Return" }
-            else if chars == "\t" { displayChar = "Tab" }
-            else if chars == " " { displayChar = "Space" }
-            else { displayChar = chars }
+            if chars == "\r" { displayChar = "Return" } else if chars == "\t" { displayChar = "Tab" } else if chars == " " { displayChar = "Space" } else { displayChar = chars }
 
             let desc = "Key '\(modStr)\(displayChar)' in \(appName)"
             recordAction(

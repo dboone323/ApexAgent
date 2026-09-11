@@ -229,4 +229,3 @@ struct ModelCapacityRoutingTests {
         #expect(reason == nil)
     }
 }
-

@@ -15,7 +15,7 @@ struct DifferentialScreenPerception: Tool {
         let resetCache: Bool?
     }
     
-    nonisolated(unsafe) private static var previousFrame: CGImage? = nil
+    nonisolated(unsafe) private static var previousFrame: CGImage?
     
     func call(arguments: Arguments) async throws -> String {
         guard #available(macOS 14.0, *) else {

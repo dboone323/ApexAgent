@@ -244,8 +244,7 @@ struct BotChatInputBar: View {
                         ForEach(0..<session.pendingAttachments.count, id: \.self) { idx in
                             ZStack(alignment: .topTrailing) {
                                 Image(nsImage: session.pendingAttachments[idx])
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
+                                    .resizable().scaledToFill()
                                     .frame(width: 52, height: 52)
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                     .overlay(

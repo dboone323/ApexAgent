@@ -11,8 +11,8 @@ final class ApexGatewayClient {
     // Observed state variables mirroring the server orchestrator state
     var messages: [CodableChatMessage] = []
     var isGenerating: Bool = false
-    var activeAssistantMessageId: UUID? = nil
-    var pendingConfirmation: ConfirmationRequest? = nil
+    var activeAssistantMessageId: UUID?
+    var pendingConfirmation: ConfirmationRequest?
     var isConnected: Bool = false
     
     private var connection: NWConnection?

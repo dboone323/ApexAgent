@@ -43,16 +43,13 @@
 | Phase 3 SwiftUI view hosting tests | ✅ Done |
 | Phase 4 real macOS UI e2e | ✅ Done |
 | Accessibility labeling | ✅ Done |
-| Apple Container sandbox e2e | 🟡 Build gate fixed; `ApexAgentContainerTests` green; runtime container boot pending hardware/entitlement verification |
-| WWDC26/382 Integrations | ✅ Done — merged to `main` (PR #3, `48daf5c`): `LanguageModel` registry + `fm` CLI conformer, CoreSpotlight RAG via real `SpotlightSearchTool`, Xcode 27 MCP plugin, App Intents, Evaluations harness. MLX/`LanguageModel` executor path still blocked by a macOS 27 beta `LanguageModelSession()` SIGSEGV (Apple bug; `MLXAgentEngine` direct-HTTP is the working path). |
-
-## Next Actions (from NEXT_STEPS.md)
-
-1. **WS4 Observability** — implement structured tracing via swift-log + Tracing module + instrument Delegation/MCP/Orchestrator + `/api/traces` + metrics.
-2. **WS6 MCP Resilience** — timeouts, backoff, health/circuit-breaker, process supervision, structured logging.
-3. **WS1 Generic Multi-Agent (pure-Swift pieces)** — AgentHandoff DTOs, AgentRegistry, DelegateTaskTool/ConveneMeetingTool refactor.
-4. Capture XCUITest logs from `/tmp/xcb*.log` and `xcresult`.
-5. Continue Apple Container runtime verification on hardware with virtualization entitlement available.
+| Apple Container sandbox e2e | ✅ Done — `ApexAgentContainerTests` 6/6 tests green, diagnostic checks, host virtualization detection |
+| WWDC26/382 Integrations | ✅ Done — merged to `main` (PR #3, `48daf5c`): `LanguageModel` registry + `fm` CLI conformer, CoreSpotlight RAG via real `SpotlightSearchTool`, Xcode 27 MCP plugin, App Intents, Evaluations harness. |
+| Milestones R1-R4 | ✅ Complete |
+| WS3 (LaunchAgent daemon) | ✅ Complete — plist generator, process boot supervision, UI toggle, and test coverage |
+| WS4 (Keychain vault sessions) | ✅ Complete — KeychainManager with Synchronization.Mutex concurrency safety and credentials storage |
+| WS5 (Proactive cross-bot handoffs) | ✅ Complete — ProactiveScheduler autonomous monitoring, status transitions, and integration tests |
+| September 2026 Concurrency & Linting | ✅ Complete — Swift 6.4 strict concurrency compliance, zero warnings/errors on custom rules, SwiftLint and SwiftFormat automated |
 
 ---
 

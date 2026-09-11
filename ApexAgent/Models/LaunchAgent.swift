@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 // MARK: - WS3: LaunchAgent supervision so bots keep working with the app closed
 //
@@ -75,18 +76,17 @@ final class LaunchAgentController {
     static var defaultArguments: [String] { ["--daemon"] }
 
     /// Injectable for tests; defaults to the real per-user LaunchAgents dir.
-    private static let dirLock = NSLock()
-    private nonisolated(unsafe) static var _agentsDirectory: URL = URL(fileURLWithPath: NSHomeDirectory())
-        .appendingPathComponent("Library/LaunchAgents", isDirectory: true)
+    private static let _agentsDirectory = Mutex<URL>(
+        URL(fileURLWithPath: NSHomeDirectory())
+            .appendingPathComponent("Library/LaunchAgents", isDirectory: true)
+    )
 
     static var agentsDirectory: URL {
         get {
-            dirLock.lock(); defer { dirLock.unlock() }
-            return _agentsDirectory
+            _agentsDirectory.withLock { $0 }
         }
         set {
-            dirLock.lock(); defer { dirLock.unlock() }
-            _agentsDirectory = newValue
+            _agentsDirectory.withLock { $0 = newValue }
         }
     }
 

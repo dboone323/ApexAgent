@@ -56,7 +56,7 @@ struct ChatMessage: Identifiable {
     let timestamp: Date
     var isStreaming: Bool = false
     var attachments: [NSImage] = []
-    var botName: String? = nil
+    var botName: String?
 
     init(id: UUID = UUID(), role: MessageRole, content: String, toolEvents: [ToolEvent] = [], timestamp: Date = Date(), isStreaming: Bool = false, attachments: [NSImage] = [], botName: String? = nil) {
         self.id = id
@@ -166,59 +166,14 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             }
         }
 
-        switch preference {
-        case .autoPicker:
-            let (resolved, _) = ModelRegistry.resolveProviderForTask(
-                preferred: .autoPicker,
-                prompt: prompt,
-                instructions: instructions,
-                tools: allowedTools
-            )
-            switch resolved {
-            case .cloudGemini:
-                let apiKey = ModelRegistry.geminiAPIKey()
-                return makeSession(CloudGeminiLanguageModel(apiKey: apiKey))
-            case .localOllama:
-                let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? AgentOrchestrator.defaultOllamaURLString) ?? URL(string: AgentOrchestrator.defaultOllamaURLString)!
-                return makeSession(LocalOllamaLanguageModel(hostURL: host))
-            case .localMLX:
-                let host = URL(string: UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString) ?? URL(string: LocalMLXLanguageModel.defaultHostURLString)!
-                return makeSession(LocalMLXLanguageModel(hostURL: host))
-            case .applePCC:
-                if Self.isPrivateCloudComputeAvailable() {
-                    return makeSession(PrivateCloudComputeLanguageModel())
-                } else {
-                    return makeSession(localSystemModel())
-                }
-            default:
-                return makeSession(localSystemModel())
-            }
-        case .localSystem:
-            return makeSession(localSystemModel())
-        case .privateCloud:
-            if Self.isPrivateCloudComputeAvailable() {
-                return makeSession(PrivateCloudComputeLanguageModel())
-            } else {
-                return makeSession(localSystemModel())
-            }
-        case .cloudGemini:
-            let apiKey = ModelRegistry.geminiAPIKey()
-            return makeSession(CloudGeminiLanguageModel(apiKey: apiKey))
-        case .localOllama:
-            let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? AgentOrchestrator.defaultOllamaURLString) ?? URL(string: AgentOrchestrator.defaultOllamaURLString)!
-            return makeSession(LocalOllamaLanguageModel(hostURL: host))
-        case .localMLX:
-            let host = URL(string: UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString) ?? URL(string: LocalMLXLanguageModel.defaultHostURLString)!
-            return makeSession(LocalMLXLanguageModel(hostURL: host))
-        case .hybrid:
-            if multiAgentModeEnabled {
-                return makeSession(localSystemModel())
-            } else if Self.isPrivateCloudComputeAvailable() {
-                return makeSession(PrivateCloudComputeLanguageModel())
-            } else {
-                return makeSession(localSystemModel())
-            }
-        }
+        let model = sessionCoordinator.resolveModel(
+            preference: preference,
+            prompt: prompt,
+            instructions: instructions,
+            tools: allowedTools,
+            multiAgentModeEnabled: multiAgentModeEnabled
+        )
+        return makeSession(model)
     }
 
     /// Check if Private Cloud Compute is available by verifying the process has the required entitlement.
@@ -424,13 +379,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     @MainActor
     func isFolderAccessRestricted() -> Bool {
-        guard let permissions = self.permissions else {
-            return true
-        }
-        return !permissions.musicFolderAllowed ||
-               !permissions.desktopFolderAllowed ||
-               !permissions.documentsFolderAllowed ||
-               !permissions.downloadsFolderAllowed
+        SecurityAuditor.shared.isFolderAccessRestricted(permissions: self.permissions)
     }
 
     private var customWorkspacePath: String?
@@ -460,236 +409,18 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     }
 
     @MainActor
-    private func saveSandboxBookmark(for url: URL) {
-        guard let bookmarkData = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) else {
-            return
-        }
-        var bookmarks = UserDefaults.standard.dictionary(forKey: "apex.sandboxBookmarks") as? [String: Data] ?? [:]
-        bookmarks[url.standardized.path] = bookmarkData
-        UserDefaults.standard.set(bookmarks, forKey: "apex.sandboxBookmarks")
-    }
-
-    @MainActor
-    private func accessSandboxBookmark(for path: String) -> URL? {
-        guard let bookmarks = UserDefaults.standard.dictionary(forKey: "apex.sandboxBookmarks") as? [String: Data] else {
-            return nil
-        }
-        var currentPath = URL(fileURLWithPath: path).standardized.path
-        while !currentPath.isEmpty && currentPath != "/" {
-            if let data = bookmarks[currentPath] {
-                var isStale = false
-                if let url = try? URL(resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil, bookmarkDataIsStale: &isStale),
-                   url.startAccessingSecurityScopedResource() {
-                    return url
-                }
-            }
-            currentPath = URL(fileURLWithPath: currentPath).deletingLastPathComponent().path
-        }
-        return nil
-    }
-
-    @MainActor
     func verifyPathAllowed(_ path: String) throws(SecuritySandboxError) {
-        let wsPath = currentWorkspacePath
-        let wsURL = URL(fileURLWithPath: wsPath)
-        saveSandboxBookmark(for: wsURL)
-
-        guard let permissions = self.permissions else {
-            throw .pathViolation(path)
-        }
-
-        let expanded = NSString(string: path).expandingTildeInPath
-        let effectivePath: String
-        if expanded.hasPrefix("/") {
-            effectivePath = expanded
-        } else if expanded.isEmpty || expanded == "." || expanded == "./" {
-            effectivePath = wsPath
-        } else {
-            effectivePath = (wsPath as NSString).appendingPathComponent(expanded)
-        }
-        let rawStandardized = URL(fileURLWithPath: effectivePath).standardized.path
-        let resolvedURL = URL(fileURLWithPath: effectivePath).resolvingSymlinksInPath()
-        let standardized = resolvedURL.path
-
-        let fm = FileManager.default
-        let homeDir = fm.homeDirectoryForCurrentUser.standardized.path
-
-        let destinationOfSymlink: String?
-        do {
-            let rawDest = try fm.destinationOfSymbolicLink(atPath: path)
-            destinationOfSymlink = NSString(string: rawDest).expandingTildeInPath
-        } catch {
-            destinationOfSymlink = nil
-        }
-        // Helper: does `p` land inside any forbidden home-relative directory?
-        func isForbiddenHomeSubpath(_ p: String) -> Bool {
-            let sensitiveNames = [".ssh", ".aws", ".gnupg", ".config"]
-            for name in sensitiveNames {
-                let forbidden = (homeDir as NSString).appendingPathComponent(name)
-                if p == forbidden || p.hasPrefix(forbidden + "/") { return true }
-            }
-            return false
-        }
-
-        let desktopPath = (homeDir as NSString).appendingPathComponent("Desktop")
-        let documentsPath = (homeDir as NSString).appendingPathComponent("Documents")
-        let downloadsPath = (homeDir as NSString).appendingPathComponent("Downloads")
-        let musicPath = (homeDir as NSString).appendingPathComponent("Music")
-        let sshPath = (homeDir as NSString).appendingPathComponent(".ssh")
-        let awsPath = (homeDir as NSString).appendingPathComponent(".aws")
-        let gnupgPath = (homeDir as NSString).appendingPathComponent(".gnupg")
-        let configPath = (homeDir as NSString).appendingPathComponent(".config")
-
-        if !permissions.desktopFolderAllowed && (standardized == desktopPath || standardized.hasPrefix(desktopPath + "/")) {
-            throw .desktopFolderRestricted
-        }
-        if !permissions.documentsFolderAllowed && (standardized == documentsPath || standardized.hasPrefix(documentsPath + "/")) {
-            throw .documentsFolderRestricted
-        }
-        if !permissions.downloadsFolderAllowed && (standardized == downloadsPath || standardized.hasPrefix(downloadsPath + "/")) {
-            throw .downloadsFolderRestricted
-        }
-        if !permissions.musicFolderAllowed && (standardized == musicPath || standardized.hasPrefix(musicPath + "/")) {
-            throw .musicFolderRestricted
-        }
-        if standardized == sshPath || standardized.hasPrefix(sshPath + "/") {
-            throw .pathViolation(path)
-        }
-        if standardized == awsPath || standardized.hasPrefix(awsPath + "/") {
-            throw .pathViolation(path)
-        }
-        if standardized == gnupgPath || standardized.hasPrefix(gnupgPath + "/") {
-            throw .pathViolation(path)
-        }
-        if standardized == configPath || standardized.hasPrefix(configPath + "/") {
-            throw .pathViolation(path)
-        }
-
-        // Forbidden-directory check on the raw symlink destination.
-        if let dest = destinationOfSymlink, isForbiddenHomeSubpath(dest) {
-            throw .symlinkTraversal(path)
-        }
-
-        // Host system root enforcement
-        if standardized == "/" {
-            throw .pathViolation(path)
-        }
-
-        let resolvedWorkspace = URL(fileURLWithPath: wsPath).resolvingSymlinksInPath().path
-        let isInWorkspace = standardized == resolvedWorkspace || standardized.hasPrefix(resolvedWorkspace + "/")
-
-        let tempDir = NSTemporaryDirectory()
-        let resolvedTemp = URL(fileURLWithPath: tempDir).resolvingSymlinksInPath().path
-        let isSystemTmp = standardized == "/tmp" || standardized.hasPrefix("/tmp/")
-            || standardized == "/private/tmp" || standardized.hasPrefix("/private/tmp/")
-        let isInTemp = standardized == resolvedTemp || standardized.hasPrefix(resolvedTemp + "/") || isSystemTmp
-
-        let skillsDir = (homeDir as NSString).appendingPathComponent(".apex/skills")
-        let resolvedSkills = URL(fileURLWithPath: skillsDir).resolvingSymlinksInPath().path
-        let dotApexDir = (homeDir as NSString).appendingPathComponent(".apex")
-        let resolvedDotApex = URL(fileURLWithPath: dotApexDir).resolvingSymlinksInPath().path
-        let apexDir = (homeDir as NSString).appendingPathComponent("apex")
-        let resolvedApex = URL(fileURLWithPath: apexDir).resolvingSymlinksInPath().path
-        let userTmpDir = (homeDir as NSString).appendingPathComponent("tmp")
-        let resolvedUserTmp = URL(fileURLWithPath: userTmpDir).resolvingSymlinksInPath().path
-
-        let isInSkills = standardized == resolvedSkills || standardized.hasPrefix(resolvedSkills + "/")
-            || standardized == resolvedDotApex || standardized.hasPrefix(resolvedDotApex + "/")
-            || standardized == resolvedApex || standardized.hasPrefix(resolvedApex + "/")
-            || standardized == resolvedUserTmp || standardized.hasPrefix(resolvedUserTmp + "/")
-
-        let forbiddenSystemPrefixes = [
-            "/System", "/Library", "/etc", "/private/etc", "/usr", "/bin", "/sbin", "/var", "/private/var", "/dev", "/Volumes"
-        ]
-
-        // 1. Symlink Traversal Detection:
-        let isSymlink = (destinationOfSymlink != nil) || (rawStandardized != standardized)
-        if isSymlink {
-            for forbidden in forbiddenSystemPrefixes {
-                if standardized == forbidden || standardized.hasPrefix(forbidden + "/") {
-                    throw .symlinkTraversal(path)
-                }
-            }
-            if let dest = destinationOfSymlink {
-                for forbidden in forbiddenSystemPrefixes {
-                    if dest == forbidden || dest.hasPrefix(forbidden + "/") {
-                        throw .symlinkTraversal(path)
-                    }
-                }
-            }
-            let rawInWorkspace = rawStandardized == wsPath || rawStandardized.hasPrefix(wsPath + "/") || rawStandardized == resolvedWorkspace || rawStandardized.hasPrefix(resolvedWorkspace + "/")
-            if rawInWorkspace && !isInWorkspace {
-                throw .symlinkTraversal(path)
-            }
-        }
-
-        // 2. Direct system directory access
-        for forbidden in forbiddenSystemPrefixes {
-            if standardized == forbidden || standardized.hasPrefix(forbidden + "/") {
-                if !isInTemp {
-                    throw .pathViolation(path)
-                }
-            }
-        }
-
-        if accessSandboxBookmark(for: standardized) != nil {
-            return
-        }
-
-        if isInWorkspace || isInTemp || isInSkills {
-            return
-        }
-
-        throw .pathViolation(path)
+        try SecurityAuditor.shared.verifyPathAllowed(path, workspacePath: currentWorkspacePath, permissions: self.permissions)
     }
 
     @MainActor
     func isPathAllowed(_ path: String) -> Bool {
-        do {
-            try verifyPathAllowed(path)
-            return true
-        } catch {
-            return false
-        }
+        SecurityAuditor.shared.isPathAllowed(path, workspacePath: currentWorkspacePath, permissions: self.permissions)
     }
 
     @MainActor
     func isCommandOrScriptAllowed(_ input: String, isContainerSandboxed: Bool = false) -> Bool {
-        if isContainerSandboxed {
-            return true
-        }
-
-        guard let permissions = self.permissions else {
-            return false
-        }
-
-        let fm = FileManager.default
-        let homeDir = fm.homeDirectoryForCurrentUser.standardized.path
-
-        let desktopPath = (homeDir as NSString).appendingPathComponent("Desktop")
-        let documentsPath = (homeDir as NSString).appendingPathComponent("Documents")
-        let downloadsPath = (homeDir as NSString).appendingPathComponent("Downloads")
-        let musicPath = (homeDir as NSString).appendingPathComponent("Music")
-
-        let desktopAllowed = permissions.desktopFolderAllowed
-        let documentsAllowed = permissions.documentsFolderAllowed
-        let downloadsAllowed = permissions.downloadsFolderAllowed
-        let musicAllowed = permissions.musicFolderAllowed
-
-        if !desktopAllowed && (input.contains(desktopPath) || input.contains("~/Desktop")) {
-            return false
-        }
-        if !documentsAllowed && (input.contains(documentsPath) || input.contains("~/Documents")) {
-            return false
-        }
-        if !downloadsAllowed && (input.contains(downloadsPath) || input.contains("~/Downloads")) {
-            return false
-        }
-        if !musicAllowed && (input.contains(musicPath) || input.contains("~/Music")) {
-            return false
-        }
-
-        return true
+        SecurityAuditor.shared.isCommandOrScriptAllowed(input, permissions: self.permissions, isContainerSandboxed: isContainerSandboxed)
     }
 
     // MARK: Model Check
@@ -756,54 +487,16 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         rehydrateSession()
     }
 
+    let sessionCoordinator = AgentSessionCoordinator.shared
+
     func createModelInstance() -> any LanguageModel {
-        switch modelPreference {
-        case .autoPicker:
-            let (resolved, _) = ModelRegistry.resolveProviderForTask(
-                preferred: .autoPicker,
-                prompt: "",
-                instructions: agentInstructions
-            )
-            switch resolved {
-            case .cloudGemini:
-                let apiKey = ModelRegistry.geminiAPIKey()
-                return CloudGeminiLanguageModel(apiKey: apiKey)
-            case .localOllama:
-                let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? AgentOrchestrator.defaultOllamaURLString) ?? URL(string: AgentOrchestrator.defaultOllamaURLString)!
-                return LocalOllamaLanguageModel(hostURL: host)
-            case .localMLX:
-                let host = URL(string: UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString) ?? URL(string: LocalMLXLanguageModel.defaultHostURLString)!
-                return LocalMLXLanguageModel(hostURL: host)
-            case .applePCC:
-                if Self.isPrivateCloudComputeAvailable() {
-                    return PrivateCloudComputeLanguageModel()
-                } else {
-                    return localSystemModel()
-                }
-            default:
-                return localSystemModel()
-            }
-        case .localSystem:
-            return localSystemModel()
-        case .privateCloud:
-            if Self.isPrivateCloudComputeAvailable() {
-                return PrivateCloudComputeLanguageModel()
-            } else {
-                return localSystemModel()
-            }
-        case .cloudGemini:
-            let apiKey = ModelRegistry.geminiAPIKey()
-            return CloudGeminiLanguageModel(apiKey: apiKey)
-        case .localOllama:
-            let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? AgentOrchestrator.defaultOllamaURLString) ?? URL(string: AgentOrchestrator.defaultOllamaURLString)!
-            return LocalOllamaLanguageModel(hostURL: host)
-        case .localMLX:
-            let host = URL(string: UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString) ?? URL(string: LocalMLXLanguageModel.defaultHostURLString)!
-            return LocalMLXLanguageModel(hostURL: host)
-        case .hybrid:
-            // Hybrid defaults to local system model for general orchestrator tasks
-            return localSystemModel()
-        }
+        sessionCoordinator.resolveModel(
+            preference: modelPreference,
+            prompt: "",
+            instructions: agentInstructions,
+            tools: [],
+            multiAgentModeEnabled: multiAgentModeEnabled
+        )
     }
 
     /// Returns the on-device system language model. Callers are responsible for
@@ -846,13 +539,8 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         return LanguageModelSession(profile: profile, history: transcript)
     }
 
-    private func prunedContent(_ content: String, maxChars: Int = AgentOrchestrator.contextPruningMaxChars) -> String {
-        if content.count <= maxChars {
-            return content
-        }
-        let keepLength = maxChars - 100
-        let prefix = content.prefix(keepLength)
-        return prefix + "\n\n[... content truncated to conserve context space ...]"
+    private func prunedContent(_ content: String, maxChars: Int = AgentSessionCoordinator.contextPruningMaxChars) -> String {
+        sessionCoordinator.prunedContent(content, maxChars: maxChars)
     }
 
     private func rehydrateSession() {
@@ -864,38 +552,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         let instructions = SupervisorPrompt.system
 
         // Rehydrate model session history using Transcript.Entry
-        var transcriptEntries: [Transcript.Entry] = []
-        let systemInstructions = Transcript.Instructions(
-            segments: [.text(Transcript.TextSegment(content: instructions))],
-            toolDefinitions: []
-        )
-        transcriptEntries.append(.instructions(systemInstructions))
-
-        // Apply Sliding Rehydration Window: only rehydrate the last 10 messages (5 user-assistant turns)
-        let rehydrationMessages = messages.suffix(AgentOrchestrator.rehydrationWindowSize)
-        for msg in rehydrationMessages {
-            let truncated = prunedContent(msg.content)
-            switch msg.role {
-            case .user:
-                let promptSegment = Transcript.Prompt(segments: [.text(Transcript.TextSegment(content: truncated))])
-                transcriptEntries.append(.prompt(promptSegment))
-            case .assistant:
-                let responseSegment = Transcript.Response(
-                    id: UUID().uuidString,
-                    assetIDs: [],
-                    segments: [.text(Transcript.TextSegment(content: truncated))]
-                )
-                transcriptEntries.append(.response(responseSegment))
-            case .system:
-                let instSegment = Transcript.Instructions(
-                    segments: [.text(Transcript.TextSegment(content: truncated))],
-                    toolDefinitions: []
-                )
-                transcriptEntries.append(.instructions(instSegment))
-            }
-        }
-
-        let transcript = Transcript(entries: transcriptEntries)
+        let transcript = sessionCoordinator.buildRehydratedTranscript(messages: messages, instructions: instructions)
 
         let mode: GenerationOptions.ToolCallingMode = switch toolCallingMode {
         case .auto: .allowed
@@ -951,67 +608,13 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         return (true, nil)
     }
 
+    let toolDispatchEngine = ToolDispatchEngine()
+
     var allTools: [AnyExecutableTool] {
         if let cached = _allTools {
             return cached
         }
-        let tools: [AnyExecutableTool] = [
-            AnyExecutableTool(ShellTool(orchestrator: self)),
-            AnyExecutableTool(FileReadTool(orchestrator: self)),
-            AnyExecutableTool(FileWriteTool(orchestrator: self)),
-            AnyExecutableTool(ListDirectoryTool(orchestrator: self)),
-            AnyExecutableTool(CreateDirectoryTool(orchestrator: self)),
-            AnyExecutableTool(DeleteFileTool(orchestrator: self)),
-            AnyExecutableTool(MoveFileTool(orchestrator: self)),
-            AnyExecutableTool(WebSearchTool(orchestrator: self)),
-            AnyExecutableTool(AppleScriptTool(orchestrator: self)),
-            AnyExecutableTool(ScreenshotTool(orchestrator: self)),
-            AnyExecutableTool(ClipboardReadTool(orchestrator: self)),
-            AnyExecutableTool(ClipboardWriteTool(orchestrator: self)),
-            AnyExecutableTool(NotificationTool(orchestrator: self)),
-            AnyExecutableTool(SystemInfoTool(orchestrator: self)),
-            AnyExecutableTool(ProcessListTool(orchestrator: self)),
-            AnyExecutableTool(GetFrontmostAppTool(orchestrator: self)),
-            AnyExecutableTool(StoreMemoryTool(orchestrator: self)),
-            AnyExecutableTool(SearchMemoryTool(orchestrator: self)),
-            AnyExecutableTool(ApplicationControlTool(orchestrator: self)),
-            AnyExecutableTool(AccessibilityControlTool(orchestrator: self)),
-            AnyExecutableTool(AccessibilityOmniTargeter(orchestrator: self)),
-            AnyExecutableTool(DifferentialScreenPerception(orchestrator: self)),
-            AnyExecutableTool(CaptureWindowImageTool(orchestrator: self)),
-            AnyExecutableTool(BrowserAutomationTool(orchestrator: self)),
-            AnyExecutableTool(UpdatePlanTool(orchestrator: self)),
-            AnyExecutableTool(ProjectAuditTool(orchestrator: self)),
-            AnyExecutableTool(DelegateTaskTool(orchestrator: self)),
-            AnyExecutableTool(AnalyzeImageTool(orchestrator: self)),
-            AnyExecutableTool(DetectImageTextTool(orchestrator: self)),
-            AnyExecutableTool(ConveneMeetingTool(orchestrator: self)),
-            AnyExecutableTool(CreateSkillTool(orchestrator: self)),
-            AnyExecutableTool(RunWorkflowTool(orchestrator: self)),
-            AnyExecutableTool(FileSearchTool(orchestrator: self)),
-            AnyExecutableTool(SpotlightSearchTool(orchestrator: self)),
-            AnyExecutableTool(DynamicToolCallTool(orchestrator: self)),
-            AnyExecutableTool(DailyBriefingTool(orchestrator: self)),
-            AnyExecutableTool(AskBotTool(botManager: botManager)),
-            AnyExecutableTool(ConfirmCompletionTool(orchestrator: self)),
-            AnyExecutableTool(SaveReviewSessionTool(orchestrator: self)),
-            AnyExecutableTool(ListReviewSessionsTool(orchestrator: self)),
-            AnyExecutableTool(WeatherTool(orchestrator: self)),
-            AnyExecutableTool(MapSearchTool(orchestrator: self)),
-            AnyExecutableTool(DirectionsTool(orchestrator: self)),
-            AnyExecutableTool(CalendarTool(orchestrator: self)),
-            AnyExecutableTool(ReminderTool(orchestrator: self)),
-            AnyExecutableTool(TranslateTool(orchestrator: self)),
-            AnyExecutableTool(EntityExtractTool(orchestrator: self)),
-            AnyExecutableTool(AppleShortcutsTool(orchestrator: self)),
-            AnyExecutableTool(OSLogQueryTool(orchestrator: self)),
-            AnyExecutableTool(WatchPathsTool(orchestrator: self)),
-            AnyExecutableTool(NetworkDiagnosticsTool(orchestrator: self)),
-            AnyExecutableTool(ScreenPerceptionTool(orchestrator: self)),
-            AnyExecutableTool(FilePatchTool(orchestrator: self)),
-            AnyExecutableTool(GitOperationsTool(orchestrator: self)),
-            AnyExecutableTool(DispatchSwarmTool(botManager: botManager))
-        ]
+        let tools = toolDispatchEngine.buildAllTools(orchestrator: self, botManager: botManager)
         _allTools = tools
         return tools
     }
@@ -1150,26 +753,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         await runMessageGeneration(text: trimmedText)
     }
 
-    private struct CompactionProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfile {
-        let instructions: String
-        let model: Model
-
-        var body: some LanguageModelSession.DynamicProfile {
-            LanguageModelSession.Profile {
-                Instructions(instructions)
-            }
-            .model(model)
-            .toolCallingMode(.disallowed)
-        }
-    }
-
     @MainActor
     private func createCompactionSession(model: any LanguageModel, instructions: String) -> LanguageModelSession {
-        func helper<M: LanguageModel>(_ m: M) -> LanguageModelSession {
-            let profile = CompactionProfile(instructions: instructions, model: m)
-            return LanguageModelSession(profile: profile, history: Transcript(entries: []))
-        }
-        return helper(model)
+        sessionCoordinator.createCompactionSession(model: model, instructions: instructions)
     }
 
     @MainActor
@@ -1556,52 +1142,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     }
 
     func executeToolByName(name: String, jsonArguments: String) async throws -> String {
-        do {
-            // Enterprise zero-trust capability validation
-            if !AgentSecurity.validateCapabilityToken(for: name, botName: nil) {
-                throw NSError(domain: "AgentSecurity", code: 403, userInfo: [NSLocalizedDescriptionKey: "Enterprise Security: Missing or expired capability token for high-risk tool '\(name)'"])
-            }
-            
-            let result: String
-            if let speculativeResult = await SpeculativeToolExecutor.shared.resolve(toolName: name, jsonArguments: jsonArguments) {
-                result = speculativeResult
-            } else if let tool = allTools.first(where: { $0.name == name }) {
-                result = try await tool.execute(jsonArguments: jsonArguments)
-            } else if DynamicToolbox.shared.dynamicTools[name] != nil {
-                result = try await DynamicToolbox.shared.executeTool(name: name, jsonArguments: jsonArguments)
-            } else {
-                throw NSError(domain: "AgentOrchestrator", code: -2, userInfo: [NSLocalizedDescriptionKey: "Unknown tool: \(name)"])
-            }
-            
-            // Invalidate cache if a write tool executes
-            let speculableToolNames: Set<String> = [
-                "read_file", "file_search", "list_directory",
-                "get_system_info", "search_memory", "query_logs"
-            ]
-            if !speculableToolNames.contains(name) {
-                await SpeculativeToolExecutor.shared.invalidateAll()
-            }
-            
-            // Audit log
-            CryptographicAuditChain.shared.record(
-                toolName: name,
-                input: jsonArguments,
-                output: String(result.prefix(500)),
-                status: "success",
-                botName: nil
-            )
-            
-            return result
-        } catch {
-            CryptographicAuditChain.shared.record(
-                toolName: name,
-                input: jsonArguments,
-                output: error.localizedDescription,
-                status: "error",
-                botName: nil
-            )
-            throw error
-        }
+        try await toolDispatchEngine.executeToolByName(name: name, jsonArguments: jsonArguments, allTools: allTools)
     }
 
     @MainActor
@@ -1659,12 +1200,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         graph.entryNode = "Codex"
 
         // Codex passes -> go to Auditor to lint check
-        graph.addEdge(from: "Codex") { output, isSuccess, state in
+        graph.addEdge(from: "Codex") { _, isSuccess, state in
             return (isSuccess ? "Auditor" : nil, state)
         }
 
         // Auditor passes -> go to Nexus to build; fails -> return to Codex to fix lint issues (limit loops to prevent infinite)
-        graph.addEdge(from: "Auditor") { output, isSuccess, state in
+        graph.addEdge(from: "Auditor") { _, isSuccess, state in
             let loopCount = state.values["audit_loops"] as? Int ?? 0
             var nextState = state
             if !isSuccess && loopCount < 2 {
@@ -1675,7 +1216,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
 
         // Nexus fails -> go back to Codex to fix build errors; passes -> terminate (success)
-        graph.addEdge(from: "Nexus") { output, isSuccess, state in
+        graph.addEdge(from: "Nexus") { _, isSuccess, state in
             let loopCount = state.values["build_loops"] as? Int ?? 0
             var nextState = state
             if !isSuccess && loopCount < 2 {
@@ -1743,8 +1284,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     public var isUnattendedTurn: Bool = false
 
     public func shouldConfirmTool(name: String) -> Bool {
-        if requireConfirmationForAll { return true }
-        return AgentOrchestrator.dangerousToolNames.contains(name) || AgentSecurity.requiresConfirmation(name)
+        toolDispatchEngine.shouldConfirmTool(name: name, requireConfirmationForAll: requireConfirmationForAll)
     }
 
     public func requestConfirmation(

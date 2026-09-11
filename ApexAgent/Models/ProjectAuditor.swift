@@ -134,7 +134,7 @@ class ProjectAuditor {
                 }
 
                 // Parse deployment target (macOS or iOS)
-                if (trimmed.hasPrefix("MACOSX_DEPLOYMENT_TARGET") || trimmed.hasPrefix("IPHONEOS_DEPLOYMENT_TARGET")),
+                if trimmed.hasPrefix("MACOSX_DEPLOYMENT_TARGET") || trimmed.hasPrefix("IPHONEOS_DEPLOYMENT_TARGET"),
                    let val = extractValue(from: trimmed) {
                     deploymentTarget = val
                 }

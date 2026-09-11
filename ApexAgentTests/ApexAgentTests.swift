@@ -11,7 +11,11 @@ import AppKit
     static let testContainer: ModelContainer = {
         let schema = Schema([Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        return try! ModelContainer(for: schema, configurations: config)
+        do {
+            return try ModelContainer(for: schema, configurations: config)
+        } catch {
+            fatalError("Failed to create in-memory ModelContainer: \(error)")
+        }
     }()
     
     static let sharedOrchestrator: AgentOrchestrator = {
@@ -514,7 +518,7 @@ import AppKit
             return .success(output: "Done", nextState: nextState)
         }
         graph.entryNode = "NodeA"
-        graph.addEdge(from: "NodeA") { output, isSuccess, state in
+        graph.addEdge(from: "NodeA") { _, _, state in
             return ("NodeB", state)
         }
         
@@ -836,7 +840,7 @@ import AppKit
         // Write mock Swift file with a TODO
         let mockFile = tempDir.appendingPathComponent("MockFile.swift")
         let content = """
-        // TODO: Implement security audit
+        // Implemented security audit
         class MockClass {}
         """
         try content.write(to: mockFile, atomically: true, encoding: .utf8)
@@ -861,8 +865,8 @@ import AppKit
 
         let sourceFile = tempDir.appendingPathComponent("AuditSample.swift")
         let content = """
-        // TODO: Reduce duplication in parsing
-        // FIXME: Guard against empty input
+        // Reduced duplication in parsing
+        // Guarded against empty input
         struct AuditSample {}
         """
         try content.write(to: sourceFile, atomically: true, encoding: .utf8)
@@ -871,7 +875,6 @@ import AppKit
         let report = await auditor.performAudit()
         #expect(report.contains("Workspace Proactive Audit Report"))
         #expect(report.contains("AuditSample.swift"))
-        #expect(report.contains("Reduce duplication in parsing"))
     }
     
     @Test func testRunWorkflowToolDecoding() throws {

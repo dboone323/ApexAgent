@@ -16,9 +16,9 @@ struct RecordedStep: Identifiable, Equatable, Sendable {
     let detail: String
     let occurredAt: Date
 
-    var windowTitle: String? = nil
-    var ocrSummary: String? = nil
-    var screenshotImage: NSImage? = nil
+    var windowTitle: String?
+    var ocrSummary: String?
+    var screenshotImage: NSImage?
 
     init(action: String, detail: String, occurredAt: Date = Date(), windowTitle: String? = nil, ocrSummary: String? = nil, screenshotImage: NSImage? = nil) {
         self.action = action
@@ -157,7 +157,7 @@ final class RoutineRecorder {
 
     func captureSnapshot(note: String? = nil) {
         let image = ScreenStreamer.shared.getLatestFrame()
-        var ocrSummary: String? = nil
+        var ocrSummary: String?
         
         if let cgImage = image?.cgImage(forProposedRect: nil, context: nil, hints: nil) {
             let request = VNRecognizeTextRequest()

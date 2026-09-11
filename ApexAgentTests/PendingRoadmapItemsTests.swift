@@ -88,7 +88,7 @@ final class PendingRoadmapItemsTests: XCTestCase {
         // 2. Dispatch matching message
         let matchingOutputs = await routineManager.dispatchOnMessage(text: "Urgent: deploy failed on production cluster")
         XCTAssertFalse(matchingOutputs.isEmpty, "Matching message must trigger the routine")
-        XCTAssertTrue(matchingOutputs[0].count > 0, "Bot must produce a response to the routine prompt")
+        XCTAssertTrue(!matchingOutputs[0].isEmpty, "Bot must produce a response to the routine prompt")
     }
 
     // MARK: - 2. MCPServerDashboardView & Diagnostics

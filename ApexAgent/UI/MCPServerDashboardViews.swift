@@ -10,7 +10,7 @@ public struct MCPServerDashboardView: View {
     @State private var latencies: [UUID: Double] = [:]
     @State private var serverTools: [UUID: [MCPToolDefinition]] = [:]
     @State private var isProbing: Bool = false
-    @State private var statusMessage: String? = nil
+    @State private var statusMessage: String?
 
     public init() {}
 
@@ -395,9 +395,9 @@ public struct DynamicScriptEditorView: View {
     @State private var testArguments: String = "{\"query\": \"sample\"}"
     @State private var consoleOutput: String = ""
     @State private var isRunning: Bool = false
-    @State private var lastExitCode: Int? = nil
-    @State private var lastDuration: TimeInterval? = nil
-    @State private var statusAlert: String? = nil
+    @State private var lastExitCode: Int?
+    @State private var lastDuration: TimeInterval?
+    @State private var statusAlert: String?
 
     public struct ScriptEntry: Identifiable, Hashable {
         public let id: String

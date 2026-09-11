@@ -474,15 +474,25 @@ final class PlaybookRunner {
         return participantMap.values.first
     }
 
+    package static func sanitizeForPrompt(_ text: String) -> String {
+        var sanitized = text
+        sanitized = sanitized.replacingOccurrences(of: "{input}", with: "\\{input\\}")
+        sanitized = sanitized.replacingOccurrences(of: "{previousOutput}", with: "\\{previousOutput\\}")
+        sanitized = sanitized.replacingOccurrences(of: "{stageName}", with: "\\{stageName\\}")
+        return sanitized
+    }
+
     private func interpolatePrompt(
         template: String,
         input: String,
         previousOutput: String,
         stageName: String
     ) -> String {
+        let cleanInput = Self.sanitizeForPrompt(input)
+        let cleanPrev = Self.sanitizeForPrompt(previousOutput)
         var result = template
-        result = result.replacingOccurrences(of: "{input}", with: input)
-        result = result.replacingOccurrences(of: "{previousOutput}", with: previousOutput)
+        result = result.replacingOccurrences(of: "{input}", with: cleanInput)
+        result = result.replacingOccurrences(of: "{previousOutput}", with: cleanPrev)
         result = result.replacingOccurrences(of: "{stageName}", with: stageName)
         return result
     }

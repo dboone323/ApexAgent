@@ -408,4 +408,3 @@ struct ContainerIsolationSecurityTests {
         #expect(profile.restrictedHostPaths.contains("~/Desktop"))
     }
 }
-

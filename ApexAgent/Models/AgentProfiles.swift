@@ -410,7 +410,7 @@ struct SupervisorAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynami
 // Patterns that, when present in tool/output/response text, indicate an
 // attempted indirect prompt injection. The native `.historyTransform` drops
 // any entry whose recoverable text contains one of these.
-fileprivate let apexInjectionPatterns: [String] = [
+private let apexInjectionPatterns: [String] = [
     "ignore previous instructions",
     "ignore all previous",
     "disregard the system prompt",
@@ -421,7 +421,7 @@ fileprivate let apexInjectionPatterns: [String] = [
 ]
 
 /// Extracts human-readable text from a transcript entry for inspection.
-fileprivate func apexEntryText(_ entry: Transcript.Entry) -> String {
+private func apexEntryText(_ entry: Transcript.Entry) -> String {
     switch entry {
     case .prompt(let prompt):
         return prompt.segments.compactMap { seg in

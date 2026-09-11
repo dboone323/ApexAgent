@@ -76,7 +76,7 @@ public final class MultiAgentDebateCoordinator {
         }
         
         let moderatorName = moderatorBotName ?? participantBotNames.first ?? "Unknown"
-        var consensus: String? = nil
+        var consensus: String?
         
         if let botManager = self.botManager,
            let moderatorBot = botManager.allBots.first(where: { $0.name == moderatorName }) {

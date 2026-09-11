@@ -19,6 +19,7 @@
 	<key>com.apple.security.app-groups</key>
 	<array>
 		<string>group.com.apexagent</string>
+		<string>group.com.dboone323.fleet</string>
 	</array>
 	<key>com.apple.security.virtualization</key>
 	<true/>

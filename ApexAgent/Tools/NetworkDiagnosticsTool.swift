@@ -41,9 +41,7 @@ struct NetworkDiagnosticsTool: Tool {
                 }
                 
                 var interfaceType = "unknown"
-                if path.usesInterfaceType(.wifi) { interfaceType = "wifi" }
-                else if path.usesInterfaceType(.cellular) { interfaceType = "cellular" }
-                else if path.usesInterfaceType(.wiredEthernet) { interfaceType = "wiredEthernet" }
+                if path.usesInterfaceType(.wifi) { interfaceType = "wifi" } else if path.usesInterfaceType(.cellular) { interfaceType = "cellular" } else if path.usesInterfaceType(.wiredEthernet) { interfaceType = "wiredEthernet" }
                 
                 return """
                 Interface Type: \(interfaceType)

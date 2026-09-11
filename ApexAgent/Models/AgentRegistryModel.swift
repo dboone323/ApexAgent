@@ -10,10 +10,6 @@ import Foundation
 // (which stores internal AFM session profiles like developer/executor).
 // AgentRegistryModel is for Discord bot identity / coordination only.
 
-import Foundation
-
-// MARK: - Transport
-
 enum AgentTransport: String, Codable, Sendable {
     case ws   // WebSocket / Discord Gateway (real-time push)
     case poll // REST polling via DiscordMessagePoller

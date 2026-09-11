@@ -285,4 +285,14 @@ enum ViewHost {
         let orchestrator = AgentOrchestrator()
         ViewHost.host(QuickPromptView(panel: nil, orchestrator: orchestrator), pump: 0.1)
     }
+
+    @Test func testSettingsViewHostingWithOrchestrator() {
+        let orchestrator = AgentOrchestrator()
+        ViewHost.host(SettingsView().environment(orchestrator), pump: 0.15)
+    }
+
+    @Test func testMCPServerDashboardViewHosting() {
+        let orchestrator = AgentOrchestrator()
+        ViewHost.host(MCPServerDashboardView().environment(orchestrator), pump: 0.15)
+    }
 }

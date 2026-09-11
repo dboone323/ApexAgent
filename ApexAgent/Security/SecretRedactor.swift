@@ -29,26 +29,30 @@ enum SecretRedactor {
 
     // MARK: Content-shaped secrets
 
+    private static func makeRegex(_ pattern: String, options: NSRegularExpression.Options = []) -> NSRegularExpression {
+        (try? NSRegularExpression(pattern: pattern, options: options)) ?? NSRegularExpression()
+    }
+
     private static let contentPatterns: [NSRegularExpression] = [
-        try! NSRegularExpression(pattern: #"\bsk-(?:ant-|proj-|live-|test-)?[A-Za-z0-9_-]{16,}"#),  // anthropic / openai / stripe
-        try! NSRegularExpression(pattern: #"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}"#),        // github classic
-        try! NSRegularExpression(pattern: #"\bgithub_pat_[A-Za-z0-9_]{20,}"#),                     // github fine-grained
-        try! NSRegularExpression(pattern: #"\bxox[abposr]-[A-Za-z0-9-]{20,}"#),                    // slack
-        try! NSRegularExpression(pattern: #"\bAKIA[0-9A-Z]{16}\b"#),                              // aws access key id
-        try! NSRegularExpression(pattern: #"\bAIza[0-9A-Za-z_-]{30,}"#),                           // google api key
-        try! NSRegularExpression(pattern: #"\bnpm_[A-Za-z0-9]{20,}"#),                             // npm
-        try! NSRegularExpression(pattern: #"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"#), // jwt
+        makeRegex(#"\bsk-(?:ant-|proj-|live-|test-)?[A-Za-z0-9_-]{16,}"#),  // anthropic / openai / stripe
+        makeRegex(#"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}"#),        // github classic
+        makeRegex(#"\bgithub_pat_[A-Za-z0-9_]{20,}"#),                     // github fine-grained
+        makeRegex(#"\bxox[abposr]-[A-Za-z0-9-]{20,}"#),                    // slack
+        makeRegex(#"\bAKIA[0-9A-Z]{16}\b"#),                              // aws access key id
+        makeRegex(#"\bAIza[0-9A-Za-z_-]{30,}"#),                           // google api key
+        makeRegex(#"\bnpm_[A-Za-z0-9]{20,}"#),                             // npm
+        makeRegex(#"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"#) // jwt
     ]
 
     private static let bearerPattern =
-        try! NSRegularExpression(pattern: #"(\bBearer\s+)([A-Za-z0-9._~+/=-]{12,})"#, options: [.caseInsensitive])
+        makeRegex(#"(\bBearer\s+)([A-Za-z0-9._~+/=-]{12,})"#, options: [.caseInsensitive])
 
-    private static let pemPattern = try! NSRegularExpression(
-        pattern: #"(-----BEGIN [A-Z ]*PRIVATE KEY-----)([\s\S]*?)(-----END [A-Z ]*PRIVATE KEY-----)"#)
+    private static let pemPattern = makeRegex(
+        #"(-----BEGIN [A-Z ]*PRIVATE KEY-----)([\s\S]*?)(-----END [A-Z ]*PRIVATE KEY-----)"#)
 
     /// key=value / key: value / key="value" where the key is secret-shaped.
-    private static let keyValuePattern = try! NSRegularExpression(
-        pattern: #"\b((?:[A-Za-z0-9_-]*_)?(?:api[_-]?key|apikey|secret|token|password|passwd|authorization|auth[_-]?token|access[_-]?key|private[_-]?key)s?)(["']?\s*[=:]\s*)(["']?)([A-Za-z0-9._~+/=-]{8,})\3"#,
+    private static let keyValuePattern = makeRegex(
+        #"\b((?:[A-Za-z0-9_-]*_)?(?:api[_-]?key|apikey|secret|token|password|passwd|authorization|auth[_-]?token|access[_-]?key|private[_-]?key)s?)(["']?\s*[=:]\s*)(["']?)([A-Za-z0-9._~+/=-]{8,})\3"#,
         options: [.caseInsensitive])
 
     // MARK: Public API

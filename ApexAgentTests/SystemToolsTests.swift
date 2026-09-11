@@ -61,7 +61,7 @@ struct SystemToolsTests {
         #expect(startResult.contains("Started watching") || startResult.contains("watch_"))
         
         // Extract watch ID
-        var watchId: String? = nil
+        var watchId: String?
         if let range = startResult.range(of: #"watch_[a-zA-Z0-9]+"#, options: .regularExpression) {
             watchId = String(startResult[range])
         }

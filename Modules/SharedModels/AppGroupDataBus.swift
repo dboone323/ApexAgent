@@ -11,7 +11,7 @@ import Foundation
 /// in-memory-only. This keeps the daily briefing reflecting real data in every
 /// build configuration.
 @MainActor
-public final class AppGroupDataBus: Sendable {
+public final class AppGroupDataBus {
     public static let shared = AppGroupDataBus()
 
     public static let appGroupIdentifier = "group.com.dboone323.fleet"

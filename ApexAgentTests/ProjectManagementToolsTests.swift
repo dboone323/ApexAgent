@@ -18,15 +18,15 @@ import SharedKit
         orchestrator.modelContext = ModelContext(container)
     }
     
-    private func makeArgs<T: Decodable>(_ json: String) -> T {
-        let data = json.data(using: .utf8)!
-        return try! JSONDecoder().decode(T.self, from: data)
+    private func makeArgs<T: Decodable>(_ json: String) throws -> T {
+        let data = json.data(using: .utf8) ?? Data()
+        return try JSONDecoder().decode(T.self, from: data)
     }
     
     @Test func testCreateProjectSprintAndTask() async throws {
         // 1. Test CreateProjectTool
         let createProj = CreateProjectTool(orchestrator: orchestrator)
-        let projArgs: CreateProjectTool.Arguments = makeArgs("""
+        let projArgs: CreateProjectTool.Arguments = try makeArgs("""
         {
             "name": "Audit Pipeline",
             "summary": "Automated compiler diagnostic checks",
@@ -44,7 +44,7 @@ import SharedKit
         
         // 2. Test CreateSprintTool
         let createSprint = CreateSprintTool(orchestrator: orchestrator)
-        let sprintArgs: CreateSprintTool.Arguments = makeArgs("""
+        let sprintArgs: CreateSprintTool.Arguments = try makeArgs("""
         {
             "projectID": "\(projectIDString)",
             "name": "Sprint 1",
@@ -63,7 +63,7 @@ import SharedKit
         
         // 3. Test CreateTaskTool
         let createTask = CreateTaskTool(orchestrator: orchestrator)
-        let taskArgs: CreateTaskTool.Arguments = makeArgs("""
+        let taskArgs: CreateTaskTool.Arguments = try makeArgs("""
         {
             "projectID": "\(projectIDString)",
             "sprintID": "\(sprintIDString)",
@@ -83,7 +83,7 @@ import SharedKit
         
         // 4. Test UpdateTaskStatusTool
         let updateStatus = UpdateTaskStatusTool(orchestrator: orchestrator)
-        let updateArgs: UpdateTaskStatusTool.Arguments = makeArgs("""
+        let updateArgs: UpdateTaskStatusTool.Arguments = try makeArgs("""
         {
             "taskID": "\(taskIDString)",
             "status": "in_progress",

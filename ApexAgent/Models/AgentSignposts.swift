@@ -1,14 +1,5 @@
 import Foundation
 import os
-import os.signpost
-
-// MARK: - Agent Signposts & Structured Logging (Instruments)
-//
-// Performance signposts + structured OSLog categories so Instruments (the
-// Foundation Models template + Time Profiler) captures meaningful spans for
-// each agent phase and tool call — WWDC26 "Debug and profile agentic app
-// experiences with Instruments". Categories: Agent, Tools, Security, Provider.
-
 let agentSignpostLog = OSLog(subsystem: "com.apexagent.app", category: "AgentPerformance")
 /// Points-of-Interest log: renders in Instruments' Time Profiler "Points of Interest"
 /// lane automatically (no manual os_signpost instrument needed). Used to mark

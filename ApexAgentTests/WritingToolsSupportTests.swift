@@ -39,7 +39,7 @@ import AppKit
         pasteboard.clearContents()
         pasteboard.writeObjects(["Original Text to Refine" as NSString])
         
-        var errorString: NSString? = nil
+        var errorString: NSString?
         support.handleWritingToolsRequest(pasteboard, userData: "", error: &errorString)
         
         #expect(errorString == nil)
@@ -54,7 +54,7 @@ import AppKit
         let pasteboard = NSPasteboard.withUniqueName()
         pasteboard.clearContents()
         
-        var errorString: NSString? = nil
+        var errorString: NSString?
         
         pasteboard.writeObjects(["" as NSString])
         support.handleWritingToolsRequest(pasteboard, userData: "", error: &errorString)

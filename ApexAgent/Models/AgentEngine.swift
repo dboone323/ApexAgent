@@ -24,7 +24,7 @@ protocol AgentEngine {
 @MainActor
 struct NativeAppleEngine: AgentEngine {
     let orchestrator: AgentOrchestrator
-    var customSession: LanguageModelSession? = nil
+    var customSession: LanguageModelSession?
 
     func streamResponse(
         prompt: String,
@@ -281,5 +281,3 @@ public func isMultimodalAttachmentSupported() -> Bool {
     let symbol2 = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "_$s16FoundationModels10AttachmentVA2A05ImageC7ContentVRszrlE_11orientationACyAEGSo10CGImageRefa_So0G19PropertyOrientationVSgtcfC")
     return symbol1 != nil || symbol2 != nil
 }
-
-

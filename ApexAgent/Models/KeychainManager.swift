@@ -1,27 +1,21 @@
 import Foundation
 import Security
+import Synchronization
 
-private final class FallbackStorage: @unchecked Sendable {
+private final class FallbackStorage: Sendable {
     static let shared = FallbackStorage()
-    private let lock = NSLock()
-    private var storage: [String: String] = [:]
+    private let storage = Mutex<[String: String]>([:])
 
     func set(_ value: String, for key: String) {
-        lock.lock()
-        storage[key] = value
-        lock.unlock()
+        storage.withLock { $0[key] = value }
     }
 
     func get(_ key: String) -> String? {
-        lock.lock()
-        defer { lock.unlock() }
-        return storage[key]
+        storage.withLock { $0[key] }
     }
 
     func remove(_ key: String) {
-        lock.lock()
-        storage.removeValue(forKey: key)
-        lock.unlock()
+        storage.withLock { $0.removeValue(forKey: key) }
     }
 }
 

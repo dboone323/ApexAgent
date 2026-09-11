@@ -191,8 +191,8 @@ struct E2EFeatureMatrixTests {
 
         // 4. Dynamic Toolbox Sync & Registration
         let toolbox = DynamicToolbox.shared
-        let schemaData = manifestJSON.data(using: .utf8)!
-        let parsedSchema = try JSONSerialization.jsonObject(with: schemaData) as! [String: Any]
+        let schemaData = manifestJSON.data(using: .utf8) ?? Data()
+        let parsedSchema = (try? JSONSerialization.jsonObject(with: schemaData)) as? [String: Any] ?? [:]
 
         let toolEntry = DynamicToolbox.DynamicToolEntry(
             name: skillName,

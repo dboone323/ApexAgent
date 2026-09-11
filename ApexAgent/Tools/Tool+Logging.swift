@@ -164,16 +164,20 @@ struct AnyExecutableTool: Sendable {
 /// model transcript. It does not destroy content — it wraps/marks directive
 /// phrasing so the model treats it as data, not as instructions.
 func sanitizeForPromptInjection(_ text: String) -> String {
+    func makeRegex(_ pattern: String) -> NSRegularExpression {
+        (try? NSRegularExpression(pattern: pattern, options: [])) ?? NSRegularExpression()
+    }
+
     var out = text
     let patterns: [(NSRegularExpression, String)] = [
         // "ignore previous/all instructions" / "disregard the above"
-        (try! NSRegularExpression(pattern: #"(?i)\b(ignore|disregard|forget)\b.{0,40}\b(previous|prior|above|all|earlier)\b.{0,20}\b(instructions?|prompt|context|rules?)\b"#, options: []), "[PROMPT-INJECTION-FLAGGED: instruction-override attempt removed]"),
+        (makeRegex(#"(?i)\b(ignore|disregard|forget)\b.{0,40}\b(previous|prior|above|all|earlier)\b.{0,20}\b(instructions?|prompt|context|rules?)\b"#), "[PROMPT-INJECTION-FLAGGED: instruction-override attempt removed]"),
         // "you are now / you are an" role hijack
-        (try! NSRegularExpression(pattern: #"(?i)\byou (are|are now|will be) now\b.{0,60}\b(ai|assistant|model|agent|bot|helpful|harmless)\b"#, options: []), "[PROMPT-INJECTION-FLAGGED: role-redefinition attempt removed]"),
+        (makeRegex(#"(?i)\byou (are|are now|will be) now\b.{0,60}\b(ai|assistant|model|agent|bot|helpful|harmless)\b"#), "[PROMPT-INJECTION-FLAGGED: role-redefinition attempt removed]"),
         // "system prompt" / "new system message" injection
-        (try! NSRegularExpression(pattern: #"(?i)\b(new |updated )?system (prompt|message|instruction)\b"#, options: []), "[PROMPT-INJECTION-FLAGGED: system-prompt injection attempt removed]"),
+        (makeRegex(#"(?i)\b(new |updated )?system (prompt|message|instruction)\b"#), "[PROMPT-INJECTION-FLAGGED: system-prompt injection attempt removed]"),
         // direct command to the assistant
-        (try! NSRegularExpression(pattern: #"(?i)\b(please |now )?(respond|reply|act|pretend|reveal|output|print) (as|with|only|exactly)\b"#, options: []), "[PROMPT-INJECTION-FLAGGED: directive attempt removed]")
+        (makeRegex(#"(?i)\b(please |now )?(respond|reply|act|pretend|reveal|output|print) (as|with|only|exactly)\b"#), "[PROMPT-INJECTION-FLAGGED: directive attempt removed]")
     ]
     for (regex, replacement) in patterns {
         let range = NSRange(out.startIndex..., in: out)

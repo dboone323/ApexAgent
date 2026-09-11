@@ -7,12 +7,15 @@ import SwiftData
 /// registry.  Each row exposes the routine name, trigger type, schedule (if
 /// applicable), and enable/disable / run-now / delete actions.
 struct RoutinesSection: View {
-    @Environment(RoutineManager.self) private var routineManager: RoutineManager
+    @Environment(RoutineManager.self) private var envRoutineManager: RoutineManager?
+    private var routineManager: RoutineManager {
+        envRoutineManager ?? RoutineManager.shared
+    }
 
     @Query(sort: \Routine.name) private var routines: [Routine]
 
     @State private var isConfirmingDelete: Bool = false
-    @State private var pendingRoutine: Routine? = nil
+    @State private var pendingRoutine: Routine?
     @State private var isRecordingRoutine: Bool = false
     @State private var isAddingRoutine: Bool = false
 

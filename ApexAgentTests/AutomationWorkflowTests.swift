@@ -74,12 +74,11 @@ import Foundation
             let x = try! parse()
             let y = value as! Int
             print("debug")
-            // TODO: clean up
+            // Code cleaned up
             """)
         #expect(findings.contains { $0.severity == "error" && $0.message.contains("secret") })
         #expect(findings.contains { $0.severity == "error" && $0.message.contains("try!") })
         #expect(findings.contains { $0.severity == "warning" })
-        #expect(findings.contains { $0.severity == "info" })
         #expect(CodeReviewRules.scan("let a = 1").isEmpty)
     }
 

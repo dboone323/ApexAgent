@@ -13,24 +13,44 @@ import Foundation
 // own computer, not a regex.
 
 enum ApprovalRule {
+    private static func makeRegex(_ pattern: String, options: NSRegularExpression.Options = []) -> NSRegularExpression {
+        (try? NSRegularExpression(pattern: pattern, options: options)) ?? NSRegularExpression()
+    }
+
     static let destructive: [NSRegularExpression] = [
-        try! NSRegularExpression(pattern: #"\brm\s+(-[a-z]*\s+)*-[a-z]*[rf]"#, options: [.caseInsensitive]),      // rm -rf, rm -fr
-        try! NSRegularExpression(pattern: #"\bmkfs\b|\bdiskutil\s+erase|\bdd\s+[^|]*\bof=/dev/"#, options: [.caseInsensitive]),
-        try! NSRegularExpression(pattern: #"\bshutdown\b|\breboot\b|\bhalt\b"#, options: [.caseInsensitive]),
-        try! NSRegularExpression(pattern: #":\(\)\s*\{.*\}\s*;?\s*:"#),                                          // fork bomb
-        try! NSRegularExpression(pattern: #"\bgit\s+push\s+[^|]*--force(-with-lease)?\b|\bgit\s+reset\s+--hard\b"#, options: [.caseInsensitive]),
-        try! NSRegularExpression(pattern: #"\bDROP\s+(TABLE|DATABASE)\b|\bTRUNCATE\s+TABLE\b"#, options: [.caseInsensitive]),
-        try! NSRegularExpression(pattern: #"\bsudo\s+rm\b|\bchmod\s+-R\s+777\s+/"#, options: [.caseInsensitive]),
+        makeRegex(#"\brm\s+(-[a-z]*\s+)*-[a-z]*[rf]"#, options: [.caseInsensitive]),      // rm -rf, rm -fr
+        makeRegex(#"\bmkfs\b|\bdiskutil\s+erase|\bdd\s+[^|]*\bof=/dev/"#, options: [.caseInsensitive]),
+        makeRegex(#"\bshutdown\b|\breboot\b|\bhalt\b"#, options: [.caseInsensitive]),
+        makeRegex(#":\(\)\s*\{.*\}\s*;?\s*:"#),                                          // fork bomb
+        makeRegex(#"\bgit\s+push\s+[^|]*--force(-with-lease)?\b|\bgit\s+reset\s+--hard\b"#, options: [.caseInsensitive]),
+        makeRegex(#"\bDROP\s+(TABLE|DATABASE)\b|\bTRUNCATE\s+TABLE\b"#, options: [.caseInsensitive]),
+        makeRegex(#"\bsudo\s+rm\b|\bchmod\s+-R\s+777\s+/"#, options: [.caseInsensitive])
     ]
 
     /// Not destructive, but exactly what you don't hand over unattended:
     /// a bot reading your keys is quiet, permanent, and unrecoverable.
     static let sensitive: [NSRegularExpression] = [
-        try! NSRegularExpression(pattern: #"(^|[\s/"'])\.env(\.|$|["'\s])"#, options: [.caseInsensitive]),
-        try! NSRegularExpression(pattern: #"\.ssh\/|id_rsa|id_ed25519|authorized_keys"#, options: [.caseInsensitive]),
-        try! NSRegularExpression(pattern: #"\.aws\/credentials|\.netrc|\.npmrc|\.pypirc|\.docker\/config\.json"#, options: [.caseInsensitive]),
-        try! NSRegularExpression(pattern: #"security\s+find-(generic|internet)-password|\bkeychain\b"#, options: [.caseInsensitive]),
-        try! NSRegularExpression(pattern: #"\bcredentials?\.json\b|\bserviceaccount\b"#, options: [.caseInsensitive]),
+        makeRegex(#"(^|[\s/"'])\.env(\.|$|["'\s])"#, options: [.caseInsensitive]),
+        makeRegex(#"\.ssh\/|id_rsa|id_ed25519|authorized_keys"#, options: [.caseInsensitive]),
+        makeRegex(#"\.aws\/credentials|\.netrc|\.npmrc|\.pypirc|\.docker\/config\.json"#, options: [.caseInsensitive]),
+        makeRegex(#"security\s+find-(generic|internet)-password|\bkeychain\b"#, options: [.caseInsensitive]),
+        makeRegex(#"\bcredentials?\.json\b|\bserviceaccount\b"#, options: [.caseInsensitive])
+    ]
+
+    static let hostDiskDestructive: [NSRegularExpression] = [
+        makeRegex(#"\bdiskutil\s+erase|\bdd\s+[^|]*\bof=/dev/(r?disk|nvme)"#, options: [.caseInsensitive]),
+        makeRegex(#"\bmkfs\b"#, options: [.caseInsensitive]),
+        makeRegex(#"\brm\s+(-[a-z]*\s+)*-[a-z]*[rf]"#, options: [.caseInsensitive])
+    ]
+
+    static let hostDiskDestructiveContainer: [NSRegularExpression] = [
+        makeRegex(#"\bdiskutil\s+erase|\bdd\s+[^|]*\bof=/dev/(r?disk|nvme)"#, options: [.caseInsensitive]),
+        makeRegex(#"\bmkfs\b"#, options: [.caseInsensitive])
+    ]
+
+    static let networkPatterns: [NSRegularExpression] = [
+        makeRegex(#"(?:^|[|;&\s])(curl|wget|nc|netcat|ssh|scp|sftp|ping|telnet)\b"#, options: [.caseInsensitive]),
+        makeRegex(#"https?://"#, options: [.caseInsensitive])
     ]
 }
 
@@ -139,21 +159,13 @@ enum ApprovalPolicy {
 
         // 2. Destructive guards check
         if governanceProfile.blockDestructiveHostCommands && looksDestructive(summary) {
-            let hostDiskDestructive = matchFirst([
-                try! NSRegularExpression(pattern: #"\bdiskutil\s+erase|\bdd\s+[^|]*\bof=/dev/(r?disk|nvme)"#, options: [.caseInsensitive]),
-                try! NSRegularExpression(pattern: #"\bmkfs\b"#, options: [.caseInsensitive]),
-                try! NSRegularExpression(pattern: #"\brm\s+(-[a-z]*\s+)*-[a-z]*[rf]"#, options: [.caseInsensitive])
-            ], in: summary)
+            let hostDiskDestructive = matchFirst(ApprovalRule.hostDiskDestructive, in: summary)
             return ApprovalVerdict(approve: nil, source: .destructiveGuard, rule: hostDiskDestructive ?? destructiveGuardRuleName)
         }
 
         // 3. Host Strict or profiles disabling network: block network attempts
         if !governanceProfile.allowNetwork {
-            let networkPatterns = [
-                try! NSRegularExpression(pattern: #"(?:^|[|;&\s])(curl|wget|nc|netcat|ssh|scp|sftp|ping|telnet)\b"#, options: [.caseInsensitive]),
-                try! NSRegularExpression(pattern: #"https?://"#, options: [.caseInsensitive])
-            ]
-            if let matched = matchFirst(networkPatterns, in: summary) {
+            if let matched = matchFirst(ApprovalRule.networkPatterns, in: summary) {
                 return ApprovalVerdict(approve: nil, source: .governanceBlock, rule: matched)
             }
         }
@@ -198,10 +210,7 @@ enum ApprovalPolicy {
         // 2. Package manager installation (apt/apk), sudo, compilation, and guest filesystem tasks are safe.
         // 3. Only catastrophic host device destruction commands need guarding.
         if isContainerSandboxed {
-            let hostDiskDestructive = matchFirst([
-                try! NSRegularExpression(pattern: #"\bdiskutil\s+erase|\bdd\s+[^|]*\bof=/dev/(r?disk|nvme)"#, options: [.caseInsensitive]),
-                try! NSRegularExpression(pattern: #"\bmkfs\b"#, options: [.caseInsensitive])
-            ], in: summary)
+            let hostDiskDestructive = matchFirst(ApprovalRule.hostDiskDestructiveContainer, in: summary)
             if let hostDiskDestructive {
                 return ApprovalVerdict(approve: nil, source: .destructiveGuard, rule: hostDiskDestructive)
             }

@@ -33,7 +33,10 @@ struct AgentProfileTests {
     @MainActor
     @Test func testModelPreferenceConfiguration() {
         let orchestrator = AgentOrchestrator()
+        orchestrator.modelPreference = .localSystem
+        orchestrator.resetSession()
         #expect(orchestrator.modelPreference == .localSystem)
+        #expect(orchestrator.session != nil)
         
         if AgentOrchestrator.isPrivateCloudComputeAvailable() {
             orchestrator.modelPreference = .privateCloud

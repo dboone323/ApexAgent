@@ -1,14 +1,22 @@
 # os files
 .DS_Store
+._*
+.Spotlight-V100
+.Trashes
 
 # xcode
 build/
+DerivedData/
 *.xcuserstate
 *.xcuserdatad
+*.xcscmblueprint
+xcuserdata/
 
 # swift package manager
 .build/
 .swiftpm/
+.swiftpm-cache/
+.clang-cache/
 
 # local logs and outputs
 *.log
@@ -31,11 +39,17 @@ docs/Reference/export.html
 r2.html
 googlec86b2f6eb74a972d.html
 xoxo.html
-# build artifacts / junk
+
+# build artifacts / junk / backups
 BuildArtifacts/
 *.profraw
-Package.swift.bak
-Package.swift.bak2
+*.profdata
+*.bak
+*.bak*
+*.backup
+*~
+*.swp
+*.swo
 Tools/benchmark-repro/
 
 # Local xcodebuild artifacts
@@ -43,9 +57,7 @@ Tools/benchmark-repro/
 .dd-release/
 results/
 *.xcresult
-DerivedData/
 .build_challenger/
-.clang-cache/
-.swiftpm-cache/
 .tmp/
 ORIGINAL_REQUEST.md
+

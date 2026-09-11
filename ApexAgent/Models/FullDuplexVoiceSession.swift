@@ -23,12 +23,12 @@ public final class FullDuplexVoiceSession: NSObject, ObservableObject, AVAudioPl
     @Published public private(set) var isSessionActive: Bool = false
     @Published public private(set) var currentDecibels: Float = -80.0
     @Published public private(set) var liveTranscript: String = ""
-    @Published public private(set) var lastCompletedTurnTranscript: String? = nil
+    @Published public private(set) var lastCompletedTurnTranscript: String?
 
     @Published public var isSpeaking: Bool = false
     @Published public var bargeInDetected: Bool = false
     public var bargeInSilenceThreshold: Float = -30.0
-    private var bargeInMonitoringTask: Task<Void, Never>? = nil
+    private var bargeInMonitoringTask: Task<Void, Never>?
     private let audioEngine = AVAudioEngine()
 
     private let speechSynthesizer = AVSpeechSynthesizer()
@@ -40,7 +40,7 @@ public final class FullDuplexVoiceSession: NSObject, ObservableObject, AVAudioPl
     public var speechThresholdDb: Float = -38.0
     public var silenceDurationForTurnSeconds: TimeInterval = 1.2
 
-    private var silenceTimerTask: Task<Void, Never>? = nil
+    private var silenceTimerTask: Task<Void, Never>?
     private var consecutiveSilenceFrames: Int = 0
 
     public override init() {
@@ -137,7 +137,7 @@ public final class FullDuplexVoiceSession: NSObject, ObservableObject, AVAudioPl
         let inputNode = audioEngine.inputNode
         let format = inputNode.outputFormat(forBus: 0)
         
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, time in
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
             guard let self = self else { return }
             let db = Self.calculateDecibels(from: buffer)
             

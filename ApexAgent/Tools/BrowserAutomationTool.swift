@@ -274,7 +274,7 @@ class BrowserManager: NSObject, WKNavigationDelegate {
     // MARK: - WKNavigationDelegate
     
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        webView.evaluateJavaScript("document.title") { [weak self] result, error in
+        webView.evaluateJavaScript("document.title") { [weak self] result, _ in
             guard let self = self else { return }
             if let continuation = self.navigationContinuation {
                 self.navigationContinuation = nil

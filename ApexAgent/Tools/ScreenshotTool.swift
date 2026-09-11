@@ -119,7 +119,7 @@ struct ScreenshotTool: Tool {
                 }
             }
 
-            var windowID: UInt32? = nil
+            var windowID: UInt32?
             if windowOnly {
                 windowID = await MainActor.run {
                     return getFrontmostWindowID()

@@ -21,7 +21,7 @@ struct SkillsSection: View {
     @State private var isAddingSkill: Bool = false
 
     /// The skill currently being operated on (nil = none / cancelled).
-    @State private var pendingSkill: Skill? = nil
+    @State private var pendingSkill: Skill?
 
     var body: some View {
         Section("Skills") {

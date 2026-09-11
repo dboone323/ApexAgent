@@ -55,7 +55,7 @@ final class LiveAgentTriageTests: XCTestCase {
 
         let sendButton = app.buttons["sendButton"].firstMatch
         let enabled = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: sendButton, handler: nil)
-        let _ = XCTWaiter.wait(for: [enabled], timeout: 5)
+        _ = XCTWaiter.wait(for: [enabled], timeout: 5)
         sendButton.click()
 
         // The assistant response bubble is tagged "AgentResponse".
@@ -96,7 +96,7 @@ final class LiveAgentTriageTests: XCTestCase {
         chatInput.typeText("Reply with the exact phrase: System OK")
         let sendButton = app.buttons["sendButton"].firstMatch
         let enabled = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: sendButton, handler: nil)
-        let _ = XCTWaiter.wait(for: [enabled], timeout: 5)
+        _ = XCTWaiter.wait(for: [enabled], timeout: 5)
         sendButton.click()
 
         let agentResponseBubble = app.descendants(matching: .any)["AgentResponse"].firstMatch

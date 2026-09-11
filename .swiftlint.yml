@@ -1,0 +1,38 @@
+included:
+  - ApexAgent
+  - ApexAgentTests
+  - ApexAgentUITests
+  - ApexAgentContainerTests
+  - Modules
+
+excluded:
+  - .build
+  - build
+  - DerivedData
+  - Pods
+  - Tests/LinuxMain.swift
+
+disabled_rules:
+  - line_length
+  - function_body_length
+  - type_body_length
+  - file_length
+  - identifier_name
+  - cyclomatic_complexity
+  - large_tuple
+  - trailing_whitespace
+  - todo
+  - trailing_comma
+  - opening_brace
+  - vertical_whitespace
+  - implicit_return
+
+opt_in_rules:
+  - empty_count
+  - explicit_init
+  - fatal_error_message
+  - first_where
+  - redundant_nil_coalescing
+  - unneeded_break_in_switch
+
+reporter: "xcode"

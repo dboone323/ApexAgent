@@ -18,9 +18,9 @@ import SharedKit
         orchestrator.modelContext = ModelContext(container)
     }
     
-    private func makeArgs<T: Decodable>(_ json: String) -> T {
-        let data = json.data(using: .utf8)!
-        return try! JSONDecoder().decode(T.self, from: data)
+    private func makeArgs<T: Decodable>(_ json: String) throws -> T {
+        let data = json.data(using: .utf8) ?? Data()
+        return try JSONDecoder().decode(T.self, from: data)
     }
     
     @Test func testSaveAndListReviewSession() async throws {
@@ -36,7 +36,7 @@ import SharedKit
         // Escape issuesJSON properly for inside JSON string
         let escapedIssues = issuesJSON.replacingOccurrences(of: "\"", with: "\\\"").replacingOccurrences(of: "\n", with: "\\n")
         
-        let saveArgs: SaveReviewSessionTool.Arguments = makeArgs("""
+        let saveArgs: SaveReviewSessionTool.Arguments = try makeArgs("""
         {
             "fileName": "PTYSession.swift",
             "summary": "PTY write validation review",

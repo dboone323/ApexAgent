@@ -112,7 +112,7 @@ class CollaborativeServer: NSObject, ObservableObject {
     }
 
     private func readRequest(connection: NWConnection) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 1048576) { [weak self] data, context, isComplete, error in
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 1048576) { [weak self] data, _, _, error in
             guard let self = self else { return }
             Task { @MainActor in
                 if let error = error {
@@ -195,7 +195,7 @@ class CollaborativeServer: NSObject, ObservableObject {
         }
 
         // 2. Token Auth Extraction (from query params or header)
-        var queryToken: String? = nil
+        var queryToken: String?
         if let url = URL(string: "http://localhost" + path),
            let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
            let tokenQuery = components.queryItems?.first(where: { $0.name == "token" }) {

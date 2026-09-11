@@ -116,12 +116,12 @@ public final class DiscordGatewayClient: ObservableObject {
     public static let shared = DiscordGatewayClient()
 
     @Published public private(set) var isConnected: Bool = false
-    @Published public private(set) var lastSequence: Int? = nil
-    @Published public private(set) var lastHeartbeatAckReceived: Date? = nil
+    @Published public private(set) var lastSequence: Int?
+    @Published public private(set) var lastHeartbeatAckReceived: Date?
     @Published public private(set) var receivedMessages: [DiscordGatewayMessage] = []
 
-    private var heartbeatTask: Task<Void, Never>? = nil
-    private var token: String? = nil
+    private var heartbeatTask: Task<Void, Never>?
+    private var token: String?
 
     public init() {}
 

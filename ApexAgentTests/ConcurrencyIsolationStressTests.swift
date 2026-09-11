@@ -75,7 +75,7 @@ struct TraceBusConcurrencyStressTests {
         // Final verification of events count limit
         let finalEvents = traceBus.recentEvents(limit: 500)
         #expect(finalEvents.count <= 400)
-        #expect(finalEvents.count > 0)
+        #expect(!finalEvents.isEmpty)
     }
 
     @Test func testRapidStreamSubscriptionAndCancellationCycles() async throws {

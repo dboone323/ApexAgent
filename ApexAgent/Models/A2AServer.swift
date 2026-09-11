@@ -193,7 +193,7 @@ public final class A2AServer {
                 
                 Task {
                     if let (requestData, responseData) = await self.processHttpBuffer(currentBuffer) {
-                        connection.send(content: responseData, completion: .contentProcessed({ error in
+                        connection.send(content: responseData, completion: .contentProcessed({ _ in
                             connection.cancel()
                         }))
                     } else if !isComplete {

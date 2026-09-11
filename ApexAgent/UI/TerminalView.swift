@@ -48,7 +48,7 @@ struct TerminalView: View {
                 .onAppear {
                     terminalSegments = ANSIColorParser.parse(orchestrator.activeTerminalOutput)
                 }
-                .onChange(of: orchestrator.activeTerminalOutput) { oldValue, newValue in
+                .onChange(of: orchestrator.activeTerminalOutput) { _, newValue in
                     terminalSegments = ANSIColorParser.parse(newValue)
                     if !isPaused { proxy.scrollTo("console_text_bottom", anchor: .bottom) }
                 }
@@ -66,8 +66,7 @@ struct TerminalView: View {
         var combined = Text("")
         for segment in segments {
             var color = segment.foregroundColor
-            if color == .black { color = .gray }
-            else if color == .primary { color = .white }
+            if color == .black { color = .gray } else if color == .primary { color = .white }
             var text = Text(segment.text).foregroundColor(color)
             if segment.isBold { text = text.bold() }
             combined = Text("\(combined)\(text)")

@@ -137,4 +137,3 @@ final class AppPermissions {
         self.downloadsFolderAllowed = downloadsFolderAllowed
     }
 }
-

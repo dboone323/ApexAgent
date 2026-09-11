@@ -1,6 +1,6 @@
 import Foundation
 
 @globalActor
-public actor ToolActor: Sendable {
+public actor ToolActor {
     public static let shared = ToolActor()
 }

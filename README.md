@@ -10,7 +10,7 @@ The default LLM is Apple's on-device Foundation Model (no cloud, no key). You ca
 
 ### Prerequisites
 - macOS 27
-- Xcode 27 Beta or later (Swift 6)
+- Xcode 27 Beta or later (Swift 6.4)
 - Apple Intelligence enabled in **System Settings → Apple Intelligence & Siri**
 - Apple Silicon Mac (M1 or later)
 
@@ -57,7 +57,7 @@ Per-agent model preferences are supported (`localSystem` / `privateCloud` / `clo
 
 ## 🧰 Agent Capabilities
 
-Apex ships **32 tools** the model can call, including:
+Apex ships **47 tools** the model can call, including:
 
 | Tool | What It Does |
 |------|-------------|

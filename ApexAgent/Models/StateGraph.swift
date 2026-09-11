@@ -168,7 +168,7 @@ class StateGraph {
             }
             
             // Evaluate edges
-            var nextNodeName: String? = nil
+            var nextNodeName: String?
             let currentEdges = edges
             for edge in currentEdges where edge.fromNode == currentNodeName {
                 let (next, updatedState) = edge.evaluate(output, isSuccess, currentState)

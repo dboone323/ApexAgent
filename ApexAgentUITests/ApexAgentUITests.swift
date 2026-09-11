@@ -22,12 +22,7 @@ import XCTest
 @MainActor
 final class ApexAgentUITests: XCTestCase {
 
-    private static var activeApp: XCUIApplication?
-
-    private var app: XCUIApplication! {
-        get { Self.activeApp }
-        set { Self.activeApp = newValue }
-    }
+    private var app: XCUIApplication?
 
     /// Fresh-launch lifecycle, invoked explicitly at the top of every test.
     /// setUpWithError overrides are nonisolated under Swift strict concurrency,
@@ -60,7 +55,7 @@ final class ApexAgentUITests: XCTestCase {
 
     nonisolated override func tearDownWithError() throws {
         MainActor.assumeIsolated {
-            if let app = Self.activeApp {
+            if let app = self.app {
                 app.terminate()
                 _ = app.wait(for: .notRunning, timeout: 5)
             }
@@ -69,9 +64,10 @@ final class ApexAgentUITests: XCTestCase {
 
     /// The chat input is a TextEditor → AX text view. Falls back to textField.
     private var chatInput: XCUIElement {
-        let tv = app.textViews["chatInputField"].firstMatch
+        let currentApp = app ?? XCUIApplication()
+        let tv = currentApp.textViews["chatInputField"].firstMatch
         if tv.exists { return tv }
-        return app.textFields["chatInputField"].firstMatch
+        return currentApp.textFields["chatInputField"].firstMatch
     }
 
     /// Native macOS click with coordinate fallback for SwiftUI ScrollViews.
@@ -95,7 +91,7 @@ final class ApexAgentUITests: XCTestCase {
         let send = app.buttons["sendButton"].firstMatch
         XCTAssertTrue(send.waitForExistence(timeout: 5))
         let enabled = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: send, handler: nil)
-        let _ = XCTWaiter.wait(for: [enabled], timeout: 5)
+        _ = XCTWaiter.wait(for: [enabled], timeout: 5)
         tap(send)
 
         // Verify the user message rendered into conversationScrollView
@@ -140,7 +136,7 @@ final class ApexAgentUITests: XCTestCase {
         let send = app.buttons["sendButton"].firstMatch
         XCTAssertTrue(send.waitForExistence(timeout: 5))
         let enabled = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: send, handler: nil)
-        let _ = XCTWaiter.wait(for: [enabled], timeout: 5)
+        _ = XCTWaiter.wait(for: [enabled], timeout: 5)
         tap(send)
 
         let bubble = app.scrollViews["conversationScrollView"]
@@ -192,7 +188,7 @@ final class ApexAgentUITests: XCTestCase {
         input.typeText("seed message")
         let send = app.buttons["sendButton"].firstMatch
         let en = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: send, handler: nil)
-        let _ = XCTWaiter.wait(for: [en], timeout: 5)
+        _ = XCTWaiter.wait(for: [en], timeout: 5)
         tap(send)
 
         let newBtn = app.buttons["newConversationButton"].firstMatch
@@ -230,7 +226,7 @@ final class ApexAgentUITests: XCTestCase {
         input.typeText("Summarize the ApexAgent architecture in depth")
         let send = app.buttons["sendButton"].firstMatch
         let en = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: send, handler: nil)
-        let _ = XCTWaiter.wait(for: [en], timeout: 5)
+        _ = XCTWaiter.wait(for: [en], timeout: 5)
         tap(send)
 
         // Run is now in flight (fake engine). Switch to a NEW
@@ -244,7 +240,7 @@ final class ApexAgentUITests: XCTestCase {
         // run was NOT cancelled by navigating away).
         let rows = app.descendants(matching: .any)["conversationRow"]
         let rowExpectation = expectation(for: NSPredicate(format: "count >= 2"), evaluatedWith: rows, handler: nil)
-        let _ = XCTWaiter.wait(for: [rowExpectation], timeout: 4)
+        _ = XCTWaiter.wait(for: [rowExpectation], timeout: 4)
 
         // Switch BACK — the run's user message is restored, proving survival.
         // Tap the first conversation row (the original run's conversation).
@@ -276,7 +272,7 @@ final class ApexAgentUITests: XCTestCase {
         input.typeText("Write a very long essay about Swift")
         let send = app.buttons["sendButton"].firstMatch
         let en = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: send, handler: nil)
-        let _ = XCTWaiter.wait(for: [en], timeout: 5)
+        _ = XCTWaiter.wait(for: [en], timeout: 5)
         tap(send)
 
         let stop = app.buttons["stopGenerationButton"].firstMatch

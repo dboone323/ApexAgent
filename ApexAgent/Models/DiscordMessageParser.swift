@@ -76,44 +76,64 @@ enum DiscordMessageParser {
     // MARK: - Extraction
 
     private static func extractMentionedAgents(from content: String) -> [String] {
-        let atPattern = try! Regex<(Substring, Substring)>("@([A-Za-z0-9_]+)")
-        let bracketPattern = try! Regex<(Substring, Substring)>("\\[([A-Za-z0-9_]+)\\]")
-        let numericPattern = try! Regex<(Substring, Substring)>("<@!?(\\d+)>")
-
         var agents: [String] = []
 
-        for match in content.matches(of: numericPattern) {
-            let numericId = match.output.1
-            if let name = knownAgentIds[String(numericId)], !agents.contains(name) {
-                agents.append(name)
+        // 1. Numeric mention syntax <@123456789> or <@!123456789>
+        if let numericPattern = try? NSRegularExpression(pattern: #"<@!?(\d+)>"#) {
+            let nsRange = NSRange(content.startIndex..<content.endIndex, in: content)
+            let matches = numericPattern.matches(in: content, range: nsRange)
+            for match in matches where match.numberOfRanges > 1 {
+                if let r = Range(match.range(at: 1), in: content) {
+                    let numericId = String(content[r])
+                    if let name = knownAgentIds[numericId], !agents.contains(name) {
+                        agents.append(name)
+                    }
+                }
             }
         }
-        for match in content.matches(of: atPattern) {
-            let handle = String(match.output.1)
-            let lowered = handle.lowercased()
-            if knownAgentHandles.contains(lowered) && !agents.contains(handle) {
-                agents.append(handle)
+
+        // 2. Word mentions @handle
+        if let atPattern = try? NSRegularExpression(pattern: #"@([A-Za-z0-9_]+)"#) {
+            let nsRange = NSRange(content.startIndex..<content.endIndex, in: content)
+            let matches = atPattern.matches(in: content, range: nsRange)
+            for match in matches where match.numberOfRanges > 1 {
+                if let r = Range(match.range(at: 1), in: content) {
+                    let handle = String(content[r])
+                    let lowered = handle.lowercased()
+                    if knownAgentHandles.contains(lowered) && !agents.contains(handle) {
+                        agents.append(handle)
+                    }
+                }
             }
         }
-        for match in content.matches(of: bracketPattern) {
-            let handle = String(match.output.1)
-            let lowered = handle.lowercased()
-            if knownAgentHandles.contains(lowered) && !agents.contains(handle) {
-                agents.append(handle)
+
+        // 3. Bracket mentions [handle]
+        if let bracketPattern = try? NSRegularExpression(pattern: #"\[([A-Za-z0-9_]+)\]"#) {
+            let nsRange = NSRange(content.startIndex..<content.endIndex, in: content)
+            let matches = bracketPattern.matches(in: content, range: nsRange)
+            for match in matches where match.numberOfRanges > 1 {
+                if let r = Range(match.range(at: 1), in: content) {
+                    let handle = String(content[r])
+                    let lowered = handle.lowercased()
+                    if knownAgentHandles.contains(lowered) && !agents.contains(handle) {
+                        agents.append(handle)
+                    }
+                }
             }
         }
+
         return agents
     }
 
     // MARK: - Classification
 
     private static func classify(rawContent: String, mentionedAgents: [String]) -> DiscordMessageType {
-        let atPattern = try! Regex<(Substring, Substring)>("@([A-Za-z0-9_]+)")
-        let bracketPattern = try! Regex<(Substring, Substring)>("\\[([A-Za-z0-9_]+)\\]")
-
-        if (try? atPattern.wholeMatch(in: rawContent)) != nil {
-            if mentionedAgents.contains(where: { knownAgentHandles.contains($0.lowercased()) }) {
-                return .agentDirected
+        if let atPattern = try? NSRegularExpression(pattern: #"^@([A-Za-z0-9_]+)$"#) {
+            let nsRange = NSRange(rawContent.startIndex..<rawContent.endIndex, in: rawContent)
+            if atPattern.firstMatch(in: rawContent, range: nsRange) != nil {
+                if mentionedAgents.contains(where: { knownAgentHandles.contains($0.lowercased()) }) {
+                    return .agentDirected
+                }
             }
         }
 
@@ -126,14 +146,18 @@ enum DiscordMessageParser {
             }
         }
 
-        if let match = rawContent.firstMatch(of: bracketPattern) {
-            let handle = String(match.output.1)
-            let lowered = handle.lowercased()
-            if knownAgentHandles.contains(lowered) {
-                return .agentStatus
-            }
-            if match.range.lowerBound == rawContent.startIndex {
-                return .agentStatus
+        if let bracketPattern = try? NSRegularExpression(pattern: #"\[([A-Za-z0-9_]+)\]"#) {
+            let nsRange = NSRange(rawContent.startIndex..<rawContent.endIndex, in: rawContent)
+            if let match = bracketPattern.firstMatch(in: rawContent, range: nsRange), match.numberOfRanges > 1,
+               let r = Range(match.range(at: 1), in: rawContent) {
+                let handle = String(rawContent[r])
+                let lowered = handle.lowercased()
+                if knownAgentHandles.contains(lowered) {
+                    return .agentStatus
+                }
+                if match.range.location == 0 {
+                    return .agentStatus
+                }
             }
         }
 

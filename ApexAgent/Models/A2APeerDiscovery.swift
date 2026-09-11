@@ -45,7 +45,7 @@ public final class A2APeerDiscovery {
             }
         }
         
-        browser?.browseResultsChangedHandler = { [weak self] results, changes in
+        browser?.browseResultsChangedHandler = { [weak self] _, changes in
             Task { @MainActor in
                 guard let self = self else { return }
                 for change in changes {
@@ -127,7 +127,7 @@ public final class A2APeerDiscovery {
                             return
                         }
                         
-                        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, isComplete, error in
+                        connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, _, _ in
                             if let data = data, let responseString = String(data: data, encoding: .utf8) {
                                 let components = responseString.components(separatedBy: "\r\n\r\n")
                                 if components.count >= 2, let bodyData = components[1].data(using: .utf8) {
@@ -143,7 +143,7 @@ public final class A2APeerDiscovery {
                             connection.cancel()
                         }
                     }))
-                case .failed(_), .cancelled:
+                case .failed, .cancelled:
                     continuation.resume(returning: nil)
                 default:
                     break

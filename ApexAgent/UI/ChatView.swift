@@ -261,8 +261,7 @@ struct ChatInputBar: View {
                         ForEach(0..<orchestrator.pendingAttachments.count, id: \.self) { idx in
                             ZStack(alignment: .topTrailing) {
                                 Image(nsImage: orchestrator.pendingAttachments[idx])
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
+                                    .resizable().scaledToFill()
                                     .frame(width: 52, height: 52)
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                     .overlay(

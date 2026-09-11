@@ -59,7 +59,7 @@ struct TerminalStateView: View {
     }
 }
 
-fileprivate struct BlinkModifier: ViewModifier {
+private struct BlinkModifier: ViewModifier {
     @State private var isVisible = true
 
     func body(content: Content) -> some View {

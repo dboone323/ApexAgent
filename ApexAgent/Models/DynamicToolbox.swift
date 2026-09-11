@@ -318,7 +318,7 @@ class DynamicToolbox {
             var properties: [String: Any] = [:]
             var required: [String] = []
 
-            var currentProp: String? = nil
+            var currentProp: String?
             var propDict: [String: Any] = [:]
 
             for pLine in parameterLines {

@@ -39,12 +39,12 @@ final class BotProfile {
     /// string to assign a specific provider to this bot (e.g. one bot on
     /// Ollama while another uses Apple on-device). Defaults keep SwiftData
     /// lightweight migration working for existing stores.
-    var modelProviderRaw: String? = nil
+    var modelProviderRaw: String?
 
     /// Per-bot Ollama model name override (e.g. "deepseek-r1:14b" vs the
     /// global "gemma4:12b"). Only used when this bot's provider is
     /// `.localOllama`. Nil = use the global `apex.ollamaModel` default.
-    var ollamaModelOverride: String? = nil
+    var ollamaModelOverride: String?
 
     /// Type-safe accessor for the per-bot model provider.
     /// Returns nil when the bot should use the global default.

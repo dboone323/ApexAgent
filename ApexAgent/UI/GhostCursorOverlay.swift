@@ -9,7 +9,7 @@ public final class GhostCursorController {
     public var isVisible: Bool = false
     public var isClicking: Bool = false
     
-    private var inactivityTask: Task<Void, Never>? = nil
+    private var inactivityTask: Task<Void, Never>?
     
     public init() {}
     

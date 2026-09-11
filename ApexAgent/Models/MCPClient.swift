@@ -164,11 +164,11 @@ actor MCPClient {
                     while let nl = buffer.firstIndex(of: 0x0A) {
                         let lineData = buffer.subdata(in: buffer.startIndex..<nl)
                         buffer.removeSubrange(buffer.startIndex...nl)
-                        continuation.yield(String(decoding: lineData, as: UTF8.self))
+                        continuation.yield(String(bytes: lineData, encoding: .utf8) ?? "")
                     }
                 }
                 if !buffer.isEmpty {
-                    continuation.yield(String(decoding: buffer, as: UTF8.self))
+                    continuation.yield(String(bytes: buffer, encoding: .utf8) ?? "")
                 }
                 continuation.finish()
             }
@@ -346,18 +346,18 @@ actor MCPClient {
         try await performInitializeHandshake()
     }
     
+    private struct InitializeClientInfo: Codable {
+        let name: String
+        let version: String
+    }
+    private struct InitializeCapabilities: Codable {
+        var sampling: [String: AnyCodable]?
+        var roots: [String: AnyCodable]?
+    }
     private struct InitializeParams: Codable {
-        struct ClientInfo: Codable {
-            let name: String
-            let version: String
-        }
-        struct Capabilities: Codable {
-            var sampling: [String: AnyCodable]? = nil
-            var roots: [String: AnyCodable]? = nil
-        }
         let protocolVersion: String
-        let capabilities: Capabilities
-        let clientInfo: ClientInfo
+        let capabilities: InitializeCapabilities
+        let clientInfo: InitializeClientInfo
     }
     
     private struct InitializeResult: Codable {
@@ -369,8 +369,8 @@ actor MCPClient {
     private func performInitializeHandshake() async throws {
         let params = InitializeParams(
             protocolVersion: "2024-11-05",
-            capabilities: InitializeParams.Capabilities(),
-            clientInfo: InitializeParams.ClientInfo(name: "ApexAgent", version: "1.0.0")
+            capabilities: InitializeCapabilities(),
+            clientInfo: InitializeClientInfo(name: "ApexAgent", version: "1.0.0")
         )
 
         // The server may still be warming its transport even after the 2s
@@ -776,8 +776,8 @@ public func executeDynamicScript(
 
     return DynamicScriptResult(
         exitCode: process.terminationStatus,
-        stdout: String(decoding: stdoutBytes, as: UTF8.self),
-        stderr: String(decoding: stderrBytes, as: UTF8.self),
+        stdout: String(bytes: stdoutBytes, encoding: .utf8) ?? "",
+        stderr: String(bytes: stderrBytes, encoding: .utf8) ?? "",
         duration: duration
     )
 }

@@ -21,8 +21,8 @@ actor AgentAuditLog {
         let status: String        // "success" | "failed" | "denied" | "started"
         // Decision-log attribution (O6): WHY the call was allowed/denied and by
         // which rule. Optional so previously-written rows still decode.
-        var decisionSource: String? = nil   // ApprovalVerdictSource rawValue, or "user"
-        var decisionRule: String? = nil     // guard regex source or granted key
+        var decisionSource: String?   // ApprovalVerdictSource rawValue, or "user"
+        var decisionRule: String?     // guard regex source or granted key
     }
 
     private(set) var entries: [AuditEntry] = []

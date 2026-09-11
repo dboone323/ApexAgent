@@ -75,9 +75,9 @@ public final class VisualPerceptionObserver: ObservableObject {
 
     @Published public private(set) var isObserving: Bool = false
     @Published public private(set) var latestFindings: [VisualPerceptionFinding] = []
-    @Published public private(set) var lastProcessedTime: Date? = nil
+    @Published public private(set) var lastProcessedTime: Date?
 
-    private var observationTask: Task<Void, Never>? = nil
+    private var observationTask: Task<Void, Never>?
 
     public init() {}
 

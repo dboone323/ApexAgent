@@ -51,7 +51,7 @@ struct TranslateTool: Tool {
             let hasFilePath = !(filePath ?? "").isEmpty
 
             var inlineText = arguments.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            var sourceURL: URL? = nil
+            var sourceURL: URL?
 
             if hasFilePath {
                 let rawPath = filePath!
@@ -95,7 +95,7 @@ struct TranslateTool: Tool {
             let tgtDisplayName = Locale.current.localizedString(forLanguageCode: targetLangCode) ?? targetLangCode
 
             // ── Perform Translation (chunked) ──
-            var translatedText: String? = nil
+            var translatedText: String?
 
             #if canImport(Translation)
             if #available(macOS 15.0, *) {

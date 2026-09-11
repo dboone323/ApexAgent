@@ -133,7 +133,7 @@ public final class ContainerManager: ContainerManagerProtocol {
     public var state: State = .idle
     
     public var stateDescription: String {
-        get { self.state.description }
+        self.state.description
     }
 
     /// Isolation level for the current container runtime (used by E2E snapshot tests).
@@ -324,7 +324,7 @@ public final class ContainerManager: ContainerManagerProtocol {
             }
             
             // Choose network based on macOS version
-            var network: Network? = nil
+            var network: Network?
             if #available(macOS 26, *) {
                 do {
                     network = try VmnetNetwork()
