@@ -474,7 +474,7 @@ final class PlaybookRunner {
         return participantMap.values.first
     }
 
-    package static func sanitizeForPrompt(_ text: String) -> String {
+    public static func sanitizeForPrompt(_ text: String) -> String {
         var sanitized = text
         sanitized = sanitized.replacingOccurrences(of: "{input}", with: "\\{input\\}")
         sanitized = sanitized.replacingOccurrences(of: "{previousOutput}", with: "\\{previousOutput\\}")

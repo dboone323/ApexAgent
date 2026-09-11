@@ -22,7 +22,7 @@ import XCTest
 @MainActor
 final class ApexAgentUITests: XCTestCase {
 
-    private var app: XCUIApplication?
+    private var app: XCUIApplication!
 
     /// Fresh-launch lifecycle, invoked explicitly at the top of every test.
     /// setUpWithError overrides are nonisolated under Swift strict concurrency,
@@ -53,12 +53,10 @@ final class ApexAgentUITests: XCTestCase {
         XCTAssertTrue(input.waitForExistence(timeout: 20), "Chat input field did not appear — app failed to render.")
     }
 
-    nonisolated override func tearDownWithError() throws {
-        MainActor.assumeIsolated {
-            if let app = self.app {
-                app.terminate()
-                _ = app.wait(for: .notRunning, timeout: 5)
-            }
+    override func tearDownWithError() throws {
+        if let app {
+            app.terminate()
+            _ = app.wait(for: .notRunning, timeout: 5)
         }
     }
 

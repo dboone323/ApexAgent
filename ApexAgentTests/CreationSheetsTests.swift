@@ -401,6 +401,7 @@ final class CreationSheetsTests {
             RoutinesSection()
         }
         .modelContainer(container)
+        .modelContext(context)
         .environment(routineManager)
 
         ViewHost.host(view, size: NSSize(width: 500, height: 400), pump: 0.1)
@@ -421,6 +422,7 @@ final class CreationSheetsTests {
             SkillsSection()
         }
         .modelContainer(container)
+        .modelContext(context)
         .environment(skillManager)
 
         ViewHost.host(view, size: NSSize(width: 500, height: 400), pump: 0.1)
@@ -439,6 +441,7 @@ final class CreationSheetsTests {
 
         let view = SettingsView()
             .modelContainer(container)
+            .modelContext(context)
             .environment(orchestrator)
             .environment(routineManager)
             .environment(skillManager)
