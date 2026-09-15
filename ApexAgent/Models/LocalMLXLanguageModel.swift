@@ -181,6 +181,7 @@ public struct LocalMLXLanguageModelExecutor: LanguageModelExecutor, DynamicToolR
             var fragments: [Int: (id: String, name: String, arguments: String)] = [:]
 
             for try await line in bytes.lines {
+                try Task.checkCancellation()
                 let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard trimmed.hasPrefix("data: ") else { continue }
                 let payload = String(trimmed.dropFirst(6))

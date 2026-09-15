@@ -18,11 +18,13 @@ extension BotSession {
         isGenerating = true
         activeAssistantMessageId = nil
 
-        Task { [weak self] in
+        let task = Task { [weak self] in
             guard let self else { return }
             defer {
                 self.isGenerating = false
                 self.activeAssistantMessageId = nil
+                self.generationTask = nil
+                SessionLifecycleManager.shared.unregister(sessionId: self.id)
                 if let continuation = self.pendingAsyncContinuation {
                     let finalResponse = self.messages.last(where: { $0.role == .assistant })?.content
                     continuation.resume(returning: finalResponse)
@@ -31,7 +33,9 @@ extension BotSession {
             }
 
             // 0. Compact context if conversation history has exceeded character limits
+            if Task.isCancelled { return }
             await self.compactContextIfNeeded()
+            if Task.isCancelled { return }
 
             // 1. Create or reset the model session with this Bot's instructions
             self.resetSession()
@@ -52,23 +56,24 @@ extension BotSession {
             let assistantId = assistantMsg.id
             self.activeAssistantMessageId = assistantId
 
-            // 4. Launch generation
-            do {
-                let engine = ModelRegistry.resolveEngine(
-                    for: self.bot,
-                    prompt: trimmedText,
-                    history: self.messages,
-                    instructions: self.systemInstructions,
-                    session: self.session,
-                    orchestrator: self.orchestrator ?? AgentOrchestrator()
-                )
-                try await engine.streamResponse(
-                    prompt: trimmedText,
-                    attachments: attachments,
-                    history: self.messages,
-                    instructions: self.systemInstructions,
-                    toolCallingMode: self.toolCallingMode,
-                    onUpdate: { [weak self] partialContent in
+            // 4. Launch generation via canonical AgentRequestRouter
+            let request = AgentRequest(
+                conversationId: self.id,
+                senderIdentity: .bot(id: self.bot.id, name: self.bot.name),
+                prompt: trimmedText,
+                attachments: attachments,
+                toolCallingMode: self.toolCallingMode
+            )
+            let orch = self.orchestrator ?? AgentOrchestrator()
+
+            let terminalState = await AgentRequestRouter.shared.route(
+                request,
+                bot: self.bot,
+                history: self.messages,
+                instructions: self.systemInstructions,
+                orchestrator: orch,
+                onUpdate: { [weak self] partialContent in
+                    Task { @MainActor [weak self] in
                         guard let self else { return }
                         if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
                             var copy = self.messages
@@ -76,43 +81,23 @@ extension BotSession {
                             self.messages = copy
                         }
                     }
-                )
-                // Streaming finished successfully — clear isStreaming on this
-                // BotSession's own message copy so pollers observe completion.
-                if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
-                    var copy = self.messages
-                    copy[idx].isStreaming = false
-                    self.messages = copy
                 }
-            } catch {
-                if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
-                    var copy = self.messages
-                    copy[idx].content = "⚠️ Error: \(error.localizedDescription)"
-                    copy[idx].isStreaming = false
-                    self.messages = copy
-                }
+            )
+
+            if let currentMessage = self.messages.first(where: { $0.id == assistantId }) {
+                let finalContent = (!terminalState.isSuccess || currentMessage.content.isEmpty)
+                    ? terminalState.userFacingMessage
+                    : currentMessage.content
+                self.updateMessage(id: assistantId, content: finalContent)
+                self.updateMessage(id: assistantId, isStreaming: false)
             }
 
             self.activeAssistantMessageId = nil
             self.isGenerating = false
         }
 
-        // Store the task so it can be cancelled
-        // (In a real multi-Bot setup each BotSession would own its task;
-        // for v1 we rely on the shared orchestrator's cancellation for now)
+        generationTask = task
+        SessionLifecycleManager.shared.register(task: task, forSessionId: self.id)
     }
 
-    /// Creates the appropriate AgentEngine for this Bot's model preference.
-    private func makeEngine() -> any AgentEngine {
-        let orch = orchestrator ?? AgentOrchestrator()
-        let provider = ModelRegistry.effectiveProvider(for: bot)
-        switch provider {
-        case .localOllama:
-            return OllamaAgentEngine(orchestrator: orch, bot: bot)
-        case .localMLX:
-            return MLXAgentEngine(orchestrator: orch)
-        case .autoPicker, .appleOnDevice, .applePCC, .fmCLI, .cloudGemini:
-            return NativeAppleEngine(orchestrator: orch, customSession: session)
-        }
-    }
 }

@@ -119,25 +119,36 @@ public struct FMCLILanguageModelExecutor: LanguageModelExecutor {
                           userInfo: [NSLocalizedDescriptionKey: "Failed to launch fm: \(error.localizedDescription)"])
         }
 
-        // Stream fm's stdout line-by-line into the generation channel.
+        // Stream fm's stdout line-by-line into the generation channel with task cancellation handling.
         let stdoutHandle = stdoutPipe.fileHandleForReading
         var accumulated = ""
-        for try await line in stdoutHandle.bytes.lines {
-            guard !line.isEmpty else { continue }
-            accumulated += line + "\n"
-            await channel.send(LanguageModelExecutorGenerationChannel.Event.response(
-                entryID: entryID,
-                action: .appendText(line + "\n", segmentID: nil, tokenCount: 0)
-            ))
-        }
 
-        process.waitUntilExit()
-        if process.terminationStatus != 0 {
-            let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-            let stderr = String(data: stderrData, encoding: .utf8) ?? ""
-            if accumulated.isEmpty {
-                throw NSError(domain: "FMCLILanguageModel", code: -3,
-                              userInfo: [NSLocalizedDescriptionKey: "fm exited \(process.terminationStatus): \(stderr)"])
+        try await withTaskCancellationHandler {
+            for try await line in stdoutHandle.bytes.lines {
+                if Task.isCancelled {
+                    if process.isRunning { process.terminate() }
+                    throw CancellationError()
+                }
+                guard !line.isEmpty else { continue }
+                accumulated += line + "\n"
+                await channel.send(LanguageModelExecutorGenerationChannel.Event.response(
+                    entryID: entryID,
+                    action: .appendText(line + "\n", segmentID: nil, tokenCount: 0)
+                ))
+            }
+
+            process.waitUntilExit()
+            if process.terminationStatus != 0 {
+                let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                let stderr = String(data: stderrData, encoding: .utf8) ?? ""
+                if accumulated.isEmpty {
+                    throw NSError(domain: "FMCLILanguageModel", code: -3,
+                                  userInfo: [NSLocalizedDescriptionKey: "fm exited \(process.terminationStatus): \(stderr)"])
+                }
+            }
+        } onCancel: {
+            if process.isRunning {
+                process.terminate()
             }
         }
     }

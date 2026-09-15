@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import SwiftUI
 import AppKit
+import SwiftData
 @testable import ApexAgentCore
 
 // MARK: - Phase 3: SwiftUI view-body coverage via real NSHostingView hosting.
@@ -44,47 +45,62 @@ enum ViewHost {
 
     @Test func testEmptyStateWithAndWithoutAction() {
         var tapped = false
-        ViewHost.host(EmptyState(
+        let host1 = ViewHost.host(EmptyState(
             icon: "tray",
             title: "Nothing here",
             message: "No content yet",
             actionTitle: "Reload",
             action: { tapped = true }
         ))
-        ViewHost.host(EmptyState(
+        #expect(host1.frame.size.width > 0)
+        #expect(host1.frame.size.height > 0)
+        #expect(tapped == false) // hosted, not clicked — rendering only
+
+        let host2 = ViewHost.host(EmptyState(
             icon: "tray",
             title: "Nothing here",
             message: "No content yet",
             actionTitle: nil,
             action: nil
         ))
-        #expect(tapped == false) // hosted, not clicked — rendering only
+        #expect(host2.frame.size.width > 0)
+        #expect(host2.frame.size.height > 0)
     }
 
     @Test func testSectionHeaderVariants() {
-        ViewHost.host(VStack {
+        let host = ViewHost.host(VStack {
             SectionHeader(title: "General", icon: "gear", subtitle: "App-wide settings")
             SectionHeader(title: "Bare", icon: nil, subtitle: nil)
         })
+        #expect(host.frame.size.width > 0)
+        #expect(host.frame.size.height > 0)
     }
 
     @Test func testAppCardRendersContent() {
-        ViewHost.host(AppCard { Text("card body") })
+        let host = ViewHost.host(AppCard { Text("card body") })
+        #expect(host.frame.size.width > 0)
+        #expect(host.frame.size.height > 0)
     }
 
     @Test func testDiagnosticCardRenders() {
-        ViewHost.host(VStack {
+        let host = ViewHost.host(VStack {
             DiagnosticCard(title: "CPU", subtitle: "Load", status: "ok", message: "12%")
             DiagnosticCard(title: "Net", subtitle: "Ping", status: "fail", message: "timeout")
         })
+        #expect(host.frame.size.width > 0)
+        #expect(host.frame.size.height > 0)
     }
 
     @Test func testAgentAndUserAvatars() {
-        ViewHost.host(HStack { AgentAvatar(); UserAvatar() })
+        let host = ViewHost.host(HStack { AgentAvatar(); UserAvatar() })
+        #expect(host.frame.size.width > 0)
+        #expect(host.frame.size.height > 0)
     }
 
     @Test func testTypingIndicatorAnimates() {
-        ViewHost.host(TypingIndicator(), pump: 0.15)
+        let host = ViewHost.host(TypingIndicator(), pump: 0.15)
+        #expect(host.frame.size.width > 0)
+        #expect(host.frame.size.height > 0)
     }
 
     @Test func testBubbleShapeBothOrientations() {
@@ -100,15 +116,30 @@ enum ViewHost {
     @Test func testDiffViewAddDeleteContext() {
         let old = "line1\nline2\nline3"
         let new = "line1\nline2changed\nline3\nline4"
-        ViewHost.host(DiffView(oldContent: old, newContent: new), pump: 0.1)
+        let lines = DiffHelper.computeDiff(oldText: old, newText: new)
+        #expect(lines.contains { $0.kind == .added && $0.text == "line2changed" })
+        #expect(lines.contains { $0.kind == .added && $0.text == "line4" })
+        #expect(lines.contains { $0.kind == .deleted && $0.text == "line2" })
+        #expect(lines.contains { $0.kind == .unchanged && $0.text == "line1" })
+        let host = ViewHost.host(DiffView(oldContent: old, newContent: new), pump: 0.1)
+        #expect(host.frame.size.width > 0)
     }
 
     @Test func testDiffViewEmptyToContent() {
-        ViewHost.host(DiffView(oldContent: "", newContent: "brand new file"), pump: 0.1)
+        let lines = DiffHelper.computeDiff(oldText: "", newText: "brand new file")
+        #expect(lines.count == 2)
+        #expect(lines.contains { $0.kind == .added && $0.text == "brand new file" })
+        #expect(lines.contains { $0.kind == .deleted && $0.text == "" })
+        let host = ViewHost.host(DiffView(oldContent: "", newContent: "brand new file"), pump: 0.1)
+        #expect(host.frame.size.width > 0)
     }
 
     @Test func testDiffViewIdenticalContent() {
-        ViewHost.host(DiffView(oldContent: "same", newContent: "same"), pump: 0.1)
+        let lines = DiffHelper.computeDiff(oldText: "same", newText: "same")
+        #expect(lines.count == 1)
+        #expect(lines.first?.kind == .unchanged)
+        let host = ViewHost.host(DiffView(oldContent: "same", newContent: "same"), pump: 0.1)
+        #expect(host.frame.size.width > 0)
     }
 
     // MARK: MessageBubble / MarkdownText / CodeBlock
@@ -168,7 +199,7 @@ enum ViewHost {
         waiting.status = .awaitingConfirmation
         var denied = ToolEvent(toolName: "sudo", arguments: "{}")
         denied.status = .denied
-        ViewHost.host(
+        let host = ViewHost.host(
             VStack {
                 ToolEventRow(event: running)
                 ToolEventRow(event: ok)
@@ -178,6 +209,8 @@ enum ViewHost {
             },
             pump: 0.1
         )
+        #expect(host.frame.size.width > 0)
+        #expect(host.frame.size.height > 0)
     }
 
     // MARK: PlanStep components
@@ -186,7 +219,8 @@ enum ViewHost {
         let steps = PlanStepStatus.allCases.enumerated().map { idx, status in
             PlanStep(title: "Step \(idx)", status: status, result: status == .completed ? "ok" : nil, error: status == .failed ? "err" : nil)
         }
-        ViewHost.host(
+        #expect(steps.count == PlanStepStatus.allCases.count)
+        let host = ViewHost.host(
             VStack {
                 ForEach(steps) { step in
                     PlanStepRow(step: step, index: 0) {}
@@ -194,28 +228,34 @@ enum ViewHost {
             },
             pump: 0.1
         )
+        #expect(host.frame.size.width > 0)
     }
 
     @Test func testPlanStepDetailView() {
         let step = PlanStep(title: "Build", status: .failed, result: "partial", error: "exit 65")
-        ViewHost.host(PlanStepDetailView(step: step))
+        #expect(step.title == "Build")
+        #expect(step.error == "exit 65")
+        let host = ViewHost.host(PlanStepDetailView(step: step))
+        #expect(host.frame.size.width > 0)
     }
 
     // MARK: TerminalStateView + toolbar
 
     @Test func testTerminalStateViewAllStates() {
-        ViewHost.host(VStack {
+        let host = ViewHost.host(VStack {
             TerminalStateView(state: .idle, message: nil)
             TerminalStateView(state: .running, message: "building…")
             TerminalStateView(state: .error, message: "exit 65")
         })
+        #expect(host.frame.size.width > 0)
     }
 
     @Test func testPlayPauseButtonBothStates() {
-        ViewHost.host(HStack {
+        let host = ViewHost.host(HStack {
             PlayPauseButton(isPaused: true) {}
             PlayPauseButton(isPaused: false) {}
         })
+        #expect(host.frame.size.width > 0)
     }
 
     // MARK: Environment-dependent views (real AgentOrchestrator injected)
@@ -223,17 +263,21 @@ enum ViewHost {
     @Test func testTerminalViewWithRealOutput() {
         let orchestrator = AgentOrchestrator()
         orchestrator.activeTerminalOutput = "plain\n\u{001B}[32mgreen line\u{001B}[0m\nafter"
-        ViewHost.host(TerminalView().environment(orchestrator), pump: 0.15)
+        #expect(orchestrator.activeTerminalOutput.contains("green line"))
+        let host = ViewHost.host(TerminalView().environment(orchestrator), pump: 0.15)
+        #expect(host.frame.size.width > 0)
     }
 
     @Test func testTerminalViewEmpty() {
         let orchestrator = AgentOrchestrator()
-        ViewHost.host(TerminalView().environment(orchestrator), pump: 0.1)
+        let host = ViewHost.host(TerminalView().environment(orchestrator), pump: 0.1)
+        #expect(host.frame.size.width > 0)
     }
 
     @Test func testPlanDashboardEmptyAndPopulated() {
         let orchestrator = AgentOrchestrator()
-        ViewHost.host(PlanDashboardView().environment(orchestrator), pump: 0.1)
+        let hostEmpty = ViewHost.host(PlanDashboardView().environment(orchestrator), pump: 0.1)
+        #expect(hostEmpty.frame.size.width > 0)
 
         orchestrator.updatePlan(steps: [
             PlanStep(title: "Audit", status: .completed, result: "done"),
@@ -241,7 +285,9 @@ enum ViewHost {
             PlanStep(title: "Verify", status: .queued),
             PlanStep(title: "Ship", status: .failed, error: "CI red"),
         ])
-        ViewHost.host(PlanDashboardView().environment(orchestrator), pump: 0.1)
+        #expect(orchestrator.activePlan.count == 4)
+        let hostPopulated = ViewHost.host(PlanDashboardView().environment(orchestrator), pump: 0.1)
+        #expect(hostPopulated.frame.size.width > 0)
     }
 
     @Test func testConfirmationOverlayRendersPendingRequest() {
@@ -255,44 +301,61 @@ enum ViewHost {
             filePath: "/tmp/x",
             continuation: nil
         )
-        ViewHost.host(ConfirmationOverlay().environment(orchestrator), pump: 0.2)
+        #expect(orchestrator.pendingConfirmation?.toolName == "write_file")
+        #expect(orchestrator.pendingConfirmation?.riskDescription == "Writes a file to disk")
+        let host = ViewHost.host(ConfirmationOverlay().environment(orchestrator), pump: 0.2)
+        #expect(host.frame.size.width > 0)
         // Clear so the overlay's countdown task ends with the host.
         orchestrator.pendingConfirmation = nil
     }
 
     @Test func testSidebarViewEmptyAndPopulated() {
-        ViewHost.host(SidebarView(
+        let hostEmpty = ViewHost.host(SidebarView(
             conversations: [],
             selectedConversation: nil,
             onSelectConversation: { _ in },
             onDeleteConversations: { _ in }
         ), pump: 0.1)
+        #expect(hostEmpty.frame.size.width > 0)
 
         let convo = Conversation(title: "Test chat")
-        ViewHost.host(SidebarView(
+        let hostPopulated = ViewHost.host(SidebarView(
             conversations: [convo],
             selectedConversation: convo,
             onSelectConversation: { _ in },
             onDeleteConversations: { _ in }
         ), pump: 0.1)
+        #expect(hostPopulated.frame.size.width > 0)
+        #expect(convo.title == "Test chat")
     }
 
     @Test func testDiagnosticsViewRuns() {
-        ViewHost.host(DiagnosticsView(), pump: 0.4)
+        let host = ViewHost.host(DiagnosticsView(), pump: 0.4)
+        #expect(host.frame.size.width > 0)
     }
 
     @Test func testQuickPromptViewRenders() {
         let orchestrator = AgentOrchestrator()
-        ViewHost.host(QuickPromptView(panel: nil, orchestrator: orchestrator), pump: 0.1)
+        let host = ViewHost.host(QuickPromptView(panel: nil, orchestrator: orchestrator), pump: 0.1)
+        #expect(host.frame.size.width > 0)
     }
 
-    @Test func testSettingsViewHostingWithOrchestrator() {
+    @Test func testSettingsViewHostingWithOrchestrator() throws {
         let orchestrator = AgentOrchestrator()
-        ViewHost.host(SettingsView().environment(orchestrator), pump: 0.15)
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: Routine.self, configurations: configuration)
+        let host = ViewHost.host(
+            SettingsView()
+                .modelContainer(container)
+                .environment(orchestrator),
+            pump: 0.15
+        )
+        #expect(host.frame.size.width > 0)
     }
 
     @Test func testMCPServerDashboardViewHosting() {
         let orchestrator = AgentOrchestrator()
-        ViewHost.host(MCPServerDashboardView().environment(orchestrator), pump: 0.15)
+        let host = ViewHost.host(MCPServerDashboardView().environment(orchestrator), pump: 0.15)
+        #expect(host.frame.size.width > 0)
     }
 }

@@ -55,6 +55,10 @@ final class ApexAgentUITests: XCTestCase {
 
     override func tearDownWithError() throws {
         if let app {
+            if testRun?.hasSucceeded == false {
+                UITestActivity.attachScreenshot(of: app.windows.firstMatch, named: "Failure_Screenshot")
+                UITestActivity.attachHierarchy(of: app, named: "Failure_UI_Hierarchy")
+            }
             app.terminate()
             _ = app.wait(for: .notRunning, timeout: 5)
         }

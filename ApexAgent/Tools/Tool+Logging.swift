@@ -54,7 +54,13 @@ extension Tool {
         }
 
         // Check if user confirmation is required (safety gate)
-        let needsConfirm = await orchestrator.orchestrator.shouldConfirmTool(name: toolName)
+        // Skip if the orchestrator already performed confirmation in its
+        // executeToolByName wrapper — prevents a double prompt for the
+        // MLX/Ollama engine paths.
+                let needsConfirm = await MainActor.run {
+            !orchestrator.orchestrator.confirmationPerformed
+                && orchestrator.orchestrator.shouldConfirmTool(name: toolName)
+        }
         if needsConfirm {
             Logger.security.warning("High-risk tool requested: \(toolName, privacy: .public)")
             await orchestrator.orchestrator.updateToolStatus(name: toolName, status: .awaitingConfirmation)

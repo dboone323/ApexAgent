@@ -132,13 +132,16 @@ public struct CreateRoutineSheet: View {
                 Section("Routine Details") {
                     TextField("Routine Name", text: $nameInput)
                         .accessibilityLabel("Routine Name")
+                        .accessibilityIdentifier("routineNameTextField")
 
                     TextField("Target Bot (default: Apex)", text: $botNameInput)
                         .accessibilityLabel("Target Bot")
+                        .accessibilityIdentifier("targetBotTextField")
 
                     TextEditor(text: $promptInput)
                         .frame(minHeight: 80)
                         .accessibilityLabel("Routine Prompt")
+                        .accessibilityIdentifier("routinePromptTextEditor")
 
                     HStack {
                         if DemoRecorder.shared.isRecording {
@@ -195,13 +198,16 @@ public struct CreateRoutineSheet: View {
                     }
                 }
             }
+            .accessibilityIdentifier("createRoutineSheet")
             .navigationTitle("New Routine")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .accessibilityIdentifier("cancelRoutineButton")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { saveRoutine() }
+                        .accessibilityIdentifier("saveRoutineButton")
                         .disabled(!uiCanSave)
                 }
             }

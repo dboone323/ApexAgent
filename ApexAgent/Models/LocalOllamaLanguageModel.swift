@@ -194,6 +194,7 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor, DynamicTo
             var detectedToolCalls: [ParsedToolCall] = []
             
             for try await line in bytes.lines {
+                try Task.checkCancellation()
                 let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty,
                       let data = trimmed.data(using: .utf8),

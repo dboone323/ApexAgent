@@ -50,21 +50,24 @@ final class SecurityAuditor: Sendable {
     }
 
     func verifyPathAllowed(_ path: String, workspacePath: String, permissions: AppPermissions?) throws(SecuritySandboxError) {
-        let wsURL = URL(fileURLWithPath: workspacePath)
+        let ws = (workspacePath.isEmpty || workspacePath == "." || workspacePath == "./")
+            ? AgentOrchestrator.proactiveAuditWorkspacePath()
+            : workspacePath
+        let wsURL = URL(fileURLWithPath: ws)
         saveSandboxBookmark(for: wsURL)
 
-        guard let permissions = permissions else {
-            throw .pathViolation(path)
-        }
+        let effectivePerms = permissions ?? AppPermissions()
 
-        let expanded = NSString(string: path).expandingTildeInPath
+        var cleanPath = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        cleanPath = cleanPath.replacingOccurrences(of: "\\/", with: "/")
+        let expanded = NSString(string: cleanPath).expandingTildeInPath
         let effectivePath: String
         if expanded.hasPrefix("/") {
             effectivePath = expanded
         } else if expanded.isEmpty || expanded == "." || expanded == "./" {
-            effectivePath = workspacePath
+            effectivePath = ws
         } else {
-            effectivePath = (workspacePath as NSString).appendingPathComponent(expanded)
+            effectivePath = (ws as NSString).appendingPathComponent(expanded)
         }
         let rawStandardized = URL(fileURLWithPath: effectivePath).standardized.path
         let resolvedURL = URL(fileURLWithPath: effectivePath).resolvingSymlinksInPath()
@@ -99,16 +102,19 @@ final class SecurityAuditor: Sendable {
         let gnupgPath = (homeDir as NSString).appendingPathComponent(".gnupg")
         let configPath = (homeDir as NSString).appendingPathComponent(".config")
 
-        if !permissions.desktopFolderAllowed && (standardized == desktopPath || standardized.hasPrefix(desktopPath + "/")) {
+        let resolvedWorkspace = URL(fileURLWithPath: ws).resolvingSymlinksInPath().path
+        let isInWorkspace = standardized == resolvedWorkspace || standardized.hasPrefix(resolvedWorkspace + "/")
+
+        if !effectivePerms.desktopFolderAllowed && (standardized == desktopPath || standardized.hasPrefix(desktopPath + "/")) && !isInWorkspace {
             throw .desktopFolderRestricted
         }
-        if !permissions.documentsFolderAllowed && (standardized == documentsPath || standardized.hasPrefix(documentsPath + "/")) {
+        if !effectivePerms.documentsFolderAllowed && (standardized == documentsPath || standardized.hasPrefix(documentsPath + "/")) && !isInWorkspace {
             throw .documentsFolderRestricted
         }
-        if !permissions.downloadsFolderAllowed && (standardized == downloadsPath || standardized.hasPrefix(downloadsPath + "/")) {
+        if !effectivePerms.downloadsFolderAllowed && (standardized == downloadsPath || standardized.hasPrefix(downloadsPath + "/")) && !isInWorkspace {
             throw .downloadsFolderRestricted
         }
-        if !permissions.musicFolderAllowed && (standardized == musicPath || standardized.hasPrefix(musicPath + "/")) {
+        if !effectivePerms.musicFolderAllowed && (standardized == musicPath || standardized.hasPrefix(musicPath + "/")) && !isInWorkspace {
             throw .musicFolderRestricted
         }
         if standardized == sshPath || standardized.hasPrefix(sshPath + "/") {
@@ -133,9 +139,6 @@ final class SecurityAuditor: Sendable {
         if standardized == "/" {
             throw .pathViolation(path)
         }
-
-        let resolvedWorkspace = URL(fileURLWithPath: workspacePath).resolvingSymlinksInPath().path
-        let isInWorkspace = standardized == resolvedWorkspace || standardized.hasPrefix(resolvedWorkspace + "/")
 
         let tempDir = NSTemporaryDirectory()
         let resolvedTemp = URL(fileURLWithPath: tempDir).resolvingSymlinksInPath().path
@@ -247,5 +250,28 @@ final class SecurityAuditor: Sendable {
         }
 
         return true
+    }
+
+    /// Redacts sensitive information such as API keys, bearer tokens, passwords, and private keys.
+    nonisolated public static func redactSensitiveData(in text: String) -> String {
+        var sanitized = text
+
+        // Redact standard API key patterns: sk-..., AIza...
+        let patterns: [(regex: String, replacement: String)] = [
+            (#"sk-[a-zA-Z0-9_-]{20,}"#, "[REDACTED_API_KEY]"),
+            (#"AIza[0-9A-Za-z_-]{20,}"#, "[REDACTED_GEMINI_KEY]"),
+            (#"Bearer\s+[a-zA-Z0-9._-]{10,}"#, "Bearer [REDACTED_TOKEN]"),
+            (#""(password|token|secret|apiKey|api_key)"\s*:\s*"[^"]+""#, #""$1": "[REDACTED]""#),
+            (#"-----BEGIN [A-Z ]+ PRIVATE KEY-----[\s\S]*?-----END [A-Z ]+ PRIVATE KEY-----"#, "[REDACTED_PRIVATE_KEY]")
+        ]
+
+        for (regexStr, replacement) in patterns {
+            if let regex = try? NSRegularExpression(pattern: regexStr, options: [.caseInsensitive]) {
+                let range = NSRange(location: 0, length: sanitized.utf16.count)
+                sanitized = regex.stringByReplacingMatches(in: sanitized, options: [], range: range, withTemplate: replacement)
+            }
+        }
+
+        return sanitized
     }
 }

@@ -12,7 +12,7 @@ struct ConveneMeetingTool: Tool {
     }
 
     let name = "convene_meeting"
-    let description = "Convenes a panel meeting/debate between specialized sub-agents to discuss findings, review issues, and reach a consensus."
+    let description = "Convenes a panel meeting/debate between the requested specialized sub-agents to execute the user's concrete topic, review findings, and reach a consensus. Preserve the supplied topic and participants; do not replace a concrete discussion with an agent-status or readiness report."
 
     @Generable
     struct Arguments: Decodable {
@@ -21,6 +21,44 @@ struct ConveneMeetingTool: Tool {
 
         @Guide(description: "List of sub-agent types to invite to the meeting (e.g., ['developer', 'uiDesigner', 'planner', 'researcher']).")
         var participants: [String]
+
+        enum CodingKeys: String, CodingKey {
+            case topic
+            case participants
+        }
+
+        init(topic: String, participants: [String]) {
+            self.topic = topic
+            self.participants = participants
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.topic = try container.decodeIfPresent(String.self, forKey: .topic) ?? ""
+
+            if let list = try? container.decode([String].self, forKey: .participants) {
+                self.participants = list
+            } else if let stringVal = try? container.decode(String.self, forKey: .participants) {
+                let trimmed = stringVal.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.hasPrefix("[") && trimmed.hasSuffix("]") {
+                    if let data = trimmed.data(using: .utf8),
+                       let parsed = try? JSONDecoder().decode([String].self, from: data) {
+                        self.participants = parsed
+                    } else {
+                        let inner = trimmed.dropFirst().dropLast()
+                        self.participants = inner.components(separatedBy: ",")
+                            .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: " \"'")) }
+                            .filter { !$0.isEmpty }
+                    }
+                } else {
+                    self.participants = trimmed.components(separatedBy: ",")
+                        .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: " \"'")) }
+                        .filter { !$0.isEmpty }
+                }
+            } else {
+                self.participants = []
+            }
+        }
     }
 
     struct MeetingTurn {
@@ -58,7 +96,8 @@ struct ConveneMeetingTool: Tool {
             var accumulatedText = startMessage
 
             // Run up to 2 rounds of discussion
-            for round in 1...2 {
+            let rounds = 2
+            for round in 1...rounds {
                 await MainActor.run {
                     accumulatedText += "\n\n**Round \(round) Discussion:**"
                     orchestrator.updateMessage(id: messageId, content: accumulatedText)
@@ -73,7 +112,7 @@ struct ConveneMeetingTool: Tool {
                     }
 
                     // Hydrate session with the conversation history so far
-                    let instructions = agent.systemPrompt
+                    let instructions = String(agent.systemPrompt.prefix(1200))
                     let preference = await orchestrator.modelPreference
                     let session = await createVisualSession(
                         agent: agent,
@@ -83,9 +122,35 @@ struct ConveneMeetingTool: Tool {
                         debateHistory: debateHistory
                     )
 
-                    let prompt = "Please provide your contribution and response/feedback to the discussion on: \(arguments.topic)"
-                    let response = try await session.respond(to: Prompt(prompt), options: GenerationOptions(toolCallingMode: .allowed))
-                    let finalTurnContent = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let topic = String(arguments.topic.prefix(600))
+                    let prompt = "Act as the \(agent.name) specialist. For '\(topic)', propose one actionable ApexAgent improvement, why it matters, and the next implementation step. Do not report readiness or ask for files."
+                    let responseTask = Task { @MainActor in
+                        try await session.respond(to: Prompt(prompt), options: GenerationOptions(toolCallingMode: .allowed))
+                    }
+                    let finalTurnContent: String
+                    do {
+                        let response = try await withThrowingTaskGroup(of: LanguageModelSession.Response.self) { group in
+                            group.addTask {
+                                try await responseTask.value
+                            }
+                            group.addTask {
+                                try await Task.sleep(for: .seconds(45))
+                                throw NSError(
+                                    domain: "ConveneMeetingTool",
+                                    code: 45,
+                                    userInfo: [NSLocalizedDescriptionKey: "Meeting participant response timed out after 45 seconds."]
+                                )
+                            }
+                            guard let response = try await group.next() else {
+                                throw CancellationError()
+                            }
+                            group.cancelAll()
+                            return response
+                        }
+                        finalTurnContent = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                    } catch {
+                        finalTurnContent = "Participant response unavailable: \(error.localizedDescription)"
+                    }
                     await MainActor.run {
                         orchestrator.updateMessage(id: messageId, content: accumulatedText + "\n\n🤖 [\(displayName)]: \(finalTurnContent)")
                     }
@@ -107,29 +172,39 @@ struct ConveneMeetingTool: Tool {
                 }
             }
 
+            // Quorum and consensus calculations
+            let totalExpected = validAgents.count * rounds
+            let successfulTurns = debateHistory.filter { !$0.statement.starts(with: "Participant response unavailable:") }
+            let failedTurns = debateHistory.filter { $0.statement.starts(with: "Participant response unavailable:") }
+            let quorumMet = successfulTurns.count >= (validAgents.count / 2 + 1)
+            let confidence = totalExpected > 0 ? Double(successfulTurns.count) / Double(totalExpected) : 0.0
+
+            let consensusStatus = quorumMet
+                ? "Consensus reached (Confidence: \(Int(confidence * 100))%)."
+                : "Quorum not reached: \(failedTurns.count) participant response(s) failed or timed out."
+
             // Complete the streaming
             await MainActor.run {
-                accumulatedText += "\n\n--- \nConsensus reached."
+                accumulatedText += "\n\n--- \n\(consensusStatus)"
                 orchestrator.updateMessage(id: messageId, content: accumulatedText)
                 orchestrator.updateMessage(id: messageId, isStreaming: false)
             }
 
             // Return debate summary report to the Supervisor
-            var finalReport = "Debate Consensus Transcript:\n"
+            var finalReport = "Debate Transcript (\(consensusStatus)):\n"
             for turn in debateHistory {
                 finalReport += "- \(turn.agentName): \(turn.statement)\n"
             }
 
-            // WS1.5 reconciliation: record the structured consensus so the
-            // orchestrator / dashboard can reconcile multi-agent outcomes without
-            // re-parsing the free-text transcript. Non-breaking — finalReport is
-            // still returned unchanged.
-            let majorityView = debateHistory.map { "\($0.agentName): \($0.statement.prefix(300))" }.joined(separator: "\n")
+            let majorityView = successfulTurns.map { "\($0.agentName): \($0.statement.prefix(300))" }.joined(separator: "\n")
+            let minorityDissent = failedTurns.isEmpty ? nil : "Failed/Unavailable participants: " + failedTurns.map { $0.agentName }.joined(separator: ", ")
             let consensus = ConsensusReport(
-                consensusDecision: "Panel reached consensus on '\(arguments.topic)' after \(debateHistory.count) statements across \(validAgents.count) participants.",
-                majorityView: majorityView,
-                minorityDissent: debateHistory.count > 1 ? "Minority positions were reconciled during the panel discussion." : nil,
-                confidence: debateHistory.isEmpty ? 0.0 : 1.0
+                consensusDecision: quorumMet
+                    ? "Panel reached consensus on '\(arguments.topic)' after \(successfulTurns.count) valid statements across \(validAgents.count) participants."
+                    : "Panel failed to reach quorum on '\(arguments.topic)' (\(failedTurns.count) failures).",
+                majorityView: majorityView.isEmpty ? "No valid consensus statements produced." : majorityView,
+                minorityDissent: minorityDissent,
+                confidence: confidence
             )
             await AgentRegistry.shared.recordConsensus(consensus)
 
@@ -182,8 +257,8 @@ struct ConveneMeetingTool: Tool {
         let session = orchestrator.orchestrator.sessionForAgent(
             agent: agent,
             preference: preference,
-            instructions: instructions,
-            allowedTools: agent.allowedTools,
+            instructions: String(instructions.prefix(1200)),
+            allowedTools: [],
             toolCallingMode: .allowed,
             reasoningLevel: nil,
             maxResponseTokens: nil,

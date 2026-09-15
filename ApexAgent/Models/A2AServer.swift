@@ -208,7 +208,7 @@ public final class A2AServer {
         readLoop(buffer: Data())
     }
     
-    private nonisolated func processHttpBuffer(_ buffer: Data) async -> (Data, Data)? {
+    nonisolated func processHttpBuffer(_ buffer: Data) async -> (Data, Data)? {
         // Look for \r\n\r\n
         guard let headerEnd = buffer.range(of: Data([13, 10, 13, 10])) else {
             return nil // Incomplete headers
@@ -232,17 +232,44 @@ public final class A2AServer {
         
         let bodyStartIndex = headerEnd.upperBound
         var contentLength = 0
+        var authHeader: String?
         
         for line in lines.dropFirst() {
-            let parts = line.components(separatedBy: ":")
-            if parts.count == 2, parts[0].trimmingCharacters(in: .whitespaces).lowercased() == "content-length" {
-                contentLength = Int(parts[1].trimmingCharacters(in: .whitespaces)) ?? 0
-                break
+            let parts = line.split(separator: ":", maxSplits: 1).map(String.init)
+            if parts.count == 2 {
+                let name = parts[0].trimmingCharacters(in: .whitespaces).lowercased()
+                let value = parts[1].trimmingCharacters(in: .whitespaces)
+                if name == "content-length" {
+                    contentLength = Int(value) ?? 0
+                } else if name == "authorization" {
+                    authHeader = value
+                }
             }
         }
         
         if buffer.count < bodyStartIndex + contentLength {
             return nil // Incomplete body
+        }
+
+        // Security check: If an A2A auth token is configured in Keychain, enforce Bearer auth on /a2a
+        if path == "/a2a" {
+            if let token = KeychainManager.get(key: "a2aAuthToken"), !token.isEmpty {
+                let expected = "Bearer \(token)"
+                if authHeader != expected {
+                    let errBody = Data("{\"error\": \"Unauthorized\"}\n".utf8)
+                    let errResponse = """
+                    HTTP/1.1 401 Unauthorized\r
+                    Content-Length: \(errBody.count)\r
+                    Content-Type: application/json\r
+                    Connection: close\r
+                    \r
+                    
+                    """
+                    var errFull = Data(errResponse.utf8)
+                    errFull.append(errBody)
+                    return (buffer, errFull)
+                }
+            }
         }
         
         let bodyData = buffer.subdata(in: bodyStartIndex..<bodyStartIndex + contentLength)

@@ -23,26 +23,26 @@ struct AskApexAgentIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
             throw IntentError.emptyPrompt
         }
 
         let orchestrator = AppDelegate.sharedOrchestrator
-        orchestrator.sendMessage(prompt)
+        let request = AgentRequest(
+            senderIdentity: .intent(name: "AskApexAgent"),
+            prompt: trimmed,
+            toolCallingMode: orchestrator.toolCallingMode
+        )
 
-        // Wait for the agent to finish generating (best-effort, bounded).
-        var waited: UInt64 = 0
-        let step: UInt64 = 100_000_000 // 0.1s
-        let maxWait: UInt64 = 30 * 1_000_000_000 // 30s
-        while orchestrator.isGenerating && waited < maxWait {
-            try? await Task.sleep(nanoseconds: step)
-            waited += step
-        }
+        let terminalState = await AgentRequestRouter.shared.route(
+            request,
+            history: orchestrator.messages,
+            instructions: orchestrator.agentInstructions,
+            orchestrator: orchestrator
+        )
 
-        if let last = orchestrator.messages.last(where: { $0.role == .assistant }) {
-            return .result(value: last.content)
-        }
-        return .result(value: "Apex Agent received your request but produced no response.")
+        return .result(value: terminalState.userFacingMessage)
     }
 
     enum IntentError: LocalizedError {

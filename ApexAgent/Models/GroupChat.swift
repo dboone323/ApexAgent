@@ -199,15 +199,26 @@ final class GroupChatSession {
         case .disabled: .disabled
         }
 
-        do {
-            let engine = resolveEngine(for: bot, prompt: context, orchestrator: orchestrator)
-            try await engine.streamResponse(
-                prompt: context,
-                attachments: [],
-                history: [],
-                instructions: bot.systemInstructions + "\n\n" + groupBotInstructions(botName: bot.name),
-                toolCallingMode: toolMode,
-                onUpdate: { [weak self] partialContent in
+        // Mandatory canonical runtime: GroupChat participant turns route through
+        // AgentRequestRouter → buildCandidateChain → ProviderFallbackExecutor so
+        // every participant gets candidate planning, bounded fallback, tool
+        // governance, and terminal-state normalization. Direct
+        // ModelRegistry.resolveEngine + engine.streamResponse is forbidden here.
+        let request = AgentRequest(
+            conversationId: self.id,
+            senderIdentity: .bot(id: bot.id, name: bot.name),
+            prompt: context,
+            toolCallingMode: toolMode
+        )
+        let instructions = bot.systemInstructions + "\n\n" + groupBotInstructions(botName: bot.name)
+        let terminalState = await AgentRequestRouter.shared.route(
+            request,
+            bot: bot,
+            history: [],
+            instructions: instructions,
+            orchestrator: orchestrator,
+            onUpdate: { [weak self] partialContent in
+                Task { @MainActor [weak self] in
                     guard let self else { return }
                     if let idx = self.messages.firstIndex(where: { $0.id == thinkingId }) {
                         var copy = self.messages
@@ -215,11 +226,12 @@ final class GroupChatSession {
                         self.messages = copy
                     }
                 }
-            )
-        } catch {
+            }
+        )
+        if !terminalState.isSuccess {
             if let idx = self.messages.firstIndex(where: { $0.id == thinkingId }) {
                 var copy = self.messages
-                copy[idx].content = "⚠️ \(bot.name) Error: \(error.localizedDescription)"
+                copy[idx].content = terminalState.userFacingMessage
                 self.messages = copy
             }
         }
@@ -244,15 +256,6 @@ final class GroupChatSession {
             isGenerating = false
             activeGeneratorId = nil
         }
-    }
-
-    private func resolveEngine(for bot: BotProfile, prompt: String, orchestrator: AgentOrchestrator) -> any AgentEngine {
-        ModelRegistry.resolveEngine(
-            for: bot,
-            prompt: prompt,
-            instructions: bot.systemInstructions,
-            orchestrator: orchestrator
-        )
     }
 
     // MARK: - User messages

@@ -98,49 +98,28 @@ final class AgentSessionCoordinator: Sendable {
                 instructions: instructions,
                 tools: tools
             )
-            switch resolved {
-            case .cloudGemini:
-                let apiKey = ModelRegistry.geminiAPIKey()
-                return CloudGeminiLanguageModel(apiKey: apiKey)
-            case .localOllama:
-                let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? Self.defaultOllamaURLString) ?? URL(string: Self.defaultOllamaURLString)!
-                return LocalOllamaLanguageModel(hostURL: host)
-            case .localMLX:
-                let host = URL(string: UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString) ?? URL(string: LocalMLXLanguageModel.defaultHostURLString)!
-                return LocalMLXLanguageModel(hostURL: host)
-            case .applePCC:
-                if AgentOrchestrator.isPrivateCloudComputeAvailable() {
-                    return PrivateCloudComputeLanguageModel()
-                } else {
-                    return SystemLanguageModel.default
-                }
-            default:
-                return SystemLanguageModel.default
-            }
+            return ModelRegistry.model(for: .explicit(resolved))
         case .localSystem:
-            return SystemLanguageModel.default
+            return ModelRegistry.model(for: .explicit(.appleOnDevice))
         case .privateCloud:
             if AgentOrchestrator.isPrivateCloudComputeAvailable() {
-                return PrivateCloudComputeLanguageModel()
+                return ModelRegistry.model(for: .explicit(.applePCC))
             } else {
-                return SystemLanguageModel.default
+                return ModelRegistry.model(for: .explicit(.appleOnDevice))
             }
         case .cloudGemini:
-            let apiKey = ModelRegistry.geminiAPIKey()
-            return CloudGeminiLanguageModel(apiKey: apiKey)
+            return ModelRegistry.model(for: .explicit(.cloudGemini))
         case .localOllama:
-            let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? Self.defaultOllamaURLString) ?? URL(string: Self.defaultOllamaURLString)!
-            return LocalOllamaLanguageModel(hostURL: host)
+            return ModelRegistry.model(for: .explicit(.localOllama))
         case .localMLX:
-            let host = URL(string: UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString) ?? URL(string: LocalMLXLanguageModel.defaultHostURLString)!
-            return LocalMLXLanguageModel(hostURL: host)
+            return ModelRegistry.model(for: .explicit(.localMLX))
         case .hybrid:
             if multiAgentModeEnabled {
-                return SystemLanguageModel.default
+                return ModelRegistry.model(for: .explicit(.appleOnDevice))
             } else if AgentOrchestrator.isPrivateCloudComputeAvailable() {
-                return PrivateCloudComputeLanguageModel()
+                return ModelRegistry.model(for: .explicit(.applePCC))
             } else {
-                return SystemLanguageModel.default
+                return ModelRegistry.model(for: .explicit(.appleOnDevice))
             }
         }
     }

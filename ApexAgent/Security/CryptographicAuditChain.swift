@@ -73,32 +73,34 @@ import Observation
     }
     
     public func verifyChain() -> Bool {
-        guard let first = entries.first else {
-            self.chainValid = true
-            return true
-        }
-        
+        self.chainValid = Self.verifyEntries(entries)
+        return self.chainValid
+    }
+
+    public static func verifyEntries(_ entries: [AuditEntry]) -> Bool {
+        guard let first = entries.first else { return true }
         var currentPreviousHash = first.previousHash
-        
         for entry in entries {
             if entry.previousHash != currentPreviousHash {
-                self.chainValid = false
                 return false
             }
-            
             let dataToHash = currentPreviousHash + entry.timestamp.ISO8601Format() + entry.toolName + entry.inputArguments + entry.outputSummary + entry.exitStatus
             let hash = SHA256.hash(data: Data(dataToHash.utf8))
             let computedHash = hash.compactMap { String(format: "%02x", $0) }.joined()
-            
             if entry.entryHash != computedHash {
-                self.chainValid = false
                 return false
             }
             currentPreviousHash = entry.entryHash
         }
-        
-        self.chainValid = true
         return true
+    }
+
+    public func importChain(from data: Data) throws -> Bool {
+        let decoded = try JSONDecoder().decode([AuditEntry].self, from: data)
+        self.entries = decoded
+        self.saveChain()
+        self.chainValid = self.verifyChain()
+        return self.chainValid
     }
     
     public func exportChain() throws -> Data {

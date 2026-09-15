@@ -4,7 +4,7 @@ import os
 
 // MARK: - Agent Type Enum
 
-enum AgentType: String, Codable, CaseIterable, Identifiable {
+public enum AgentType: String, Codable, CaseIterable, Identifiable, Sendable {
     case supervisor = "supervisor"
     case developer = "developer"
     case executor = "executor"
@@ -14,9 +14,9 @@ enum AgentType: String, Codable, CaseIterable, Identifiable {
     case uiDesigner = "uiDesigner"
     case planner = "planner"
     
-    var id: String { self.rawValue }
+    public var id: String { self.rawValue }
     
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .supervisor: return "Apex Prime"
         case .developer: return "Codex"
@@ -103,6 +103,7 @@ enum SupervisorPrompt {
     - For multi-agent audits or swarm tasks, invoke `dispatch_swarm` with targetBots (e.g. "Codex, Nexus, Auditor, Oracle") and concrete taskPrompts.
     - NEVER end your turn merely stating, planning, or promising that you will delegate, or narrating that bots are "performing a deep-dive", "standing by", "mapping", or in an "analysis phase" without immediately invoking the tool call. You must execute the tools and present their real outputs!
     - When asked to do a "bot check" or check multiple agents, prefer invoking `convene_meeting` with participants: ["developer", "executor", "controller", "researcher", "linter", "uiDesigner", "planner"] and topic: "Agent status and readiness check", or invoke `delegate_task` instructing: "Report operational status and capability readiness directly in natural language."
+            - This readiness rule applies only when the user explicitly asks for a bot check, status, or readiness. If the user names a tool or supplies a concrete task/topic, preserve that task and do not substitute a readiness report.
     - If you update the plan with `update_plan`, immediately invoke `delegate_task`, `dispatch_swarm`, or `convene_meeting` in the same turn to start executing the tasks.
     - Coordinate multiple agents sequentially or in parallel if needed to achieve the overall goal. Provide a final consolidated response to the user.
     - Solve mathematical calculations, arithmetic (such as 2+2), logic puzzles, and conversational inquiries directly using your own AI reasoning in natural language. DO NOT delegate basic math, greetings, or conversational questions to sub-agents, and NEVER invoke terminal commands or scripts (such as echo or python) to calculate or repeat answers. Answer directly in natural language.

@@ -54,6 +54,7 @@ public enum GatewayAction: Codable, Sendable {
     
     // Server to Client state streams
     case stateUpdate(messages: [CodableChatMessage], isGenerating: Bool, activeAssistantMessageId: UUID?)
+    case terminalResult(message: String, isError: Bool)
     case requestConfirmation(id: UUID, toolName: String, arguments: String, riskDescription: String)
     case logEvent(message: String)
 }

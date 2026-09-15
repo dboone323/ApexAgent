@@ -28,16 +28,27 @@ enum FMIntentSupport {
         process.standardError = stderr
 
         try process.run()
-        var output = ""
-        for try await line in stdout.fileHandleForReading.bytes.lines {
-            output += line + "\n"
+
+        return try await withTaskCancellationHandler {
+            var output = ""
+            for try await line in stdout.fileHandleForReading.bytes.lines {
+                if Task.isCancelled {
+                    if process.isRunning { process.terminate() }
+                    throw CancellationError()
+                }
+                output += line + "\n"
+            }
+            process.waitUntilExit()
+            if process.terminationStatus != 0, output.isEmpty {
+                let err = String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                throw NSError(domain: "FMIntentSupport", code: -2,
+                              userInfo: [NSLocalizedDescriptionKey: "fm exited \(process.terminationStatus): \(err)"])
+            }
+            return output.trimmingCharacters(in: .whitespacesAndNewlines)
+        } onCancel: {
+            if process.isRunning {
+                process.terminate()
+            }
         }
-        process.waitUntilExit()
-        if process.terminationStatus != 0, output.isEmpty {
-            let err = String(data: stderr.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            throw NSError(domain: "FMIntentSupport", code: -2,
-                          userInfo: [NSLocalizedDescriptionKey: "fm exited \(process.terminationStatus): \(err)"])
-        }
-        return output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

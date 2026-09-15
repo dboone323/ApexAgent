@@ -30,6 +30,7 @@ final class BotSession {
     var activePlan: [PlanStep] = []
     var pendingAttachments: [NSImage] = []
     var pendingAsyncContinuation: CheckedContinuation<String?, Never>?
+    var generationTask: Task<Void, Never>?
 
     // MARK: - Model State
     var modelPreference: AgentModelPreference = .localSystem
@@ -58,6 +59,10 @@ final class BotSession {
         self.orchestrator = orchestrator
         self.computer = computer
         self.modelAvailability = orchestrator.modelAvailability
+    }
+
+    var id: UUID {
+        currentConversation?.id ?? bot.id
     }
 
     // MARK: - System Instructions (dynamic, includes memory + chief roster)
@@ -94,6 +99,7 @@ final class BotSession {
     // MARK: - Reset / New Conversation
 
     func reset() {
+        cancelGeneration()
         messages = []
         toolEvents = []
         isGenerating = false
@@ -104,6 +110,12 @@ final class BotSession {
         needsAttention = false
         unreadActivity = false
         currentConversation = nil
+    }
+
+    /// Cancels this Bot's active generation without affecting other Bot sessions.
+    func cancelGeneration() {
+        generationTask?.cancel()
+        SessionLifecycleManager.shared.cancelSession(id: id)
     }
 
     // MARK: - Message Management
@@ -137,6 +149,9 @@ final class BotSession {
     func updateMessage(id: UUID, isStreaming: Bool) {
         if let idx = messages.firstIndex(where: { $0.id == id }) {
             messages[idx].isStreaming = isStreaming
+            if currentConversation?.messages.contains(where: { $0.id == id }) == true {
+                try? modelContext?.save()
+            }
         }
     }
 

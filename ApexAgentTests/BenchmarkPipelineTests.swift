@@ -133,7 +133,7 @@ final class BenchmarkPipelineTests: XCTestCase {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        req.timeoutInterval = 120
+        req.timeoutInterval = 10
 
         let startTime = Date()
         do {

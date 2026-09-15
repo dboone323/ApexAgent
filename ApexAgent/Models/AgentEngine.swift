@@ -59,6 +59,28 @@ struct NativeAppleEngine: AgentEngine {
         // Extract semantic RAG context (the portion appended to orchestrator.agentInstructions)
         let semanticContext = instructions.replacingOccurrences(of: orchestrator.agentInstructions, with: "")
         let promptWithContext = prompt + semanticContext
+        let explicitToolDirective: String
+        if lowerPrompt.contains("convene_meeting") {
+            explicitToolDirective = "The user explicitly requested convene_meeting. Invoke convene_meeting now, preserve the requested topic and participant list exactly, and execute the concrete discussion. Do not substitute a bot-status or readiness report.\n\n"
+        } else if lowerPrompt.contains("delegate_task") {
+            explicitToolDirective = "The user explicitly requested delegate_task. Invoke delegate_task now with the concrete task from the user. Do not replace the task with an operational-status or readiness report.\n\n"
+        } else {
+            explicitToolDirective = ""
+        }
+
+        if let directMeetingArguments = directConveneMeetingArguments(from: prompt) {
+            let result = try await orchestrator.toolDispatchEngine.executeToolByName(
+                name: "convene_meeting",
+                jsonArguments: directMeetingArguments,
+                allTools: orchestrator.allTools
+            )
+            onUpdate(result)
+            if let id = orchestrator.activeAssistantMessageId {
+                orchestrator.updateMessage(id: id, content: result)
+                orchestrator.updateMessage(id: id, isStreaming: false)
+            }
+            return
+        }
 
         if !attachments.isEmpty {
             guard isMultimodalAttachmentSupported() else {
@@ -108,11 +130,33 @@ struct NativeAppleEngine: AgentEngine {
             // and is also a production-quality safeguard.
             do {
                 var fullText = ""
-                var currentPrompt = promptWithContext
+                var currentPrompt = explicitToolDirective + promptWithContext
                 let maxTurns = 5
 
                 for turn in 0..<maxTurns {
-                    let response = try await session.respond(to: currentPrompt, options: options)
+                    let turnPrompt = currentPrompt
+                    let responseTask = Task { @MainActor in
+                        try await session.respond(to: turnPrompt, options: options)
+                    }
+                    let response = try await withThrowingTaskGroup(of: LanguageModelSession.Response.self) { group in
+                        group.addTask {
+                            try await responseTask.value
+                        }
+                        group.addTask {
+                            try await Task.sleep(for: .seconds(90))
+                            throw NSError(
+                                domain: "NativeAppleEngine",
+                                code: 90,
+                                userInfo: [NSLocalizedDescriptionKey: "On-device model response timed out after 90 seconds."]
+                            )
+                        }
+
+                        guard let response = try await group.next() else {
+                            throw CancellationError()
+                        }
+                        group.cancelAll()
+                        return response
+                    }
                     let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !text.isEmpty else { break }
 
@@ -185,6 +229,41 @@ struct NativeAppleEngine: AgentEngine {
             onUpdate("⚠️ The on-device model returned no output. This usually means its model asset is still downloading (enable Apple Intelligence in Settings → Siri and wait), or isn't available on this macOS build. Switch Model Provider to “Local Ollama” (if Ollama is running) or “Cloud Gemini” to continue.")
         }
     }
+}
+
+@MainActor
+private func directConveneMeetingArguments(from prompt: String) -> String? {
+    let lowerPrompt = prompt.lowercased()
+    guard lowerPrompt.contains("convene_meeting") else { return nil }
+
+    let participantPattern = #"participants\s*[:=]?\s*\[([^\]]+)\]"#
+    guard let participantRegex = try? NSRegularExpression(pattern: participantPattern, options: [.caseInsensitive]),
+          let participantMatch = participantRegex.firstMatch(in: prompt, range: NSRange(prompt.startIndex..., in: prompt)),
+          let participantRange = Range(participantMatch.range(at: 1), in: prompt) else {
+        return nil
+    }
+
+    let participantText = String(prompt[participantRange])
+    let participants = participantText
+        .split(separator: ",")
+        .map { $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\\\"'"))) }
+        .filter { !$0.isEmpty }
+    guard !participants.isEmpty else { return nil }
+
+    let topic: String
+    if let topicRange = prompt.range(of: "to discuss", options: [.caseInsensitive]) {
+        topic = String(prompt[topicRange.upperBound...])
+            .components(separatedBy: ". Actually").first?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? prompt
+    } else {
+        topic = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    guard let data = try? JSONSerialization.data(withJSONObject: [
+        "topic": topic,
+        "participants": participants
+    ]) else { return nil }
+    return String(data: data, encoding: .utf8)
 }
 
 

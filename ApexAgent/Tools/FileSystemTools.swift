@@ -8,20 +8,21 @@ import FoundationModels
 /// relative paths get the correct absolute workspace location instead of
 /// the app bundle's CWD.
 func resolveToWorkspace(rawPath: String, workspacePath: String) -> String {
-    let expanded = NSString(string: rawPath).expandingTildeInPath
+    var clean = rawPath.trimmingCharacters(in: .whitespacesAndNewlines)
+    clean = clean.replacingOccurrences(of: "\\/", with: "/")
+    let expanded = NSString(string: clean).expandingTildeInPath
     if expanded.hasPrefix("/") {
         return expanded
     }
+    let ws = (workspacePath.isEmpty || workspacePath == "." || workspacePath == "./")
+        ? AgentOrchestrator.proactiveAuditWorkspacePath()
+        : workspacePath
     if expanded.isEmpty || expanded == "." || expanded == "./" {
-        return workspacePath
+        return ws
     }
     // Relative path: anchor to workspace
-    let candidate = (workspacePath as NSString).appendingPathComponent(expanded)
-    if FileManager.default.fileExists(atPath: candidate) {
-        return candidate
-    }
-    // Fall back to anchoring anyway (path may not exist yet for write operations)
-    return candidate
+    let candidate = (ws as NSString).appendingPathComponent(expanded)
+    return URL(fileURLWithPath: candidate).standardized.path
 }
 
 // MARK: - File Read Tool
@@ -237,16 +238,7 @@ struct ListDirectoryTool: Tool {
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
-            let expandedRaw = NSString(string: arguments.path).expandingTildeInPath
-            let effectivePath: String
-            if expandedRaw.hasPrefix("/") {
-                effectivePath = expandedRaw
-            } else if expandedRaw.isEmpty || expandedRaw == "." || expandedRaw == "./" {
-                effectivePath = wsPath
-            } else {
-                let candidate = (wsPath as NSString).appendingPathComponent(expandedRaw)
-                effectivePath = FileManager.default.fileExists(atPath: candidate) ? candidate : expandedRaw
-            }
+            let effectivePath = resolveToWorkspace(rawPath: arguments.path, workspacePath: wsPath)
 
             let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(effectivePath) }
             guard isAllowed else {

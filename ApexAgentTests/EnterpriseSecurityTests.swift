@@ -82,15 +82,63 @@ final class EnterpriseSecurityTests: XCTestCase {
     
     func testAuditChainTamperDetection() async throws {
         let chain = CryptographicAuditChain.shared
-        chain.record(toolName: "validTool1", input: "in", output: "out", status: "success", botName: nil)
-        chain.record(toolName: "validTool2", input: "in", output: "out", status: "success", botName: nil)
+        chain.trimToLast(0)
         
-        XCTAssertTrue(chain.verifyChain())
+        TestActivity.step("Record genuine entries") { _ in
+            chain.record(toolName: "validTool1", input: "in1", output: "out1", status: "success", botName: nil)
+            chain.record(toolName: "validTool2", input: "in2", output: "out2", status: "success", botName: nil)
+            XCTAssertTrue(chain.verifyChain(), "Untampered chain must verify")
+            XCTAssertTrue(chain.chainValid)
+        }
         
-        // This is a roundtrip test as requested in prompt.
-        let data = try chain.exportChain()
-        let decoded = try JSONDecoder().decode([CryptographicAuditChain.AuditEntry].self, from: data)
-        XCTAssertEqual(decoded.count, 2)
+        try TestActivity.step("Tamper with an entry and verify detection") { _ in
+            let validData = try chain.exportChain()
+            var decoded = try JSONDecoder().decode([CryptographicAuditChain.AuditEntry].self, from: validData)
+            XCTAssertEqual(decoded.count, 2)
+            
+            // Mutate inputArguments of the first entry without updating its hash
+            let tamperedEntry = CryptographicAuditChain.AuditEntry(
+                id: decoded[0].id,
+                timestamp: decoded[0].timestamp,
+                toolName: decoded[0].toolName,
+                inputArguments: "TAMPERED_INPUT_PAYLOAD",
+                outputSummary: decoded[0].outputSummary,
+                exitStatus: decoded[0].exitStatus,
+                botName: decoded[0].botName,
+                previousHash: decoded[0].previousHash,
+                entryHash: decoded[0].entryHash
+            )
+            decoded[0] = tamperedEntry
+            
+            let tamperedData = try JSONEncoder().encode(decoded)
+            let importedValid = try chain.importChain(from: tamperedData)
+            XCTAssertFalse(importedValid, "Chain import must report invalid for tampered entry")
+            XCTAssertFalse(chain.chainValid, "chainValid property must be false after tamper detection")
+            XCTAssertFalse(chain.verifyChain(), "verifyChain must return false on tampered chain")
+        }
+    }
+    
+    func testEphemeralTokenConcurrentConsumption() async throws {
+        let manager = EphemeralCapabilityManager.shared
+        let token = manager.issueToken(for: "concurrent_tool", botName: "bot_a", ttlSeconds: 60.0)
+        
+        var consumeResults: [Bool] = []
+        await withTaskGroup(of: Bool.self) { group in
+            for _ in 0..<5 {
+                group.addTask { @MainActor in
+                    manager.consumeToken(id: token.id, toolName: "concurrent_tool")
+                }
+            }
+            for await result in group {
+                consumeResults.append(result)
+            }
+        }
+        
+        TestActivity.step("Ensure token cannot be double-consumed under concurrency") { _ in
+            let successCount = consumeResults.filter { $0 }.count
+            XCTAssertEqual(successCount, 1, "Exactly one concurrent caller may consume the single-use token")
+            XCTAssertFalse(manager.hasValidToken(botName: "bot_a", toolName: "concurrent_tool"))
+        }
     }
     
     // MARK: - Stage 3: MicroVM & Sandbox Tests

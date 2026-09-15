@@ -78,57 +78,90 @@ struct ShellTool: Tool {
                 orchestrator.currentConversation?.id ?? botShellUUID
             }
             
-            guard let pty = await orchestrator.ptySession(for: conversationId) else {
-                return "ERROR: Failed to allocate or initialize a terminal session (PTY allocation failed)."
-            }
-            
-            // For bot-delegated calls that don't specify workingDirectory,
-            // auto-inject workspace so commands run in the right place.
+            let wsPath = await MainActor.run { orchestrator.currentWorkspacePath }
             if arguments.workingDirectory == nil || (arguments.workingDirectory?.isEmpty ?? true) {
-                let wsPath = await MainActor.run { orchestrator.currentWorkspacePath }
                 let escapedWs = "'" + wsPath.replacingOccurrences(of: "'", with: "'\\''") + "'"
                 finalCommand = "cd \(escapedWs) && \(finalCommand)"
             }
-            
+
             // Log the command run in the TerminalView
             await MainActor.run {
                 orchestrator.appendTerminalOutput(conversationId: conversationId, text: "\r\n$ \(arguments.command)\r\n")
             }
-            
+
             let timeout = arguments.timeoutSeconds ?? 30
-            
             let buildCommands = ["build", "compile", "make", "gcc", "clang", "cargo", "xcodebuild", "tsc"]
             let isBuildCommand = buildCommands.contains { arguments.command.lowercased().contains($0) }
-            
             let cmdToExecute = finalCommand
-            do {
-                let result = try await withThrowingTaskGroup(of: String.self) { group in
-                    group.addTask {
-                        try await pty.runCommand(cmdToExecute)
+
+            if let pty = await orchestrator.ptySession(for: conversationId) {
+                do {
+                    let result = try await withThrowingTaskGroup(of: String.self) { group in
+                        group.addTask {
+                            try await pty.runCommand(cmdToExecute)
+                        }
+                        group.addTask {
+                            try await Task.sleep(for: .seconds(timeout))
+                            throw NSError(domain: "ShellTool", code: -2, userInfo: [NSLocalizedDescriptionKey: "Command timed out after \(timeout) seconds."])
+                        }
+
+                        let first = try await group.next()!
+                        group.cancelAll()
+                        return first
                     }
-                    group.addTask {
-                        try await Task.sleep(for: .seconds(timeout))
-                        throw NSError(domain: "ShellTool", code: -2, userInfo: [NSLocalizedDescriptionKey: "Command timed out after \(timeout) seconds."])
+                    return result
+                } catch {
+                    let nsErr = error as NSError
+                    var outputMsg = ""
+                    if let output = nsErr.userInfo["output"] as? String {
+                        outputMsg = output + "\nERROR: Command failed with exit code \(nsErr.code)"
+                    } else {
+                        outputMsg = "ERROR: \(error.localizedDescription)"
                     }
-                    
-                    let first = try await group.next()!
-                    group.cancelAll()
-                    return first
+
+                    if isBuildCommand {
+                        outputMsg += "\n\n[REMEDIATION GUIDANCE: The build failed. Please read the error log above, identify the failing lines in the code, use the appropriate tools to fix the code, and rerun the build command. Do not give up.]"
+                    }
+                    return outputMsg
                 }
-                return result
-            } catch {
-                let nsErr = error as NSError
-                var outputMsg = ""
-                if let output = nsErr.userInfo["output"] as? String {
-                    outputMsg = output + "\nERROR: Command failed with exit code \(nsErr.code)"
-                } else {
-                    outputMsg = "ERROR: \(error.localizedDescription)"
+            } else {
+                // Direct Process fallback when PTY allocation is unavailable
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+                process.arguments = ["-l", "-c", cmdToExecute]
+                if FileManager.default.fileExists(atPath: wsPath) {
+                    process.currentDirectoryURL = URL(fileURLWithPath: wsPath)
                 }
-                
-                if isBuildCommand {
-                    outputMsg += "\n\n[REMEDIATION GUIDANCE: The build failed. Please read the error log above, identify the failing lines in the code, use the appropriate tools to fix the code, and rerun the build command. Do not give up.]"
+                var env = ProcessInfo.processInfo.environment
+                env["TERM"] = "xterm-color"
+                env["NO_COLOR"] = "1"
+                let currentPath = env["PATH"] ?? ""
+                env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + currentPath
+                process.environment = env
+
+                let pipe = Pipe()
+                process.standardOutput = pipe
+                process.standardError = pipe
+
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    let output = String(data: data, encoding: .utf8) ?? ""
+                    await MainActor.run {
+                        orchestrator.appendTerminalOutput(conversationId: conversationId, text: output)
+                    }
+                    if process.terminationStatus != 0 {
+                        var msg = output + "\nERROR: Command failed with exit code \(process.terminationStatus)"
+                        if isBuildCommand {
+                            msg += "\n\n[REMEDIATION GUIDANCE: The build failed. Please read the error log above, identify the failing lines in the code, use the appropriate tools to fix the code, and rerun the build command. Do not give up.]"
+                        }
+                        return msg
+                    }
+                    return output
+                } catch {
+                    return "ERROR: Failed to run process: \(error.localizedDescription)"
                 }
-                return outputMsg
             }
         }
     }

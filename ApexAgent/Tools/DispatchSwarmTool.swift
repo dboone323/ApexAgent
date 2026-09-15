@@ -118,47 +118,63 @@ struct DispatchSwarmTool: Tool, @unchecked Sendable {
             assignments.append((name, botPrompt))
         }
 
-        // Execute sequentially to prevent PTY collisions, Ollama queue timeouts, and prompt cache thrashing
+        // Bounded parallel execution across swarm bots (max 4 concurrent workers)
+        let maxConcurrency = 4
         var results: [SwarmResult] = []
-        for (botName, taskPrompt) in assignments {
-            let sanitizedPrompt = SecretRedactor.redact(text: taskPrompt)
-            let output: String = await Task { @MainActor in
-                if let bot = botManager.botByName(botName) ?? (UUID(uuidString: botName).flatMap { botManager.bot(byId: $0) }) {
-                    let session = botManager.session(for: bot)
-                    let response = await session.sendMessageAsync(sanitizedPrompt)
-                    let rawOut = response ?? "Completed with no output."
-                    return SecretRedactor.redact(text: rawOut)
-                } else if let agent = AgentRegistry.shared.resolve(name: botName) {
-                    if let orchestrator = botManager.orchestrator {
-                        let safeTools = agent.allowedTools.filter {
-                            $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm"
-                        }
-                        let engine = OllamaAgentEngine(orchestrator: orchestrator, allowedTools: safeTools)
-                        var subOutput = ""
-                        do {
-                            try await engine.streamResponse(
-                                prompt: sanitizedPrompt,
-                                attachments: [],
-                                history: [],
-                                instructions: agent.systemPrompt,
-                                toolCallingMode: .auto,
-                                onUpdate: { partial in
-                                    subOutput = partial
-                                }
-                            )
-                        } catch {
-                            subOutput = "ERROR: Agent execution failed: \(error.localizedDescription)"
-                        }
-                        let raw = subOutput.trimmingCharacters(in: .whitespacesAndNewlines)
-                        return raw.isEmpty ? "Completed with no output." : SecretRedactor.redact(text: raw)
-                    }
-                    return "ERROR: Orchestrator unavailable for agent '\(botName)'."
-                } else {
-                    return "ERROR: Bot '\(botName)' not found."
-                }
-            }.value
 
-            results.append(SwarmResult(botName: botName, output: output, success: !output.hasPrefix("ERROR:")))
+        try await withThrowingTaskGroup(of: SwarmResult.self) { group in
+            var submitted = 0
+            for (botName, taskPrompt) in assignments {
+                if submitted >= maxConcurrency {
+                    if let res = try await group.next() {
+                        results.append(res)
+                    }
+                }
+                submitted += 1
+                group.addTask {
+                    let sanitizedPrompt = SecretRedactor.redact(text: taskPrompt)
+                    let output: String = await Task { @MainActor in
+                        if let bot = botManager.botByName(botName) ?? (UUID(uuidString: botName).flatMap { botManager.bot(byId: $0) }) {
+                            let session = botManager.session(for: bot)
+                            let response = await session.sendMessageAsync(sanitizedPrompt)
+                            let rawOut = response ?? "Completed with no output."
+                            return SecretRedactor.redact(text: rawOut)
+                        } else if let agent = AgentRegistry.shared.resolve(name: botName) {
+                            if let orchestrator = botManager.orchestrator {
+                                let safeTools = agent.allowedTools.filter {
+                                    $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm"
+                                }
+                                let engine = OllamaAgentEngine(orchestrator: orchestrator, allowedTools: safeTools)
+                                var subOutput = ""
+                                do {
+                                    try await engine.streamResponse(
+                                        prompt: sanitizedPrompt,
+                                        attachments: [],
+                                        history: [],
+                                        instructions: agent.systemPrompt,
+                                        toolCallingMode: .auto,
+                                        onUpdate: { partial in
+                                            subOutput = partial
+                                        }
+                                    )
+                                } catch {
+                                    subOutput = "ERROR: Agent execution failed: \(error.localizedDescription)"
+                                }
+                                let raw = subOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+                                return raw.isEmpty ? "Completed with no output." : SecretRedactor.redact(text: raw)
+                            }
+                            return "ERROR: Orchestrator unavailable for agent '\(botName)'."
+                        } else {
+                            return "ERROR: Bot '\(botName)' not found."
+                        }
+                    }.value
+
+                    return SwarmResult(botName: botName, output: output, success: !output.hasPrefix("ERROR:"))
+                }
+            }
+            while let res = try await group.next() {
+                results.append(res)
+            }
         }
 
         var report = "🐝 Swarm Parallel Execution Complete (\(results.count) bots):\n\n"

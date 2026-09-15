@@ -14,6 +14,7 @@ import AppKit
 @MainActor
 struct MLXAgentEngine: AgentEngine {
     let orchestrator: AgentOrchestrator
+    var bot: BotProfile?
 
     func streamResponse(
         prompt: String,
@@ -44,7 +45,12 @@ struct MLXAgentEngine: AgentEngine {
         var tools: [[String: Any]] = []
         if useTools {
             for schema in getParsedSchemas() {
-                guard schema["name"] is String else { continue }
+                guard let name = schema["name"] as? String else { continue }
+                if let allowedTools = bot?.allowedToolNames,
+                   !allowedTools.isEmpty,
+                   !allowedTools.contains(name) {
+                    continue
+                }
                 tools.append(["type": "function", "function": schema])
             }
         }
@@ -85,6 +91,7 @@ struct MLXAgentEngine: AgentEngine {
             var fragments: [Int: (id: String, name: String, arguments: String)] = [:]
 
             for try await line in bytes.lines {
+                try Task.checkCancellation()
                 let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard trimmed.hasPrefix("data: ") else { continue }
                 let payload = String(trimmed.dropFirst(6))
@@ -138,13 +145,14 @@ struct MLXAgentEngine: AgentEngine {
                 let name = fragment.name
                 let argsString = fragment.arguments.isEmpty ? "{}" : fragment.arguments
 
-                guard let tool = orchestrator.allTools.first(where: { $0.name == name }) else {
-                    messages.append(["role": "tool", "content": "ERROR: Tool '\(name)' is not registered.", "tool_call_id": callId])
-                    continue
-                }
                 let output: String
                 do {
-                    output = try await tool.execute(jsonArguments: argsString)
+                    output = try await orchestrator.executeToolByName(
+                        name: name,
+                        jsonArguments: argsString,
+                        bot: bot,
+                        agentIdentity: bot.map { .bot(id: $0.id, name: $0.name) }
+                    )
                 } catch {
                     output = "ERROR: Tool '\(name)' failed: \(error.localizedDescription)"
                 }

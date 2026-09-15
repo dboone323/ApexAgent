@@ -37,6 +37,21 @@ public enum ModelProvider: String, CaseIterable, Sendable {
     }
 }
 
+/// Represents an eligible provider candidate within a fallback chain.
+public struct ProviderCandidate: Equatable, Sendable {
+    public let provider: ModelProvider
+    public let modelName: String?
+    public let reason: String?
+    public let priority: Int
+
+    public init(provider: ModelProvider, modelName: String? = nil, reason: String? = nil, priority: Int = 0) {
+        self.provider = provider
+        self.modelName = modelName
+        self.reason = reason
+        self.priority = priority
+    }
+}
+
 public enum ModelSelectionStrategy: Sendable {
     /// Use exactly the requested provider.
     case explicit(ModelProvider)
@@ -82,7 +97,8 @@ public struct ModelRegistry {
         return .balanced
     }
 
-    /// Retrieves the Gemini API Key from Keychain (preferred), environment, ~/.apex/gemini_key, or UserDefaults.
+    /// Retrieves the Gemini API Key from Keychain (preferred) or environment.
+    /// Automatically migrates any legacy plaintext keys in ~/.apex/gemini_key or UserDefaults to Keychain and purges them.
     public static func geminiAPIKey() -> String {
         if let key = KeychainManager.get(key: "geminiAPIKey"), !key.isEmpty {
             return key
@@ -93,30 +109,47 @@ public struct ModelRegistry {
         if let envKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"], !envKey.isEmpty {
             return envKey
         }
+
+        // Automatic legacy migration: check file then UserDefaults
         let fileURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex/gemini_key")
+        var legacyKey: String?
         if let fileKey = try? String(contentsOf: fileURL, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines), !fileKey.isEmpty {
-            return fileKey
+            legacyKey = fileKey
+            try? FileManager.default.removeItem(at: fileURL)
+        } else if let udKey = UserDefaults.standard.string(forKey: geminiKeyKey) ?? UserDefaults.standard.string(forKey: "geminiAPIKey"), !udKey.isEmpty {
+            legacyKey = udKey
         }
-        return UserDefaults.standard.string(forKey: geminiKeyKey)
-            ?? UserDefaults.standard.string(forKey: "geminiAPIKey")
-            ?? ""
+
+        // Purge legacy plaintext from UserDefaults
+        UserDefaults.standard.removeObject(forKey: geminiKeyKey)
+        UserDefaults.standard.removeObject(forKey: "geminiAPIKey")
+
+        if let found = legacyKey, !found.isEmpty {
+            KeychainManager.save(key: "geminiAPIKey", value: found)
+            KeychainManager.save(key: geminiKeyKey, value: found)
+            return found
+        }
+        return ""
     }
 
-    /// Persists the Gemini API Key across Keychain, UserDefaults, and ~/.apex/gemini_key file.
+    /// Persists the Gemini API Key securely in Keychain, purging any legacy plaintext file or UserDefaults entries.
     public static func saveGeminiAPIKey(_ key: String) {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        KeychainManager.save(key: "geminiAPIKey", value: trimmed)
-        KeychainManager.save(key: geminiKeyKey, value: trimmed)
-        UserDefaults.standard.set(trimmed, forKey: "geminiAPIKey")
-        UserDefaults.standard.set(trimmed, forKey: geminiKeyKey)
-
-        let apexDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex")
-        try? FileManager.default.createDirectory(at: apexDir, withIntermediateDirectories: true)
-        let fileURL = apexDir.appendingPathComponent("gemini_key")
         if trimmed.isEmpty {
-            try? FileManager.default.removeItem(at: fileURL)
+            KeychainManager.delete(key: "geminiAPIKey")
+            KeychainManager.delete(key: geminiKeyKey)
         } else {
-            try? trimmed.write(to: fileURL, atomically: true, encoding: .utf8)
+            KeychainManager.save(key: "geminiAPIKey", value: trimmed)
+            KeychainManager.save(key: geminiKeyKey, value: trimmed)
+        }
+
+        // Purge legacy plaintext storage
+        UserDefaults.standard.removeObject(forKey: "geminiAPIKey")
+        UserDefaults.standard.removeObject(forKey: geminiKeyKey)
+
+        let fileURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex/gemini_key")
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            try? FileManager.default.removeItem(at: fileURL)
         }
     }
 
@@ -281,40 +314,28 @@ public struct ModelRegistry {
         return matches.count >= 2 || tools.contains("convene_meeting")
     }
 
-    /// Creates the appropriate `AgentEngine` with automatic context-overflow routing.
+    /// Creates an `AgentEngine` for a specific `ModelProvider`.
+    /// Sole instantiation path used by `ProviderFallbackExecutor` for canonical
+    /// runtime routing (candidate planning + bounded fallback + tool governance).
+    /// Nothing outside the fallback executor may construct an engine directly.
     @MainActor
-    static func resolveEngine(
-        for bot: BotProfile? = nil,
-        preferredProvider: ModelProvider? = nil,
-        prompt: String = "",
-        history: [ChatMessage] = [],
-        instructions: String = "",
-        tools: [String] = [],
-        hasAttachments: Bool = false,
+    static func engine(
+        for provider: ModelProvider,
+        bot: BotProfile? = nil,
         session: LanguageModelSession? = nil,
         orchestrator: AgentOrchestrator
     ) -> any AgentEngine {
-        let preferred = preferredProvider ?? bot?.modelProvider ?? activeProvider()
-        let (resolved, reason) = resolveProviderForTask(
-            preferred: preferred,
-            prompt: prompt,
-            history: history,
-            instructions: instructions,
-            tools: tools,
-            hasAttachments: hasAttachments
-        )
-        if let reason = reason {
-            print("🧠 [Auto Model Picker] \(reason)")
+        let botAllowedTools: [String]? = if let bot, !bot.allowedToolNames.isEmpty {
+            bot.allowedToolNames
+        } else {
+            nil
         }
 
-        switch resolved {
+        switch provider {
         case .autoPicker, .appleOnDevice, .applePCC, .fmCLI:
             return NativeAppleEngine(orchestrator: orchestrator, customSession: session)
         case .cloudGemini:
             if !geminiAPIKey().isEmpty {
-                // Build a LanguageModelSession backed by CloudGeminiLanguageModel and
-                // pass it as customSession so NativeAppleEngine calls the Gemini REST API
-                // instead of the on-device AFM model.
                 let geminiModel = CloudGeminiLanguageModel(apiKey: geminiAPIKey())
                 let geminiSession: LanguageModelSession
                 if let existingSession = session {
@@ -332,13 +353,66 @@ public struct ModelRegistry {
                 }
                 return NativeAppleEngine(orchestrator: orchestrator, customSession: geminiSession)
             } else {
-                return OllamaAgentEngine(orchestrator: orchestrator, bot: bot)
+                return OllamaAgentEngine(orchestrator: orchestrator, bot: bot, allowedTools: botAllowedTools)
             }
         case .localOllama:
-            return OllamaAgentEngine(orchestrator: orchestrator, bot: bot)
+            return OllamaAgentEngine(orchestrator: orchestrator, bot: bot, allowedTools: botAllowedTools)
         case .localMLX:
-            return MLXAgentEngine(orchestrator: orchestrator)
+            return MLXAgentEngine(orchestrator: orchestrator, bot: bot)
         }
+    }
+
+    /// Builds a prioritized, deduplicated fallback candidate chain.
+    static func buildCandidateChain(
+        preferred: ModelProvider? = nil,
+        bot: BotProfile? = nil,
+        prompt: String = "",
+        history: [ChatMessage] = [],
+        instructions: String = "",
+        tools: [String] = [],
+        hasAttachments: Bool = false
+    ) -> [ProviderCandidate] {
+        let preferredTarget = preferred ?? bot?.modelProvider ?? activeProvider()
+        let (primary, primaryReason) = resolveProviderForTask(
+            preferred: preferredTarget,
+            prompt: prompt,
+            history: history,
+            instructions: instructions,
+            tools: tools,
+            hasAttachments: hasAttachments
+        )
+
+        var candidates: [ProviderCandidate] = []
+        var seenProviders: Set<ModelProvider> = []
+
+        func addCandidate(_ provider: ModelProvider, reason: String?, modelName: String? = nil) {
+            guard !seenProviders.contains(provider) else { return }
+            seenProviders.insert(provider)
+            candidates.append(ProviderCandidate(
+                provider: provider,
+                modelName: modelName,
+                reason: reason,
+                priority: candidates.count
+            ))
+        }
+
+        let primaryModelName: String? = switch primary {
+        case .cloudGemini: geminiModel()
+        case .localOllama: bot?.ollamaModelOverride ?? ollamaModel()
+        case .localMLX: mlxModel()
+        default: nil
+        }
+        addCandidate(primary, reason: primaryReason ?? "Primary selected provider", modelName: primaryModelName)
+
+        let hasGeminiKey = !geminiAPIKey().isEmpty
+        if hasGeminiKey {
+            addCandidate(.cloudGemini, reason: "Cloud Gemini fallback", modelName: geminiModel())
+        }
+        addCandidate(.localOllama, reason: "Local Ollama fallback", modelName: bot?.ollamaModelOverride ?? ollamaModel())
+        addCandidate(.appleOnDevice, reason: "Apple On-Device fallback")
+        addCandidate(.localMLX, reason: "Local MLX fallback", modelName: mlxModel())
+
+        return candidates
     }
 
     /// Build a `LanguageModel` for the given strategy.
@@ -381,17 +455,6 @@ public struct ModelRegistry {
     /// or the global default.
     static func effectiveProvider(for bot: BotProfile) -> ModelProvider {
         bot.modelProvider ?? activeProvider()
-    }
-
-    /// Convenience: build the automatic fallback chain as an ordered list.
-    public static func automaticChain() -> [any LanguageModel] {
-        [
-            SystemLanguageModel.default,
-            CloudGeminiLanguageModel(apiKey: geminiAPIKey()),
-            LocalOllamaLanguageModel(hostURL: URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434") ?? URL(string: "http://localhost:11434")!),
-            PrivateCloudComputeLanguageModel(),
-            LocalMLXLanguageModel(hostURL: mlxHost()),
-        ]
     }
 }
 

@@ -41,7 +41,7 @@ final class ToolEventLoggerImpl: ToolEventLogger {
     public func resolveConfirmation(approved: Bool) {}
 }
 
-public enum ToolStatus: Sendable {
+public enum ToolStatus: Sendable, Equatable {
     case running
     case success
     case failed(String)

@@ -8,6 +8,7 @@ import SwiftData
 /// applicable), and enable/disable / run-now / delete actions.
 struct RoutinesSection: View {
     @Environment(RoutineManager.self) private var envRoutineManager: RoutineManager?
+    @Environment(\.modelContext) private var modelContext
     private var routineManager: RoutineManager {
         envRoutineManager ?? RoutineManager.shared
     }

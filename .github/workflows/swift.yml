@@ -40,8 +40,24 @@ jobs:
       - name: Build (release)
         run: swift build -c release
 
-      - name: Test (release)
-        # Skip tests that hang on headless CI:
-        #  - testBrowserAutomation: requires a live WebView (WebKit)
-        #  - testRealToolsGrepAndGitMCP: spawns a git MCP subprocess that never terminates under CI
-        run: swift test -c release --skip testBrowserAutomation --skip testRealToolsGrepAndGitMCP --parallel
+      - name: Run Test Plan & Generate xcresult
+        run: |
+          mkdir -p build
+          xcodebuild test -project ApexAgent.xcodeproj -scheme ApexAgent \
+            -testPlan ApexAgent-UnitTests \
+            -destination "platform=macOS" \
+            -resultBundlePath build/CI-UnitTests.xcresult
+
+      - name: Generate Diagnostic Summary & Step Summary
+        if: always()
+        run: |
+          chmod +x ./Tools/scripts/xcresult-report.sh
+          ./Tools/scripts/xcresult-report.sh build/CI-UnitTests.xcresult
+
+      - name: Upload xcresult Bundle Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: CI-UnitTests.xcresult
+          path: build/CI-UnitTests.xcresult
+          retention-days: 7

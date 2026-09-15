@@ -76,10 +76,43 @@ final class ToolDispatchEngine: Sendable {
         ]
     }
 
-    func executeToolByName(name: String, jsonArguments: String, allTools: [AnyExecutableTool]) async throws -> String {
+    func executeToolByName(
+        name: String,
+        jsonArguments: String,
+        allTools: [AnyExecutableTool],
+        bot: BotProfile? = nil,
+        agentIdentity: AgentIdentity? = nil
+    ) async throws -> String {
+        let botName = bot?.name ?? {
+            if case .bot(_, let name) = agentIdentity { return name }
+            return nil
+        }()
+
+        // RBAC Allowlist enforcement: If a Bot defines allowed tools, reject any disallowed tool
+        if let bot = bot, !bot.allowedToolNames.isEmpty {
+            if !bot.allowedToolNames.contains(name) {
+                let err = NSError(
+                    domain: "AgentSecurity",
+                    code: 403,
+                    userInfo: [NSLocalizedDescriptionKey: "Permission Denied: Bot '\(bot.name)' is not authorized to execute tool '\(name)'. Allowed tools: \(bot.allowedToolNames.joined(separator: ", "))"]
+                )
+                throw err
+            }
+        }
+
+        let redactedInput = SecurityAuditor.redactSensitiveData(in: jsonArguments)
+
         do {
+            guard AgentSecurity.isAllowed(name) else {
+                throw NSError(
+                    domain: "AgentSecurity",
+                    code: 403,
+                    userInfo: [NSLocalizedDescriptionKey: "Permission Denied: Tool '\(name)' is disabled by the global security denylist."]
+                )
+            }
+
             // Enterprise zero-trust capability validation
-            if !AgentSecurity.validateCapabilityToken(for: name, botName: nil) {
+            if !AgentSecurity.validateCapabilityToken(for: name, botName: botName) {
                 throw NSError(domain: "AgentSecurity", code: 403, userInfo: [NSLocalizedDescriptionKey: "Enterprise Security: Missing or expired capability token for high-risk tool '\(name)'"])
             }
             
@@ -103,23 +136,26 @@ final class ToolDispatchEngine: Sendable {
                 SpeculativeToolExecutor.shared.invalidateAll()
             }
             
-            // Audit log
+            let redactedOutput = SecurityAuditor.redactSensitiveData(in: String(result.prefix(500)))
+
+            // Audit log with redacted inputs & outputs
             CryptographicAuditChain.shared.record(
                 toolName: name,
-                input: jsonArguments,
-                output: String(result.prefix(500)),
+                input: redactedInput,
+                output: redactedOutput,
                 status: "success",
-                botName: nil
+                botName: botName
             )
             
             return result
         } catch {
+            let redactedError = SecurityAuditor.redactSensitiveData(in: error.localizedDescription)
             CryptographicAuditChain.shared.record(
                 toolName: name,
-                input: jsonArguments,
-                output: error.localizedDescription,
+                input: redactedInput,
+                output: redactedError,
                 status: "error",
-                botName: nil
+                botName: botName
             )
             throw error
         }

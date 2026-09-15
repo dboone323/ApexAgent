@@ -51,6 +51,39 @@ struct ToolGovernanceTests {
         }
     }
 
+    @Test func testRegisteredToolsHaveRiskClassification() {
+        let orchestrator = AgentOrchestrator()
+        let registeredNames = Set(orchestrator.allTools.map(\.name))
+        let missingRiskEntries = registeredNames.subtracting(AgentSecurity.toolRiskMap.keys)
+
+        #expect(missingRiskEntries.isEmpty, "Every registered tool must have an explicit risk classification: \(missingRiskEntries.sorted())")
+    }
+
+    @Test func testGlobalDenylistBlocksCentralDispatch() async {
+        let key = "apex.deniedTools"
+        let previous = UserDefaults.standard.stringArray(forKey: key)
+        UserDefaults.standard.set(["read_file"], forKey: key)
+        defer {
+            if let previous {
+                UserDefaults.standard.set(previous, forKey: key)
+            } else {
+                UserDefaults.standard.removeObject(forKey: key)
+            }
+        }
+
+        let orchestrator = AgentOrchestrator()
+        do {
+            _ = try await orchestrator.executeToolByName(
+                name: "read_file",
+                jsonArguments: "{}"
+            )
+            Issue.record("A globally denied tool must not execute")
+        } catch {
+            #expect((error as NSError).domain == "AgentSecurity")
+            #expect((error as NSError).code == 403)
+        }
+    }
+
     @Test func testToolEventLoggingRecordsStartAndEnd() {
         let orchestrator = AgentOrchestrator()
         let initialCount = orchestrator.toolEvents.count

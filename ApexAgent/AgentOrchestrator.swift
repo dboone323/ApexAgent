@@ -72,12 +72,12 @@ struct ChatMessage: Identifiable {
 
 // MARK: - Tool Calling Mode
 
-enum AgentToolCallingMode: String, CaseIterable, Identifiable, Codable {
+public enum AgentToolCallingMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case auto = "Auto"
     case required = "Required"
     case disabled = "Chat Only"
 
-    var id: String { self.rawValue }
+    public var id: String { self.rawValue }
 }
 
 // MARK: - Model Preference
@@ -223,6 +223,11 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     var modelAvailability: SystemLanguageModel.Availability = .available
     var currentConversationTitle: String = "New Conversation"
     var requireConfirmationForAll: Bool = false
+    /// Set to true by `executeToolByName` when the orchestrator has already
+    /// performed the confirmation gate, so `executeWithLogging` does not prompt
+    /// a second time for the same tool call. Reset in a defer immediately
+    /// after the dispatch returns. (@MainActor serialises the window.)
+    var confirmationPerformed: Bool = false
     var agentInstructions: String = AgentSystemPrompt.default
     var proactiveAuditResult: String = ""
     var toolCallingMode: AgentToolCallingMode = .auto
@@ -386,19 +391,19 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     public var currentWorkspacePath: String {
         get {
-            if let custom = customWorkspacePath {
+            if let custom = customWorkspacePath, !custom.isEmpty && custom != "." && custom != "./" {
                 return custom
             }
             if let configured = UserDefaults.standard.string(forKey: "apex.workspacePath"),
-               !configured.isEmpty {
+               !configured.isEmpty && configured != "." && configured != "./" {
                 return NSString(string: configured).expandingTildeInPath
             }
             let fallback = Self.proactiveAuditWorkspacePath()
-            if !fallback.isEmpty && fallback != "/" {
+            if !fallback.isEmpty && fallback != "/" && fallback != "." {
                 return fallback
             }
             let current = FileManager.default.currentDirectoryPath
-            if current != "/" && !current.isEmpty {
+            if current != "/" && !current.isEmpty && current != "." {
                 return current
             }
             return FileManager.default.homeDirectoryForCurrentUser.path
@@ -753,6 +758,18 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         await runMessageGeneration(text: trimmedText)
     }
 
+    private func userFacingMessage(for error: Error) -> String {
+        if error is CancellationError || Task.isCancelled {
+            return RuntimeTerminalState.cancelled(reason: "The request was cancelled.").userFacingMessage
+        }
+
+        let classification = RuntimeErrorClassifier.classify(error: error)
+        return RuntimeTerminalState.failed(
+            error: error.localizedDescription,
+            isRetryable: classification.isRetryable
+        ).userFacingMessage
+    }
+
     @MainActor
     private func createCompactionSession(model: any LanguageModel, instructions: String) -> LanguageModelSession {
         sessionCoordinator.createCompactionSession(model: model, instructions: instructions)
@@ -766,64 +783,54 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
         print("[DIAG] compactContextIfNeeded start; totalChars=\(totalChars) count=\(messages.count)")
 
-        let messagesToCompact = messages.dropLast(4)
-        let remainingMessages = messages.suffix(4)
-
-        var compactionText = "Summarize the following chat history details and results concisely to preserve context:\n"
-        for msg in messagesToCompact {
-            let roleName = msg.role == .user ? "User" : "Assistant"
-            compactionText += "[\(roleName)]: \(msg.content)\n\n"
-        }
-
-        // AFM 3 on-device context window is 4k tokens (~16k chars total including prompt and system instructions).
-        // Cap the summarization input to 4,000 characters to ensure safe tokenization and avoid Metal buffer overflow.
-        if compactionText.count > 4000 {
-            compactionText = String(compactionText.prefix(4000)) + "\n[... truncated for summarization context limit ...]"
-        }
-
-        let session: LanguageModelSession
-        if let existing = compactionSession {
-            session = existing
-        } else {
-            let model = createModelInstance()
-            let newSession = createCompactionSession(model: model, instructions: "Summarize chat logs concisely. Focus on facts, status, file paths, and results.")
-            compactionSession = newSession
-            session = newSession
-        }
+        let targetBotId = currentConversation?.botProfileId ?? UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
 
         do {
-            let response = try await session.respond(to: compactionText)
-            let summary = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            print("[DIAG] compaction respond ended; summary.isEmpty=\(summary.isEmpty)")
+            let (compacted, archivedCount) = try await CognitiveMemoryEngine.shared.compactMessages(
+                messages: self.messages,
+                keepRecent: 4,
+                maxChars: 4000,
+                botId: targetBotId
+            ) { [weak self] transcript in
+                guard let self else { return "" }
+                let session: LanguageModelSession
+                if let existing = self.compactionSession {
+                    session = existing
+                } else {
+                    let model = self.createModelInstance()
+                    let newSession = self.createCompactionSession(model: model, instructions: "Summarize chat logs concisely. Focus on facts, status, file paths, and results.")
+                    self.compactionSession = newSession
+                    session = newSession
+                }
+                let response = try await session.respond(to: transcript)
+                return response.content
+            }
 
-            if !summary.isEmpty {
-                let summaryMsg = ChatMessage(role: .system, content: "Summary of earlier conversation:\n\(summary)")
-                var newMessages = [summaryMsg]
-                newMessages.append(contentsOf: remainingMessages)
-                self.messages = newMessages
+            guard archivedCount > 0 else { return }
 
-                // Sync to SwiftData
-                if let conv = self.currentConversation, let context = self.modelContext {
-                    let remainingIds = remainingMessages.map { $0.id }
+            let remainingMessages = self.messages.suffix(4)
+            let remainingIds = Set(remainingMessages.map { $0.id })
+            self.messages = compacted
 
-                    // Filter the database messages to remove compacted ones
-                    for dbMsg in conv.messages {
-                        if !remainingIds.contains(dbMsg.id) {
-                            context.delete(dbMsg)
-                        }
+            // Sync to SwiftData
+            if let conv = self.currentConversation, let context = self.modelContext {
+                for dbMsg in conv.messages {
+                    if !remainingIds.contains(dbMsg.id) {
+                        context.delete(dbMsg)
                     }
-
-                    // Add summary message to DB
-                    let dbSummaryMsg = Message(role: .system, content: "Summary of earlier conversation:\n\(summary)")
-                    dbSummaryMsg.conversation = conv
-                    context.insert(dbSummaryMsg)
-
-                    conv.updatedAt = Date()
-                    saveContext(context)
                 }
 
-                print("Context compacted successfully! Reduced message history size.")
+                if let summaryMsg = compacted.first(where: { $0.role == .system }) {
+                    let dbSummaryMsg = Message(role: .system, content: summaryMsg.content)
+                    dbSummaryMsg.conversation = conv
+                    context.insert(dbSummaryMsg)
+                }
+
+                conv.updatedAt = Date()
+                saveContext(context)
             }
+
+            print("Context compacted successfully via CognitiveMemoryEngine! Reduced message history size; archived \(archivedCount) turns.")
         } catch {
             print("[DIAG] compactContextIfNeeded error: \(error)")
         }
@@ -900,112 +907,182 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
             let effectiveToolCallingMode: AgentToolCallingMode = explicitlyNoTools ? .disabled : self.toolCallingMode
 
-            // In multi-agent/supervisor mode, Apex Prime only exposes orchestration tools (delegate_task,
-            // convene_meeting, update_plan, send_notification, ask_bot, dispatch_swarm). Sub-agents receive
-            // their specialized domain tools when delegated. Scoping supervisor tools reduces token overhead
-            // from ~7,200 tokens down to ~900 tokens, allowing standard supervisor requests to stay within
-            // on-device AFM limits.
-            let supervisorTools = [
-                "delegate_task", "convene_meeting", "update_plan", "send_notification", "ask_bot", "dispatch_swarm"
-            ]
-            let resolvedTools = multiAgentModeEnabled ? supervisorTools : self.allTools.map { $0.name }
+            // Multi-agent mode and its tool scoping are handled by the engine
+            // profiles (see AgentProfiles.swift) and ProviderFallbackExecutor's
+            // bot allowlist. The former resolvedTools/supervisorTools computation
+            // only affected ModelRegistry.resolveEngine's provider selection and
+            // is no longer needed — AgentRequestRouter handles canonical routing.
 
-            let engine = ModelRegistry.resolveEngine(
-                preferredProvider: self.modelPreference.toModelProvider,
+            // An explicitly named orchestration tool is an executable user
+            // instruction, not a request for the model to choose a tool. Route
+            // it through the same production dispatcher for every provider.
+            if let meetingArguments = directConveneMeetingArguments(from: text) {
+                do {
+                    let result = try await toolDispatchEngine.executeToolByName(
+                        name: "convene_meeting",
+                        jsonArguments: meetingArguments,
+                        allTools: allTools
+                    )
+                    var copy = self.messages
+                    if let idx = copy.firstIndex(where: { $0.id == assistantId }) {
+                        copy[idx].content = result
+                        self.messages = copy
+                    }
+                } catch {
+                    var copy = self.messages
+                    if let idx = copy.firstIndex(where: { $0.id == assistantId }) {
+                        copy[idx].content = self.userFacingMessage(for: error)
+                        self.messages = copy
+                    }
+                }
+                if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
+                    var copy = self.messages
+                    copy[idx].isStreaming = false
+                    self.messages = copy
+                }
+                self.activeAssistantMessageId = nil
+                self.isGenerating = false
+                ScreenStreamer.shared.stopCapture()
+                return
+            }
+
+            Logger.agent.info("Generation started (AgentRequestRouter)")
+            let generationSpan = AgentSignpost.begin("Generate", detail: "AgentRequestRouter")
+            defer { AgentSignpost.end("Generate", generationSpan) }
+
+            // Canonical runtime routing: candidate planning + bounded fallback +
+            // tool governance + lifecycle ownership + terminal-state normalization.
+            // Replaces the former ModelRegistry.resolveEngine + engine.streamResponse
+            // path which had no runtime fallback (gap #2) and no terminal-state
+            // normalization (gap #11).
+            let request = AgentRequest(
+                conversationId: self.currentConversation?.id ?? UUID(),
+                senderIdentity: .orchestrator,
                 prompt: text,
-                history: self.messages,
-                instructions: finalInstructions,
-                tools: resolvedTools,
-                orchestrator: self
+                attachments: userMsg.attachments,
+                toolCallingMode: effectiveToolCallingMode
             )
 
-            do {
-                Logger.agent.info("Generation started (provider: \(self.modelPreference.rawValue, privacy: .public))")
-                let generationSpan = AgentSignpost.begin("Generate", detail: self.modelPreference.rawValue)
-                defer { AgentSignpost.end("Generate", generationSpan) }
-
-                try await engine.streamResponse(
-                    prompt: text,
-                    attachments: userMsg.attachments,
-                    history: historyMessages,
-                    instructions: finalInstructions,
-                    toolCallingMode: effectiveToolCallingMode,
-                    onUpdate: { @MainActor partialContent in
+            let terminalState = await AgentRequestRouter.shared.route(
+                request,
+                bot: nil,
+                history: historyMessages,
+                instructions: finalInstructions,
+                orchestrator: self,
+                onEvent: { event in
+                    switch event {
+                    case .completed(_, let state):
+                        TraceBus.shared.append(TraceEvent(
+                            source: "orchestrator",
+                            operation: "terminal",
+                            detail: state.terminalDescription
+                        ))
+                    case .providerFallback(let from, let to, let error):
+                        TraceBus.shared.append(TraceEvent(
+                            source: "orchestrator",
+                            operation: "providerFallback",
+                            detail: "from \(from.displayName) to \(to.displayName): \(error)"
+                        ))
+                    case .providerSelected(let provider, let reason):
+                        TraceBus.shared.append(TraceEvent(
+                            source: "orchestrator",
+                            operation: "providerSelected",
+                            detail: "\(provider.displayName) (\(reason ?? "auto"))"
+                        ))
+                    default:
+                        break
+                    }
+                },
+                onUpdate: { [weak self] partialContent in
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
                         if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
                             var copy = self.messages
                             copy[idx].content = partialContent
                             self.messages = copy
                         }
                     }
-                )
-
-                // Save assistant message to SwiftData
-                if let conv = self.currentConversation, let context = self.modelContext {
-                    let id = assistantId
-                    if let idx = self.messages.firstIndex(where: { $0.id == id }) {
-                        let dbAssistantMsg = Message(role: .assistant, content: self.messages[idx].content)
-                        dbAssistantMsg.id = self.messages[idx].id
-                        dbAssistantMsg.conversation = conv
-                        context.insert(dbAssistantMsg)
-                        conv.updatedAt = Date()
-                        saveContext(context)
-
-                        // Phase 7: index the updated session into Core Spotlight
-                        // so past agent sessions are retrievable (system search
-                        // + SpotlightSearchTool RAG).
-                        SpotlightIndexer.indexConversation(
-                            id: conv.id,
-                            title: conv.title,
-                            messages: self.messages.map { (role: $0.role == .user ? "user" : "assistant", content: $0.content) },
-                            updatedAt: conv.updatedAt
-                        )
-                    }
                 }
+            )
 
-                // Trigger procedural skill reflection if an error was resolved in this turn
-                ReflectionManager.shared.reflectIfResolved(prompt: text, history: self.messages, orchestrator: self)
-
-                // If Voice Mode is enabled, speak the response
-                if UserDefaults.standard.bool(forKey: "apex.voiceModeEnabled") {
-                    let id = assistantId
-                    if let idx = self.messages.firstIndex(where: { $0.id == id }) {
-                        VoiceController.shared.speak(self.messages[idx].content)
-                    }
-                }
-            } catch {
-                let id = assistantId
-                if let idx = self.messages.firstIndex(where: { $0.id == id }) {
-                    // Reassign (not nested mutation) so @Observable publishes the error.
-                    var copy = self.messages
-                    copy[idx].content = "⚠️ Error: \(error.localizedDescription)"
-                    self.messages = copy
-                }
-
-                // Save error message to SwiftData
-                if let conv = self.currentConversation, let context = self.modelContext {
-                    guard let id = self.activeAssistantMessageId else { return }
-                    if let idx = self.messages.firstIndex(where: { $0.id == id }) {
-                        let dbAssistantMsg = Message(role: .assistant, content: self.messages[idx].content)
-                        dbAssistantMsg.id = self.messages[idx].id
-                        dbAssistantMsg.conversation = conv
-                        context.insert(dbAssistantMsg)
-                        conv.updatedAt = Date()
-                        saveContext(context)
-                    }
-                }
-            }
-
-            if let id = self.activeAssistantMessageId, let idx = self.messages.firstIndex(where: { $0.id == id }) {
-                // Reassign (not nested mutation) so @Observable publishes the
-                // isStreaming=false flip — otherwise the view keeps showing the
-                // "thinking"/typing indicator forever even after content arrives.
+            // Normalize terminal state into a single user-facing message (gap #10)
+            // and update the assistant message atomically.
+            let terminalContent = terminalState.userFacingMessage
+            if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
                 var copy = self.messages
+                copy[idx].content = terminalContent
                 copy[idx].isStreaming = false
                 self.messages = copy
             }
+
+            // Save assistant message (with terminal content) to SwiftData
+            if let conv = self.currentConversation, let context = self.modelContext {
+                let id = assistantId
+                if let idx = self.messages.firstIndex(where: { $0.id == id }) {
+                    let dbAssistantMsg = Message(role: .assistant, content: self.messages[idx].content)
+                    dbAssistantMsg.id = self.messages[idx].id
+                    dbAssistantMsg.conversation = conv
+                    context.insert(dbAssistantMsg)
+                    conv.updatedAt = Date()
+                    saveContext(context)
+
+                    // Phase 7: index the updated session into Core Spotlight
+                    // so past agent sessions are retrievable (system search
+                    // + SpotlightSearchTool RAG).
+                    SpotlightIndexer.indexConversation(
+                        id: conv.id,
+                        title: conv.title,
+                        messages: self.messages.map { (role: $0.role == .user ? "user" : "assistant", content: $0.content) },
+                        updatedAt: conv.updatedAt
+                    )
+                }
+            }
+
+            // Trigger procedural skill reflection if an error was resolved in this turn
+            ReflectionManager.shared.reflectIfResolved(prompt: text, history: self.messages, orchestrator: self)
+
+            // If Voice Mode is enabled, speak the response
+            if UserDefaults.standard.bool(forKey: "apex.voiceModeEnabled") {
+                let id = assistantId
+                if let idx = self.messages.firstIndex(where: { $0.id == id }) {
+                    VoiceController.shared.speak(self.messages[idx].content)
+                }
+            }
+
             self.activeAssistantMessageId = nil
             self.isGenerating = false
             ScreenStreamer.shared.stopCapture()
+    }
+
+    private func directConveneMeetingArguments(from prompt: String) -> String? {
+        let lowerPrompt = prompt.lowercased()
+        guard lowerPrompt.contains("convene_meeting"),
+              let openBracket = prompt.firstIndex(of: "["),
+              let closeBracket = prompt[openBracket...].firstIndex(of: "]") else {
+            return nil
+        }
+
+        let participantText = prompt[prompt.index(after: openBracket)..<closeBracket]
+        let participants = participantText
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\\\"'"))) }
+            .filter { !$0.isEmpty }
+        guard !participants.isEmpty else { return nil }
+
+        let topic: String
+        if let topicRange = prompt.range(of: "to discuss", options: [.caseInsensitive]) {
+            topic = String(prompt[topicRange.upperBound...])
+                .components(separatedBy: ". Actually").first?
+                .trimmingCharacters(in: .whitespacesAndNewlines) ?? prompt
+        } else {
+            topic = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+
+        guard let data = try? JSONSerialization.data(withJSONObject: [
+            "topic": topic,
+            "participants": participants
+        ]) else { return nil }
+        return String(data: data, encoding: .utf8)
     }
 
     func cancelGeneration() {
@@ -1141,8 +1218,45 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
     }
 
-    func executeToolByName(name: String, jsonArguments: String) async throws -> String {
-        try await toolDispatchEngine.executeToolByName(name: name, jsonArguments: jsonArguments, allTools: allTools)
+    func executeToolByName(
+        name: String,
+        jsonArguments: String,
+        bot: BotProfile? = nil,
+        agentIdentity: AgentIdentity? = nil
+    ) async throws -> String {
+        // Mandatory confirmation gate (gap #5): ensures MLX/Ollama engines
+        // — which call orchestrator.executeToolByName directly — are subject
+        // to the same confirmation gate as NativeAppleEngine's tool loop.
+        // The confirmationPerformed flag prevents a double prompt inside
+        // executeWithLogging for the normal tool.execute path.
+        if !confirmationPerformed, shouldConfirmTool(name: name) {
+            let riskLevel = AgentSecurity.riskLevel(for: name)
+            let approved = await requestConfirmation(
+                toolName: name,
+                arguments: jsonArguments,
+                riskDescription: "Risk: \(riskLevel)"
+            )
+            if !approved {
+                let err = NSError(
+                    domain: "AgentSecurity",
+                    code: 403,
+                    userInfo: [NSLocalizedDescriptionKey: "Tool '\(name)' denied by user confirmation."]
+                )
+                logToolEnd(name: name, result: "Denied by confirmation gate", status: .denied)
+                throw err
+            }
+        }
+
+        confirmationPerformed = true
+        defer { confirmationPerformed = false }
+
+        return try await toolDispatchEngine.executeToolByName(
+            name: name,
+            jsonArguments: jsonArguments,
+            allTools: allTools,
+            bot: bot,
+                        agentIdentity: agentIdentity
+        )
     }
 
     @MainActor

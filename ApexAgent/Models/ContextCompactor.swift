@@ -1,13 +1,13 @@
 import Foundation
 
-public struct CompactionInput {
+public struct CompactionInput: Sendable {
     public let messages: [(role: String, content: String)]
     public let maxTokenBudget: Int       // target max approximate tokens to keep
     public let pinnedSystemPrompt: String // always preserved verbatim
     public let recentTurnsToPreserve: Int // last N user+assistant turns kept verbatim
 }
 
-public struct CompactionResult {
+public struct CompactionResult: Sendable {
     public let compactedMessages: [(role: String, content: String)]
     public let summarizedTurnCount: Int
     public let approximateTokensSaved: Int

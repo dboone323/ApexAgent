@@ -391,7 +391,16 @@ public final class ContainerManager: ContainerManagerProtocol {
             
             let cpus = containerCPUs
             let memory = containerMemoryMB
-            let workspace = FileManager.default.currentDirectoryPath
+            let hostWorkspace: String
+            let configured = UserDefaults.standard.string(forKey: "apex.workspacePath") ?? ""
+            let current = FileManager.default.currentDirectoryPath
+            if !configured.isEmpty && configured != "/" && configured != "." {
+                hostWorkspace = NSString(string: configured).expandingTildeInPath
+            } else if current != "/" && !current.isEmpty && current != "." {
+                hostWorkspace = current
+            } else {
+                hostWorkspace = AgentOrchestrator.proactiveAuditWorkspacePath()
+            }
             
             // Create container
             let containerInstance = try await mgr.create(
@@ -411,12 +420,14 @@ public final class ContainerManager: ContainerManagerProtocol {
                 config.process.arguments = ["/bin/sleep", "infinity"]
                 config.process.terminal = false
                 
-                // Mount current directory/workspace
-                let czMount = Containerization.Mount.share(
-                    source: workspace,
-                    destination: workspace
-                )
-                config.mounts.append(czMount)
+                // Mount host workspace into /workspace if valid and not system root
+                if hostWorkspace != "/" && FileManager.default.fileExists(atPath: hostWorkspace) {
+                    let czMount = Containerization.Mount.share(
+                        source: hostWorkspace,
+                        destination: "/workspace"
+                    )
+                    config.mounts.append(czMount)
+                }
             }
             
             try await containerInstance.create()

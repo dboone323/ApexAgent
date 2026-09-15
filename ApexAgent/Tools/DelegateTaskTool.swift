@@ -12,7 +12,7 @@ struct DelegateTaskTool: Tool {
     }
 
     let name = "delegate_task"
-    let description = "Delegates a specific sub-task to a specialized sub-agent (developer/Codex, executor/Nexus, controller/Pilot, researcher/Oracle, linter/Auditor, uiDesigner/Aura, planner/Chronos) and returns their final response report."
+    let description = "Delegates the user's specific concrete task to a specialized sub-agent (developer/Codex, executor/Nexus, controller/Pilot, researcher/Oracle, linter/Auditor, uiDesigner/Aura, planner/Chronos) and returns the completed response report. Preserve the task; do not replace it with a generic operational-status or readiness report unless the user explicitly requested readiness."
 
     @Generable
     struct Arguments: Decodable {
@@ -62,85 +62,35 @@ struct DelegateTaskTool: Tool {
                 }
                 let startMessage = "\(indicatorPrefix) is starting task:\n> \(arguments.taskDescription)\n\n"
                 
-                let orchPreference = await MainActor.run { orchestrator.modelPreference }
-                let subAgentPreference: AgentModelPreference
-                if let agentPrefStr = agent.modelPreference, let pref = AgentModelPreference(rawValue: agentPrefStr) {
-                    subAgentPreference = pref
-                } else {
-                    subAgentPreference = orchPreference
+                // 1. Create the initial placeholder chat message on MainActor
+                let messageId = await MainActor.run {
+                    let chatMsg = ChatMessage(role: .assistant, content: startMessage, isStreaming: true)
+                    orchestrator.appendMessage(chatMsg)
+                    return chatMsg.id
                 }
 
-                let safeTools = agent.allowedTools.filter { $0 != "delegate_task" && $0 != "convene_meeting" }
-                let estimatedTokens = ModelRegistry.estimateTokenCount(
+                // 2. Generate the sub-agent response with AgentRequestRouter resilience & fallback
+                let subStartTime = Date()
+                let agentType = AgentType(rawValue: agent.name) ?? .developer
+                let request = AgentRequest(
+                    senderIdentity: .archetype(agentType),
                     prompt: arguments.taskDescription,
-                    instructions: agent.systemPrompt,
-                    tools: safeTools
+                    toolCallingMode: .auto
                 )
 
-                let effectivePreference: AgentModelPreference
-                if (subAgentPreference == .autoPicker || subAgentPreference == .localSystem) && estimatedTokens > 3200 {
-                    effectivePreference = .localOllama
-                    print("🧠 [DelegateTaskTool] Sub-agent '\(agent.name)' task is ~\(estimatedTokens) tokens (>3.2k safe limit). Pre-tiering to Local Ollama.")
-                } else {
-                    effectivePreference = subAgentPreference
-                }
-
-                // 1. Create the session and append the initial chat message on the MainActor
-                let (session, messageId) = await MainActor.run {
-                    let chatMsg = ChatMessage(role: .assistant, content: startMessage, isStreaming: true)
-                    let msgId = chatMsg.id
-                    orchestrator.appendMessage(chatMsg)
-                    
-                    let s = createSubAgentSession(
-                        agent: agent,
-                        preference: effectivePreference,
-                        instructions: agent.systemPrompt,
-                        prompt: arguments.taskDescription
-                    )
-                    return (s, msgId)
-                }
-                
-                // 2. Generate the sub-agent response with auto-picker resilience.
-                let subStartTime = Date()
-                var finalContent = ""
-
-                if effectivePreference == .localOllama {
-                    print("[DELEGATION] 🚀 Sub-agent '\(agent.name)' executing via OllamaAgentEngine (gemma4:12b)...")
-                    finalContent = try await executeViaOllama(
-                        orchestrator: orchestrator,
-                        agent: agent,
-                        taskDescription: arguments.taskDescription,
-                        safeTools: safeTools
-                    )
-                } else {
-                    do {
-                        let response = try await session.respond(
-                            to: Prompt(arguments.taskDescription),
-                            options: GenerationOptions(toolCallingMode: .allowed)
-                        )
-                        finalContent = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-                    } catch {
-                        let errStr = "\(error)"
-                        let isContextOrTokenLimit = errStr.contains("context")
-                            || errStr.contains("tokenize")
-                            || errStr.contains("4,096")
-                            || errStr.contains("4096")
-                            || errStr.contains("InferenceError")
-
-                        if isContextOrTokenLimit {
-                            print("⚠️ [DelegateTaskTool] Sub-agent '\(agent.name)' exceeded on-device token limit (\(errStr)). Auto-tiering fallback to Local Ollama (gemma4:12b)...")
-                            finalContent = try await executeViaOllama(
-                                orchestrator: orchestrator,
-                                agent: agent,
-                                taskDescription: arguments.taskDescription,
-                                safeTools: safeTools
-                            )
-                        } else {
-                            throw error
+                let terminalState = await AgentRequestRouter.shared.route(
+                    request,
+                    history: [],
+                    instructions: agent.systemPrompt,
+                    orchestrator: orchestrator,
+                    onUpdate: { partial in
+                        Task { @MainActor in
+                            orchestrator.updateMessage(id: messageId, content: startMessage + partial)
                         }
                     }
-                }
+                )
 
+                let finalContent = terminalState.userFacingMessage
                 let elapsed = String(format: "%.2f", Date().timeIntervalSince(subStartTime))
                 print("[DELEGATION] ✅ Sub-agent '\(agent.name)' finished in \(elapsed)s: '\(finalContent.prefix(80))'")
                 fflush(stdout)
@@ -159,15 +109,11 @@ struct DelegateTaskTool: Tool {
                     orchestrator.coordinationTraces.append(trace)
                 }
 
-                // WS1.5 reconciliation: record the structured handoff result so the
-                // orchestrator / dashboard can reconcile sub-agent work without
-                // re-parsing the free-text response. Non-breaking — the String
-                // return below is unchanged.
+                // 4. Record subagent turn and handoff
                 let handoff = TaskResult(
                     taskId: UUID().uuidString,
                     status: finalContent.isEmpty ? "failed" : "completed",
-                    resultSummary: finalContent.prefix(2000).description,
-                    errorDetails: finalContent.isEmpty ? "Sub-agent returned no content" : nil
+                    resultSummary: finalContent.prefix(2000).description
                 )
                 await AgentRegistry.shared.recordHandoff(handoff)
 
@@ -175,49 +121,5 @@ struct DelegateTaskTool: Tool {
                 return returnSummary
             }
         }
-    }
-
-    @MainActor
-    private func executeViaOllama(
-        orchestrator: AgentOrchestrator,
-        agent: RegisteredAgent,
-        taskDescription: String,
-        safeTools: [String]
-    ) async throws -> String {
-        let engine = OllamaAgentEngine(orchestrator: orchestrator, allowedTools: safeTools)
-        var subOutput = ""
-        try await engine.streamResponse(
-            prompt: taskDescription,
-            attachments: [],
-            history: [],
-            instructions: agent.systemPrompt,
-            toolCallingMode: .auto,
-            onUpdate: { partial in
-                subOutput = partial
-            }
-        )
-        return subOutput.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    @MainActor
-    private func createSubAgentSession(
-        agent: RegisteredAgent,
-        preference: AgentModelPreference,
-        instructions: String,
-        prompt: String = ""
-    ) -> LanguageModelSession {
-        // Ensure subagents never inherit recursive delegation tools
-        let safeTools = agent.allowedTools.filter { $0 != "delegate_task" && $0 != "convene_meeting" }
-        return orchestrator.orchestrator.sessionForAgent(
-            agent: agent,
-            preference: preference,
-            instructions: instructions,
-            allowedTools: safeTools,
-            toolCallingMode: .allowed,
-            reasoningLevel: apexConfiguredReasoningLevel(),
-            maxResponseTokens: apexConfiguredMaxResponseTokens(),
-            history: nil,
-            prompt: prompt
-        )
     }
 }

@@ -34,6 +34,9 @@ enum AgentSecurity {
         "list_review_sessions": .low,
         "container_status": .low,
         "audit_projects": .low,
+        "extract_entities": .low,
+        "screen_diff": .low,
+        "screen_perception": .low,
 
         // ── Medium: fetches external data or writes local state ──────────
         "web_search": .medium,
@@ -54,6 +57,14 @@ enum AgentSecurity {
         "run_workflow": .medium,
         "execute_dynamic_tool": .medium,
         "confirm_completion": .medium,
+        "ask_bot": .medium,
+        "get_weather": .medium,
+        "map_search": .medium,
+        "get_directions": .medium,
+        "translate": .medium,
+        "network_diagnostics": .medium,
+        "query_logs": .medium,
+        "watch_paths": .medium,
 
         // ── High: destructive, code-executing, or externally visible ─────
         "run_shell_command": .high,
@@ -69,7 +80,10 @@ enum AgentSecurity {
         "dispatch_swarm": .medium,
         "ax_target_element": .low,
         "capture_differential_screen": .low,
-        "capture_window_image": .low
+        "capture_window_image": .low,
+        "calendar": .high,
+        "reminders": .high,
+        "run_shortcut": .high
     ]
 
     /// Risk level for a tool name (unknown tools are `.medium`).

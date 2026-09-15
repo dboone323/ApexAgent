@@ -7,11 +7,44 @@ struct ContainerIsolationSecurityTests {
 
     // MARK: - 1. Container Isolation Levels
 
-    @Test func testContainerIsolationLevelEnumValues() {
-        #expect(ContainerIsolationLevel.strict.rawValue == "strict")
-        #expect(ContainerIsolationLevel.standard.rawValue == "standard")
-        #expect(ContainerIsolationLevel.ephemeralOverlay.rawValue == "overlay")
-        #expect(ContainerIsolationLevel.allCases.count == 3)
+    @MainActor
+    @Test func testContainerFilesystemSnapshotAndRollbackRealVerification() async throws {
+        let manager = ContainerManager.shared
+        let containerId = "test-rollback-\(UUID().uuidString.prefix(6).lowercased())"
+        let snapshotName = "snap-baseline-\(UUID().uuidString.prefix(4))"
+
+        let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
+        let root = paths.first!.appendingPathComponent("com.apexagent.containers")
+        let containerDir = root.appendingPathComponent("imagestore/containers/\(containerId)")
+        let fm = FileManager.default
+
+        // 1. Arrange: setup container directory with a baseline file
+        try fm.createDirectory(at: containerDir, withIntermediateDirectories: true)
+        let testFile = containerDir.appendingPathComponent("app_state.json")
+        try "{\"status\": \"healthy\", \"version\": 1}".write(to: testFile, atomically: true, encoding: .utf8)
+
+        // 2. Act: Take snapshot
+        let snap = try await manager.createSnapshot(name: snapshotName, description: "Before mutation", containerId: containerId)
+        #expect(snap.name == snapshotName)
+
+        // 3. Mutate: corrupt the file and inject a rogue file
+        try "{\"status\": \"CORRUPTED\", \"version\": 999}".write(to: testFile, atomically: true, encoding: .utf8)
+        let rogueFile = containerDir.appendingPathComponent("rogue.sh")
+        try "rm -rf /".write(to: rogueFile, atomically: true, encoding: .utf8)
+
+        #expect(fm.fileExists(atPath: rogueFile.path))
+
+        // 4. Rollback: restore from snapshot
+        try await manager.restoreSnapshot(id: snap.id, containerId: containerId)
+
+        // 5. Assert: baseline state restored, rogue file removed
+        let restoredContent = try String(contentsOf: testFile, encoding: .utf8)
+        #expect(restoredContent == "{\"status\": \"healthy\", \"version\": 1}")
+        #expect(!fm.fileExists(atPath: rogueFile.path), "Rogue file created post-snapshot must be gone after rollback")
+
+        // Cleanup
+        try await manager.deleteSnapshot(id: snap.id, containerId: containerId)
+        try? fm.removeItem(at: containerDir)
     }
 
     @MainActor

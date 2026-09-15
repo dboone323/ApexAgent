@@ -9,8 +9,7 @@ public final class ApexGatewayServer {
     private var listener: NWListener?
     private var connections: [UUID: NWConnection] = [:]
     
-    // Hold pending continuations for tool confirmations keyed by request ID
-    private var pendingConfirmations: [UUID: CheckedContinuation<Bool, Never>] = [:]
+    private var lastTerminalMessageId: UUID?
     
     public init(port: UInt16 = 1337, orchestrator: AgentOrchestrator) {
         self.port = port
@@ -62,10 +61,7 @@ public final class ApexGatewayServer {
             conn.cancel()
         }
         connections.removeAll()
-        for continuation in pendingConfirmations.values {
-            continuation.resume(returning: false)
-        }
-        pendingConfirmations.removeAll()
+        SessionLifecycleManager.shared.cancelAll()
         print("📡 [ApexGatewayServer] Daemon stopped.")
     }
     
@@ -78,10 +74,16 @@ public final class ApexGatewayServer {
             switch state {
             case .failed(let error):
                 print("📡 [ApexGatewayServer] Connection \(id) failed: \(error)")
-                Task { @MainActor [weak self] in self?.connections.removeValue(forKey: id) }
+                Task { @MainActor [weak self] in
+                    self?.connections.removeValue(forKey: id)
+                    SessionLifecycleManager.shared.cancelSession(id: id)
+                }
             case .cancelled:
                 print("📡 [ApexGatewayServer] Connection \(id) cancelled")
-                Task { @MainActor [weak self] in self?.connections.removeValue(forKey: id) }
+                Task { @MainActor [weak self] in
+                    self?.connections.removeValue(forKey: id)
+                    SessionLifecycleManager.shared.cancelSession(id: id)
+                }
             default:
                 break
             }
@@ -124,7 +126,7 @@ public final class ApexGatewayServer {
                 Task { @MainActor [weak self] in
                     guard let self else { return }
                     if let action = try? JSONDecoder().decode(GatewayAction.self, from: bodyContent) {
-                        await self.handleClientAction(action)
+                        await self.handleClientAction(action, connectionId: id)
                     }
                     self.readNextMessage(from: connection, id: id)
                 }
@@ -132,34 +134,37 @@ public final class ApexGatewayServer {
         }
     }
     
-    private func handleClientAction(_ action: GatewayAction) async {
+    private func handleClientAction(_ action: GatewayAction, connectionId: UUID) async {
         switch action {
         case .sendMessage(let text, let attachmentsData):
             let attachments = attachmentsData.compactMap { NSImage(data: $0) }
             orchestrator.pendingAttachments = attachments
-            orchestrator.sendMessage(text)
+            let task = Task { @MainActor [weak orchestrator] in
+                guard let orchestrator else { return }
+                orchestrator.sendMessage(text)
+            }
+            SessionLifecycleManager.shared.register(task: task, forSessionId: connectionId)
             
         case .cancelGeneration:
             orchestrator.cancelGeneration()
+            SessionLifecycleManager.shared.cancelSession(id: connectionId)
             
         case .resolveConfirmation(let id, let approved):
-            if let continuation = pendingConfirmations.removeValue(forKey: id) {
-                continuation.resume(returning: approved)
-            }
-            
+                        SessionLifecycleManager.shared.resolveConfirmation(requestId: id, approved: approved)
         default:
             break
         }
     }
-    
+
     private func requestRemoteConfirmation(toolName: String, arguments: String, riskDescription: String) async -> Bool {
         let reqId = UUID()
-        let action = GatewayAction.requestConfirmation(id: reqId, toolName: toolName, arguments: arguments, riskDescription: riskDescription)
+        let sanitizedArgs = SecurityAuditor.redactSensitiveData(in: arguments)
+        let action = GatewayAction.requestConfirmation(id: reqId, toolName: toolName, arguments: sanitizedArgs, riskDescription: riskDescription)
         
         broadcastMessage(action)
         
         return await withCheckedContinuation { continuation in
-            pendingConfirmations[reqId] = continuation
+            SessionLifecycleManager.shared.registerConfirmation(requestId: reqId, continuation: continuation)
         }
     }
     
@@ -178,8 +183,8 @@ public final class ApexGatewayServer {
                     toolName: ev.toolName,
                     status: String(describing: ev.status),
                     riskDescription: nil,
-                    arguments: ev.arguments,
-                    result: ev.result,
+                    arguments: SecurityAuditor.redactSensitiveData(in: ev.arguments),
+                    result: SecurityAuditor.redactSensitiveData(in: ev.result ?? ""),
                     timestamp: ev.timestamp
                 )
             }
@@ -208,6 +213,23 @@ public final class ApexGatewayServer {
         )
         
         broadcastMessage(action)
+
+        if let terminalMessage = orchestrator.messages.last(where: { $0.role == .assistant && !$0.isStreaming }),
+           terminalMessage.id != lastTerminalMessageId,
+           Self.isTerminalErrorMessage(terminalMessage.content) {
+            lastTerminalMessageId = terminalMessage.id
+            broadcastMessage(.terminalResult(message: terminalMessage.content, isError: true))
+        }
+    }
+
+    private static func isTerminalErrorMessage(_ content: String) -> Bool {
+        content.hasPrefix("⚠️")
+            || content.hasPrefix("Generation cancelled")
+            || content.hasPrefix("The request failed")
+            || content.hasPrefix("The request could not be completed")
+            || content.hasPrefix("The request timed out")
+            || content.hasPrefix("The provider returned no response")
+            || content.hasPrefix("All available providers failed")
     }
     
     private func broadcastMessage(_ action: GatewayAction) {

@@ -1,0 +1,33 @@
+{
+  "configurations" : [
+    {
+      "id" : "7F9C6E84-4B2E-47C0-8B39-D3E1A68903F4",
+      "name" : "Default Configuration",
+      "options" : {
+        "environmentVariableEntries" : [
+          {
+            "enabled" : true,
+            "key" : "APEX_TEST_MODE",
+            "value" : "1"
+          }
+        ]
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "defaultTestExecutionTimeAllowance" : 120,
+    "maximumTestExecutionTimeAllowance" : 240,
+    "testTimeoutsEnabled" : true,
+    "userAttachmentLifetime" : "keepAlways"
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:ApexAgent.xcodeproj",
+        "name" : "ApexAgentUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

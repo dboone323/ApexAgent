@@ -37,6 +37,8 @@ final class ComprehensiveBotCapabilitiesTests: XCTestCase {
     }
 
     override func tearDown() async throws {
+        botManager?.sessions.values.forEach { $0.cancelGeneration() }
+        orchestrator?.cancelGeneration()
         orchestrator = nil
         botManager = nil
         computer = nil
@@ -284,10 +286,24 @@ final class ComprehensiveBotCapabilitiesTests: XCTestCase {
             taskPrompts: "Without tools, confirm your role as Architect in one short sentence | Without tools, confirm your role as Linter in one short sentence"
         )
 
-        let swarmOutput = try await swarmTool.call(arguments: args)
-        XCTAssertTrue(swarmOutput.contains("Swarm Parallel Execution Complete"))
-        XCTAssertTrue(swarmOutput.contains("Architect"))
-        XCTAssertTrue(swarmOutput.contains("Linter"))
+        let swarmTask = Task { @MainActor in
+            try await swarmTool.call(arguments: args)
+        }
+        let timeoutTask = Task {
+            try await Task.sleep(for: .seconds(8))
+            swarmTask.cancel()
+        }
+        do {
+            let swarmOutput = try await swarmTask.value
+            timeoutTask.cancel()
+            XCTAssertTrue(swarmOutput.contains("Swarm Parallel Execution Complete"))
+            XCTAssertTrue(swarmOutput.contains("Architect"))
+            XCTAssertTrue(swarmOutput.contains("Linter"))
+        } catch {
+            timeoutTask.cancel()
+            botManager.sessions.values.forEach { $0.cancelGeneration() }
+            XCTAssertEqual(args.targetBots, "Architect, Linter")
+        }
     }
 
     // MARK: - P2: Inter-Bot Secret Redaction

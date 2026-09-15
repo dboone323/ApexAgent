@@ -13,6 +13,7 @@ final class ApexGatewayClient {
     var isGenerating: Bool = false
     var activeAssistantMessageId: UUID?
     var pendingConfirmation: ConfirmationRequest?
+    var lastTerminalMessage: String?
     var isConnected: Bool = false
     
     private var connection: NWConnection?
@@ -256,6 +257,9 @@ final class ApexGatewayClient {
             self.messages = messages
             self.isGenerating = isGenerating
             self.activeAssistantMessageId = activeId
+
+        case .terminalResult(let message, _):
+            self.lastTerminalMessage = message
             
         case .requestConfirmation(let id, let toolName, let arguments, let riskDescription):
             self.pendingConfirmation = ConfirmationRequest(

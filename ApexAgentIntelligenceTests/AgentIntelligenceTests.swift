@@ -59,13 +59,13 @@ struct AgentIntelligenceTests {
         )
 
         do {
-            let result = try await withBound(seconds: 120) {
+            let result = try await withBound(seconds: 40) {
                 try await tool.call(arguments: arguments)
             }
             #expect(!result.isEmpty, "ConveneMeetingTool should return a non-empty result")
             // When the model is available the result contains a transcript header
             #expect(
-                result.contains("Debate Consensus Transcript:") || result.contains("ERROR"),
+                result.contains("Debate Transcript") || result.contains("ERROR"),
                 "Result should be a consensus transcript or a structured error. Got: \(result)"
             )
         } catch is CancellationError {
@@ -73,8 +73,8 @@ struct AgentIntelligenceTests {
             // the on-device model is fast. On macOS 27 beta `respond(to:)` can
             // exceed any sane bound; that is an environment condition, so report
             // it as a known issue rather than failing the suite.
-            withKnownIssue("macOS 27 beta respond(to:) regression: ConveneMeetingTool exceeded 120s", isIntermittent: true) {
-                Issue.record("ConveneMeetingTool timed out after 120s")
+            withKnownIssue("macOS 27 beta respond(to:) regression: ConveneMeetingTool exceeded 40s", isIntermittent: true) {
+                Issue.record("ConveneMeetingTool timed out after 40s")
             }
         } catch {
             // Model unavailable (entitlement / PCC absent) — expected in CI
@@ -83,8 +83,8 @@ struct AgentIntelligenceTests {
         }
     }
 
-    /// Verifies DelegateTaskTool successfully executes its mock fallback behavior
-    /// in test mode or runs via the sub-agent registry.
+    /// Verifies DelegateTaskTool reaches a real sub-agent session or reports a
+    /// structured model/provider error.
     @Test("DelegateTaskTool coordinates sub-agents correctly")
     @MainActor
     func testDelegateTaskTool() async throws {
@@ -97,14 +97,14 @@ struct AgentIntelligenceTests {
         )
         
         do {
-            let result = try await withBound(seconds: 120) {
+            let result = try await withBound(seconds: 40) {
                 try await tool.call(arguments: arguments)
             }
             #expect(!result.isEmpty, "DelegateTaskTool should return a non-empty result")
-            #expect(result.contains("Mock delegation response") || result.contains("ERROR") || !result.isEmpty)
+            #expect(!result.contains("Mock delegation response"), "DelegateTaskTool must not use a mock response")
         } catch is CancellationError {
-            withKnownIssue("macOS 27 beta respond(to:) regression: DelegateTaskTool exceeded 120s", isIntermittent: true) {
-                Issue.record("DelegateTaskTool timed out after 120s")
+            withKnownIssue("macOS 27 beta respond(to:) regression: DelegateTaskTool exceeded 40s", isIntermittent: true) {
+                Issue.record("DelegateTaskTool timed out after 40s")
             }
         }
     }
@@ -151,6 +151,44 @@ struct DynamicToolRoutingTests {
         #expect(result.staticCalls.count == 0, "Expected 0 static calls")
         #expect(result.dynamicCalls.count == 1, "Expected 1 dynamic call")
         #expect(result.dynamicCalls.first?.name == "live_custom_tool")
+    }
+
+    @Test("ConveneMeetingTool decodes both raw arrays and serialized JSON array strings")
+    func testConveneMeetingArgumentsDecoding() throws {
+        let jsonStringified = """
+        {
+            "topic": "Sprint planning",
+            "participants": "[\\"Codex\\", \\"Nexus\\", \\"Pilot\\", \\"Oracle\\", \\"Auditor\\", \\"Aura\\", \\"Chronos\\"]"
+        }
+        """
+        let dataStringified = try #require(jsonStringified.data(using: .utf8))
+        let decodedStringified = try JSONDecoder().decode(ConveneMeetingTool.Arguments.self, from: dataStringified)
+        #expect(decodedStringified.topic == "Sprint planning")
+        #expect(decodedStringified.participants.count == 7)
+        #expect(decodedStringified.participants.contains("Codex"))
+        #expect(decodedStringified.participants.contains("Chronos"))
+
+        let jsonStandard = """
+        {
+            "topic": "Architecture review",
+            "participants": ["developer", "planner"]
+        }
+        """
+        let dataStandard = try #require(jsonStandard.data(using: .utf8))
+        let decodedStandard = try JSONDecoder().decode(ConveneMeetingTool.Arguments.self, from: dataStandard)
+        #expect(decodedStandard.topic == "Architecture review")
+        #expect(decodedStandard.participants == ["developer", "planner"])
+
+        let jsonComma = """
+        {
+            "topic": "Security audit",
+            "participants": "auditor, researcher, developer"
+        }
+        """
+        let dataComma = try #require(jsonComma.data(using: .utf8))
+        let decodedComma = try JSONDecoder().decode(ConveneMeetingTool.Arguments.self, from: dataComma)
+        #expect(decodedComma.topic == "Security audit")
+        #expect(decodedComma.participants == ["auditor", "researcher", "developer"])
     }
 }
 

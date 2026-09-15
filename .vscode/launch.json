@@ -1,0 +1,44 @@
+{
+    "configurations": [
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ApexAgent}",
+            "name": "Debug ApexAgent",
+            "target": "ApexAgent",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug ApexAgent"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ApexAgent}",
+            "name": "Release ApexAgent",
+            "target": "ApexAgent",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release ApexAgent"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ApexAgent}",
+            "name": "Debug sandboxctl",
+            "target": "sandboxctl",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug sandboxctl"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ApexAgent}",
+            "name": "Release sandboxctl",
+            "target": "sandboxctl",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release sandboxctl"
+        }
+    ]
+}

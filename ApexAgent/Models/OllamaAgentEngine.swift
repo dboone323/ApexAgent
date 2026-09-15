@@ -116,6 +116,7 @@ struct OllamaAgentEngine: AgentEngine {
             var thinkingText = ""
             var toolCalls: [[String: Any]] = []
             for try await line in bytes.lines {
+                try Task.checkCancellation()
                 let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty,
                       let data = trimmed.data(using: .utf8),
@@ -231,7 +232,7 @@ struct OllamaAgentEngine: AgentEngine {
                     // Route through executeToolByName so logToolStart/logToolEnd fire,
                     // populating the Activity panel and Plan dashboard — matching the
                     // behavior users see with AFM/Gemini turns.
-                    output = try await orchestrator.executeToolByName(name: name, jsonArguments: argsString)
+                    output = try await orchestrator.executeToolByName(name: name, jsonArguments: argsString, bot: bot)
                 } catch {
                     output = "ERROR: Tool '\(name)' failed: \(error.localizedDescription)"
                 }

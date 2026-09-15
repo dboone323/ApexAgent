@@ -167,6 +167,7 @@ public final class RemoteCompanionGateway: ObservableObject {
 
     @Published public private(set) var isAdvertising: Bool = false
     @Published public private(set) var pairedDevices: [String: CompanionDevice] = [:]
+    @Published public private(set) var activeSessionTokens: [String: String] = [:] // sessionToken -> deviceId
     @Published public private(set) var pendingApprovalRelays: [String: CompanionApprovalRelayEvent] = [:]
     @Published public private(set) var currentLiveActivity: CompanionLiveActivityState?
     @Published public private(set) var receivedSensorUploads: [CompanionSensorPayload] = []
@@ -210,6 +211,7 @@ public final class RemoteCompanionGateway: ObservableObject {
         if isAuthorized {
             let device = CompanionDevice(id: request.deviceId, name: request.deviceName, isAuthorized: true)
             pairedDevices[request.deviceId] = device
+            activeSessionTokens[token] = request.deviceId
         }
 
         return CompanionPairingAck(
@@ -220,13 +222,28 @@ public final class RemoteCompanionGateway: ObservableObject {
         )
     }
 
+    public func validateSessionToken(_ token: String?, forDeviceId deviceId: String) -> Bool {
+        guard let token, !token.isEmpty else { return false }
+        guard let tokenOwner = activeSessionTokens[token], tokenOwner == deviceId else { return false }
+        guard let device = pairedDevices[deviceId], device.isAuthorized else { return false }
+        return true
+    }
+
     // MARK: - Approval Card Relay
 
     public func postApprovalRelay(_ event: CompanionApprovalRelayEvent) {
         pendingApprovalRelays[event.requestId] = event
     }
 
-    public func resolveApprovalRelay(requestId: String, allow: Bool) -> CompanionApprovalRelayEvent? {
+    public func resolveApprovalRelay(
+        requestId: String,
+        allow: Bool,
+        sessionToken: String? = nil,
+        senderId: String? = nil
+    ) -> CompanionApprovalRelayEvent? {
+        if let senderId {
+            guard validateSessionToken(sessionToken, forDeviceId: senderId) else { return nil }
+        }
         guard let event = pendingApprovalRelays.removeValue(forKey: requestId) else { return nil }
         if allow {
             _ = EphemeralCapabilityManager.shared.issueToken(for: event.stageName, botName: nil, ttlSeconds: 120.0)
@@ -256,12 +273,32 @@ public final class RemoteCompanionGateway: ObservableObject {
                 )
             }
         case .sensorUpload:
+            guard validateSessionToken(frame.sessionToken, forDeviceId: frame.senderId) else {
+                return nil
+            }
             if let sensor = try? JSONDecoder().decode(CompanionSensorPayload.self, from: Data(frame.payloadJSON.utf8)) {
                 receivedSensorUploads.append(sensor)
                 return CompanionMessageFrame(
                     type: .ack,
                     senderId: hostId,
+                    sessionToken: frame.sessionToken,
                     payloadJSON: "{\"status\": \"ingested\", \"kind\": \"\(sensor.kind.rawValue)\"}"
+                )
+            }
+        case .approvalDecision:
+            guard validateSessionToken(frame.sessionToken, forDeviceId: frame.senderId) else {
+                return nil
+            }
+            if let data = frame.payloadJSON.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let reqId = json["requestId"] as? String,
+               let allow = json["allow"] as? Bool {
+                _ = resolveApprovalRelay(requestId: reqId, allow: allow, sessionToken: frame.sessionToken, senderId: frame.senderId)
+                return CompanionMessageFrame(
+                    type: .ack,
+                    senderId: hostId,
+                    sessionToken: frame.sessionToken,
+                    payloadJSON: "{\"status\": \"resolved\", \"requestId\": \"\(reqId)\"}"
                 )
             }
         default:

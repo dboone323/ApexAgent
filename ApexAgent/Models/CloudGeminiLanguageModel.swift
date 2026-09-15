@@ -258,6 +258,7 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
             let entryID = UUID().uuidString
             
             for try await line in bytes.lines {
+                try Task.checkCancellation()
                 if line.hasPrefix("data: ") {
                     let jsonStr = line.dropFirst(6).trimmingCharacters(in: .whitespacesAndNewlines)
                     if jsonStr == "[DONE]" { break }
