@@ -138,6 +138,11 @@ actor MCPClient {
     private var stdinPipe: Pipe?
     private var stdoutPipe: Pipe?
     private var stderrPipe: Pipe?
+    /// True when the MCP server was placed in its own process group (via setpgid)
+    /// at launch. Enables stop() to kill the whole process tree — the server plus
+    /// any child workers (e.g. node) — instead of orphaning them with SIGTERM
+    /// to the main pid alone.
+    private var processGroupEstablished: Bool = false
 
     /// Readiness gate: wait until the spawned Node server has attached its
     /// JSON-RPC stdio transport (signalled by its "running on stdio" stderr
@@ -304,6 +309,11 @@ actor MCPClient {
 
         try proc.run()
 
+        // Place the MCP server in its own process group so that stop() can kill
+        // the entire tree (server + any child workers, e.g. node) via killpg,
+        // preventing orphaned processes from lingering after termination.
+        processGroupEstablished = setpgid(proc.processIdentifier, proc.processIdentifier) == 0
+
 // Read stdout/stderr with blocking `availableData` reads pumped onto a
         // utility queue. (The previous `FileHandle.bytes.lines` implementation
         // stopped delivering pipe data inside the XCTest host on Xcode 27:
@@ -443,15 +453,32 @@ actor MCPClient {
         proc.terminationHandler = nil
 
         if proc.isRunning {
-            proc.terminate()
+            // Kill the entire process group (server + child workers) rather than
+            // just the main pid, so MCP servers that spawn subprocesses (e.g.
+            // node) don't leave orphans behind. Falls back to Process.terminate()
+            // when setpgid couldn't establish a dedicated group.
+            let pid = proc.processIdentifier
+            if processGroupEstablished {
+                kill(-pid, SIGTERM)
+            } else {
+                proc.terminate()
+            }
             for _ in 0..<20 {
                 if !proc.isRunning { break }
                 usleep(50_000) // 50ms * 20 = up to 1s
+            }
+            if proc.isRunning {
+                if processGroupEstablished {
+                    kill(-pid, SIGKILL)
+                } else {
+                    kill(pid, SIGKILL)
+                }
             }
         }
 
         cleanupPipes()
         process = nil
+        processGroupEstablished = false
     }
 
     private func cleanupPipes() {
