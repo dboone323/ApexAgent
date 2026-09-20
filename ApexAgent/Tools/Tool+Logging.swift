@@ -41,12 +41,16 @@ extension Tool {
         await orchestrator.orchestrator.logToolStart(name: toolName, arguments: argsString)
 
         let overLimit = await MainActor.run {
-            let limit = 20
-            return orchestrator.orchestrator.activeTurnToolCallCount > limit
+            // The per-turn tool-call cap guards LLM generation turns against context
+            // window overflow. Direct/programmatic tool calls (e.g. tests invoking
+            // tools via .call(arguments:)) are not LLM turns, so the cap must NOT
+            // apply to them — otherwise parallel tests sharing the singleton
+            // orchestrator race on the shared counter and falsely trip the limit.
+            orchestrator.orchestrator.isGenerating
+                && orchestrator.orchestrator.activeTurnToolCallCount > 20
         }
         if overLimit {
-            let limit = 20
-            let limitMsg = "ERROR: Maximum tool calls (\(limit)) reached for this turn to prevent context window overflow."
+            let limitMsg = "ERROR: Maximum tool calls (20) reached for this turn to prevent context window overflow."
             await MainActor.run {
                 orchestrator.orchestrator.logToolEnd(name: toolName, result: limitMsg, status: .failed("Tool call limit reached"))
             }
