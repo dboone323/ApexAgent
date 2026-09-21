@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import FoundationModels
 
 /// Central, single-Swift-API model selector for ApexAgent.
@@ -89,6 +90,13 @@ public struct ModelRegistry {
     public static let providerKey = "apex.modelProvider"
     public static let tieringStrategyKey = "apex.autoTieringStrategy"
 
+    /// Serializes the read-migrate-write cycle in `geminiAPIKey()` and the
+    /// delete in `saveGeminiAPIKey()` so concurrent callers (e.g. parallel
+    /// tests, or multi-agent provider resolution) can't race the legacy-key
+    /// migration into writing a stale/real key back to the keychain right
+    /// after a test (or logout) deleted it.
+    private static let geminiKeyMutex = Mutex(())
+
     public static func activeTieringStrategy() -> AutoTieringStrategy {
         if let raw = UserDefaults.standard.string(forKey: tieringStrategyKey),
            let strategy = AutoTieringStrategy(rawValue: raw) {
@@ -100,6 +108,7 @@ public struct ModelRegistry {
     /// Retrieves the Gemini API Key from Keychain (preferred) or environment.
     /// Automatically migrates any legacy plaintext keys in ~/.apex/gemini_key or UserDefaults to Keychain and purges them.
     public static func geminiAPIKey() -> String {
+        geminiKeyMutex.withLock { _ in
         if let key = KeychainManager.get(key: "geminiAPIKey"), !key.isEmpty {
             return key
         }
@@ -130,10 +139,12 @@ public struct ModelRegistry {
             return found
         }
         return ""
+        }
     }
 
     /// Persists the Gemini API Key securely in Keychain, purging any legacy plaintext file or UserDefaults entries.
     public static func saveGeminiAPIKey(_ key: String) {
+        geminiKeyMutex.withLock { _ in
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
             KeychainManager.delete(key: "geminiAPIKey")
@@ -150,6 +161,7 @@ public struct ModelRegistry {
         let fileURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex/gemini_key")
         if FileManager.default.fileExists(atPath: fileURL.path) {
             try? FileManager.default.removeItem(at: fileURL)
+        }
         }
     }
 
