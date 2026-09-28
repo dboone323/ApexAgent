@@ -1,6 +1,11 @@
 import AppIntents
 import Foundation
 
+// NOTE (M15): this is the canonical AskApexAgentIntent. The smaller FM-only
+// duplicate that lived in ApexAgentIntents/ (a 20-line FMIntentSupport.runFM
+// wrapper) was removed to eliminate the AppIntents registration collision;
+// its Siri surface is fully covered by the router + shortcuts below.
+
 // MARK: - App Intents exposure (Siri / Shortcuts)
 //
 // Exposes ApexAgent's core action ("ask the agent a question / run a task") to
@@ -20,6 +25,9 @@ struct AskApexAgentIntent: AppIntent {
 
     @Parameter(title: "Prompt", description: "The question or task to send to Apex Agent.")
     var prompt: String
+
+    public init() { self.prompt = "" }
+    public init(prompt: String) { self.prompt = prompt }
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<String> {

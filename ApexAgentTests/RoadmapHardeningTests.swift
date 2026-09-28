@@ -133,13 +133,15 @@ struct RoadmapHardeningTests {
     }
 
     // MARK: - Registered Tools Count
-    @Test("AgentOrchestrator registers all 52 tools in allTools")
+    @Test("AgentOrchestrator registers all 63 tools in allTools")
     @MainActor
     func testAllToolsRegistrationCount() {
         let orchestrator = AgentOrchestrator()
         let tools = orchestrator.allTools
-        // 55 tools registered across all pillars and specialized features
-        #expect(tools.count == 55)
+        // 63 tools registered across all pillars and specialized features
+        // (recounted 2026-09-28 against the live dispatch registrations;
+        // matches the tool count in README.md).
+        #expect(tools.count == 63)
 
         let names = Set(tools.map(\.name))
         #expect(names.contains("run_shell_command"))

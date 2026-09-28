@@ -192,7 +192,7 @@ public final class A2AServer {
                 }
                 
                 Task {
-                    if let (requestData, responseData) = await self.processHttpBuffer(currentBuffer) {
+                    if let (_, responseData) = await self.processHttpBuffer(currentBuffer) {
                         connection.send(content: responseData, completion: .contentProcessed({ _ in
                             connection.cancel()
                         }))
@@ -293,7 +293,7 @@ public final class A2AServer {
     // Handle incoming A2A requests
     private func handleRequest(method: String, path: String, body: Data) async -> Data {
         if method == "GET" && path == "/.well-known/agent.json" {
-            let card = await buildAgentCard()
+            let card = buildAgentCard()
             let encoder = JSONEncoder()
             return (try? encoder.encode(card)) ?? Data()
         }

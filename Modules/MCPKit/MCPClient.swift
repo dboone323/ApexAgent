@@ -1,5 +1,13 @@
 import Foundation
 
+/// EXPERIMENTAL / SUPERSEDED — naive reference MCP client (M4).
+///
+/// This is a minimal ~56-line reference implementation: no request timeouts,
+/// no retries, no circuit-breaker, no health probing. It is kept only for
+/// experimentation and local tooling. Production code MUST use the hardened
+/// client in `ApexAgent/Models/MCPClient.swift` (timeouts, retry with
+/// backoff, circuit-breaker, health probing) instead.
+/// See `Modules/MCPKit/README.md`. Consolidation is tracked follow-up work.
 public actor MCPClient {
     private let serverURL: URL
     private let session: URLSession

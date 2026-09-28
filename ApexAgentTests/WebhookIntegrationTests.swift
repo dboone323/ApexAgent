@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 import Network
+import SwiftData
 @testable import ApexAgentCore
 
 // MARK: - Chief-of-staff wiring through BotSession
@@ -54,8 +55,18 @@ struct ChiefOfStaffSessionTests {
 @Suite("RoutineWebhookDispatchTests")
 struct RoutineWebhookDispatchTests {
 
-    @Test func dispatchWebhookWithoutMatchingRoutineReturnsNilGracefully() async {
-        let result = await RoutineManager.shared.dispatchWebhook(
+    @Test func dispatchWebhookWithoutMatchingRoutineReturnsNilGracefully() async throws {
+        // Hermetic: dedicated manager + in-memory container. Sharing the
+        // app-wide `RoutineManager.shared` singleton here raced with other
+        // suites that reassign its `modelContext` from containers they own
+        // under parallel Swift Testing runs — the dangling-context race that
+        // crashed the full run with a SwiftData SIGTRAP (2026-09-28).
+        let container = try ModelContainer(
+            for: Routine.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        let manager = RoutineManager()
+        manager.modelContext = ModelContext(container)
+        let result = await manager.dispatchWebhook(
             routineName: "no-such-routine-\(UUID().uuidString)")
         #expect(result == nil)
     }

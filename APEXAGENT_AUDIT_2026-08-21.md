@@ -342,3 +342,13 @@ Sub-agent sessions are created via `sessionForAgent` with per-agent `allowedTool
 **GO — with conditions.** The codebase is strong and well-engineered. The blocking issues (B1, B2) are straightforward to fix and don't indicate architectural problems. Once B1 is resolved (add `sessionForAgent` to `AgentOrchestrator`), the multi-agent delegation feature becomes functional again. The high-priority items (H1-H5) are hygiene fixes that improve robustness.
 
 **Immediate action:** Fix B1 (protocol conformance) — this is the only thing preventing a successful build.
+
+---
+
+## 12. Follow-up Notes (2026-09-20)
+
+### WS3 — LaunchAgent 24/7 daemon
+`TASK_MANIFEST.md` (line 49) marks WS3 as **✅ Complete** — plist generator, process boot supervision, UI toggle, and test coverage. The APEXAGENT_AUDIT_2026-08-21.md is a build/tech audit and does not track workspace status, so WS3 does not appear in its findings. No discrepancy exists: WS3 is complete per the authoritative manifest. The audit's scope is build system, imports, SPM deps, Swift 6 concurrency, entitlements, tests, multi-agent, and security — not workspace delivery status.
+
+### B1 — `sessionForAgent` conformance (contradicted by current code)
+The audit claims (§1.2, §9, §11) that `AgentOrchestrator` is missing the `sessionForAgent` implementation required by `OrchestratorProvider`, causing a build failure. **This claim is contradicted by current code.** `sessionForAgent` is fully implemented at `AgentOrchestrator.swift:107-177` — both the convenience variant (107-128) and the full variant with `prompt:` parameter (130-177), delegating to `sessionCoordinator.resolveModel(...)` and constructing `SupervisorAgentProfile` / `SpecializedAgentProfile` sessions. The verification checklist (§10) already marks B1 as `[x] fixed`. **Build status re-verified: B1 is resolved.**

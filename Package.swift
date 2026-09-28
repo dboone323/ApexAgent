@@ -7,7 +7,10 @@ let package = Package(
         .macOS("27.0")
     ],
     products: [
-        .executable(name: "ApexAgent", targets: ["ApexAgent"])
+        .executable(name: "ApexAgent", targets: ["ApexAgent"]),
+        .executable(name: "sandboxctl", targets: ["sandboxctl"]),
+        .executable(name: "apexflow", targets: ["apexflow"]),
+        .executable(name: "benchmark-repro", targets: ["benchmark-repro"])
     ],
     dependencies: [
         // shared-kit modules are now INLINED as local targets under Modules/
@@ -21,8 +24,9 @@ let package = Package(
         // version: vmexec's sync-pipe protocol changed between 0.37.0 and
         // 0.38.0 ("no PID data from sync pipe" on mismatch).
         .package(url: "https://github.com/apple/containerization.git", exact: "0.38.0"),
-        // Explicitly declare transitive Apple infrastructure packages
-        .package(url: "https://github.com/apple/swift-log.git", from: "1.5.0"),
+        // Explicitly declare transitive Apple infrastructure packages.
+        // Pinned exact to match project.yml and Package.resolved (1.14.0).
+        .package(url: "https://github.com/apple/swift-log.git", exact: "1.14.0"),
     ],
     targets: [
         // ─────────────────────────────────────────────────────────────────────
@@ -172,6 +176,50 @@ let package = Package(
         ),
 
         // ─────────────────────────────────────────────────────────────────────
+        // apexflow: runs ApexAgent automation workflows
+        // ─────────────────────────────────────────────────────────────────────
+        .executableTarget(
+            name: "apexflow",
+            dependencies: [
+                "ApexAgentCore"
+            ],
+            path: "Tools/apexflow",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
+            ],
+            linkerSettings: [
+                .unsafeFlags([
+                    "-Xlinker", "-weak_framework", "-Xlinker", "FoundationModels",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_AppKit",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_SwiftUI",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels",
+                    "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../Frameworks"
+                ])
+            ]
+        ),
+
+        // ─────────────────────────────────────────────────────────────────────
+        // benchmark-repro: reproduces LanguageModelSession latency benchmarks
+        // ─────────────────────────────────────────────────────────────────────
+        .executableTarget(
+            name: "benchmark-repro",
+            path: "Tools/benchmark-repro",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
+            ],
+            linkerSettings: [
+                .unsafeFlags([
+                    "-Xlinker", "-weak_framework", "-Xlinker", "FoundationModels",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_AppKit",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_SwiftUI",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
+                    "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels"
+                ])
+            ]
+        ),
+
+        // ─────────────────────────────────────────────────────────────────────
         // ApexAgentTests: Headless-safe unit + integration tests.
         //
         // Depends ONLY on ApexAgentCore (no Containerization), so CoreDevice
@@ -183,6 +231,8 @@ let package = Package(
             dependencies: [
                 "ApexAgentCore",
                 "MCPKit",
+                // Mirrors project.yml (ApexAgentTests links Logging there).
+                .product(name: "Logging", package: "swift-log"),
             ],
             path: "ApexAgentTests",
             linkerSettings: [
@@ -192,10 +242,8 @@ let package = Package(
                     "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_SwiftUI",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels",
-                    // SwiftPM does not add the build-products dir to the test bundle's
-                    // @rpath, so ApexAgentCore's linked frameworks fail to dlopen at
-                    // test launch. Add the rpath explicitly.
-                    "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../../.."
+                    // SwiftPM auto-adds the build-products rpath for test targets;
+                    // the explicit -rpath caused a duplicate linker warning.
                 ])
             ]
         ),
@@ -203,8 +251,9 @@ let package = Package(
         // ─────────────────────────────────────────────────────────────────────
         // ApexAgentContainerTests: Tests specifically verifying container logic.
         //
-        // Links against the full ApexAgent executable and Containerization package.
-        // Does NOT import FoundationModels in its tests, avoiding loading conflict.
+        // Links against ApexAgentCore only (which already links the
+        // Containerization products). Does NOT import FoundationModels in its
+        // tests, avoiding loading conflict.
         // ─────────────────────────────────────────────────────────────────────
         .testTarget(
             name: "ApexAgentContainerTests",
@@ -219,7 +268,6 @@ let package = Package(
                     "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_SwiftUI",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels",
-                    "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../../.."
                 ])
             ]
         ),
@@ -247,7 +295,6 @@ let package = Package(
                     "-Xlinker", "-weak_framework", "-Xlinker", "_FoundationModels_SwiftUI",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_Vision_FoundationModels",
                     "-Xlinker", "-weak_framework", "-Xlinker", "_CoreSpotlight_FoundationModels",
-                    "-Xlinker", "-rpath", "-Xlinker", "@loader_path/../../.."
                 ])
             ]
         ),

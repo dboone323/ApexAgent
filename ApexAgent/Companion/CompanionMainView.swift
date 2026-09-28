@@ -8,7 +8,6 @@ public struct CompanionMainView: View {
 
     @State private var selectedTab: Int = 0
     @State private var isVoicePresented: Bool = false
-    @State private var chatInputText: String = ""
 
     public init(client: ApexCompanionMobileClient, gateway: RemoteCompanionGateway) {
         self.client = client

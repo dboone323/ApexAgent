@@ -27,7 +27,7 @@ import SharedModels
         #expect(saved.first?.title == "Audit Test Conversation")
         
         // 2. Verify sidebar selection interaction
-        var selectedId: UUID? = nil
+        var selectedId: UUID?
         let onSelect: (Conversation) -> Void = { conv in selectedId = conv.id }
         let onDelete: (IndexSet) -> Void = { indexSet in
             for idx in indexSet {
@@ -100,7 +100,7 @@ import SharedModels
     @MainActor
     @Test func testSettingsViewAndIsolationModes() throws {
         let orchestrator = AgentOrchestrator()
-        let settingsView = SettingsView()
+        _ = SettingsView()
             .environment(orchestrator)
         
         // Verify IsolationMode enum completeness and display values

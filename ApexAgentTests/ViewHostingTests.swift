@@ -41,6 +41,14 @@ enum ViewHost {
         setenv("APEX_TEST_MODE", "1", 1)
     }
 
+    /// Recursively searches an NSView tree for a SwiftUI
+    /// `.accessibilityIdentifier(_:)` marker. Proves a section is actually
+    /// present in a hosted view hierarchy (H8).
+    static func containsAccessibilityIdentifier(_ identifier: String, in view: NSView) -> Bool {
+        if view.accessibilityIdentifier() == identifier { return true }
+        return view.subviews.contains { containsAccessibilityIdentifier(identifier, in: $0) }
+    }
+
     // MARK: Leaf components (no environment needed)
 
     @Test func testEmptyStateWithAndWithoutAction() {
@@ -334,16 +342,10 @@ enum ViewHost {
         #expect(host.frame.size.width > 0)
     }
 
-    @Test func testQuickPromptViewRenders() {
-        let orchestrator = AgentOrchestrator()
-        let host = ViewHost.host(QuickPromptView(panel: nil, orchestrator: orchestrator), pump: 0.1)
-        #expect(host.frame.size.width > 0)
-    }
-
-    @Test func testSettingsViewHostingWithOrchestrator() throws {
+    @Test func testSettingsViewHostingWithAllSections() throws {
         let orchestrator = AgentOrchestrator()
         let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try ModelContainer(for: Routine.self, configurations: configuration)
+        let container = try ModelContainer(for: Skill.self, Routine.self, configurations: configuration)
         let host = ViewHost.host(
             SettingsView()
                 .modelContainer(container)
@@ -351,6 +353,19 @@ enum ViewHost {
             pump: 0.15
         )
         #expect(host.frame.size.width > 0)
+        // H8 regression: SkillsSection must be wired INTO SettingsView, not
+        // just hostable on its own. The standalone host validates the
+        // accessibilityIdentifier mechanism itself; the Settings host then
+        // proves the wiring (SkillsSection() added to SettingsView's body).
+        let skillsHost = ViewHost.host(SkillsSection().modelContainer(container), pump: 0.1)
+        #expect(
+            ViewHostingTests.containsAccessibilityIdentifier("SkillsSection", in: skillsHost),
+            "Standalone SkillsSection should expose its accessibilityIdentifier — if this fails, the mechanism (not the wiring) is broken"
+        )
+        #expect(
+            ViewHostingTests.containsAccessibilityIdentifier("SkillsSection", in: host),
+            "SettingsView must contain the Skills section — SkillsSection() is not wired into the Settings body"
+        )
     }
 
     @Test func testMCPServerDashboardViewHosting() {

@@ -181,6 +181,12 @@ struct ConfirmationOverlay: View {
         }
         .onAppear { startTimer() }
         .onDisappear { stopTimer() }
+        .onChange(of: orchestrator.pendingConfirmation?.id) { _, newId in
+            stopTimer()
+            if newId != nil {
+                startTimer()
+            }
+        }
         .accessibilityIdentifier("confirmationOverlay")
     }
 

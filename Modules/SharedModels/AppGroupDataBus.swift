@@ -3,7 +3,8 @@ import Foundation
 /// Cross-app data bus backed by real persistent storage.
 ///
 /// Reads/writes go through the App Group container shared with the Momentum
-/// Ecosystem apps (`group.com.dboone323.fleet`). Producers in those apps write
+/// Ecosystem apps (`group.com.apexagent`), matching the entitlement in
+/// ApexAgent/ApexAgent.entitlements. Producers in those apps write
 /// into the same suite; ApexAgent reads it back for the daily briefing.
 ///
 /// If the App Group is not provisioned (e.g. an unsigned local build), we fall
@@ -14,7 +15,7 @@ import Foundation
 public final class AppGroupDataBus {
     public static let shared = AppGroupDataBus()
 
-    public static let appGroupIdentifier = "group.com.dboone323.fleet"
+    public static let appGroupIdentifier = "group.com.apexagent"
 
     private enum Key {
         static let sharedTasks = "apex.databus.sharedTasks"
@@ -62,17 +63,17 @@ public final class AppGroupDataBus {
     // MARK: - Writes
 
     public func update(
-        tasks: [SharedTask] = [],
+        tasks: [SharedTask]? = nil,
         mood: String? = nil,
         budgetAlertStatus: String? = nil,
-        habitCompletionCount: Int = 0,
-        activePowerUp: Bool = false
+        habitCompletionCount: Int? = nil,
+        activePowerUp: Bool? = nil
     ) {
-        update(tasks: tasks)
+        if let tasks { update(tasks: tasks) }
         if let mood { update(mood: mood) }
         if let budgetAlertStatus { update(budgetAlertStatus: budgetAlertStatus) }
-        update(habitCompletionCount: habitCompletionCount)
-        update(activePowerUp: activePowerUp)
+        if let habitCompletionCount { update(habitCompletionCount: habitCompletionCount) }
+        if let activePowerUp { update(activePowerUp: activePowerUp) }
     }
 
     public func update(mood: String) {

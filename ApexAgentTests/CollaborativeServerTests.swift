@@ -3,10 +3,10 @@ import Foundation
 import Network
 @testable import ApexAgentCore
 
-// Serialized: every case here reads or writes the process-wide
-// UserDefaults keys the server consults ("apex.lanModeEnabled",
-// "apex.collabToken"). Running them in parallel races on that shared
-// state — which is what produced intermittent lanMode failures.
+// Serialized: every case here reads or writes the process-wide state the
+// server consults ("apex.lanModeEnabled" in UserDefaults, the LAN token in
+// the Keychain). Running them in parallel races on that shared state —
+// which is what produced intermittent lanMode failures.
 @MainActor
 @Suite("CollaborativeServerTests", .serialized)
 struct CollaborativeServerTests {
@@ -15,11 +15,14 @@ struct CollaborativeServerTests {
     private static let lanKey = "apex.lanModeEnabled"
     private static let tokenKey = "apex.collabToken"
 
-    /// Pin the defaults this suite depends on instead of inheriting whatever
+    /// Pin the state this suite depends on instead of inheriting whatever
     /// a previous `swift test` run leaked into the swiftpm-testing-helper
     /// defaults domain (that leak caused real false failures).
     init() {
         UserDefaults.standard.removeObject(forKey: Self.lanKey)
+        // M1: the token now lives in the Keychain (the legacy UserDefaults
+        // slot is cleared for hygiene).
+        KeychainManager.delete(key: Self.tokenKey)
         UserDefaults.standard.removeObject(forKey: Self.tokenKey)
         CollaborativeServer.resetRateLimiter()
     }
@@ -27,10 +30,11 @@ struct CollaborativeServerTests {
     private func withLAN(enabled: Bool, token: String?, _ body: () -> Void) {
         let defaults = UserDefaults.standard
         defaults.set(enabled, forKey: Self.lanKey)
-        if let token { defaults.set(token, forKey: Self.tokenKey) }
+        // M1: configure the token where the server reads it — the Keychain.
+        if let token { KeychainManager.save(key: Self.tokenKey, value: token) }
         defer {
             defaults.removeObject(forKey: Self.lanKey)
-            defaults.removeObject(forKey: Self.tokenKey)
+            KeychainManager.delete(key: Self.tokenKey)
         }
         body()
     }
@@ -45,7 +49,7 @@ struct CollaborativeServerTests {
     @Test func testHealthEndpointStructure() async throws {
         let settings = server.health()
         #expect(settings.running == false)
-        #expect(settings.port == 1337)
+        #expect(settings.port == 1340)
         #expect(settings.lanMode == false)
     }
 

@@ -23,9 +23,15 @@ open ApexAgent.xcodeproj
 2. Set your **Development Team** in `Signing & Capabilities`
 3. Press **⌘R** to run
 
-Or build/test from the command line (Swift Package Manager):
+Or build/test from the command line:
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
+
+# Xcodebuild (recommended for full macOS app & extensions):
+xcodebuild build -project ApexAgent.xcodeproj -scheme ApexAgent -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO
+xcodebuild test -project ApexAgent.xcodeproj -scheme ApexAgent -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO
+
+# Or Swift Package Manager:
 swift build
 swift test
 ```
@@ -57,7 +63,7 @@ Per-agent model preferences are supported (`localSystem` / `privateCloud` / `clo
 
 ## 🧰 Agent Capabilities
 
-Apex ships **47 tools** the model can call, including:
+Apex ships **63 tools** the model can call, including:
 
 | Tool | What It Does |
 |------|-------------|
@@ -127,14 +133,9 @@ Or edit the **System Prompt** directly in Settings to customize Apex's behavior.
 
 ## 🧪 Testing
 
-Current verified state:
+Current test-target inventory (**103 test files**): `ApexAgentTests` 85 · `ApexAgentContainerTests` 1 · `ApexAgentIntelligenceTests` 10 · `ApexAgentUITests` 7 — covering the R1–R4 suites (creation sheets, playbook collaboration, container isolation security, MCP dashboard, E2E feature matrix, adversarial stress) plus real macOS UI e2e via XCUITest.
 
-- **Phase 2:** Logic gap-fill tests
-- **Phase 3:** SwiftUI view hosting tests
-- **Phase 4:** Real macOS UI e2e via XCUITest + accessibility labeling
-- **`ApexAgentTests`:** 134 tests in 22 suites passed
-- **`ApexAgentIntelligenceTests`:** 53 tests in 10 suites executed; 1 benchmark issue under investigation
-- **`ApexAgentContainerTests`:** test path present; standalone verification pending
+> **2026-09-24:** historical PASS claims are unverified for the current sources — the newest test artifacts predate the current test sources (2026-09-21). Run `swift test` on a green build before treating any result as green (see AUDIT_2026-09-24.md §7).
 
 ---
 

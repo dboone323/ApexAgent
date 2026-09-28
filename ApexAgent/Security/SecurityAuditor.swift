@@ -7,7 +7,7 @@ import AppKit
 // symlink traversal prevention, and shell command security checks.
 
 @MainActor
-final class SecurityAuditor: Sendable {
+final class SecurityAuditor {
     static let shared = SecurityAuditor()
 
     init() {}

@@ -51,7 +51,12 @@ import SharedModels
         for key in sandboxKeys { UserDefaults.standard.removeObject(forKey: key) }
 
         // Spawn a real, functioning interactive shell session and execute a command
-        let pty = try await PTYSession(workspacePath: "/Users/danielstevens/Developer/ApexAgent")
+        // Hermetic (AUDIT_2026-09-28 §3.3.12): derive repo root from #filePath.
+        let workspacePath = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()   // ApexAgentTests/
+            .deletingLastPathComponent()   // repository root
+            .path
+        let pty = try await PTYSession(workspacePath: workspacePath)
         _ = pty // non-optional: init succeeded or threw
         
         do {

@@ -8,7 +8,9 @@ import Foundation
 /// forbid `run_shell_command` app-wide). A tool is only available when BOTH
 /// the per-agent allowlist and this global policy permit it.
 ///
-/// Backed by `UserDefaults` (`apex.disabledTools`) so a Settings UI can toggle
+/// Backed by `UserDefaults` (`apex.deniedTools` — the single key shared with
+/// `AgentSecurity`'s runtime deny list; unified per AUDIT_2026-09-28 §3.4.35)
+/// so a Settings UI can toggle
 /// individual tools at runtime without a rebuild. Defaults to "all tools
 /// enabled" so existing behavior is unchanged.
 ///
@@ -18,7 +20,7 @@ import Foundation
 public final class ToolPolicy: @unchecked Sendable {
     public static let shared = ToolPolicy()
 
-    private static let userDefaultsKey = "apex.disabledTools"
+    private static let userDefaultsKey = "apex.deniedTools"
 
     private let lock = NSLock()
     private var disabledTools: Set<String>

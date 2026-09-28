@@ -10,7 +10,7 @@ class CollaborativeServer: NSObject, ObservableObject {
     private let queue = DispatchQueue(label: "com.apexagent.collab.server")
 
     @Published private(set) var isRunning = false
-    @Published private(set) var port: UInt16 = 1337
+    @Published private(set) var port: UInt16 = 1340
 
     // Token Bucket Rate Limiter
     struct TokenBucket: Sendable {
@@ -41,18 +41,41 @@ class CollaborativeServer: NSObject, ObservableObject {
         PolicyRule(endpoint: "/index.html", requiredPermission: "read:dashboard")
     ])
 
+    /// Keychain account for the LAN bearer token (M1: was plaintext in
+    /// UserDefaults as "apex.collabToken").
+    static let collabTokenKeychainKey = "apex.collabToken"
+
+    /// Returns the configured LAN token. Migrates a legacy plaintext
+    /// UserDefaults value into the Keychain (and deletes it) on first use.
+    static func collabToken() -> String {
+        if let stored = KeychainManager.get(key: collabTokenKeychainKey), !stored.isEmpty {
+            return stored
+        }
+        let legacy = UserDefaults.standard.string(forKey: "apex.collabToken") ?? ""
+        if !legacy.isEmpty {
+            if KeychainManager.save(key: collabTokenKeychainKey, value: legacy) {
+                UserDefaults.standard.removeObject(forKey: "apex.collabToken")
+            }
+            return legacy
+        }
+        return ""
+    }
+
+    /// Generates and stores a fresh token in the Keychain when none exists.
+    static func ensureCollabToken() {
+        guard collabToken().isEmpty else { return }
+        let newToken = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(16)).lowercased()
+        _ = KeychainManager.save(key: collabTokenKeychainKey, value: newToken)
+    }
+
     override init() {
         super.init()
-        let token = UserDefaults.standard.string(forKey: "apex.collabToken")
-        if token == nil || token?.isEmpty == true {
-            let newToken = UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(16).lowercased()
-            UserDefaults.standard.set(newToken, forKey: "apex.collabToken")
-        }
+        Self.ensureCollabToken()
     }
 
     /// Starts the server. `port: 0` asks the OS for an ephemeral port; the
     /// bound port is published via `self.port` once the listener reports ready.
-    func start(port: UInt16 = 1337) {
+    func start(port: UInt16 = 1340) {
         guard !isRunning else { return }
         self.port = port
 
@@ -214,7 +237,8 @@ class CollaborativeServer: NSObject, ObservableObject {
         let rule = policy.rules.first(where: { $0.endpoint == plainPath })
         let requiredPermission = rule?.requiredPermission
 
-        if let requiredPerm = requiredPermission {
+        if let requiredPerm = requiredPermission,
+           !isLoopbackClient(connection) {
             let requestToken = queryToken ?? headers["authorization"]?.dropFirst(7).trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             if !hasPermission(token: requestToken, requiredPermission: requiredPerm) {
                 logAccess(clientIP: clientIP, endpoint: plainPath, isAuthorized: true, decision: "Forbidden (403): Missing permission \(requiredPerm)")
@@ -286,12 +310,10 @@ class CollaborativeServer: NSObject, ObservableObject {
     }
 
     func isAuthorized(headers: [String: String], queryToken: String?, connection: NWConnection) -> Bool {
-        let clientIP = getClientIP(connection: connection)
-
         // Only genuine loopback addresses are implicitly trusted. An
         // unresolvable client IP ("unknown") must NOT be trusted — it must
         // present a valid token (handled below in LAN mode).
-        if clientIP == "127.0.0.1" || clientIP == "::1" || clientIP == "localhost" {
+        if isLoopbackClient(connection) {
             return true
         }
 
@@ -300,7 +322,7 @@ class CollaborativeServer: NSObject, ObservableObject {
             return false
         }
 
-        let token = UserDefaults.standard.string(forKey: "apex.collabToken") ?? ""
+        let token = Self.collabToken()
         guard !token.isEmpty else {
             return false
         }
@@ -318,16 +340,18 @@ class CollaborativeServer: NSObject, ObservableObject {
         return false
     }
 
+    private func isLoopbackClient(_ connection: NWConnection) -> Bool {
+        let clientIP = getClientIP(connection: connection)
+        return clientIP == "127.0.0.1" || clientIP == "::1" || clientIP == "localhost"
+    }
+
     private func hasPermission(token: String, requiredPermission: String) -> Bool {
-        let mainToken = UserDefaults.standard.string(forKey: "apex.collabToken") ?? ""
-        if !mainToken.isEmpty && token == mainToken {
-            return true
-        }
-        // Localhost/default bypass
-        if token.isEmpty {
-            return true
-        }
-        return false
+        let mainToken = Self.collabToken()
+        // Require a non-empty token matching the stored collabToken.
+        // Loopback trust is already handled by isAuthorized(); hasPermission
+        // must NOT grant access to empty tokens from any client.
+        guard !mainToken.isEmpty, !token.isEmpty else { return false }
+        return token == mainToken
     }
 
     func logAccess(clientIP: String, endpoint: String, isAuthorized: Bool, decision: String) {

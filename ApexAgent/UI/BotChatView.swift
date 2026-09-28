@@ -290,11 +290,12 @@ struct BotChatInputBar: View {
                     
                     Button {
                         Task {
+                            let countBefore = session.orchestrator?.pendingAttachments.count ?? 0
                             await session.orchestrator?.captureAndAttachScreenshot()
-                            // Copy screenshot to Bot session
-                            if let photo = session.orchestrator?.pendingAttachments.first {
+                            let countAfter = session.orchestrator?.pendingAttachments.count ?? 0
+                            if countAfter > countBefore,
+                               let photo = session.orchestrator?.pendingAttachments.removeLast() {
                                 session.pendingAttachments.append(photo)
-                                session.orchestrator?.pendingAttachments = []
                             }
                         }
                     } label: {
@@ -466,9 +467,5 @@ struct BotChatInputBar: View {
         }
 
         return .ignored
-    }
-    
-    private func toggleRecording() {
-        // Voice recording not wired for BotChat yet — delegate to orchestrator
     }
 }

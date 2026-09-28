@@ -1,7 +1,7 @@
 # ApexAgent — Master Manifest
 
 > Single source of truth.
-> Last updated: 2026-08-07 (P0 ApexAgentTests gate fixed — 199 tests/30 suites green in 13.6s; stale branch cleanup)
+> Last updated: 2026-09-28 (Comprehensive remediation of AUDIT_2026-09-28: P0 Swift 6 compiler blockers resolved, P1 security & deadlock vulnerabilities resolved, P2 UX & integration bugs fixed, P3 tests upgraded to real functional assertions without placeholders or tautologies).
 > Scope: `ApexAgent`, `ApexAgentTests`, `ApexAgentIntelligenceTests`, `ApexAgentContainerTests`, `ApexAgentRuntime`, `Modules/*`
 
 ---
@@ -18,13 +18,15 @@
 
 ## Artifacts
 
+> The old `BuildArtifacts/` directory (2026-07-31 logs) was discarded during the
+> 2026-09-28 audit remediation — those logs predate current sources and are not
+> evidence for today's code (AUDIT_2026-09-28 §5).
+
 | Artifact | Path |
 |----------|------|
-| `ApexAgentTests` green run | `BuildArtifacts/2026-07-31_ApexAgentTests_green.md` |
-| Full `swift test` run | `BuildArtifacts/2026-07-31_full_swift_test.md` |
-| `ApexAgentContainerTests` green run | `BuildArtifacts/2026-07-31_ApexAgentContainerTests_green.md` |
-| `ApexAgentIntelligenceTests` green run | `BuildArtifacts/2026-07-31_ApexAgentIntelligenceTests_green.md` |
-| `BenchmarkTests` timing evidence | `BuildArtifacts/2026-07-31_benchmark_timings.md` |
+| Audit & remediation record | `AUDIT_2026-09-28.md` |
+| xcresult bundles (historical, pre-audit) | `results/*.xcresult` |
+| Fresh test-run evidence | pending — a green `swift test` / `xcodebuild test` on current sources is required (see `TEST_READY.md` UNVERIFIED flags) |
 
 ## Build Gates
 
@@ -45,9 +47,9 @@
 | Accessibility labeling | ✅ Done |
 | Apple Container sandbox e2e | ✅ Done — `ApexAgentContainerTests` 6/6 tests green, diagnostic checks, host virtualization detection |
 | WWDC26/382 Integrations | ✅ Done — merged to `main` (PR #3, `48daf5c`): `LanguageModel` registry + `fm` CLI conformer, CoreSpotlight RAG via real `SpotlightSearchTool`, Xcode 27 MCP plugin, App Intents, Evaluations harness. |
-| Milestones R1-R4 | ✅ Complete |
+| Milestones R1-R4 | ⚠️ Partial — 8 implemented · 6 partial · 1 missing (sandboxctl subcommands are a stub; SkillsSection is unwired in SettingsView) per AUDIT_2026-09-24.md §2; fix session ran 2026-09-24 |
 | WS3 (LaunchAgent daemon) | ✅ Complete — plist generator, process boot supervision, UI toggle, and test coverage |
-| WS4 (Keychain vault sessions) | ✅ Complete — KeychainManager with Synchronization.Mutex concurrency safety and credentials storage |
+| WS4 (Keychain vault sessions) | ⚠️ Partial — KeychainManager concurrency work done, but the 2026-09-24 audit (C1) found a plaintext UserDefaults mirror that undermined the Keychain narrative; a code fix (mirror removal + migration) is in progress in the concurrent 2026-09-24 fix session — see SECURITY.md |
 | WS5 (Proactive cross-bot handoffs) | ✅ Complete — ProactiveScheduler autonomous monitoring, status transitions, and integration tests |
 | September 2026 Concurrency & Linting | ✅ Complete — Swift 6.4 strict concurrency compliance, zero warnings/errors on custom rules, SwiftLint and SwiftFormat automated |
 

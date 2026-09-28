@@ -7,7 +7,9 @@ import SharedKit
 // audit recording, and user approval workflows.
 
 @MainActor
-final class ToolDispatchEngine: Sendable {
+final class ToolDispatchEngine {
+    /// Single source of truth for the dangerous-tool set. AgentOrchestrator's
+    /// confirmation path reads this via shouldConfirmTool (do not duplicate).
     static let dangerousToolNames: Set<String> = [
         "run_shell_command", "delete_file", "write_file", "run_applescript", "create_skill"
     ]
@@ -72,7 +74,17 @@ final class ToolDispatchEngine: Sendable {
             AnyExecutableTool(ScreenPerceptionTool(orchestrator: orchestrator)),
             AnyExecutableTool(FilePatchTool(orchestrator: orchestrator)),
             AnyExecutableTool(GitOperationsTool(orchestrator: orchestrator)),
-            AnyExecutableTool(DispatchSwarmTool(botManager: botManager))
+            AnyExecutableTool(DispatchSwarmTool(botManager: botManager)),
+            // M3: these tools were fully implemented but never registered,
+            // so the agent could not call them at all.
+            AnyExecutableTool(ComputerUseTool(orchestrator: orchestrator)),
+            AnyExecutableTool(GitHubTool(orchestrator: orchestrator)),
+            AnyExecutableTool(ContainerStatusTool(orchestrator: orchestrator)),
+            AnyExecutableTool(SimctlTool(orchestrator: orchestrator)),
+            AnyExecutableTool(MailAutomationTool(orchestrator: orchestrator)),
+            AnyExecutableTool(DiscordBotTool(orchestrator: orchestrator)),
+            AnyExecutableTool(DiscordWebhookTool(orchestrator: orchestrator)),
+            AnyExecutableTool(DeepLinkTool(orchestrator: orchestrator))
         ]
     }
 

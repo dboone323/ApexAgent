@@ -252,6 +252,7 @@ enum ApprovalPolicy {
         return ApprovalVerdict(approve: nil, source: .noGrant, rule: nil)
     }
 
+
     /// Why this request may be answered without the human, or nil to ask.
     static func autoDecision(
         tool: String,

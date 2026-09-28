@@ -162,8 +162,12 @@ struct BotSidebarSection: View {
         panel.nameFieldStringValue = "apex-team.json"
         panel.allowedContentTypes = [.json]
         if panel.runModal() == .OK, let url = panel.url {
-            try? str.write(to: url, atomically: true, encoding: .utf8)
-            notify("Exported to \(url.lastPathComponent)")
+            do {
+                try str.write(to: url, atomically: true, encoding: .utf8)
+                notify("Exported to \(url.lastPathComponent)")
+            } catch {
+                notify("Export failed: \(error.localizedDescription)")
+            }
         }
     }
     
@@ -178,8 +182,12 @@ struct BotSidebarSection: View {
             panel.allowedContentTypes = [mdType, .plainText]
         }
         if panel.runModal() == .OK, let url = panel.url {
-            try? md.write(to: url, atomically: true, encoding: .utf8)
-            notify("Exported to \(url.lastPathComponent)")
+            do {
+                try md.write(to: url, atomically: true, encoding: .utf8)
+                notify("Exported to \(url.lastPathComponent)")
+            } catch {
+                notify("Export failed: \(error.localizedDescription)")
+            }
         }
     }
     

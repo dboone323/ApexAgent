@@ -526,14 +526,14 @@ actor MCPClient {
         guard status != 0 else { return } // normal exit
         
         let now = Date()
-        if now.timeIntervalSince(lastRestartTime) > 60 {
+        if now.timeIntervalSince(lastRestartTime) > config.restartRateLimitWindow {
             lastRestartTime = now
             restartCountInWindow = 1
         } else {
             restartCountInWindow += 1
         }
         
-        if restartCountInWindow <= 3 {
+        if restartCountInWindow <= config.maxRestartsInWindow {
             await logger.logToolEnd(
                 name: "mcp:\(serverName)",
                 result: "MCP Server crashed (status \(status)). Attempting automatic restart...",
@@ -751,26 +751,87 @@ actor MCPClient {
     public func executeDynamicScript(
         scriptPath: String,
         jsonArguments: String,
-        environment: [String: String]? = nil
+        environment: [String: String]? = nil,
+        timeout: TimeInterval = 60
     ) async throws -> DynamicScriptResult {
         try await ApexAgentCore.executeDynamicScript(
             scriptPath: scriptPath,
             jsonArguments: jsonArguments,
-            environment: environment
+            environment: environment,
+            timeout: timeout
         )
     }
 }
 
+/// Errors thrown by ``executeDynamicScript`` (H3 hardening).
+public enum DynamicScriptError: Error, LocalizedError, Sendable {
+    /// The script path is missing, not a regular file, or outside the allowed
+    /// tool directories.
+    case invalidPath(String)
+    /// The script did not finish within the timeout and was killed.
+    case timedOut(TimeInterval)
+
+    public var errorDescription: String? {
+        switch self {
+        case .invalidPath(let reason):
+            return "Dynamic script rejected: \(reason)"
+        case .timedOut(let timeout):
+            return "Dynamic script timed out after \(Int(timeout))s and was terminated."
+        }
+    }
+}
+
+/// SIGTERM, then SIGKILL after a 2s grace period, then reaps the process.
+private func killProcess(_ process: Process) {
+    guard process.isRunning else { return }
+    process.terminate()
+    let killDeadline = Date().addingTimeInterval(2)
+    while process.isRunning, Date() < killDeadline {
+        Thread.sleep(forTimeInterval: 0.05)
+    }
+    if process.isRunning {
+        kill(process.processIdentifier, SIGKILL)
+    }
+    process.waitUntilExit()
+}
+
 /// Executes a local shell script and captures its exit code, stdout, stderr, and
 /// wall-clock duration. Used by the dynamic script editor / test harness.
+///
+/// H3 hardening: `scriptPath` must be an existing regular file under an allowed
+/// tool directory (`~/.apex/tools`, `~/.apex/skills`), with symlinks fully
+/// resolved; execution is bounded by `timeout` (the process is killed on expiry).
 public func executeDynamicScript(
     scriptPath: String,
     jsonArguments: String,
-    environment: [String: String]? = nil
+    environment: [String: String]? = nil,
+    timeout: TimeInterval = 60
 ) async throws -> DynamicScriptResult {
+    // H3: validate the script path — must exist, be a regular file, and live
+    // under an allowed directory, with symlinks fully resolved.
+    let allowedRoots = [
+        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex/tools"),
+        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex/skills"),
+    ].map { $0.resolvingSymlinksInPath().standardizedFileURL.path }
+
+    let resolvedURL = URL(fileURLWithPath: (scriptPath as NSString).expandingTildeInPath)
+        .resolvingSymlinksInPath()
+        .standardizedFileURL
+    var isDirectory: ObjCBool = false
+    guard FileManager.default.fileExists(atPath: resolvedURL.path, isDirectory: &isDirectory),
+          !isDirectory.boolValue else {
+        throw DynamicScriptError.invalidPath("no such script file: \(scriptPath)")
+    }
+    let insideAllowedRoot = allowedRoots.contains { root in
+        resolvedURL.path == root || resolvedURL.path.hasPrefix(root + "/")
+    }
+    guard insideAllowedRoot else {
+        throw DynamicScriptError.invalidPath("outside allowed tool directories (~/.apex/tools, ~/.apex/skills): \(scriptPath)")
+    }
+
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-    process.arguments = [scriptPath]
+    process.arguments = [resolvedURL.path]
 
     var env = ProcessInfo.processInfo.environment
     env["APEX_ARGS"] = jsonArguments
@@ -795,7 +856,26 @@ public func executeDynamicScript(
 
     let start = Date()
     try process.run()
-    process.waitUntilExit()
+
+    // H3: bounded wait — kill the process if it exceeds the timeout.
+    let deadline = Date().addingTimeInterval(timeout)
+    do {
+        while process.isRunning, Date() < deadline {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+    } catch {
+        // Don't leave a live child behind if our task is cancelled.
+        killProcess(process)
+        _ = await stdoutTask.value
+        _ = await stderrTask.value
+        throw error
+    }
+    if process.isRunning {
+        killProcess(process)
+        _ = await stdoutTask.value
+        _ = await stderrTask.value
+        throw DynamicScriptError.timedOut(timeout)
+    }
     let duration = Date().timeIntervalSince(start)
 
     let stdoutBytes = await stdoutTask.value

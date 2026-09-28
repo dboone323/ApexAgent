@@ -95,16 +95,27 @@ func handle(_ request: [String: Any]) {
         send(["jsonrpc": "2.0", "id": id ?? NSNull(), "result": ["tools": list]])
     case "tools/call":
         guard let params = request["params"] as? [String: Any],
-              let name = params["name"] as? String else { return }
-        let tool = MCPRegistry.tools.first { $0.name == name }
+              let name = params["name"] as? String else {
+            send([
+                "jsonrpc": "2.0", "id": id ?? NSNull(),
+                "error": ["code": -32602, "message": "Invalid params: missing tool name"]
+            ])
+            return
+        }
+        guard let tool = MCPRegistry.tools.first(where: { $0.name == name }) else {
+            send([
+                "jsonrpc": "2.0", "id": id ?? NSNull(),
+                "error": ["code": -32602, "message": "Tool not found: '\(name)'"]
+            ])
+            return
+        }
         let ackResult: [String: Any] = [
             "jsonrpc": "2.0", "id": id ?? NSNull(),
             "result": [
-                "content": [["type": "text", "text": "ApexAgent tool '\(name)' accepted by MCP bridge. Hand off to the ApexAgent runtime (skills/run-agent-task.md)."]],
+                "content": [["type": "text", "text": "ApexAgent tool '\(tool.name)' accepted by MCP bridge. Hand off to the ApexAgent runtime (skills/run-agent-task.md)."]],
                 "isError": false
             ]
         ]
-        _ = tool
         send(ackResult)
     case "ping":
         send(["jsonrpc": "2.0", "id": id ?? NSNull(), "result": [:]])
@@ -140,23 +151,30 @@ if args.count > 1 {
     case "--ask":
         let query = args.dropFirst(2).joined(separator: " ")
         if query.isEmpty {
-            print("Error: Please provide a question after --ask")
+            fputs("Error: Please provide a question after --ask\n", stderr)
             exit(1)
         }
-        print("⚡ [ApexAgent CLI] Running Query: \"\(query)\"")
-        print("Status: Dispatched to ApexAgent Engine.")
-        print("Response: ApexAgent query processed successfully.")
-        exit(0)
+        // Honesty (AUDIT_2026-09-28 §3.3.14): this bridge only serves MCP over
+        // stdio. Do not print fabricated success — report that dispatch is not
+        // wired and exit non-zero so callers can detect it.
+        fputs("""
+        [ApexAgentMCPServer] '--ask' is not implemented: this tool only exposes the MCP stdio server.
+        Query "\(query)" was NOT executed. Run the ApexAgent app or `apexflow` to execute queries.
+
+        """, stderr)
+        exit(78) // EX_CONFIG: capability intentionally not wired in this binary
     case "--task":
         let task = args.dropFirst(2).joined(separator: " ")
         if task.isEmpty {
-            print("Error: Please provide a task description after --task")
+            fputs("Error: Please provide a task description after --task\n", stderr)
             exit(1)
         }
-        print("⚡ [ApexAgent CLI] Running Task: \"\(task)\"")
-        print("Status: Orchestrator initialized. Stage: Analysis & Plan Execution.")
-        print("Outcome: Task execution dispatched to ApexAgent runtime.")
-        exit(0)
+        fputs("""
+        [ApexAgentMCPServer] '--task' is not implemented: this tool only exposes the MCP stdio server.
+        Task "\(task)" was NOT executed. Run the ApexAgent app or `apexflow` to execute tasks.
+
+        """, stderr)
+        exit(78) // EX_CONFIG: capability intentionally not wired in this binary
     default:
         break
     }

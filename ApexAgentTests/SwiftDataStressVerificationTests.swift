@@ -63,7 +63,12 @@ struct SwiftDataStressVerificationTests {
             summary: "Multi-Agent System Architecture",
             language: "Swift",
             repoURL: "https://github.com/dboone323/ApexAgent",
-            localPath: "/Users/danielstevens/Developer/ApexAgent"
+            // Hermetic (AUDIT_2026-09-28 §3.3.12): derive from #filePath instead
+            // of a hardcoded developer home path.
+            localPath: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()   // ApexAgentTests/
+                .deletingLastPathComponent()   // repository root
+                .path
         )
         context.insert(project)
 

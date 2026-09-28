@@ -40,19 +40,15 @@ import Foundation
     }
     
     @MainActor
-    @Test func testDumpToolSchemas() {
+    @Test func testDumpToolSchemas() throws {
         let orchestrator = AgentOrchestrator()
         let shellTool = ShellTool(orchestrator: orchestrator)
         let params = shellTool.parameters
-        print("--- GenerationSchema type: \(type(of: params)) ---")
         let encoder = JSONEncoder()
         encoder.outputFormatting = .prettyPrinted
-        if let data = try? encoder.encode(params),
-           let jsonStr = String(data: data, encoding: .utf8) {
-            print("Serialized JSON schema:")
-            print(jsonStr)
-        } else {
-            print("Failed to encode GenerationSchema data")
-        }
+        let data = try encoder.encode(params)
+        #expect(!data.isEmpty, "ShellTool schema must encode to non-empty data")
+        let jsonStr = try #require(String(data: data, encoding: .utf8), "Encoded schema must be valid UTF-8 string")
+        #expect(jsonStr.contains("command") || jsonStr.contains("properties"), "Schema must define tool properties")
     }
 }

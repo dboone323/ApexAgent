@@ -80,6 +80,10 @@ public final class VirtualizationMicroVMSandbox {
     // MARK: - Ephemeral APFS Sandbox Execution
     
     /// Executes a shell command inside an isolated ephemeral directory with rollback on exit.
+    ///
+    /// - Note: This provides ephemeral APFS process isolation (temp directory sandbox with
+    ///   rollback), NOT hardware virtual-machine isolation. For VM isolation, use
+    ///   `buildMicroVMConfiguration` + a `VZVirtualMachine` guest process.
     public func executeInIsolatedSandbox(command: String, arguments: [String] = [], workingFiles: [URL] = [], timeoutSeconds: TimeInterval = 30.0) async throws -> SandboxExecutionResult {
         let sandboxId = UUID().uuidString
         let fileManager = FileManager.default
@@ -122,14 +126,42 @@ public final class VirtualizationMicroVMSandbox {
         
         try process.run()
         
-        let outputData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-        let errorData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        // Drain both pipes concurrently to avoid deadlock when one pipe's
+        // buffer fills while the other is being read synchronously.
+        let stdoutTask = Task.detached {
+            stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+        }
+        let stderrTask = Task.detached {
+            stderrPipe.fileHandleForReading.readDataToEndOfFile()
+        }
         
-        process.waitUntilExit()
+        // Enforce timeoutSeconds — poll at 50ms intervals, kill on expiry.
+        let deadline = startTime.addingTimeInterval(timeoutSeconds)
+        var timedOut = false
+        while process.isRunning, Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        if process.isRunning {
+            process.terminate()
+            try? await Task.sleep(for: .milliseconds(200))
+            if process.isRunning { kill(process.processIdentifier, SIGKILL) }
+            timedOut = true
+        }
+        
+        let outputData = await stdoutTask.value
+        let errorData = await stderrTask.value
         
         let duration = Date().timeIntervalSince(startTime)
         let stdout = String(data: outputData, encoding: .utf8) ?? ""
         let stderr = String(data: errorData, encoding: .utf8) ?? ""
+        
+        if timedOut {
+            throw NSError(
+                domain: "VirtualizationMicroVMSandbox",
+                code: 124,
+                userInfo: [NSLocalizedDescriptionKey: "Sandbox command timed out after \(Int(timeoutSeconds))s"]
+            )
+        }
         
         return SandboxExecutionResult(
             exitCode: process.terminationStatus,
@@ -140,3 +172,4 @@ public final class VirtualizationMicroVMSandbox {
         )
     }
 }
+

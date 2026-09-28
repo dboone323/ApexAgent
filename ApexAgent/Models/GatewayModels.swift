@@ -48,6 +48,9 @@ public struct CodableChatMessage: Codable, Sendable, Identifiable {
 
 public enum GatewayAction: Codable, Sendable {
     // Client to Server requests
+    /// Presents the pre-shared gateway token (C2). The server honors no other
+    /// client action until this succeeds for the connection.
+    case authenticate(token: String)
     case sendMessage(text: String, attachments: [Data])
     case cancelGeneration
     case resolveConfirmation(id: UUID, approved: Bool)

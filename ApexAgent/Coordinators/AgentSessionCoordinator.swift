@@ -8,7 +8,7 @@ import SharedKit
 // transcript hydration, and sliding context pruning.
 
 @MainActor
-final class AgentSessionCoordinator: Sendable {
+final class AgentSessionCoordinator {
     static let shared = AgentSessionCoordinator()
 
     static let contextCompactionThreshold: Int = 12000

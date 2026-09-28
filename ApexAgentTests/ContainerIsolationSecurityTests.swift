@@ -84,6 +84,7 @@ struct ContainerIsolationSecurityTests {
         #expect(created.containerId == testContainerId)
         #expect(created.id.hasPrefix("snap-"))
         #expect(created.description == "Baseline container snapshot before test execution")
+        #expect(created.isolationLevel == (await manager.isolationLevel), "Snapshots must record the isolation level they were taken under (M3)")
 
         // 2. List snapshots
         let list = await manager.listSnapshots(containerId: testContainerId)

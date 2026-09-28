@@ -29,7 +29,10 @@ struct SkillsSection: View {
                 EmptyView()
             } else {
                 ForEach(skills) { skill in
-                    SkillRow(skill: skill)
+                    SkillRow(skill: skill) { skillToDelete in
+                        pendingSkill = skillToDelete
+                        isConfirmingDelete = true
+                    }
                 }
             }
 
@@ -37,6 +40,9 @@ struct SkillsSection: View {
                 isAddingSkill = true
             }
         }
+        // H8: identifier so the Settings hosting test can assert this section
+        // is actually wired into SettingsView (not just that it hosts alone).
+        .accessibilityIdentifier("SkillsSection")
         .confirmationDialog(
             "Delete this skill?",
             isPresented: $isConfirmingDelete,
@@ -44,7 +50,10 @@ struct SkillsSection: View {
         ) {
             Button("Delete Skill", role: .destructive) {
                 if let skill = pendingSkill {
-                    managerskills.disable(skill)
+                    // H8: the dialog promises permanent deletion — call delete,
+                    // not disable (the old call only flipped the enabled flag
+                    // while the dialog text claimed the skill was removed).
+                    managerskills.delete(skill)
                     pendingSkill = nil
                 }
             }
@@ -64,6 +73,9 @@ struct SkillsSection: View {
 
 struct SkillRow: View {
     let skill: Skill
+    /// H8: called when the user taps the trash button; the section owns the
+    /// confirmation dialog state (pendingSkill / isConfirmingDelete).
+    let onDelete: (Skill) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -79,6 +91,16 @@ struct SkillRow: View {
 
             HStack {
                 Spacer()
+
+                // H8: the delete dialog state existed but no UI ever set it —
+                // the trash button arms pendingSkill / isConfirmingDelete.
+                Button(role: .destructive) {
+                    onDelete(skill)
+                } label: {
+                    Image(systemName: "trash")
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Delete skill")
 
                 Toggle(isOn: Binding(
                     get: { skill.enabled },

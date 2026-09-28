@@ -6,9 +6,16 @@ import Foundation
 private final class TestToolRouter: DynamicToolRouting {}
 
 @Suite("DynamicToolRoutingTests") final class DynamicToolRoutingTests {
-    @Test func testPlaceholder() {
-        // testClassifyAndRouteToolCalls has been moved to ApexAgentIntelligenceTests/AgentIntelligenceTests.swift
-        // as it requires FoundationModels and was prone to UniversalHID segfaults.
-        #expect(true)
+    @Test func testExecuteNonexistentDynamicToolReturnsError() async {
+        let router = TestToolRouter()
+        let result = await router.executeDynamicTool(name: "nonexistent_verification_tool", argumentsString: "{}")
+        #expect(result.starts(with: "ERROR:"), "Executing a nonexistent dynamic tool must return an error result")
+        #expect(result.contains("nonexistent_verification_tool"), "Error result must mention the requested tool name")
+    }
+
+    @Test func testLanguageModelExecutorSupportCheck() {
+        let supported = isLanguageModelExecutorSupported()
+        // The runtime symbol check must complete and return a boolean without crashing or throwing
+        #expect(supported == true || supported == false)
     }
 }

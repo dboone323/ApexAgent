@@ -106,7 +106,7 @@ struct SettingsView: View {
     @AppStorage("apex.dockerSandboxingEnabled") private var dockerSandboxingEnabled: Bool = false
     @AppStorage("apex.dockerImage") private var dockerImage: String = "swift:latest"
     @AppStorage("apex.collaborativeServerEnabled") private var collaborativeServerEnabled: Bool = false
-    @AppStorage("apex.collaborativeServerPort") private var collaborativeServerPort: Int = 1337
+    @AppStorage("apex.collaborativeServerPort") private var collaborativeServerPort: Int = 1340
     @AppStorage("apex.lanModeEnabled") private var lanModeEnabled: Bool = false
     @AppStorage("apex.collabToken") private var collabToken: String = ""
     @AppStorage("apex.multiAgentModeEnabled") private var multiAgentModeEnabled: Bool = false
@@ -118,6 +118,7 @@ struct SettingsView: View {
     @State private var isDaemonInstalled: Bool = false
     @State private var proactiveScheduler = ProactiveScheduler.shared
     @State private var alwaysAllowKeys: [String] = []
+    @State private var isLoaded: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -174,6 +175,7 @@ struct SettingsView: View {
                         .font(AppTheme.Font.mono(13))
                         .accessibilityLabel("Brave Search API Key")
                         .onChange(of: braveAPIKey) {
+                            guard isLoaded else { return }
                             braveSaveTask?.cancel()
                             braveSaveTask = Task {
                                 try? await Task.sleep(for: .seconds(0.5))
@@ -190,6 +192,7 @@ struct SettingsView: View {
                         .font(AppTheme.Font.mono(13))
                         .accessibilityLabel("Tavily Search API Key")
                         .onChange(of: tavilyAPIKey) {
+                            guard isLoaded else { return }
                             tavilySaveTask?.cancel()
                             tavilySaveTask = Task {
                                 try? await Task.sleep(for: .seconds(0.5))
@@ -206,6 +209,7 @@ struct SettingsView: View {
                         .font(AppTheme.Font.mono(13))
                         .accessibilityLabel("Gemini API Key")
                         .onChange(of: geminiAPIKey) {
+                            guard isLoaded else { return }
                             geminiSaveTask?.cancel()
                             geminiSaveTask = Task {
                                 try? await Task.sleep(for: .seconds(0.5))
@@ -529,6 +533,10 @@ struct SettingsView: View {
                     RoutinesSection()
                 }
 
+                // MARK: Skills registry (H8: the section existed but was never
+                // added to Settings, so skills were unmanageable in the UI)
+                SkillsSection()
+
                 Section("Add New MCP Server") {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
                     Text("Add New MCP Server")
@@ -584,10 +592,10 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Webhook Ingress Endpoint")
                                 .font(AppTheme.Font.headline(12, weight: .semibold))
-                            Text("http://localhost:8800/api/v1/webhook/:routineName")
+                            Text("http://localhost:8800/hooks/<endpointId>")
                                 .font(AppTheme.Font.mono(11))
                                 .foregroundStyle(AppTheme.Palette.accent)
-                            Text("Authorization: Bearer <apex.webhookSecret> or ?secret=<key>")
+                            Text("Authorization: Bearer <secret> or header x-apex-secret: <secret>")
                                 .font(AppTheme.Font.caption(10))
                                 .foregroundStyle(AppTheme.Palette.textSecondary)
                         }
@@ -731,6 +739,7 @@ struct SettingsView: View {
                  startSandboxStatusPolling()
                  refreshDaemonStatus()
                  refreshAlwaysAllowKeys()
+                 isLoaded = true
             }
             .onDisappear {
                  sandboxPollTask?.cancel()
@@ -823,7 +832,9 @@ struct ModeButton: View {
 
 struct CollaborativeServerSettingsSection: View {
     @AppStorage("apex.collaborativeServerEnabled") private var collaborativeServerEnabled: Bool = false
-    @AppStorage("apex.collaborativeServerPort") private var collaborativeServerPort: Int = 1337
+    // Default 1340: the daemon-mode ApexGatewayServer binds 1337
+    // (AUDIT_2026-09-28 §3.2.19) — sharing the port caused silent bind failures.
+    @AppStorage("apex.collaborativeServerPort") private var collaborativeServerPort: Int = 1340
     @AppStorage("apex.lanModeEnabled") private var lanModeEnabled: Bool = false
     @AppStorage("apex.collabToken") private var collabToken: String = ""
     
@@ -872,7 +883,7 @@ struct CollaborativeServerSettingsSection: View {
             }
             .onChange(of: collaborativeServerPort) { _, newValue in
                 if newValue < 1 {
-                    collaborativeServerPort = 1337
+                    collaborativeServerPort = 1340
                 } else if newValue > 65535 {
                     collaborativeServerPort = 65535
                 }
@@ -1032,9 +1043,10 @@ struct A2ASettingsSection: View {
         }
         
         if a2aDiscoveryEnabled {
-            Text("\(A2APeerDiscovery.shared.discoveredPeers.count) peers found")
+            Text("\(discoveredCount) peers found")
                 .font(AppTheme.Font.caption(11))
                 .foregroundStyle(AppTheme.Palette.textSecondary)
+                .onAppear { discoveredCount = A2APeerDiscovery.shared.discoveredPeers.count }
                 .onReceive(Timer.publish(every: 2, on: .main, in: .common).autoconnect()) { _ in
                     discoveredCount = A2APeerDiscovery.shared.discoveredPeers.count
                 }

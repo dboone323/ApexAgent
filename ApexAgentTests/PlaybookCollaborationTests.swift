@@ -243,9 +243,19 @@ struct PlaybookCollaborationTests {
         #expect(!report.finalOutput.isEmpty)
         #expect(report.totalDuration >= 0)
 
-        // Verify stage outputs contain specialist data
-        #expect(report.stageResults[1].combinedOutput.contains("Code Architecture"))
-        #expect(report.stageResults[2].combinedOutput.contains("Executive Synthesis"))
+        // Verify stage outputs carry simulated turn placeholders (no canned claims)
+        #expect(report.executionMode == .simulated)
+
+        let architectTurn = report.stageResults[1].botResults[0]
+        #expect(architectTurn.botName == "Code Architect")
+        #expect(architectTurn.roleId == "code_architect")
+        #expect(architectTurn.isSimulated == true)
+        #expect(architectTurn.output.contains("[SIMULATION"))
+
+        let chiefTurn = report.stageResults[2].botResults[0]
+        #expect(chiefTurn.botName == "Chief of Staff")
+        #expect(chiefTurn.isSimulated == true)
+        #expect(report.stageResults[2].combinedOutput.contains("Chief of Staff"))
     }
 
     // MARK: - Test 6: Parallel Turn Fan-Out Execution
@@ -284,9 +294,12 @@ struct PlaybookCollaborationTests {
         #expect(roleIds.contains("researcher"))
         #expect(roleIds.contains("automator"))
 
-        #expect(stageResult.combinedOutput.contains("Code Architecture"))
-        #expect(stageResult.combinedOutput.contains("Security, Documentation"))
-        #expect(stageResult.combinedOutput.contains("CI Verification"))
+        // All turns are clearly-marked simulation (no canned success claims)
+        #expect(report.executionMode == .simulated)
+        #expect(stageResult.botResults.allSatisfy { $0.isSimulated })
+        #expect(stageResult.combinedOutput.contains("[SIMULATION"))
+        let botNames = Set(stageResult.botResults.map(\.botName))
+        #expect(botNames == ["Code Architect", "Researcher", "Automator"])
     }
 
     // MARK: - Test 7: Approval Card Pausing and Resuming
@@ -526,7 +539,13 @@ struct PlaybookCollaborationTests {
         #expect(report.stageResults[0].dispatchMode == .parallel)
         #expect(report.stageResults[0].botResults.count == 5)
         #expect(report.stageResults[1].dispatchMode == .sequential)
-        #expect(report.finalOutput.contains("Executive Standup Briefing"))
+
+        // Test host has no live model access: report must be honest simulation,
+        // never canned "briefing" claims.
+        #expect(report.executionMode == .simulated)
+        #expect(report.stageResults[1].botResults.allSatisfy { $0.isSimulated })
+        #expect(report.finalOutput.contains("[SIMULATION"))
+        #expect(report.finalOutput.contains("Chief of Staff"))
 
         // Check history tracking in BotManager
         #expect(botManager.playbookHistory.count == 1)
@@ -564,5 +583,209 @@ struct PlaybookCollaborationTests {
         #expect(report.stageResults[2].stageId == "stage_patch_authoring")
         #expect(report.stageResults[3].stageId == "stage_test_benchmark")
         #expect(report.stageResults[4].stageId == "stage_patch_approval_gate")
+    }
+
+    // MARK: - Test 12: Approval Timeout Auto-Rejects (Fail-Safe Against Hanging)
+
+    @Test @MainActor func testApprovalTimeoutAutoRejects() async throws {
+        let roster = createStandard5BotRoster()
+
+        let stages = [
+            PlaybookStageDefinition(
+                id: "stage_gate",
+                name: "Unattended Gate",
+                dispatchMode: .sequential,
+                requiredRole: .chiefOfStaff,
+                promptTemplate: "Gate",
+                requiresApproval: true,
+                approvalDescription: "Nobody will answer this gate"
+            ),
+            PlaybookStageDefinition(
+                id: "stage_should_not_run",
+                name: "Should Not Run",
+                dispatchMode: .sequential,
+                requiredRole: .chiefOfStaff,
+                promptTemplate: "After gate"
+            )
+        ]
+
+        let playbook = CollaborationPlaybook(
+            id: UUID(),
+            name: "Timeout Gate Test",
+            roles: [.chiefOfStaff],
+            stages: stages
+        )
+
+        let runner = PlaybookRunner(playbook: playbook, availableBots: roster)
+        runner.approvalTimeout = 0.2 // fail fast in test
+
+        // Never answer the gate — the fail-safe timeout must resolve it.
+        do {
+            _ = try await runner.execute(contextInput: "unattended")
+            Issue.record("Expected approvalRejected after timeout but execution succeeded")
+        } catch let error as PlaybookExecutionError {
+            if case .approvalRejected(let stageId, let reason) = error {
+                #expect(stageId == "stage_gate")
+                #expect(reason.lowercased().contains("timed out"))
+            } else {
+                Issue.record("Unexpected PlaybookExecutionError: \(error)")
+            }
+        } catch {
+            Issue.record("Unexpected error type: \(error)")
+        }
+
+        // Timeout never auto-approves; the timed-out card is rejected and
+        // later stages never run.
+        #expect(runner.approvalCards.count == 1)
+        #expect(runner.approvalCards[0].status == .rejected)
+        #expect((runner.approvalCards[0].resolutionNotes ?? "").lowercased().contains("timed out"))
+        #expect(runner.stageResults.isEmpty)
+        #expect(runner.pendingApprovalCard == nil)
+    }
+
+    // MARK: - Test 13: onApprovalRequired Callback Fires (PROJECT M2 Contract)
+
+    @Test @MainActor func testOnApprovalRequiredCallbackFires() async throws {
+        let roster = createStandard5BotRoster()
+
+        let stages = [
+            PlaybookStageDefinition(
+                id: "stage_gate",
+                name: "Callback Gate",
+                dispatchMode: .sequential,
+                requiredRole: .chiefOfStaff,
+                promptTemplate: "Gate",
+                requiresApproval: true,
+                approvalDescription: "Callback should fire for this card"
+            )
+        ]
+
+        let playbook = CollaborationPlaybook(
+            id: UUID(),
+            name: "Approval Callback Test",
+            roles: [.chiefOfStaff],
+            stages: stages
+        )
+
+        let runner = PlaybookRunner(playbook: playbook, availableBots: roster)
+
+        var receivedCard: PlaybookApprovalCard?
+        let executionTask = Task {
+            try await runner.execute(
+                contextInput: "callback",
+                onApprovalRequired: { card in receivedCard = card }
+            )
+        }
+
+        // Wait for approval gate
+        for _ in 0..<50 {
+            let status = runner.status
+            if case .waitingForApproval = status {
+                break
+            }
+            try await Task.sleep(nanoseconds: 20_000_000)
+        }
+
+        runner.approvePendingStage(notes: "Approved after callback")
+        let report = try await executionTask.value
+
+        #expect(report.isSuccessful == true)
+        #expect(receivedCard?.stageId == "stage_gate")
+        #expect(receivedCard?.playbookId == playbook.id)
+        // Callback fires while the card is still pending so UI can present it.
+        #expect(receivedCard?.status == .pending)
+    }
+
+    // MARK: - Test 14: onDelegationEvent Callback Fires (PROJECT M2 Contract)
+
+    @Test @MainActor func testOnDelegationEventCallbackFires() async throws {
+        let roster = createStandard5BotRoster()
+
+        let stages = [
+            PlaybookStageDefinition(
+                id: "stage_one",
+                name: "First",
+                dispatchMode: .sequential,
+                requiredRole: .chiefOfStaff,
+                promptTemplate: "Start: {input}"
+            ),
+            PlaybookStageDefinition(
+                id: "stage_two",
+                name: "Second",
+                dispatchMode: .sequential,
+                requiredRole: .codeArchitect,
+                promptTemplate: "Continue: {previousOutput}"
+            )
+        ]
+
+        let playbook = CollaborationPlaybook(
+            id: UUID(),
+            name: "Delegation Callback Test",
+            roles: [.chiefOfStaff, .codeArchitect],
+            stages: stages
+        )
+
+        let runner = PlaybookRunner(playbook: playbook, availableBots: roster)
+
+        var receivedEvents: [PlaybookDelegationEvent] = []
+        let report = try await runner.execute(
+            contextInput: "delegate",
+            onDelegationEvent: { receivedEvents.append($0) }
+        )
+
+        #expect(report.isSuccessful == true)
+        // Sequential handoff from Chief of Staff to Code Architect
+        #expect(!receivedEvents.isEmpty)
+        #expect(receivedEvents.count == report.delegationEvents.count)
+        #expect(receivedEvents.allSatisfy { !$0.fromBotName.isEmpty && !$0.toBotName.isEmpty })
+        #expect(receivedEvents.contains(where: { $0.action == "sequential_handoff" }))
+    }
+
+    // MARK: - Test 15: Backward-Compatible Decoding of Pre-Change Reports
+
+    @Test func testLegacyReportDecodingDefaultsToSimulated() throws {
+        // Reports written before executionMode/isSimulated existed lack those
+        // keys; they must still decode, defaulting to the honest `.simulated`.
+        let legacyJSON = """
+        {
+            "id": "\(UUID().uuidString)",
+            "playbookId": "\(UUID().uuidString)",
+            "playbookName": "Legacy Report",
+            "contextInput": "old input",
+            "stageResults": [],
+            "delegationEvents": [],
+            "approvalCards": [],
+            "finalOutput": "old canned output",
+            "totalDuration": 1.5,
+            "startedAt": 0,
+            "completedAt": 1,
+            "isSuccessful": true
+        }
+        """
+        let report = try JSONDecoder().decode(
+            PlaybookExecutionReport.self,
+            from: legacyJSON.data(using: .utf8)!
+        )
+        #expect(report.executionMode == .simulated)
+        #expect(report.playbookName == "Legacy Report")
+        #expect(report.isSuccessful == true)
+
+        let legacyTurnJSON = """
+        {
+            "id": "\(UUID().uuidString)",
+            "botId": "\(UUID().uuidString)",
+            "botName": "Old Bot",
+            "roleId": "code_architect",
+            "output": "old canned output",
+            "duration": 0.1,
+            "timestamp": 0
+        }
+        """
+        let turn = try JSONDecoder().decode(
+            PlaybookBotResult.self,
+            from: legacyTurnJSON.data(using: .utf8)!
+        )
+        #expect(turn.isSimulated == true)
+        #expect(turn.botName == "Old Bot")
     }
 }

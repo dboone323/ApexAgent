@@ -70,13 +70,14 @@ Every feature from the Survey phase is mapped to an assigned milestone:
 | 15 | Final E2E Integration & Verification | Execute full test matrix across ApexAgentTests and ApexAgentContainerTests, validating 100% clean builds, zero warnings, and passing all Tiers 1-5. | M5 | R1-R4 Acceptance |
 
 ## Milestones
+> **2026-09-24:** milestone statuses corrected to match the verified per-feature verdicts in AUDIT_2026-09-24.md §2 (8 implemented · 6 partial · 1 missing). A fix session ran 2026-09-24 and is addressing the gaps. None of these should be marked complete without a green build + fresh `swift test`.
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Settings & Creation UI Sheets | Implement `CreateRoutineSheet`, `CreateSkillSheet`, dual persistence, and `SettingsView` wiring. | none | PLANNED |
-| M2 | Autonomous Playbooks & Multi-Agent Engine | Implement `CollaborationPlaybook`, 3 Presets, `PlaybookParticipantAssigner`, `PlaybookRunner`, sequential/parallel dispatch, approval cards, and delegation tracking. | none | PLANNED |
-| M3 | Containerization & Sandboxctl Enhancements | Implement `ContainerIsolationLevel`, Snapshot/Checkpoint APIs, `SecurityGovernanceProfile`, Host boundary & symlink traversal guards, and `sandboxctl` CLI tool. | none | PLANNED |
-| M4 | Dynamic Script & MCP Server Discovery UI | Implement `MCPServerDashboardView` with latency probing and tool inspection, and `DynamicScriptEditorView` with test runner console. | M1 | PLANNED |
-| M5 | Final E2E Integration & Adversarial Verification | Execute full test suite across all 4 feature areas (Tiers 1-4 functional tests + Tier 5 adversarial verification). | M1, M2, M3, M4 | PLANNED |
+| M1 | Settings & Creation UI Sheets | Implement `CreateRoutineSheet`, `CreateSkillSheet`, dual persistence, and `SettingsView` wiring. | none | ⚠️ PARTIAL — features 1–2 partial (target bot picker is a free-text field, not the specified picker; skill Save uses weaker `uiCanSave` validation); feature 3 `SkillsSection` exists but is unwired in `SettingsView`, so it's unreachable in the shipped UI (audit §2). |
+| M2 | Autonomous Playbooks & Multi-Agent Engine | Implement `CollaborationPlaybook`, 3 Presets, `PlaybookParticipantAssigner`, `PlaybookRunner`, sequential/parallel dispatch, approval cards, and delegation tracking. | none | ⚠️ PARTIAL — models (4), presets (5), and assigner (6) are implemented; the runner (7) executes stages but agent "turns" are canned stub text, not real agent invocations, the specified `onApprovalRequired`/`onDelegationEvent` callbacks are missing, and there is no UI surface for approval cards — `requiresApproval` stages hang in production (audit §2, §9 C3/H6). |
+| M3 | Containerization & Sandboxctl Enhancements | Implement `ContainerIsolationLevel`, Snapshot/Checkpoint APIs, `SecurityGovernanceProfile`, Host boundary & symlink traversal guards, and `sandboxctl` CLI tool. | none | ⚠️ PARTIAL — isolation level enum (8) is formalized but write-only; snapshots (9) are implemented and filesystem-backed; governance profiles (10) exist but the governance-aware approval verdict has zero callers; boundary guards (11) resolve symlinks but never throw `.symlinkTraversal`; `sandboxctl` (12) is a 51-line stub — no `run`/`status`/`snapshot`/`verify-security` subcommands (audit §2). |
+| M4 | Dynamic Script & MCP Server Discovery UI | Implement `MCPServerDashboardView` with latency probing and tool inspection, and `DynamicScriptEditorView` with test runner console. | M1 | ⚠️ PARTIAL — the dashboard (13) is implemented; the script editor (14) exists but its test runner waits for completion and merges stdout/stderr into one pipe instead of the specified live, separately-captured console (audit §2). |
+| M5 | Final E2E Integration & Adversarial Verification | Execute full test suite across all 4 feature areas (Tiers 1-4 functional tests + Tier 5 adversarial verification). | M1, M2, M3, M4 | ⚠️ BLOCKED — test suites exist per area (incl. Tier 5 adversarial), but the "E2E" suites are code-level scenarios and no green test artifacts exist for current sources (audit §7). Cannot be marked done until the build is green and a full matrix runs. |
 
 ## Interface Contracts
 
@@ -91,9 +92,9 @@ Every feature from the Survey phase is mapped to an assigned milestone:
 ### M2 Interface Contracts
 - `CollaborationPlaybook`:
   - `PlaybookPresetKind`: `.fullPRReviewLoop`, `.issueToPatchPipeline`, `.weeklyStandupAndRetrospective`.
-  - `PlaybookStageDefinition`: `id: String`, `title: String`, `role: PlaybookRoleRequirement`, `dispatchMode: PlaybookDispatchMode`, `promptTemplate: String`, `requiresApproval: Bool`.
-  - `PlaybookParticipantAssigner.assignParticipants(for:preset:availableBots:) -> [PlaybookRoleRequirement: BotProfile]`.
-  - `PlaybookRunner.execute(playbook:preset:context:onApprovalRequired:onDelegationEvent:) async throws -> PlaybookExecutionReport`.
+  - `PlaybookStageDefinition`: `id: String`, `name: String` (with a computed `title` alias), `requiredRoles: [PlaybookRoleRequirement]` (array; a singular convenience init `requiredRole:` exists), `dispatchMode: PlaybookDispatchMode`, `promptTemplate: String`, `requiresApproval: Bool`. *(corrected 2026-09-24 — the doc's singular `role:` did not match the code)*
+  - `PlaybookParticipantAssigner.assignParticipants(for:playbook:availableBots:) -> [PlaybookRoleRequirement: BotProfile]` — note the `for:` label takes the `CollaborationPlaybook`, not a preset kind. *(corrected 2026-09-24)*
+  - `PlaybookRunner` is constructed as `PlaybookRunner(playbook:participantMap:)` (or `PlaybookRunner(playbook:availableBots:)`), then `execute(contextInput:) async throws -> PlaybookExecutionReport`. There are no `onApprovalRequired`/`onDelegationEvent` callbacks — approvals pause on a `CheckedContinuation` and surface via the runner's `approvalCards`/`pendingApprovalCard` properties; delegation events are tracked in the `delegationEvents` property. *(corrected 2026-09-24 — the doc's static `execute(playbook:preset:context:onApprovalRequired:onDelegationEvent:)` signature did not match the code)*
 
 ### M3 Interface Contracts
 - `ContainerIsolationLevel`: `enum { case strict, standard, ephemeralOverlay }`.

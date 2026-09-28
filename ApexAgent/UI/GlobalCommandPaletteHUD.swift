@@ -2,6 +2,11 @@ import SwiftUI
 import AppKit
 import Carbon
 
+private final class CommandPalettePanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 @Observable @MainActor
 public final class GlobalCommandPaletteController {
     public static let shared = GlobalCommandPaletteController()
@@ -38,10 +43,10 @@ public final class GlobalCommandPaletteController {
     
     public func show() {
         if panel == nil {
-            let newPanel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 620, height: 80),
-                                   styleMask: [.nonactivatingPanel],
-                                   backing: .buffered,
-                                   defer: false)
+            let newPanel = CommandPalettePanel(contentRect: NSRect(x: 0, y: 0, width: 620, height: 80),
+                                               styleMask: [.nonactivatingPanel],
+                                               backing: .buffered,
+                                               defer: false)
             newPanel.level = .floating
             newPanel.backgroundColor = .clear
             newPanel.isOpaque = false
@@ -51,6 +56,7 @@ public final class GlobalCommandPaletteController {
             self.panel = newPanel
         }
         panel?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
         isVisible = true
     }
     

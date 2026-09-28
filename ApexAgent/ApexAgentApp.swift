@@ -14,8 +14,8 @@ public struct ApexAgentApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var botManager: BotManager
     let computer: Computer
-    @State private var skillManager = SkillManager()
-    @State private var routineManager = RoutineManager()
+    @State private var skillManager = SkillManager.shared
+    @State private var routineManager = RoutineManager.shared
 
     public init() {
         self.computer = Computer()
@@ -28,7 +28,7 @@ public struct ApexAgentApp: App {
             // running in standalone GUI mode without the daemon.
             Task { @MainActor in
                 let shouldConnect = UserDefaults.standard.bool(forKey: "apex.connectGateway")
-                    || ProcessInfo.processInfo.arguments.contains("--connect-gateway")
+                    || args.contains("--connect-gateway")
                 if shouldConnect || ApexGatewayClient.isServerReachable() {
                     ApexGatewayClient.shared.connect()
                 }
@@ -96,7 +96,6 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
     }
 
     var statusItem: NSStatusItem?
-    var quickPromptPanel: QuickPromptPanel?
     private var webhookServer: WebhookServer?
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
@@ -104,7 +103,9 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
         setupGlobalHotkey()
         setupShortcuts()
         setupSpotlight()
-        checkFMCLIAvailability()
+        Task.detached(priority: .utility) {
+            Self.checkFMCLIAvailability()
+        }
         startWebhookReceiverIfPossible()
     }
 
@@ -130,7 +131,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
     /// If the CLI is missing (non-Apple Silicon, build without FM, or `sudo fm license` not
     /// accepted), surface a one-shot warning so the user isn't left with silent failures when
     /// they try to use on-device model features.
-    private func checkFMCLIAvailability() {
+    nonisolated static func checkFMCLIAvailability() {
         let fmPath = "/usr/bin/fm"
         guard FileManager.default.fileExists(atPath: fmPath) else {
             print("[Apex] WARNING: /usr/bin/fm not found — on-device FoundationModel + App Intents will be unavailable. Run `sudo fm license` to enable Apple's on-device model.")
@@ -206,7 +207,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
     }
 
     private func setupSpotlight() {
-        let activity = NSUserActivity(activityType: "com.dboone323.ApexAgent.query")
+        let activity = NSUserActivity(activityType: "com.apexagent.ApexAgent.query")
         activity.title = "Ask Apex Agent"
         activity.isEligibleForSearch = true
         activity.userInfo = ["entry": "spotlight"]
@@ -340,12 +341,5 @@ public func runDaemonMode() async {
     } catch {
         print("⚠️ Failed to start daemon server: \(error)")
         exit(1)
-    }
-}
-
-public class WritingToolsSupportLoader: NSObject {
-    @MainActor
-    static func configureWritingTools() {
-        WritingToolsSupport.register()
     }
 }

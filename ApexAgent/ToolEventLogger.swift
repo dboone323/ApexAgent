@@ -21,6 +21,8 @@ public protocol ToolEventLogger: Sendable {
 }
 
 /// No-op implementation for testing / fallback when no orchestrator is available.
+/// Must be @MainActor: the ToolEventLogger protocol is @MainActor-isolated.
+@MainActor
 final class ToolEventLoggerImpl: ToolEventLogger {
     public func logToolStart(name: String, arguments: String) {}
     public func logToolEnd(name: String, result: String, status: ToolStatus) {}

@@ -306,6 +306,9 @@ public struct PlaybookBotResult: Identifiable, Codable, Sendable, Equatable {
     public let output: String
     public let duration: TimeInterval
     public let timestamp: Date
+    /// True when `output` came from the simulation stub rather than a real
+    /// agent invocation. Always check this before presenting output as real work.
+    public let isSimulated: Bool
 
     public init(
         id: UUID = UUID(),
@@ -314,7 +317,8 @@ public struct PlaybookBotResult: Identifiable, Codable, Sendable, Equatable {
         roleId: String,
         output: String,
         duration: TimeInterval = 0,
-        timestamp: Date = Date()
+        timestamp: Date = Date(),
+        isSimulated: Bool = false
     ) {
         self.id = id
         self.botId = botId
@@ -323,6 +327,25 @@ public struct PlaybookBotResult: Identifiable, Codable, Sendable, Equatable {
         self.output = output
         self.duration = duration
         self.timestamp = timestamp
+        self.isSimulated = isSimulated
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, botId, botName, roleId, output, duration, timestamp, isSimulated
+    }
+
+    /// Tolerant decode: reports written before `isSimulated` existed only ever
+    /// contained canned simulation output, so a missing key means simulated.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        botId = try container.decode(UUID.self, forKey: .botId)
+        botName = try container.decode(String.self, forKey: .botName)
+        roleId = try container.decode(String.self, forKey: .roleId)
+        output = try container.decode(String.self, forKey: .output)
+        duration = try container.decodeIfPresent(TimeInterval.self, forKey: .duration) ?? 0
+        timestamp = try container.decodeIfPresent(Date.self, forKey: .timestamp) ?? Date()
+        isSimulated = try container.decodeIfPresent(Bool.self, forKey: .isSimulated) ?? true
     }
 }
 
@@ -368,6 +391,18 @@ public struct PlaybookStageResult: Identifiable, Codable, Sendable, Equatable {
     }
 }
 
+/// How a playbook's agent turns were produced.
+///
+/// - `.live`: turns were executed through real bot sessions (`BotManager` →
+///   `BotSession.sendMessageAsync`), i.e. real model invocations.
+/// - `.simulated`: turns used the clearly-marked simulation stub because no
+///   live `BotManager` was wired (unit tests, UI previews). Simulated output
+///   is explicitly labeled and must never be presented as real agent work.
+public enum PlaybookExecutionMode: String, Codable, Sendable, Equatable {
+    case live = "live"
+    case simulated = "simulated"
+}
+
 /// Overall execution status of a playbook runner.
 public enum PlaybookExecutionStatus: Codable, Sendable, Equatable {
     case idle
@@ -393,6 +428,8 @@ public struct PlaybookExecutionReport: Identifiable, Codable, Sendable, Equatabl
     public let startedAt: Date
     public var completedAt: Date
     public var isSuccessful: Bool
+    /// Whether the run's turns were real agent invocations or simulation output.
+    public var executionMode: PlaybookExecutionMode
 
     public init(
         id: UUID = UUID(),
@@ -407,7 +444,8 @@ public struct PlaybookExecutionReport: Identifiable, Codable, Sendable, Equatabl
         totalDuration: TimeInterval = 0,
         startedAt: Date = Date(),
         completedAt: Date = Date(),
-        isSuccessful: Bool = true
+        isSuccessful: Bool = true,
+        executionMode: PlaybookExecutionMode = .simulated
     ) {
         self.id = id
         self.playbookId = playbookId
@@ -422,6 +460,34 @@ public struct PlaybookExecutionReport: Identifiable, Codable, Sendable, Equatabl
         self.startedAt = startedAt
         self.completedAt = completedAt
         self.isSuccessful = isSuccessful
+        self.executionMode = executionMode
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, playbookId, playbookName, presetKind, contextInput
+        case stageResults, delegationEvents, approvalCards
+        case finalOutput, totalDuration, startedAt, completedAt
+        case isSuccessful, executionMode
+    }
+
+    /// Tolerant decode: reports written before `executionMode` existed were
+    /// always simulation runs, so a missing key means `.simulated`.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        playbookId = try container.decode(UUID.self, forKey: .playbookId)
+        playbookName = try container.decode(String.self, forKey: .playbookName)
+        presetKind = try container.decodeIfPresent(PlaybookPresetKind.self, forKey: .presetKind)
+        contextInput = try container.decode(String.self, forKey: .contextInput)
+        stageResults = try container.decodeIfPresent([PlaybookStageResult].self, forKey: .stageResults) ?? []
+        delegationEvents = try container.decodeIfPresent([PlaybookDelegationEvent].self, forKey: .delegationEvents) ?? []
+        approvalCards = try container.decodeIfPresent([PlaybookApprovalCard].self, forKey: .approvalCards) ?? []
+        finalOutput = try container.decodeIfPresent(String.self, forKey: .finalOutput) ?? ""
+        totalDuration = try container.decodeIfPresent(TimeInterval.self, forKey: .totalDuration) ?? 0
+        startedAt = try container.decodeIfPresent(Date.self, forKey: .startedAt) ?? Date()
+        completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt) ?? Date()
+        isSuccessful = try container.decodeIfPresent(Bool.self, forKey: .isSuccessful) ?? true
+        executionMode = try container.decodeIfPresent(PlaybookExecutionMode.self, forKey: .executionMode) ?? .simulated
     }
 }
 

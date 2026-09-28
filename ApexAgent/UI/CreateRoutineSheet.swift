@@ -88,12 +88,12 @@ public struct CreateRoutineSheet: View {
         }
     }
 
+    /// Preview of the webhook route shape. The live server (`WebhookReceiver`)
+    /// serves real endpoints at `/hooks/<endpointId>` where `endpointId` is a
+    /// `wh_…` identifier generated when the routine is saved, so the exact URL
+    /// is shown on the saved routine — this preview shows only the route.
     public var webhookPathPreview: String {
-        let slug = routineName.trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: " ", with: "-")
-            .lowercased()
-        let namePart = slug.isEmpty ? ":routineName" : slug
-        return "http://localhost:8800/api/v1/webhook/\(namePart)"
+        "http://localhost:8800/hooks/<endpointId>"
     }
 
     public var canSave: Bool {
@@ -188,12 +188,11 @@ public struct CreateRoutineSheet: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else if triggerInput == .webhook {
-                        let slug = nameInput.trimmingCharacters(in: .whitespacesAndNewlines)
-                            .replacingOccurrences(of: " ", with: "-")
-                            .lowercased()
-                        let path = "http://localhost:8800/api/v1/webhook/\(slug.isEmpty ? ":routineName" : slug)"
-                        Text("Webhook URL: \(path)")
+                        Text("Webhook URL: http://localhost:8800/hooks/<endpointId>")
                             .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("Endpoints are routed via WebhookManager with per-endpoint secret tokens.")
+                            .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
                 }

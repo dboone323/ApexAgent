@@ -26,8 +26,6 @@ struct DelegateTaskTool: Tool {
     @TaskLocal static var activeDelegationDepth: Int = 0
 
     func call(arguments: Arguments) async throws -> String {
-        print("[DELEGATION] delegate_task called with agent=\(arguments.agentType), task=\(arguments.taskDescription)")
-        fflush(stdout)
         guard Self.activeDelegationDepth < 2 else {
             return "ERROR: Maximum delegation depth reached. Please execute your specialized sub-task directly using your tools without delegating further."
         }
@@ -91,9 +89,6 @@ struct DelegateTaskTool: Tool {
                 )
 
                 let finalContent = terminalState.userFacingMessage
-                let elapsed = String(format: "%.2f", Date().timeIntervalSince(subStartTime))
-                print("[DELEGATION] ✅ Sub-agent '\(agent.name)' finished in \(elapsed)s: '\(finalContent.prefix(80))'")
-                fflush(stdout)
 
                 // 3. Update the assistant bubble on the MainActor.
                 await MainActor.run {

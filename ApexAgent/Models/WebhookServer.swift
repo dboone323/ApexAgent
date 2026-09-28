@@ -60,6 +60,10 @@ final class WebhookServer: @unchecked Sendable {
             throw ServerError.invalidPort
         }
 
+        // M2: bind localhost only, matching the documented contract above —
+        // without this NWListener binds all interfaces.
+        params.requiredLocalEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host("127.0.0.1"), port: nwPort)
+
         let listener: NWListener
         do {
             listener = try NWListener(using: params, on: nwPort)

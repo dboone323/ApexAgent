@@ -31,20 +31,42 @@ public enum PlaybookExecutionError: Error, LocalizedError, Equatable {
 
 /// Autonomous execution engine for multi-agent collaboration playbooks.
 ///
+/// Turn execution modes:
+/// - `.live`: each turn is a real agent invocation through the bot's live
+///   `BotSession` (requires a `BotManager` injected at init). Production mode.
+/// - `.simulated`: turns use a clearly-marked simulation stub (no `BotManager`
+///   wired, or running under a test host). Used for unit tests and UI
+///   previews; simulated output is explicitly labeled and must never be
+///   presented as real agent work.
+///
 /// Features:
 /// - Asynchronous sequential and parallel (`withThrowingTaskGroup`) turn dispatching.
-/// - Stage-level human-in-the-loop approval cards with asynchronous pause/resume.
-/// - Live tracking of peer delegation events and `TraceBus` event emission.
+/// - Stage-level human-in-the-loop approval cards with asynchronous pause/resume,
+///   a fail-safe auto-reject timeout, and an `onApprovalRequired` callback hook.
+/// - Live tracking of peer delegation events (plus an `onDelegationEvent` hook)
+///   and `TraceBus` event emission.
 /// - Comprehensive execution reporting with per-stage timings and bot responses.
 @Observable
 @MainActor
 final class PlaybookRunner {
 
+    // MARK: - Approval Resolution
+
+    /// Internal outcome of an approval-gate suspension.
+    private enum ApprovalOutcome: Sendable {
+        case approved
+        case rejected
+        case timedOut
+    }
+
     // MARK: - Properties
 
     let playbook: CollaborationPlaybook
     let participantMap: [PlaybookRoleRequirement: BotProfile]
-    
+    /// Optional live-session source. When nil, turns run in clearly-marked
+    /// simulation mode. Weak to avoid a retain cycle with the owning manager.
+    weak var botManager: BotManager?
+
     private(set) var status: PlaybookExecutionStatus = .idle
     private(set) var currentStageIndex: Int = 0
     private(set) var stageResults: [PlaybookStageResult] = []
@@ -52,36 +74,73 @@ final class PlaybookRunner {
     private(set) var approvalCards: [PlaybookApprovalCard] = []
     private(set) var pendingApprovalCard: PlaybookApprovalCard?
     private(set) var isCancelled: Bool = false
+    /// `.live` when turns go through real bot sessions, `.simulated` otherwise.
+    private(set) var executionMode: PlaybookExecutionMode = .simulated
+    /// Fail-safe: an unanswered approval gate auto-rejects after this long
+    /// so a stage can never hang forever with no user path to resolve it.
+    /// Shorten in tests to exercise the timeout path quickly.
+    var approvalTimeout: TimeInterval = 300
 
-    private var pendingApprovalContinuation: CheckedContinuation<Bool, Never>?
+    private var pendingApprovalContinuation: CheckedContinuation<ApprovalOutcome, Never>?
+    private var approvalTimeoutTask: Task<Void, Never>?
+    private var delegationEventHandler: ((PlaybookDelegationEvent) -> Void)?
     private var lastApprovalResolutionNotes: String?
     private var lastActiveBot: BotProfile?
+
+    /// Per-turn cap for a live agent invocation (timeout race mirroring
+    /// MultiAgentDebateCoordinator).
+    private static let liveTurnTimeoutNanoseconds: UInt64 = 60_000_000_000
+
+    /// Test hosts must never fire real model calls. Mirrors BotSession's
+    /// test-mode detection (a test-only behavioral gate, not a security gate).
+    private static var isTestEnvironment: Bool {
+        getenv("APEX_TEST_MODE") != nil
+            || NSClassFromString("XCTestCase") != nil
+            || ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest")
+    }
 
     // MARK: - Initialization
 
     init(
         playbook: CollaborationPlaybook,
-        participantMap: [PlaybookRoleRequirement: BotProfile]
+        participantMap: [PlaybookRoleRequirement: BotProfile],
+        botManager: BotManager? = nil
     ) {
         self.playbook = playbook
         self.participantMap = participantMap
+        self.botManager = botManager
     }
 
     init(
         playbook: CollaborationPlaybook,
-        availableBots: [BotProfile]
+        availableBots: [BotProfile],
+        botManager: BotManager? = nil
     ) {
         self.playbook = playbook
         self.participantMap = PlaybookParticipantAssigner.assignParticipants(
             for: playbook,
             availableBots: availableBots
         )
+        self.botManager = botManager
     }
 
     // MARK: - Primary Execution
 
     /// Executes the collaboration playbook end-to-end.
-    func execute(contextInput: String) async throws -> PlaybookExecutionReport {
+    ///
+    /// - Parameters:
+    ///   - contextInput: The initial input/context fed to the first stage.
+    ///   - onApprovalRequired: PROJECT M2 contract hook, fired when an approval
+    ///     card is raised so the host can surface it in UI. The runner still
+    ///     suspends until `approvePendingStage`/`rejectPendingStage` is called
+    ///     or the fail-safe auto-reject timeout fires.
+    ///   - onDelegationEvent: PROJECT M2 contract hook, fired for every peer
+    ///     delegation event as it is tracked.
+    func execute(
+        contextInput: String,
+        onApprovalRequired: ((PlaybookApprovalCard) async throws -> Void)? = nil,
+        onDelegationEvent: ((PlaybookDelegationEvent) -> Void)? = nil
+    ) async throws -> PlaybookExecutionReport {
         guard case .idle = status else {
             throw PlaybookExecutionError.alreadyRunning
         }
@@ -94,6 +153,19 @@ final class PlaybookRunner {
         pendingApprovalCard = nil
         lastApprovalResolutionNotes = nil
         lastActiveBot = nil
+        delegationEventHandler = onDelegationEvent
+        defer { delegationEventHandler = nil }
+
+        // Live turns need a wired BotManager and a non-test host process;
+        // otherwise turns are clearly-marked simulation output (tests/previews).
+        executionMode = (botManager != nil && !Self.isTestEnvironment) ? .live : .simulated
+        if executionMode == .simulated {
+            emitTrace(
+                operation: "execution_mode_simulated",
+                detail: "Running in SIMULATION mode (no live BotManager wired or test host): turn outputs are placeholders, not real agent responses.",
+                metadata: ["playbookId": playbook.id.uuidString]
+            )
+        }
 
         emitTrace(
             operation: "playbook_started",
@@ -157,31 +229,53 @@ final class PlaybookRunner {
                     ]
                 )
 
-                // Suspend execution until approved or rejected
-                let approved = await withCheckedContinuation { continuation in
-                    self.pendingApprovalContinuation = continuation
-                }
+                // PROJECT M2 contract hook: let the host surface the card in UI.
+                // If the hook throws (e.g. non-interactive Siri context), the
+                // error propagates and aborts execution immediately.
+                try await onApprovalRequired?(card)
 
-                guard approved else {
-                    let rejectReason = lastApprovalResolutionNotes ?? "User rejected approval gate"
+                // Suspend execution until approved, rejected, or timed out.
+                // The fail-safe timeout guarantees a stage can never hang
+                // forever when no UI surfaces the card.
+                let outcome: ApprovalOutcome = await withCheckedContinuation { (continuation: CheckedContinuation<ApprovalOutcome, Never>) in
+                    self.pendingApprovalContinuation = continuation
+                    let timeout = max(self.approvalTimeout, 0)
+                    self.approvalTimeoutTask = Task { [weak self] in
+                        try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                        await self?.resolveApprovalAsTimedOut()
+                    }
+                }
+                approvalTimeoutTask?.cancel()
+                approvalTimeoutTask = nil
+
+                switch outcome {
+                case .approved:
+                    emitTrace(
+                        operation: "approval_gate_resumed",
+                        detail: "Approval granted for stage '\(stage.name)'. Resuming execution.",
+                        metadata: ["playbookId": playbook.id.uuidString, "stageId": stage.id]
+                    )
+
+                    status = .running(stageId: stage.id, stageIndex: index)
+
+                case .rejected, .timedOut:
+                    let rejectReason: String
+                    if outcome == .timedOut {
+                        rejectReason = lastApprovalResolutionNotes
+                            ?? "Approval timed out after \(Int(approvalTimeout))s with no response (auto-rejected)"
+                    } else {
+                        rejectReason = lastApprovalResolutionNotes ?? "User rejected approval gate"
+                    }
                     status = .failed(error: "Approval gate rejected: \(rejectReason)")
-                    
+
                     emitTrace(
                         operation: "playbook_failed",
                         detail: "Playbook failed at approval gate '\(stage.name)': \(rejectReason)",
                         metadata: ["playbookId": playbook.id.uuidString, "stageId": stage.id]
                     )
-                    
+
                     throw PlaybookExecutionError.approvalRejected(stageId: stage.id, reason: rejectReason)
                 }
-
-                emitTrace(
-                    operation: "approval_gate_resumed",
-                    detail: "Approval granted for stage '\(stage.name)'. Resuming execution.",
-                    metadata: ["playbookId": playbook.id.uuidString, "stageId": stage.id]
-                )
-
-                status = .running(stageId: stage.id, stageIndex: index)
             }
 
             // Execute the stage turns (sequential or parallel)
@@ -217,14 +311,12 @@ final class PlaybookRunner {
                     lastActiveBot = bot
 
                     let turnStart = Date()
-                    let response = Self.generateSpecialistTurnResponse(
-                        botName: bot.name,
+                    let response = await runBotTurn(
+                        bot: bot,
                         roleId: role.id,
                         stageId: stage.id,
                         stageName: stage.name,
-                        prompt: interpolatedPrompt,
-                        input: contextInput,
-                        previousOutput: previousOutput
+                        prompt: interpolatedPrompt
                     )
                     let duration = Date().timeIntervalSince(turnStart)
 
@@ -234,7 +326,8 @@ final class PlaybookRunner {
                         roleId: role.id,
                         output: response,
                         duration: duration,
-                        timestamp: Date()
+                        timestamp: Date(),
+                        isSimulated: executionMode == .simulated
                     )
                     sequentialResults.append(turnResult)
                 }
@@ -247,15 +340,15 @@ final class PlaybookRunner {
                 let parallelRoles = stage.requiredRoles
                 var tasksResults: [PlaybookBotResult] = []
 
-                struct ParallelTaskItem: Sendable {
+                struct ParallelTaskItem {
                     let botId: UUID
                     let botName: String
                     let roleId: String
                     let stageId: String
                     let stageName: String
                     let prompt: String
-                    let input: String
-                    let previousOutput: String
+                    /// Live session when executionMode == .live; nil → simulation stub.
+                    let session: BotSession?
                 }
 
                 var taskItems: [ParallelTaskItem] = []
@@ -275,6 +368,10 @@ final class PlaybookRunner {
                         )
                     }
 
+                    // Resolve the live session on the MainActor before fanning out;
+                    // child tasks only carry Sendable snapshots (mirrors MultiAgentDebateCoordinator).
+                    let liveSession: BotSession? = (executionMode == .live) ? botManager?.session(for: bot) : nil
+
                     taskItems.append(ParallelTaskItem(
                         botId: bot.id,
                         botName: bot.name,
@@ -282,8 +379,7 @@ final class PlaybookRunner {
                         stageId: stage.id,
                         stageName: stage.name,
                         prompt: interpolatedPrompt,
-                        input: contextInput,
-                        previousOutput: previousOutput
+                        session: liveSession
                     ))
                 }
 
@@ -291,15 +387,18 @@ final class PlaybookRunner {
                     for item in taskItems {
                         group.addTask {
                             let turnStart = Date()
-                            let response = Self.generateSpecialistTurnResponse(
-                                botName: item.botName,
-                                roleId: item.roleId,
-                                stageId: item.stageId,
-                                stageName: item.stageName,
-                                prompt: item.prompt,
-                                input: item.input,
-                                previousOutput: item.previousOutput
-                            )
+                            let response: String
+                            if let session = item.session {
+                                response = await Self.runLiveTurn(session: session, botName: item.botName, prompt: item.prompt)
+                            } else {
+                                response = Self.generateSimulatedTurnResponse(
+                                    botName: item.botName,
+                                    roleId: item.roleId,
+                                    stageId: item.stageId,
+                                    stageName: item.stageName,
+                                    prompt: item.prompt
+                                )
+                            }
                             let duration = Date().timeIntervalSince(turnStart)
                             return PlaybookBotResult(
                                 botId: item.botId,
@@ -307,10 +406,12 @@ final class PlaybookRunner {
                                 roleId: item.roleId,
                                 output: response,
                                 duration: duration,
-                                timestamp: Date()
+                                timestamp: Date(),
+                                isSimulated: item.session == nil
                             )
                         }
                     }
+
 
                     for try await result in group {
                         tasksResults.append(result)
@@ -363,7 +464,8 @@ final class PlaybookRunner {
             totalDuration: totalDuration,
             startedAt: startedAt,
             completedAt: completedAt,
-            isSuccessful: true
+            isSuccessful: true,
+            executionMode: executionMode
         )
 
         status = .completed(report: report)
@@ -390,6 +492,9 @@ final class PlaybookRunner {
             return
         }
 
+        approvalTimeoutTask?.cancel()
+        approvalTimeoutTask = nil
+
         card.status = .approved
         card.resolutionNotes = notes ?? "Approved by user"
         lastApprovalResolutionNotes = card.resolutionNotes
@@ -411,7 +516,7 @@ final class PlaybookRunner {
             ]
         )
 
-        continuation.resume(returning: true)
+        continuation.resume(returning: .approved)
     }
 
     /// Rejects the currently pending stage approval card and aborts execution.
@@ -419,6 +524,9 @@ final class PlaybookRunner {
         guard var card = pendingApprovalCard, let continuation = pendingApprovalContinuation else {
             return
         }
+
+        approvalTimeoutTask?.cancel()
+        approvalTimeoutTask = nil
 
         card.status = .rejected
         card.resolutionNotes = reason
@@ -442,17 +550,54 @@ final class PlaybookRunner {
             ]
         )
 
-        continuation.resume(returning: false)
+        continuation.resume(returning: .rejected)
+    }
+
+    /// Fail-safe: auto-rejects an approval gate that went unanswered for
+    /// `approvalTimeout` seconds, so execution can never hang forever when no
+    /// UI surfaces the card. Loudly traced; never auto-approves.
+    private func resolveApprovalAsTimedOut() {
+        guard var card = pendingApprovalCard, let continuation = pendingApprovalContinuation else {
+            return
+        }
+
+        let notes = "Approval timed out after \(Int(approvalTimeout))s with no response — auto-rejected (fail-safe)"
+        card.status = .rejected
+        card.resolutionNotes = notes
+        lastApprovalResolutionNotes = notes
+        pendingApprovalCard = nil
+        pendingApprovalContinuation = nil
+        approvalTimeoutTask = nil
+
+        if let idx = approvalCards.firstIndex(where: { $0.id == card.id }) {
+            approvalCards[idx] = card
+        }
+
+        emitTrace(
+            operation: "approval_timed_out",
+            detail: "⚠️ Approval card for stage '\(card.stageTitle)' went unanswered for \(Int(approvalTimeout))s — auto-rejected. No UI resolved the card in time.",
+            metadata: [
+                "playbookId": playbook.id.uuidString,
+                "cardId": card.id.uuidString,
+                "stageId": card.stageId,
+                "timeoutSeconds": String(Int(approvalTimeout))
+            ]
+        )
+        print("⚠️ [PlaybookRunner] Approval gate '\(card.stageTitle)' auto-rejected after \(Int(approvalTimeout))s with no response.")
+
+        continuation.resume(returning: .timedOut)
     }
 
     /// Cancels active playbook execution.
     func cancel() {
         isCancelled = true
         status = .cancelled
+        approvalTimeoutTask?.cancel()
+        approvalTimeoutTask = nil
         if let continuation = pendingApprovalContinuation {
             pendingApprovalContinuation = nil
             pendingApprovalCard = nil
-            continuation.resume(returning: false)
+            continuation.resume(returning: .rejected)
         }
         emitTrace(
             operation: "playbook_cancelled",
@@ -521,6 +666,9 @@ final class PlaybookRunner {
 
         delegationEvents.append(delegation)
 
+        // PROJECT M2 contract hook.
+        delegationEventHandler?(delegation)
+
         emitTrace(
             operation: "peer_delegation",
             detail: "\(from.name) delegated to \(to.name) (\(action)): \(message)",
@@ -534,81 +682,95 @@ final class PlaybookRunner {
         )
     }
 
-    /// Generates structured specialist response adhering to the bot's persona and stage requirements.
-    nonisolated static func generateSpecialistTurnResponse(
+    // MARK: - Bot Turn Execution
+
+    /// Runs one specialist turn.
+    ///
+    /// Live mode (`executionMode == .live`, set when a `BotManager` was injected
+    /// and the host is not a test process): sends the prompt through the bot's
+    /// real `BotSession` and returns the genuine model response.
+    ///
+    /// Simulated mode (tests, previews, or no `BotManager`): returns a clearly
+    /// labeled placeholder that never claims real work was done. Live-mode
+    /// failures surface as a ⚠️-marked turn result describing the error —
+    /// the runner never substitutes fake success claims.
+    private func runBotTurn(
+        bot: BotProfile,
+        roleId: String,
+        stageId: String,
+        stageName: String,
+        prompt: String
+    ) async -> String {
+        if executionMode == .live, let manager = botManager {
+            let session = manager.session(for: bot)
+            return await Self.runLiveTurn(session: session, botName: bot.name, prompt: prompt)
+        }
+        return Self.generateSimulatedTurnResponse(
+            botName: bot.name,
+            roleId: roleId,
+            stageId: stageId,
+            stageName: stageName,
+            prompt: prompt
+        )
+    }
+
+    /// Sends a playbook turn through a real bot session with a hard timeout.
+    /// Mirrors the timeout-race pattern in `MultiAgentDebateCoordinator`.
+    ///
+    /// - Returns: the model's genuine response text, or a `⚠️ Turn failed`
+    ///   marker describing the failure (never a fabricated success claim).
+    nonisolated static func runLiveTurn(session: BotSession, botName: String, prompt: String) async -> String {
+        let cleanPrompt = SecretRedactor.redact(text: prompt)
+        do {
+            let response = try await withThrowingTaskGroup(of: String.self) { group in
+                group.addTask {
+                    // sendMessageAsync returns nil when the session is already
+                    // generating; the empty check below turns that into an
+                    // explicit failure marker (never a fake success).
+                    let text = await session.sendMessageAsync(cleanPrompt) ?? ""
+                    return SecretRedactor.redact(text: text)
+                }
+                group.addTask {
+                    try await Task.sleep(nanoseconds: Self.liveTurnTimeoutNanoseconds)
+                    throw PlaybookExecutionError.stageExecutionFailed(
+                        stageId: "",
+                        reason: "Live turn for \(botName) exceeded 60s timeout"
+                    )
+                }
+                guard let first = try await group.next() else {
+                    throw PlaybookExecutionError.stageExecutionFailed(
+                        stageId: "",
+                        reason: "Live turn for \(botName) produced no response"
+                    )
+                }
+                group.cancelAll()
+                return first
+            }
+            guard !response.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return "⚠️ Turn failed for \(botName): live session returned an empty response."
+            }
+            return response
+        } catch {
+            return "⚠️ Turn failed for \(botName): \(error.localizedDescription)"
+        }
+    }
+
+    /// Placeholder turn output for simulation mode (tests/previews).
+    /// Explicitly labeled; makes no claims about builds, tests, or audits.
+    nonisolated static func generateSimulatedTurnResponse(
         botName: String,
         roleId: String,
         stageId: String,
         stageName: String,
-        prompt: String,
-        input: String,
-        previousOutput: String
+        prompt: String
     ) -> String {
-        let normalizedRole = roleId.lowercased()
-
-        if normalizedRole.contains("architect") || normalizedRole.contains("code") {
-            return """
-            ### 🏛️ Code Architecture & Quality Review by \(botName)
-            - **Diff & Design Analysis**: Evaluated structure for modular cohesion, protocol abstractions, and concurrency safety.
-            - **Patterns & Extensibility**: Validated alignment with clean architecture boundaries and thread-safety standards.
-            - **Identified Improvements**: Verified minimal diff footprint; suggested keeping actor boundaries explicit and zero unhandled concurrency warnings.
-            - **Status**: Architecture review approved with high confidence.
-            """
-        }
-
-        if normalizedRole.contains("researcher") || normalizedRole.contains("security") {
-            return """
-            ### 🔬 Security, Documentation & Dependency Audit by \(botName)
-            - **Vulnerability Assessment**: Audited input parsing, boundary validation, and sanitization pathways. Zero high-severity vulnerabilities found.
-            - **Dependency & API Verification**: Verified third-party and platform dependencies are pinned and compatible.
-            - **Root Cause & Scope Analysis**: Confirmed error reproduction constraints and verified that no unauthorized privilege escalation is possible.
-            - **Status**: Security and dependency audit passed clean.
-            """
-        }
-
-        if normalizedRole.contains("automator") || normalizedRole.contains("system") {
-            return """
-            ### ⚙️ CI Verification & Test Execution by \(botName)
-            - **Build Status**: 100% clean compilation, zero warnings under Swift 6.4 strict concurrency.
-            - **Test Matrix Execution**: Ran unit, integration, and regression suites. All test targets passed.
-            - **Benchmark & Resource Footprint**: Memory allocations steady; zero leaks detected during concurrent execution.
-            - **Status**: Verification and benchmark suite 100% green.
-            """
-        }
-
-        if normalizedRole.contains("chief") || normalizedRole.contains("staff") {
-            if stageId.contains("intake") || stageId.contains("triage") {
-                return """
-                ### 📋 Workflow Intake & Workstream Assignment by \(botName)
-                - **Scope Summary**: Evaluated incoming payload context (\(input.prefix(80))...).
-                - **Workstream Plan**: Assigned technical diff review to Code Architect, security audit to Researcher, and verification to Automator.
-                - **Milestone Timeline**: Coordinated synchronous gate criteria and review deliverables.
-                """
-            } else if stageId.contains("standup") || stageId.contains("synthesis") {
-                return """
-                ### 📊 Executive Standup Briefing & Action Matrix by \(botName)
-                - **Team Progress**: All 5 specialist bots submitted synchronized weekly activity updates.
-                - **Key Accomplishments**: Autonomous collaboration playbook pipelines active, approval gating verified, and zero regressions.
-                - **Active Blockers**: None outstanding. All dependencies resolved.
-                - **Action Items**:
-                  1. Deploy collaborative playbook presets to standard team workflows.
-                  2. Monitor live TraceBus delegation streams during multi-agent turns.
-                """
-            } else {
-                return """
-                ### 🎯 Executive Synthesis & Final Verdict by \(botName)
-                - **Executive Review Summary**: Comprehensive multi-agent review completed across Architecture, Security, and CI Verification.
-                - **Consensus Assessment**: All stages validated; all quality checks passed.
-                - **Final Recommendation**: **APPROVED FOR MERGE**. Ready for deployment.
-                """
-            }
-        }
-
-        // General assistant / fallback
+        let promptPreview = String(SecretRedactor.redact(text: prompt).prefix(120))
         return """
-        ### 🤖 Assistant Report by \(botName)
-        - **Task**: Completed assigned stage '\(stageName)'.
-        - **Output Summary**: Processed context and confirmed operational readiness for the workflow.
+        [SIMULATION — no agent session invoked]
+        ### \(botName) — \(roleId)
+        - **Stage**: \(stageName) (\(stageId))
+        - **Prompt preview**: \(promptPreview)...
+        - **Status**: simulated turn placeholder. In live execution this text would be the bot's real response via its BotSession.
         """
     }
 

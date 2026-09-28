@@ -8,7 +8,7 @@ import AppKit
 // and guarantees graceful terminal states without silent swallowed failures.
 
 @MainActor
-public final class ProviderFallbackExecutor: Sendable {
+public final class ProviderFallbackExecutor {
     public static let shared = ProviderFallbackExecutor()
 
     public init() {}

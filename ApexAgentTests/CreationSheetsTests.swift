@@ -90,14 +90,18 @@ final class CreationSheetsTests {
     }
 
     @Test func testRoutineWebhookPathPreview() {
+        // AUDIT P2.4: the preview shows the real route (`/hooks/<endpointId>`)
+        // because the server assigns a `wh_…` id on save — it no longer
+        // fabricates a slug-based URL the server never serves. The preview is
+        // intentionally static regardless of the typed name.
         let emptyNameSheet = CreateRoutineSheet(routineName: "")
-        #expect(emptyNameSheet.webhookPathPreview == "http://localhost:8800/api/v1/webhook/:routineName")
+        #expect(emptyNameSheet.webhookPathPreview == "http://localhost:8800/hooks/<endpointId>")
 
         let spacedNameSheet = CreateRoutineSheet(routineName: "Deploy Release")
-        #expect(spacedNameSheet.webhookPathPreview == "http://localhost:8800/api/v1/webhook/deploy-release")
+        #expect(spacedNameSheet.webhookPathPreview == "http://localhost:8800/hooks/<endpointId>")
 
         let underscoredSheet = CreateRoutineSheet(routineName: "audit_security")
-        #expect(underscoredSheet.webhookPathPreview == "http://localhost:8800/api/v1/webhook/audit_security")
+        #expect(underscoredSheet.webhookPathPreview == "http://localhost:8800/hooks/<endpointId>")
     }
 
     @Test func testRoutineTargetBotDispatchFormatting() throws {
@@ -265,6 +269,43 @@ final class CreationSheetsTests {
 
         let malformedSchema = CreateSkillSheet(parameterSchemaJSON: "{ malformed json: true ")
         #expect(!malformedSchema.isSchemaValid)
+    }
+
+    @Test func testEmptySchemaObjectIsRejectedBySaveGate() {
+        // H9: a bare {} schema must not be savable through the sheet's UI gate
+        // (previously uiCanSave only checked that the schema parsed to a dict).
+        let emptyObjectSchema = CreateSkillSheet(
+            skillName: "empty_schema_skill",
+            skillDescription: "Has an empty schema object",
+            parameterSchemaJSON: "{}",
+            scriptContent: "echo hi"
+        )
+        #expect(!emptyObjectSchema.isSchemaValid, "Bare {} schema must be invalid")
+        #expect(!emptyObjectSchema.uiCanSave, "Bare {} schema must not pass the Save gate")
+
+        let whitespacePaddedEmptyObject = CreateSkillSheet(
+            skillName: "empty_schema_skill",
+            skillDescription: "Has an empty schema object",
+            parameterSchemaJSON: "  \n {} \n ",
+            scriptContent: "echo hi"
+        )
+        #expect(!whitespacePaddedEmptyObject.uiCanSave, "Whitespace-padded {} must not pass the Save gate")
+
+        let typeOnlySchema = CreateSkillSheet(
+            skillName: "typed_skill",
+            skillDescription: "Valid schema with type key",
+            parameterSchemaJSON: "{\"type\": \"object\"}",
+            scriptContent: "echo hi"
+        )
+        #expect(typeOnlySchema.uiCanSave, "Schema with a type key must pass the Save gate")
+
+        let propertiesOnlySchema = CreateSkillSheet(
+            skillName: "props_skill",
+            skillDescription: "Valid schema with properties key",
+            parameterSchemaJSON: "{\"properties\": {}}",
+            scriptContent: "echo hi"
+        )
+        #expect(propertiesOnlySchema.uiCanSave, "Schema with a properties key must pass the Save gate")
     }
 
     @Test func testSkillFileWritingAndChmodExecution() throws {

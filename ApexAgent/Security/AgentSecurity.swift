@@ -32,7 +32,6 @@ enum AgentSecurity {
         "get_frontmost_app": .low,
         "read_clipboard": .low,
         "list_review_sessions": .low,
-        "container_status": .low,
         "audit_projects": .low,
         "extract_entities": .low,
         "screen_diff": .low,
@@ -51,11 +50,9 @@ enum AgentSecurity {
         "create_directory": .medium,
         "move_file": .medium,
         "daily_briefing": .medium,
-        "weekly_reflection": .medium,
         "delegate_task": .medium,
         "convene_meeting": .medium,
         "run_workflow": .medium,
-        "execute_dynamic_tool": .medium,
         "confirm_completion": .medium,
         "ask_bot": .medium,
         "get_weather": .medium,
@@ -68,6 +65,15 @@ enum AgentSecurity {
 
         // ── High: destructive, code-executing, or externally visible ─────
         "run_shell_command": .high,
+        "computer_use": .high, // M3: live desktop input — confirmation-gated, as its docs claim
+        "github": .high, // M3: mutations via gh CLI / raw API (merge, raw requests)
+        "discord_bot": .high, // M3: externally visible post/edit/delete
+        "discord_webhook": .high, // M3: externally visible posts
+        "manage_sandbox": .high, // M3: actual tool name is manage_sandbox (was stale "container_status"); controls sandboxes
+        "simctl": .high, // M3: controls simulators, installs/launches apps
+        "mail_automation": .high, // M3: reads private mail; sends/moves/deletes
+        "deep_link": .high, // M3: opens URLs/apps — can trigger external actions
+        "execute_dynamic_tool": .high, // H2: executes arbitrary dynamic scripts — requires user confirmation
         "delete_file": .high,
         "write_file": .high,
         "run_applescript": .high,
@@ -79,7 +85,6 @@ enum AgentSecurity {
         "git_operation": .medium,
         "dispatch_swarm": .medium,
         "ax_target_element": .low,
-        "capture_differential_screen": .low,
         "capture_window_image": .low,
         "calendar": .high,
         "reminders": .high,

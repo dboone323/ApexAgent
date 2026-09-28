@@ -8,7 +8,7 @@ import AppKit
 // to candidate planning, tool governance, session task ownership, and lifecycle events.
 
 @MainActor
-public final class AgentRequestRouter: Sendable {
+public final class AgentRequestRouter {
     public static let shared = AgentRequestRouter()
 
     private var eventListeners: [(RuntimeEvent) -> Void] = []

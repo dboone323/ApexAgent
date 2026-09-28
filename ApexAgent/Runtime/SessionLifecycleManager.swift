@@ -6,7 +6,7 @@ import Foundation
 // and confirmation continuations to ensure guaranteed cleanup and reliable cancellation.
 
 @MainActor
-public final class SessionLifecycleManager: Sendable {
+public final class SessionLifecycleManager {
     public static let shared = SessionLifecycleManager()
 
     private var activeTasks: [UUID: Task<Void, Never>] = [:]
@@ -105,7 +105,7 @@ public final class SessionLifecycleManager: Sendable {
     }
 
     public func cancelAll() {
-        for (id, task) in activeTasks {
+        for (_, task) in activeTasks {
             task.cancel()
         }
         activeTasks.removeAll()

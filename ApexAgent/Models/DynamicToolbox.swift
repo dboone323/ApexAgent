@@ -218,65 +218,22 @@ class DynamicToolbox {
             throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Tool \(name) missing execution path"])
         }
 
-        let isRestricted = orchestrator?.orchestrator.isFolderAccessRestricted() ?? false
-
-        return try await Task.detached(priority: .userInitiated) {
-            let resolvedPath = (scriptPath as NSString).expandingTildeInPath
-
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            process.arguments = ["-c", "\(resolvedPath)"]
-
-            var env = ProcessInfo.processInfo.environment
-            env["APEX_ARGS"] = jsonArguments
-
-            if isRestricted {
-                let fm = FileManager.default
-                let homeDir = fm.homeDirectoryForCurrentUser
-                let sandboxDir = homeDir.appendingPathComponent(".apex/sandbox")
-                try? fm.createDirectory(at: sandboxDir, withIntermediateDirectories: true)
-                env["HOME"] = sandboxDir.path
-            }
-
-            process.environment = env
-
-            let outputPipe = Pipe()
-            let errorPipe = Pipe()
-            process.standardOutput = outputPipe
-            process.standardError = errorPipe
-
-            let inputPipe = Pipe()
-            process.standardInput = inputPipe
-
-            let outputTask = Task.detached {
-                outputPipe.fileHandleForReading.readDataToEndOfFile()
-            }
-            let errorTask = Task.detached {
-                errorPipe.fileHandleForReading.readDataToEndOfFile()
-            }
-
-            try process.run()
-
-            if let data = jsonArguments.data(using: .utf8) {
-                try? inputPipe.fileHandleForWriting.write(contentsOf: data)
-            }
-            try? inputPipe.fileHandleForWriting.close()
-
-            process.waitUntilExit()
-
-            let outputData = await outputTask.value
-            let errorData = await errorTask.value
-
-            let outputStr = String(data: outputData, encoding: .utf8) ?? ""
-            let errorStr = String(data: errorData, encoding: .utf8) ?? ""
-
-            if process.terminationStatus == 0 {
-                return outputStr
-            } else {
-                return "Execution failed with status \(process.terminationStatus)\nOutput: \(outputStr)\nError: \(errorStr)"
-            }
-        }.value
+        // H3: Route through the hardened executeDynamicScript executor which:
+        // 1. Validates scriptPath lives under ~/.apex/tools or ~/.apex/skills
+        // 2. Resolves symlinks to prevent escapes
+        // 3. Executes directly (no shell -c interpolation → no injection)
+        // 4. Enforces a 60-second kill deadline
+        let result = try await executeDynamicScript(
+            scriptPath: scriptPath,
+            jsonArguments: jsonArguments
+        )
+        if result.exitCode == 0 {
+            return result.stdout
+        } else {
+            return "Execution failed with status \(result.exitCode)\nOutput: \(result.stdout)\nError: \(result.stderr)"
+        }
     }
+
 
     private func parseYAML(_ text: String) -> [String: Any]? {
         var dict: [String: Any] = [:]

@@ -65,6 +65,11 @@ struct AgentSessionQuery: EntityQuery, EntityStringQuery {
     func suggestedEntities() async throws -> [AgentSessionEntity] {
         Array(allSessions().prefix(5))
     }
+
+    @MainActor
+    func sessions(limit: Int) -> [AgentSessionEntity] {
+        Array(allSessions().prefix(max(1, limit)))
+    }
 }
 
 // MARK: Recent sessions intent
@@ -85,8 +90,7 @@ struct RecentAgentSessionsIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<[AgentSessionEntity]> {
-        let sessions = try await AgentSessionQuery().suggestedEntities()
-        let capped = Array(sessions.prefix(max(1, limit)))
+        let capped = AgentSessionQuery().sessions(limit: limit)
         return .result(value: capped)
     }
 }

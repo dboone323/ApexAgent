@@ -18,13 +18,13 @@ struct AgentProfileTests {
     @MainActor
     @Test func testModelProtocols() {
         let localModel: any LanguageModel = SystemLanguageModel.default
-        let _ = localModel.capabilities
-        #expect(Bool(true), "SystemLanguageModel is initialized successfully")
+        #expect(!String(describing: localModel.capabilities).isEmpty,
+                "SystemLanguageModel exposes a concrete capabilities configuration")
         
         if AgentOrchestrator.isPrivateCloudComputeAvailable() {
             let cloudModel = PrivateCloudComputeLanguageModel()
-            let _ = cloudModel.capabilities
-            #expect(Bool(true), "PrivateCloudComputeLanguageModel is initialized successfully")
+            #expect(!String(describing: cloudModel.capabilities).isEmpty,
+                    "PrivateCloudComputeLanguageModel exposes a concrete capabilities configuration")
         } else {
             print("⚠️ Private Cloud Compute entitlement not available; skipping PCC model test.")
         }
@@ -65,8 +65,9 @@ struct AgentProfileTests {
             }
         }
         let transcript = Transcript(entries: [])
-        let _ = LanguageModelSession(profile: TestProfile(), history: transcript)
-        #expect(Bool(true), "LanguageModelSession initialized with dynamic profile successfully")
+        let session = LanguageModelSession(profile: TestProfile(), history: transcript)
+        #expect(!session.transcript.isEmpty,
+                "LanguageModelSession seeds the transcript with profile instructions")
     }
 
     @MainActor
@@ -79,8 +80,9 @@ struct AgentProfileTests {
             toolCallingMode: .allowed,
             orchestrator: orchestrator
         )
-        let _ = LanguageModelSession(profile: profile, history: transcript)
-        #expect(Bool(true), "LanguageModelSession initialized with ApexAgentProfile successfully")
+        let session = LanguageModelSession(profile: profile, history: transcript)
+        #expect(!session.transcript.isEmpty,
+                "ApexAgentProfile session includes its instructions and tool configuration")
     }
 
     @MainActor
@@ -95,11 +97,12 @@ struct AgentProfileTests {
         let uiDesignerProfile = SpecializedAgentProfile(agentType: .uiDesigner, instructions: "Test", model: model, toolCallingMode: .allowed, orchestrator: orchestrator)
         let plannerProfile = SpecializedAgentProfile(agentType: .planner, instructions: "Test", model: model, toolCallingMode: .allowed, orchestrator: orchestrator)
 
-        let _ = LanguageModelSession(profile: linterProfile, history: transcript)
-        let _ = LanguageModelSession(profile: uiDesignerProfile, history: transcript)
-        let _ = LanguageModelSession(profile: plannerProfile, history: transcript)
+        let s1 = LanguageModelSession(profile: linterProfile, history: transcript)
+        let s2 = LanguageModelSession(profile: uiDesignerProfile, history: transcript)
+        let s3 = LanguageModelSession(profile: plannerProfile, history: transcript)
 
-        #expect(Bool(true), "LanguageModelSession initialized with specialized agent profiles successfully")
+        #expect(!s1.transcript.isEmpty && !s2.transcript.isEmpty && !s3.transcript.isEmpty,
+                "Specialized agent profiles seed sessions with their instructions")
     }
 
     @MainActor

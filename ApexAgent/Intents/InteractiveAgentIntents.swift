@@ -38,15 +38,19 @@ public struct TriggerRoutineIntent: AppIntent {
             return .result(value: "Routine '\(trimmed)' not found in active catalog.")
         }
 
-        _ = await manager.execute(routine)
-        return .result(value: "Routine '\(routine.name)' successfully triggered.")
+        guard let output = await manager.execute(routine) else {
+            throw IntentError.executionFailed("Routine '\(routine.name)' failed to execute — check that a BotManager is active and the routine prompt is non-empty.")
+        }
+        return .result(value: "Routine '\(routine.name)' executed successfully:\n\(output)")
     }
 
     public enum IntentError: LocalizedError {
         case invalidName(String)
+        case executionFailed(String)
         public var errorDescription: String? {
             switch self {
             case .invalidName(let msg): return msg
+            case .executionFailed(let msg): return msg
             }
         }
     }
@@ -127,10 +131,23 @@ public struct ExecutePlaybookIntent: AppIntent {
             let auto = BotProfile(name: "Automator", title: "Automator", descriptionText: "Automation", avatarName: "terminal.fill")
             bots = [cos, arch, res, auto]
         }
-        let runner = PlaybookRunner(playbook: selectedPreset, availableBots: bots)
-        let report = try await runner.execute(contextInput: "Triggered via macOS App Intent")
+        // Pass botManager so the runner uses .live execution mode instead of simulation.
+        // Pass onApprovalRequired that throws immediately — Siri/Shortcuts can't surface
+        // a blocking desktop UI confirmation card without hanging the intent forever.
+        let botManager = AppDelegate.sharedOrchestrator.botManager
+        let runner = PlaybookRunner(playbook: selectedPreset, availableBots: bots, botManager: botManager)
+        let report = try await runner.execute(
+            contextInput: "Triggered via macOS App Intent",
+            onApprovalRequired: { card in
+                throw PlaybookExecutionError.approvalRejected(
+                    stageId: card.stageId,
+                    reason: "Stage '\(card.stageTitle)' requires human approval in the ApexAgent desktop app — cannot proceed non-interactively via Siri/Shortcuts."
+                )
+            }
+        )
 
         let statusText = report.isSuccessful ? "SUCCESS" : "FAILED"
         return .result(value: "Playbook '\(selectedPreset.name)' executed: \(statusText)")
     }
 }
+

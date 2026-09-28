@@ -45,11 +45,7 @@ public struct CreateSkillSheet: View {
     }
 
     public var isSchemaValid: Bool {
-        let trimmed = parameterSchemaJSON.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return false }
-        guard let data = trimmed.data(using: .utf8) else { return false }
-        guard let dict = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return false }
-        return dict.keys.contains("type") || dict.keys.contains("properties")
+        Self.isStrictlyValidSchema(parameterSchemaJSON)
     }
 
     public var canSave: Bool {
@@ -59,7 +55,9 @@ public struct CreateSkillSheet: View {
         isSchemaValid
     }
 
-    private var uiCanSave: Bool {
+    /// UI Save-button gate. Internal (not private) so unit tests can assert
+    /// the exact gate the Save button uses (H9: bare {} must not be savable).
+    var uiCanSave: Bool {
         let trimmedName = nameInput.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedDesc = descInput.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedScript = scriptInput.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -69,13 +67,23 @@ public struct CreateSkillSheet: View {
         let nameRange = NSRange(location: 0, length: trimmedName.utf16.count)
         guard regex.firstMatch(in: trimmedName, range: nameRange) != nil else { return false }
 
-        guard let data = schemaInput.data(using: .utf8),
-              let obj = try? JSONSerialization.jsonObject(with: data),
-              obj is [String: Any] else {
-            return false
-        }
+        // Strict schema validation — a bare {} must not be savable (H9).
+        guard Self.isStrictlyValidSchema(schemaInput) else { return false }
 
         return true
+    }
+
+    /// Strict schema validation shared by the Save button (`uiCanSave`) and
+    /// `saveSkill()`. A schema must parse to a JSON dictionary containing a
+    /// "type" or "properties" key — a bare `{}` is invalid.
+    private static func isStrictlyValidSchema(_ json: String) -> Bool {
+        let trimmed = json.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        guard let data = trimmed.data(using: .utf8),
+              let dict = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+            return false
+        }
+        return dict.keys.contains("type") || dict.keys.contains("properties")
     }
 
     public var body: some View {
@@ -148,6 +156,13 @@ public struct CreateSkillSheet: View {
         let desc = descInput.trimmingCharacters(in: .whitespacesAndNewlines)
         let script = scriptInput.trimmingCharacters(in: .whitespacesAndNewlines)
         let schema = schemaInput.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Defensive: direct invocation must not bypass the Save-button gate —
+        // a bare {} schema is invalid even if uiCanSave was circumvented (H9).
+        guard Self.isStrictlyValidSchema(schema) else {
+            errorMessage = "Invalid parameter schema: it must be a JSON object containing a \"type\" or \"properties\" key."
+            return
+        }
 
         let fileManager = FileManager.default
         let homeDir = fileManager.homeDirectoryForCurrentUser

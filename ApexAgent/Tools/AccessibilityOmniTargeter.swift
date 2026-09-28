@@ -40,7 +40,7 @@ struct AccessibilityOmniTargeter: Tool {
             
             let targetElement: AXUIElement
             if err == .success, let frontWindow = frontWindowRef, CFGetTypeID(frontWindow) == AXUIElementGetTypeID() {
-                targetElement = unsafeBitCast(frontWindow, to: AXUIElement.self)
+                targetElement = unsafeDowncast(frontWindow, to: AXUIElement.self)
             } else {
                 targetElement = appElement
             }

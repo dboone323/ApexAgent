@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Security Governance Profile (M3: Containerization & Sandboxctl Enhancements)
+// MARK: - Security Governance Profile (M8: Containerization & Sandboxctl Enhancements)
 
 public enum ExecutionScope: String, Sendable, Codable, CaseIterable {
     case host = "host"
@@ -190,9 +190,17 @@ public struct SecurityGovernanceProfile: Sendable, Codable, Equatable, Identifia
             // Tilde-traversal guard: if the original path started inside the home
             // directory but the candidate landed outside it, the caller is
             // using `~/.../..` to escape — reject unconditionally.
+            // M8: when symlink resolution (not the `..` spelling) is what
+            // moved the candidate outside the home directory, report the
+            // precise symlinkTraversal error.
+            let viaSymlink = (candidate == resolved) && (resolved != standardized)
             if expanded.hasPrefix("~/") || expanded.hasPrefix(homeDir + "/") || expanded == homeDir {
                 if !candidate.hasPrefix(homeDir + "/") && candidate != homeDir {
-                    throw .pathViolation(path)
+                    if viaSymlink {
+                        throw SecuritySandboxError.symlinkTraversal(path)
+                    } else {
+                        throw SecuritySandboxError.pathViolation(path)
+                    }
                 }
             }
 

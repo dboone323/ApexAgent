@@ -95,8 +95,11 @@ public final class ContainerManager: ContainerManagerProtocol {
         }
 
         let supported = isArm && freeBytes > 1_000_000_000
-        let status = !isArm ? "Apple Silicon (arm64) is required for native containerization."
-            : (freeBytes < 1_000_000_000 ? "Low disk space (<1GB free)." : "Host system meets all virtualization requirements.")
+        #if arch(arm64)
+        let status = freeBytes < 1_000_000_000 ? "Low disk space (<1GB free)." : "Host system meets all virtualization requirements."
+        #else
+        let status = "Apple Silicon (arm64) is required for native containerization."
+        #endif
 
         return ContainerHostDiagnostics(
             isAppleSilicon: isArm,
@@ -323,9 +326,11 @@ public final class ContainerManager: ContainerManagerProtocol {
                 throw NSError(domain: "ContainerManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Image store not initialized"])
             }
             
-            // Choose network based on macOS version
+            // Choose network based on macOS version. Strict isolation
+            // disables guest networking entirely (no vmnet device), so the
+            // sandbox cannot reach the network at all.
             var network: Network?
-            if #available(macOS 26, *) {
+            if #available(macOS 26, *), isolationLevel != .strict {
                 do {
                     network = try VmnetNetwork()
                 } catch {
@@ -402,6 +407,17 @@ public final class ContainerManager: ContainerManagerProtocol {
                 hostWorkspace = AgentOrchestrator.proactiveAuditWorkspacePath()
             }
             
+            // M8: hardened mount guard — runs BEFORE the host workspace is
+            // shared into the guest. Rejects workspaces that escape the
+            // allowed prefixes or resolve through symlinks outside them
+            // (throwing the precise symlinkTraversal error in that case).
+            // Only when a mount will actually occur: strict isolation shares
+            // nothing from the host, so there is nothing to guard there.
+            let selectedIsolationLevel = isolationLevel
+            if selectedIsolationLevel != .strict {
+                try verifyWorkspaceMountSafety(hostWorkspace)
+            }
+
             // Create container
             let containerInstance = try await mgr.create(
                 containerId,
@@ -420,8 +436,13 @@ public final class ContainerManager: ContainerManagerProtocol {
                 config.process.arguments = ["/bin/sleep", "infinity"]
                 config.process.terminal = false
                 
-                // Mount host workspace into /workspace if valid and not system root
-                if hostWorkspace != "/" && FileManager.default.fileExists(atPath: hostWorkspace) {
+                // Mount host workspace into /workspace if valid and not system root.
+                // Strict isolation shares NOTHING from the host: no workspace
+                // mount, fully ephemeral guest rootfs. (selectedIsolationLevel
+                // is captured above: this @Sendable closure must not read
+                // actor-isolated state directly under Swift 6.)
+                if selectedIsolationLevel != .strict,
+                   hostWorkspace != "/" && FileManager.default.fileExists(atPath: hostWorkspace) {
                     let czMount = Containerization.Mount.share(
                         source: hostWorkspace,
                         destination: "/workspace"
@@ -484,7 +505,8 @@ public final class ContainerManager: ContainerManagerProtocol {
             name: name,
             description: description,
             containerId: containerId,
-            createdAt: Date()
+            createdAt: Date(),
+            isolationLevel: isolationLevel // M8: record the posture this snapshot was taken under
         )
         snapshotStore[containerId, default: []].append(record)
 
@@ -627,6 +649,20 @@ public final class ContainerManager: ContainerManagerProtocol {
             throw NSError(domain: "ContainerManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Container is not running"])
         }
 
+        // M8: validate the guest command against the container governance
+        // posture before it reaches the VM. Strict isolation uses the
+        // container-strict profile; standard/overlay use container-standard
+        // (which permits normal guest commands but still blocks destructive
+        // host-disk patterns).
+        let commandProfile = isolationLevel == .strict
+            ? SecurityGovernanceProfile.containerStrict
+            : SecurityGovernanceProfile.containerStandard
+        guard commandProfile.validateCommand(command: command, isContainerSandboxed: true) else {
+            throw NSError(domain: "ContainerManager", code: -12, userInfo: [
+                NSLocalizedDescriptionKey: "Command rejected by container governance profile (\(commandProfile.id)): \(command)"
+            ])
+        }
+
         let collector = DataCollector()
 
         var processConfig = LinuxProcessConfiguration()
@@ -652,8 +688,20 @@ public final class ContainerManager: ContainerManagerProtocol {
         let resolved = URL(fileURLWithPath: standardized).resolvingSymlinksInPath().path
 
         for candidate in [standardized, resolved] {
+            // M8: when the REJECTION is caused by symlink resolution (the
+            // standardized spelling was acceptable but the resolved path is
+            // not), report the precise symlinkTraversal error instead of a
+            // generic pathViolation. Ordinary spelling differences that the
+            // guards accept (e.g. /tmp -> /private/tmp) are unaffected.
+            let viaSymlink = (candidate == resolved) && (resolved != standardized)
+            func reject(_ message: String) throws -> Never {
+                throw viaSymlink
+                    ? SecuritySandboxError.symlinkTraversal(message)
+                    : SecuritySandboxError.pathViolation(message)
+            }
+
             if candidate == "/" {
-                throw SecuritySandboxError.pathViolation("Mounting system directory '/' as container workspace is prohibited.")
+                try reject("Mounting system directory '/' as container workspace is prohibited.")
             }
 
             let fm = FileManager.default
@@ -662,12 +710,12 @@ public final class ContainerManager: ContainerManagerProtocol {
             // Tilde-traversal guard: if path started with ~/ but candidate escaped home directory
             if expanded.hasPrefix("~/") || expanded.hasPrefix(homeDir + "/") || expanded == homeDir {
                 if !candidate.hasPrefix(homeDir + "/") && candidate != homeDir {
-                    throw SecuritySandboxError.pathViolation("Escaping user home directory '\(homeDir)' is prohibited.")
+                    try reject("Escaping user home directory '\(homeDir)' is prohibited.")
                 }
             }
 
             if candidate == homeDir {
-                throw SecuritySandboxError.pathViolation("Mounting user home directory '\(homeDir)' directly as container workspace is prohibited.")
+                try reject("Mounting user home directory '\(homeDir)' directly as container workspace is prohibited.")
             }
 
             let sensitiveUserDirs: Set<String> = [
@@ -681,7 +729,7 @@ public final class ContainerManager: ContainerManagerProtocol {
             ]
 
             if sensitiveUserDirs.contains(candidate) {
-                throw SecuritySandboxError.pathViolation("Mounting protected user directory '\(candidate)' directly as container workspace is prohibited.")
+                try reject("Mounting protected user directory '\(candidate)' directly as container workspace is prohibited.")
             }
 
             let forbiddenRoots: Set<String> = [
@@ -700,7 +748,7 @@ public final class ContainerManager: ContainerManagerProtocol {
             ]
 
             if forbiddenRoots.contains(candidate) {
-                throw SecuritySandboxError.pathViolation("Mounting system directory '\(candidate)' as container workspace is prohibited.")
+                try reject("Mounting system directory '\(candidate)' as container workspace is prohibited.")
             }
 
             let forbiddenPrefixes = [
@@ -717,7 +765,7 @@ public final class ContainerManager: ContainerManagerProtocol {
 
             for prefix in forbiddenPrefixes {
                 if candidate.hasPrefix(prefix) {
-                    throw SecuritySandboxError.pathViolation("Mounting system directory '\(candidate)' as container workspace is prohibited.")
+                    try reject("Mounting system directory '\(candidate)' as container workspace is prohibited.")
                 }
             }
 
@@ -725,7 +773,7 @@ public final class ContainerManager: ContainerManagerProtocol {
             if candidate.hasPrefix("/var/") || candidate.hasPrefix("/private/var/") {
                 let isTempFolder = candidate.hasPrefix("/var/folders/") || candidate.hasPrefix("/private/var/folders/")
                 if !isTempFolder {
-                    throw SecuritySandboxError.pathViolation("Mounting system directory '\(candidate)' as container workspace is prohibited.")
+                    try reject("Mounting system directory '\(candidate)' as container workspace is prohibited.")
                 }
             }
         }

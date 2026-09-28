@@ -118,10 +118,13 @@ struct FileReadTool: Tool {
                 return "ERROR: File too large (\(size) bytes). Maximum is 10MB. Use shell tool with `head` or `tail` for large files."
             }
 
+            let isDifferentPath = effectivePath != arguments.path && effectivePath != NSString(string: arguments.path).expandingTildeInPath
+            let prefix = isDifferentPath ? "[Resolved path: \(effectivePath)]\n\n" : ""
+
             guard let content = try? String(contentsOf: url, encoding: .utf8) else {
                 // Try reading as binary and describe
                 let data = try Data(contentsOf: url)
-                return "BINARY FILE: \(effectivePath)\nSize: \(data.count) bytes\nFirst 128 bytes (hex): \(data.prefix(128).map { String(format: "%02x", $0) }.joined(separator: " "))"
+                return prefix + "BINARY FILE: \(effectivePath)\nSize: \(data.count) bytes\nFirst 128 bytes (hex): \(data.prefix(128).map { String(format: "%02x", $0) }.joined(separator: " "))"
             }
 
             if let maxLines = arguments.maxLines {
@@ -129,12 +132,12 @@ struct FileReadTool: Tool {
                 let truncated = lines.prefix(maxLines).joined(separator: "\n")
                 let remaining = max(0, lines.count - maxLines)
                 if remaining > 0 {
-                    return truncated + "\n\n[... \(remaining) more lines not shown ...]"
+                    return prefix + truncated + "\n\n[... \(remaining) more lines not shown ...]"
                 }
-                return truncated
+                return prefix + truncated
             }
 
-            return content
+            return prefix + content
         }
     }
 }

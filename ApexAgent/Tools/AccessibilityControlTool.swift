@@ -127,7 +127,7 @@ struct AccessibilityControlTool: Tool {
                     guard CFGetTypeID(windowElement) == AXUIElementGetTypeID() else {
                         return "ERROR: Active window element is not of type AXUIElement."
                     }
-                    let axWindow = unsafeBitCast(windowElement, to: AXUIElement.self)
+                    let axWindow = unsafeDowncast(windowElement, to: AXUIElement.self)
                     var output = "UI Elements in active window of \(frontmostApp.localizedName ?? ""):\n"
                     var remaining = 100
                     output += traverse(element: axWindow, depth: 0, maxDepth: 8, remaining: &remaining, conversationId: conversationId)

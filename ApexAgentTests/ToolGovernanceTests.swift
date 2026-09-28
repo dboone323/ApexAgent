@@ -42,9 +42,20 @@ struct ToolGovernanceTests {
             "write_file",
             "run_applescript",
             "create_skill",
+            "execute_dynamic_tool",
             "control_app",
             "control_accessibility",
-            "control_browser"
+            "control_browser",
+            // M3: the eight previously-orphaned tools are all classified
+            // high-risk, so every one flows through the confirmation gate.
+            "computer_use",
+            "github",
+            "discord_bot",
+            "discord_webhook",
+            "manage_sandbox",
+            "simctl",
+            "mail_automation",
+            "deep_link"
         ]
         for name in highRiskTools {
             #expect(AgentSecurity.requiresConfirmation(name), "AgentSecurity should require confirmation for '\(name)'")

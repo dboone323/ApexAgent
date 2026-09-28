@@ -52,7 +52,7 @@ public final class FullDuplexVoiceSession: NSObject, ObservableObject, AVAudioPl
     // MARK: - Audio Power Calculation
 
     /// Calculates normalized root-mean-square (RMS) decibels from an audio PCM buffer.
-    public static func calculateDecibels(from buffer: AVAudioPCMBuffer) -> Float {
+    public nonisolated static func calculateDecibels(from buffer: AVAudioPCMBuffer) -> Float {
         guard let channelData = buffer.floatChannelData?[0] else { return -80.0 }
         let frameLength = Int(buffer.frameLength)
         guard frameLength > 0 else { return -80.0 }
@@ -137,15 +137,20 @@ public final class FullDuplexVoiceSession: NSObject, ObservableObject, AVAudioPl
         let inputNode = audioEngine.inputNode
         let format = inputNode.outputFormat(forBus: 0)
         
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
-            guard let self = self else { return }
-            let db = Self.calculateDecibels(from: buffer)
-            
-            // This is called on a background thread.
-            // We just let the tap run, but the task will sample it.
-            Task { @MainActor in
-                self.currentDecibels = db
+        do {
+            try inputNode.installAudioTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+                guard let self = self else { return }
+                let pcmBuffer = AVAudioPCMBuffer(copying: buffer)
+                let db = Self.calculateDecibels(from: pcmBuffer)
+
+                // This is called on a background thread.
+                // We just let the tap run, but the task will sample it.
+                Task { @MainActor in
+                    self.currentDecibels = db
+                }
             }
+        } catch {
+            print("Failed to install audio tap: \(error)")
         }
         
         do {

@@ -71,10 +71,10 @@ public final class A2APeerDiscovery {
         
         // Start Advertising
         let parameters = NWParameters.tcp
-        if let name = try? NWListener.Service(name: serviceName, type: "_apex-a2a._tcp") {
+        let name = NWListener.Service(name: serviceName, type: "_apex-a2a._tcp")
             let listener = try NWListener(using: parameters)
             listener.service = name
-            
+
             listener.stateUpdateHandler = { [weak self] state in
                 Task { @MainActor in
                     switch state {
@@ -90,10 +90,9 @@ public final class A2APeerDiscovery {
                     }
                 }
             }
-            
+
             listener.start(queue: .main)
             self.advertiser = listener
-        }
     }
     
     // Stop all discovery

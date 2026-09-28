@@ -201,7 +201,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     private static let terminalOutputCap: Int = 50000
     private static let maxToolEventCount: Int = 200
     private static let confirmationTimeoutSeconds: TimeInterval = 60
-    private static let dangerousToolNames: Set<String> = ["run_shell_command", "delete_file", "write_file", "run_applescript", "create_skill"]
+    // NOTE: no `dangerousToolNames` here — the single source of truth is
+    // `ToolDispatchEngine.dangerousToolNames`, which the live confirmation
+    // path reads via `toolDispatchEngine.shouldConfirmTool`.
     private static let defaultOllamaURLString = "http://localhost:11434"
     private static let iso8601Formatter = ISO8601DateFormatter()
 
@@ -218,16 +220,24 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     private(set) var isGenerating: Bool = false
     // Internal (not private) setter: ViewHostingTests seeds a pending request
     // to drive ConfirmationOverlay's populated branch — requestConfirmation()
-    // short-circuits under APEX_TEST_MODE so tests can't reach it otherwise.
+    // auto-approves in DEBUG builds so tests can't reach it otherwise.
     var pendingConfirmation: ConfirmationRequest?
     var modelAvailability: SystemLanguageModel.Availability = .available
     var currentConversationTitle: String = "New Conversation"
     var requireConfirmationForAll: Bool = false
-    /// Set to true by `executeToolByName` when the orchestrator has already
-    /// performed the confirmation gate, so `executeWithLogging` does not prompt
-    /// a second time for the same tool call. Reset in a defer immediately
-    /// after the dispatch returns. (@MainActor serialises the window.)
-    var confirmationPerformed: Bool = false
+    /// Tracks how many `executeToolByName` frames are currently on the call
+    /// stack. When > 0, the outermost call already cleared the confirmation
+    /// gate; inner calls (e.g. sub-agent tool dispatch from DelegateTaskTool)
+    /// are NOT exempt — they must pass their own gate when the counter returns
+    /// to 0. Replacing the single Bool prevents nested calls from silently
+    /// inheriting the parent's approval. (@MainActor serialises all access.)
+    var confirmationDepth: Int = 0
+    /// Backward-compat alias used by executeWithLogging / ToolDispatchEngine
+    /// to detect that the outer executeToolByName already prompted the user.
+    var confirmationPerformed: Bool {
+        get { confirmationDepth > 0 }
+        set { confirmationDepth = newValue ? confirmationDepth + 1 : max(0, confirmationDepth - 1) }
+    }
     var agentInstructions: String = AgentSystemPrompt.default
     var proactiveAuditResult: String = ""
     var toolCallingMode: AgentToolCallingMode = .auto
@@ -252,6 +262,23 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     private(set) var activeTurnDelegationsByAgent: [String: Int] = [:]
     private(set) var totalTurnDelegations: Int = 0
     var activeTerminalOutput: String = ""
+    /// Optional security governance profile (M8). Nil (the default) keeps the
+    /// legacy path: `requestConfirmation` uses the always-allow /
+    /// auto-approve / unattended flags, and `isPathAllowed` /
+    /// `isCommandOrScriptAllowed` rely on SecurityAuditor alone — so
+    /// verdicts and guards match the pre-profile behavior exactly. When set
+    /// (persisted under "apex.governanceProfileKind" for a future Settings
+    /// picker), the profile's scope and guard booleans drive
+    /// `requestConfirmation`, and the profile's filesystem/command
+    /// validators additionally run on the live tool paths.
+    public var activeGovernanceProfile: SecurityGovernanceProfile? {
+        get {
+            guard let rawValue = UserDefaults.standard.string(forKey: "apex.governanceProfileKind"),
+                  let kind = GovernanceProfileKind(rawValue: rawValue) else { return nil }
+            return SecurityGovernanceProfile.profile(for: kind)
+        }
+        set { UserDefaults.standard.set(newValue?.id, forKey: "apex.governanceProfileKind") }
+    }
     private(set) var activePlan: [PlanStep] = []
     var multiAgentModeEnabled: Bool = UserDefaults.standard.bool(forKey: "apex.multiAgentModeEnabled")
     var coordinationTraces: [AgentTraceLog] = []
@@ -314,7 +341,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         // Start collaborative server if enabled
         if UserDefaults.standard.bool(forKey: "apex.collaborativeServerEnabled") {
             let port = UserDefaults.standard.integer(forKey: "apex.collaborativeServerPort")
-            let portVal = port > 0 ? UInt16(port) : 1337
+            let portVal = port > 0 ? UInt16(port) : 1340
             CollaborativeServer.shared.start(port: portVal)
         }
     }
@@ -420,12 +447,33 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     @MainActor
     func isPathAllowed(_ path: String) -> Bool {
-        SecurityAuditor.shared.isPathAllowed(path, workspacePath: currentWorkspacePath, permissions: self.permissions)
+        guard SecurityAuditor.shared.isPathAllowed(path, workspacePath: currentWorkspacePath, permissions: self.permissions) else {
+            return false
+        }
+        // M8: governance-profile filesystem guard on the live file-tool path
+        // (FileReadTool/FileWriteTool/etc. all funnel through here). No-op
+        // when no profile is set.
+        if let profile = activeGovernanceProfile {
+            do {
+                try profile.validateFilesystemAccess(path: path)
+            } catch {
+                return false
+            }
+        }
+        return true
     }
 
     @MainActor
     func isCommandOrScriptAllowed(_ input: String, isContainerSandboxed: Bool = false) -> Bool {
-        SecurityAuditor.shared.isCommandOrScriptAllowed(input, permissions: self.permissions, isContainerSandboxed: isContainerSandboxed)
+        guard SecurityAuditor.shared.isCommandOrScriptAllowed(input, permissions: self.permissions, isContainerSandboxed: isContainerSandboxed) else {
+            return false
+        }
+        // M8: governance-profile command guard on the live shell path
+        // (ShellTool funnels through here). No-op when no profile is set.
+        if let profile = activeGovernanceProfile {
+            return profile.validateCommand(command: input, isContainerSandboxed: isContainerSandboxed)
+        }
+        return true
     }
 
     // MARK: Model Check
@@ -712,7 +760,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
         let spanID = AgentSignpost.begin("SendMessage", detail: trimmedText.prefix(64).description)
         Task { TraceBus.shared.append(TraceEvent(source: "orchestrator", operation: "sendMessage", detail: String(trimmedText.prefix(120)))) }
-        currentTask = Task {
+        currentTask = Task { @MainActor in
             defer {
                 AgentSignpost.end("SendMessage", spanID)
                 Task { TraceBus.shared.append(TraceEvent(source: "orchestrator", operation: "sendMessage", detail: "complete")) }
@@ -1227,9 +1275,11 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         // Mandatory confirmation gate (gap #5): ensures MLX/Ollama engines
         // — which call orchestrator.executeToolByName directly — are subject
         // to the same confirmation gate as NativeAppleEngine's tool loop.
-        // The confirmationPerformed flag prevents a double prompt inside
-        // executeWithLogging for the normal tool.execute path.
-        if !confirmationPerformed, shouldConfirmTool(name: name) {
+        // Every call to this entry point needs its own approval. The depth
+        // counter is only for the lower-level logging wrapper to avoid a
+        // duplicate prompt for this same dispatch; it must never make a
+        // nested sub-agent call inherit its parent's approval.
+        if shouldConfirmTool(name: name) {
             let riskLevel = AgentSecurity.riskLevel(for: name)
             let approved = await requestConfirmation(
                 toolName: name,
@@ -1247,17 +1297,18 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             }
         }
 
-        confirmationPerformed = true
-        defer { confirmationPerformed = false }
+        confirmationDepth += 1
+        defer { confirmationDepth = max(0, confirmationDepth - 1) }
 
         return try await toolDispatchEngine.executeToolByName(
             name: name,
             jsonArguments: jsonArguments,
             allTools: allTools,
             bot: bot,
-                        agentIdentity: agentIdentity
+            agentIdentity: agentIdentity
         )
     }
+
 
     @MainActor
     func runExplicitCodingWorkflow(topic: String) async throws -> String {
@@ -1409,29 +1460,41 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         newContent: String? = nil,
         filePath: String? = nil
     ) async -> Bool {
-        let isTesting = ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest")
-            || getenv("APEX_TEST_MODE") != nil
-            || NSClassFromString("XCTestCase") != nil
-            || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
-            || ProcessInfo.processInfo.arguments.contains { $0.localizedCaseInsensitiveContains("test") }
-            || Bundle.main.bundleURL.pathExtension == "xctest"
-        if isTesting {
-            return true
-        }
+        // H4: the old runtime heuristics (process name contains "xctest",
+        // APEX_TEST_MODE, XCTestConfigurationFilePath, argv containing
+        // "test") let launch-environment influence disable ALL human
+        // confirmation — including in production. Gated strictly behind
+        // #if DEBUG instead: tests run in DEBUG (the xctestplans set
+        // APEX_TEST_MODE=1), so test behavior is preserved while the
+        // production bypass is gone.
+        #if DEBUG
+        return true
+        #endif
 
         // O3/O6: auto-grant fast path. The destructive/sensitive guards outrank
         // grants, so an always-allow can never widen into them — a guarded or
         // unguarded-but-ungranted call still falls through to the human card,
         // with the deciding rule written to the decision log either way.
-        let isContainer = UserDefaults.standard.bool(forKey: "apex.appleContainersEnabled") && toolName == "run_shell_command"
-        let verdict = ApprovalPolicy.verdict(
-            tool: toolName,
-            summary: arguments,
-            alwaysAllow: alwaysAllowKeys,
-            autoApprove: autoApproveToolCalls,
-            unattended: isUnattendedTurn,
-            isContainerSandboxed: isContainer
-        )
+        let verdict: ApprovalVerdict
+        if let profile = activeGovernanceProfile {
+            // M8: governance-profile verdict. The profile's scope and guard
+            // booleans drive the decision; always-allow keys, auto-approve,
+            // and unattended heuristics are intentionally NOT honored on
+            // this path (see the profile overload's docs). Nil profile (the
+            // default) keeps the legacy path below, so verdicts are
+            // unchanged unless a profile is explicitly selected.
+            verdict = ApprovalPolicy.verdict(tool: toolName, summary: arguments, governanceProfile: profile)
+        } else {
+            let isContainer = UserDefaults.standard.bool(forKey: "apex.appleContainersEnabled") && toolName == "run_shell_command"
+            verdict = ApprovalPolicy.verdict(
+                tool: toolName,
+                summary: arguments,
+                alwaysAllow: alwaysAllowKeys,
+                autoApprove: autoApproveToolCalls,
+                unattended: isUnattendedTurn,
+                isContainerSandboxed: isContainer
+            )
+        }
         if verdict.approve != nil {
             await AgentAuditLog.shared.recordDecision(
                 toolName: toolName, arguments: arguments, approved: true,
@@ -1476,8 +1539,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             )
             RemoteCompanionGateway.shared.postApprovalRelay(companionEvent)
 
-            // Auto-deny after timeout
-            confirmationTimeoutTask = Task { [weak self] in
+            // Auto-deny after timeout (explicit @MainActor: the body reads
+            // MainActor-isolated pendingConfirmation and calls resolveConfirmation)
+            confirmationTimeoutTask = Task { @MainActor [weak self] in
                 guard let self else { return }
                 try? await Task.sleep(for: .seconds(AgentOrchestrator.confirmationTimeoutSeconds))
                 if self.pendingConfirmation?.id == request.id {

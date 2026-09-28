@@ -30,29 +30,26 @@ final class MultiBotWorkflowsUITests: XCTestCase {
 
         try UITestActivity.step("1. Select Code Architect bot in sidebar") { _ in
             let codeArchitectBot = app.buttons["botSidebarItem_Code Architect"].firstMatch
-            if codeArchitectBot.waitForExistence(timeout: 5) {
-                codeArchitectBot.click()
-                let headerText = app.staticTexts["Code Architect"].firstMatch
-                XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Header must display 'Code Architect'")
-            }
+            XCTAssertTrue(codeArchitectBot.waitForExistence(timeout: 5), "Code Architect button must exist in sidebar")
+            codeArchitectBot.click()
+            let headerText = app.staticTexts["Code Architect"].firstMatch
+            XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Header must display 'Code Architect'")
         }
 
         try UITestActivity.step("2. Select Researcher bot in sidebar") { _ in
             let researcherBot = app.buttons["botSidebarItem_Researcher"].firstMatch
-            if researcherBot.waitForExistence(timeout: 5) {
-                researcherBot.click()
-                let headerText = app.staticTexts["Researcher"].firstMatch
-                XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Header must switch to 'Researcher'")
-            }
+            XCTAssertTrue(researcherBot.waitForExistence(timeout: 5), "Researcher button must exist in sidebar")
+            researcherBot.click()
+            let headerText = app.staticTexts["Researcher"].firstMatch
+            XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Header must switch to 'Researcher'")
         }
 
         try UITestActivity.step("3. Return to Apex default bot") { _ in
             let apexBot = app.buttons["botSidebarItem_Apex"].firstMatch
-            if apexBot.waitForExistence(timeout: 5) {
-                apexBot.click()
-                let headerText = app.staticTexts["Apex"].firstMatch
-                XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Header must return to 'Apex'")
-            }
+            XCTAssertTrue(apexBot.waitForExistence(timeout: 5), "Apex button must exist in sidebar")
+            apexBot.click()
+            let headerText = app.staticTexts["Apex"].firstMatch
+            XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Header must return to 'Apex'")
         }
     }
 
@@ -61,14 +58,10 @@ final class MultiBotWorkflowsUITests: XCTestCase {
 
         try UITestActivity.step("1. Open Create Bot Sheet") { _ in
             let createBtn = app.buttons["createBotButton"].firstMatch
-            if createBtn.waitForExistence(timeout: 5) {
-                createBtn.click()
-            } else {
-                let sidebarNewBot = app.buttons["New Bot"].firstMatch
-                if sidebarNewBot.waitForExistence(timeout: 5) {
-                    sidebarNewBot.click()
-                }
-            }
+            let sidebarNewBot = app.buttons["New Bot"].firstMatch
+            let buttonToClick = createBtn.waitForExistence(timeout: 5) ? createBtn : sidebarNewBot
+            XCTAssertTrue(buttonToClick.waitForExistence(timeout: 5), "Create Bot button should appear in UI")
+            buttonToClick.click()
             let sheet = app.sheets.firstMatch
             XCTAssertTrue(sheet.waitForExistence(timeout: 8), "Create Bot sheet should appear")
         }

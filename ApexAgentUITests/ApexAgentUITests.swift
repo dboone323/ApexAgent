@@ -85,7 +85,9 @@ final class ApexAgentUITests: XCTestCase {
     /// completed (isStreaming=false) response. Returns the assistant bubble.
     /// Runs against the real on-device model.
     @discardableResult
-    private func sendAndWaitForResponse(_ prompt: String, timeout: TimeInterval = 360) -> XCUIElement {
+    private func sendAndWaitForResponse(_ prompt: String, timeout: TimeInterval = 240) -> XCUIElement {
+        // Default 240 s: must stay ≤ maximumTestExecutionTimeAllowance (240) in
+        // ApexAgent-UITests.xctestplan, otherwise the wait is unreachable (audit #39).
         let input = chatInput
         tap(input)
         input.typeText(prompt)
@@ -107,10 +109,13 @@ final class ApexAgentUITests: XCTestCase {
         XCTAssertTrue(agentBubble.waitForExistence(timeout: 20),
                       "No agent response bubble appeared after sending — run may not have started.")
 
-        // If a high-risk tool approval dialog appears, approve it so execution proceeds
-        let approveButton = app.buttons["confirmationApprove"].firstMatch
-        if approveButton.waitForExistence(timeout: 2) {
-            tap(approveButton)
+        // Zero-approval policy (AUDIT_2026-09-28 §3.3.15): the harness must never
+        // auto-approve high-risk tool confirmations on the developer's machine.
+        // If the overlay appears, deny it — the agent still streams a final
+        // response describing the denial, so response assertions remain valid.
+        let denyButton = app.buttons["confirmationDeny"].firstMatch
+        if denyButton.waitForExistence(timeout: 2) {
+            tap(denyButton)
         }
 
         // Wait for streamed, non-empty content from the real engine.
@@ -337,7 +342,10 @@ final class ApexAgentUITests: XCTestCase {
             // Prompt dangerous tool call and test interactive dismissal
             let input = chatInput
             tap(input)
-            input.typeText("Run dangerous command rm -rf /tmp/apex_test_danger")
+            // Safe gated target (AUDIT_2026-09-28 §3.3.15): a dedicated path that
+            // never exists under /tmp, so even if the model somehow ran the tool
+            // there is nothing real to destroy. The test only ever clicks Deny.
+            input.typeText("Run the shell command: rm -rf /tmp/apex_uits_confirmation_probe_missing_dir")
             let send = app.buttons["sendButton"].firstMatch
             if send.isEnabled {
                 tap(send)

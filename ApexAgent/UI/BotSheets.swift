@@ -338,6 +338,7 @@ struct EditBotSheet: View {
 struct MemoryEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Binding var memory: String
+    @State private var draftMemory: String = ""
 
     var body: some View {
         NavigationStack {
@@ -348,7 +349,7 @@ struct MemoryEditorSheet: View {
                     .multilineTextAlignment(.center)
                     .padding(.top, 8)
 
-                TextEditor(text: $memory)
+                TextEditor(text: $draftMemory)
                     .frame(minHeight: 200)
                     .padding(8)
                     .background(Color(nsColor: .windowBackgroundColor))
@@ -365,6 +366,7 @@ struct MemoryEditorSheet: View {
                     .padding(.horizontal, 20)
 
                 Button("Save & Close") {
+                    memory = draftMemory
                     dismiss()
                 }
                 .font(.system(size: 13, weight: .semibold))
@@ -373,6 +375,9 @@ struct MemoryEditorSheet: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .navigationTitle("Durable Memory")
+            .onAppear {
+                draftMemory = memory
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {

@@ -27,11 +27,7 @@ final class MCPManager: OrchestratorProvider {
     var orchestrator: AgentOrchestrator {
         get {
             if let o = _orchestrator { return o }
-            // MCPManager is a shared singleton; if no orchestrator was injected
-            // yet (e.g. accessed before the app's AgentOrchestrator exists),
-            // lazily create and wire one rather than crashing. This is the
-            // legitimate default for a shared manager — not a masked wiring bug.
-            let o = AgentOrchestrator()
+            let o = AppDelegate.sharedOrchestrator
             _orchestrator = o
             return o
         }

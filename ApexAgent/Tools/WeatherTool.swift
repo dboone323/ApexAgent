@@ -74,7 +74,7 @@ struct WeatherTool: Tool {
         do {
             let response = try await search.start()
             guard let item = response.mapItems.first else { return nil }
-            let title = item.name ?? item.placemark.title ?? ""
+            let title = item.name ?? item.address?.fullAddress ?? ""
             return (item.location, title)
         } catch {
             return nil

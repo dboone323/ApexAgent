@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 public struct RegisteredAgent: Codable, Sendable {
     public var name: String
@@ -14,10 +15,33 @@ public struct RegisteredAgent: Codable, Sendable {
     }
 }
 
+/// Lock-guarded agent dictionary (H5). The registry is an actor, but several
+/// call sites need synchronous access, so the mutable state lives in this
+/// Sendable box synchronized with a Mutex instead of `nonisolated(unsafe)`.
+private final class AgentStore: @unchecked Sendable {
+    private let agents = Mutex<[String: RegisteredAgent]>([:])
+
+    init(_ initial: [String: RegisteredAgent] = [:]) {
+        agents.withLock { $0 = initial }
+    }
+
+    func snapshot() -> [String: RegisteredAgent] {
+        agents.withLock { $0 }
+    }
+
+    func set(_ agent: RegisteredAgent, forKey key: String) {
+        agents.withLock { $0[key] = agent }
+    }
+
+    func remove(key: String) {
+        agents.withLock { _ = $0.removeValue(forKey: key) }
+    }
+}
+
 public actor AgentRegistry {
     public static let shared = AgentRegistry()
-    
-    nonisolated(unsafe) private var registeredAgents: [String: RegisteredAgent] = [:]
+
+    private let store: AgentStore
     
     public static let builtInDefaults: [String: RegisteredAgent] = [
         "developer": RegisteredAgent(
@@ -119,7 +143,7 @@ public actor AgentRegistry {
         for (key, agent) in AgentRegistry.builtInDefaults {
             agents[key] = agent
         }
-        self.registeredAgents = agents
+        self.store = AgentStore(agents)
     }
     
     // MARK: - Handoff / Consensus reconciliation (WS1.5)
@@ -151,10 +175,11 @@ public actor AgentRegistry {
     }
     
     public nonisolated func allAgents() -> [RegisteredAgent] {
-        return Array(registeredAgents.values).sorted(by: { $0.name < $1.name })
+        return Array(store.snapshot().values).sorted(by: { $0.name < $1.name })
     }
     
     public nonisolated func resolve(name: String) -> RegisteredAgent? {
+        let registeredAgents = store.snapshot()
         let clean = name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         if let direct = registeredAgents[clean] { return direct }
         switch clean {
@@ -190,12 +215,12 @@ public actor AgentRegistry {
     
     public nonisolated func register(_ agent: RegisteredAgent) {
         let key = agent.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        registeredAgents[key] = agent
+        store.set(agent, forKey: key)
     }
     
     public nonisolated func unregister(name: String) {
         let key = name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        registeredAgents.removeValue(forKey: key)
+        store.remove(key: key)
     }
     
     public func loadAgentsFromDisk(directory: URL? = nil) {
@@ -216,7 +241,7 @@ public actor AgentRegistry {
             guard let data = try? Data(contentsOf: fileURL) else { continue }
             if let agent = try? decoder.decode(RegisteredAgent.self, from: data) {
                 let key = agent.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-                registeredAgents[key] = agent
+                store.set(agent, forKey: key)
             }
         }
     }

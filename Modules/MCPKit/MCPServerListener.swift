@@ -20,11 +20,24 @@ public actor MCPServerListener {
         self.handler = handler
     }
 
+    /// EXPERIMENTAL (M4): hand-rolled unauthenticated HTTP/1.1 listener whose
+    /// `handler` executes tool calls. Bound loopback-only so it is never
+    /// reachable from the LAN — but ANY local process can still invoke the
+    /// handler without authentication. Do not expose this on a network
+    /// interface or rely on it for production traffic; prefer the
+    /// authenticated production servers. Consolidation tracked as follow-up.
     public func start() throws {
         guard listener == nil else { return }
-        
-        let nwPort = NWEndpoint.Port(rawValue: UInt16(port))!
-        let listener = try NWListener(using: .tcp, on: nwPort)
+
+        guard port >= 0 && port <= 65535,
+              let nwPort = NWEndpoint.Port(rawValue: UInt16(port)) else {
+            throw NSError(domain: "MCPServerListener", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid port: \(port)"])
+        }
+        // SECURITY (M4): never bind the unauthenticated tool-executing
+        // listener to all interfaces. Loopback-only keeps it off the LAN.
+        let parameters = NWParameters.tcp
+        parameters.requiredInterfaceType = .loopback
+        let listener = try NWListener(using: parameters, on: nwPort)
         self.listener = listener
 
         listener.newConnectionHandler = { [weak self] connection in

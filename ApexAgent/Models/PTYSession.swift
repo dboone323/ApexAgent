@@ -182,7 +182,31 @@ class PTYSession: @unchecked Sendable {
                 self.masterFd = -999 // indicator flag
                 return
             } catch {
-                print("⚠️ [PTYSession] Apple Container sandbox could not be started (\(error.localizedDescription)). Falling back to host PTY.")
+                let failureReason = error.localizedDescription
+                // M10: this catch used to fail open with only a console
+                // print — a sandbox that never started left the user
+                // believing they were isolated. Warn loudly (console +
+                // terminal UI); strict isolation forbids the host fallback
+                // entirely and rethrows instead of executing unconfined.
+                let strictMode = await (ContainerBridge.shared as? ContainerManager)?.isolationLevel == .strict
+                print("🚨 [PTYSession] SECURITY: Apple Container sandbox failed to start (\(failureReason)). " +
+                      (strictMode
+                        ? "Strict isolation forbids falling back to a host PTY — refusing to start."
+                        : "Falling back to a HOST PTY: commands will run WITHOUT container isolation."))
+                if let provider = orchestrator {
+                    await MainActor.run {
+                        provider.orchestrator.activeTerminalOutput +=
+                            "\n⚠️ Container sandbox failed to start (\(failureReason)). " +
+                            (strictMode
+                                ? "Strict isolation forbids the host fallback — this session did not start."
+                                : "This terminal is running ON THE HOST without container isolation.") + "\n"
+                    }
+                }
+                if strictMode {
+                    throw NSError(domain: "PTYSession", code: -7, userInfo: [
+                        NSLocalizedDescriptionKey: "Apple Container sandbox failed to start (\(failureReason)); strict isolation forbids falling back to host PTY."
+                    ])
+                }
                 // Fall back to host PTY session rather than failing shell command execution
             }
         } else if dockerEnabled && !isDockerTestFallback {

@@ -90,6 +90,12 @@ final class ApexGatewayClient {
         }
         
         connection.start(queue: queue)
+
+        // C2: present the pre-shared gateway token immediately — the server
+        // honors no action from an unauthenticated connection.
+        if let token = KeychainManager.get(key: ApexGatewayServer.gatewayTokenKeychainKey), !token.isEmpty {
+            sendAction(.authenticate(token: token))
+        }
         
         // Start reading message frames
         readNextMessage(from: connection)

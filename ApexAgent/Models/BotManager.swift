@@ -448,11 +448,19 @@ final class BotManager {
     @discardableResult
     public func executeCollaborationPlaybook(
         preset: PlaybookPresetKind,
-        context: String
+        context: String,
+        onApprovalRequired: ((PlaybookApprovalCard) async throws -> Void)? = nil,
+        onDelegationEvent: ((PlaybookDelegationEvent) -> Void)? = nil
     ) async throws -> PlaybookExecutionReport {
         let playbook = CollaborationPlaybook.preset(for: preset)
-        let runner = PlaybookRunner(playbook: playbook, availableBots: allBots)
-        let report = try await runner.execute(contextInput: context)
+        // Inject self so playbook turns use real BotSessions (live mode);
+        // direct PlaybookRunner(...) construction without a manager stays simulated.
+        let runner = PlaybookRunner(playbook: playbook, availableBots: allBots, botManager: self)
+        let report = try await runner.execute(
+            contextInput: context,
+            onApprovalRequired: onApprovalRequired,
+            onDelegationEvent: onDelegationEvent
+        )
         playbookHistory.append(report)
         return report
     }
