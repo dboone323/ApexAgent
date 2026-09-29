@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import Observation
 import Containerization
 import ContainerizationOCI
@@ -525,7 +526,11 @@ public final class ContainerManager: ContainerManagerProtocol {
         let containerDir = appRoot.appendingPathComponent("imagestore/containers/\(containerId)")
         let backupDir = snapDir.appendingPathComponent("fs_data")
         if fm.fileExists(atPath: containerDir.path) {
-            try? fm.copyItem(at: containerDir, to: backupDir)
+            let srcCStr = (containerDir.path as NSString).fileSystemRepresentation
+            let dstCStr = (backupDir.path as NSString).fileSystemRepresentation
+            if clonefile(srcCStr, dstCStr, 0) != 0 {
+                try? fm.copyItem(at: containerDir, to: backupDir)
+            }
         }
 
         return record
@@ -546,7 +551,11 @@ public final class ContainerManager: ContainerManagerProtocol {
             if fm.fileExists(atPath: containerDir.path) {
                 try? fm.removeItem(at: containerDir)
             }
-            try fm.copyItem(at: backupDir, to: containerDir)
+            let srcCStr = (backupDir.path as NSString).fileSystemRepresentation
+            let dstCStr = (containerDir.path as NSString).fileSystemRepresentation
+            if clonefile(srcCStr, dstCStr, 0) != 0 {
+                try fm.copyItem(at: backupDir, to: containerDir)
+            }
         }
     }
 
@@ -591,6 +600,16 @@ public final class ContainerManager: ContainerManagerProtocol {
 
     public func rollbackToSnapshot(nameOrId: String, containerId: String = "default") async throws {
         try await restoreSnapshot(id: nameOrId, containerId: containerId)
+    }
+
+    /// Automatically rolls back to the most recent snapshot for the container, if any exists.
+    public func rollbackToLastSnapshot(containerId: String = "default") async throws -> Bool {
+        let snapshots = await listSnapshots(containerId: containerId)
+        guard let latest = snapshots.sorted(by: { $0.createdAt > $1.createdAt }).first else {
+            return false
+        }
+        try await restoreSnapshot(id: latest.id, containerId: containerId)
+        return true
     }
 
     // MARK: - Process Execution

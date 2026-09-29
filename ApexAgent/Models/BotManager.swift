@@ -444,6 +444,30 @@ final class BotManager {
     // MARK: - Collaboration Playbooks
 
     public var playbookHistory: [PlaybookExecutionReport] = []
+    public private(set) var activePlaybookRunner: PlaybookRunner?
+
+    /// Approves the pending stage approval card on the currently active playbook runner.
+    public func approveActivePlaybookStage(notes: String? = nil) {
+        activePlaybookRunner?.approvePendingStage(notes: notes)
+    }
+
+    /// Rejects the pending stage approval card on the currently active playbook runner.
+    public func rejectActivePlaybookStage(reason: String = "Rejected by user") {
+        activePlaybookRunner?.rejectPendingStage(reason: reason)
+    }
+
+    /// Resolves a pending approval card by matching card ID.
+    public func resolvePlaybookApproval(cardId: UUID, approved: Bool, notes: String? = nil) -> Bool {
+        guard let runner = activePlaybookRunner, runner.pendingApprovalCard?.id == cardId else {
+            return false
+        }
+        if approved {
+            runner.approvePendingStage(notes: notes)
+        } else {
+            runner.rejectPendingStage(reason: notes ?? "Rejected by user")
+        }
+        return true
+    }
 
     @discardableResult
     public func executeCollaborationPlaybook(
@@ -456,6 +480,12 @@ final class BotManager {
         // Inject self so playbook turns use real BotSessions (live mode);
         // direct PlaybookRunner(...) construction without a manager stays simulated.
         let runner = PlaybookRunner(playbook: playbook, availableBots: allBots, botManager: self)
+        self.activePlaybookRunner = runner
+        defer {
+            if self.activePlaybookRunner === runner {
+                self.activePlaybookRunner = nil
+            }
+        }
         let report = try await runner.execute(
             contextInput: context,
             onApprovalRequired: onApprovalRequired,

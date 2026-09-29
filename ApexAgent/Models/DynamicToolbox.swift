@@ -195,16 +195,40 @@ class DynamicToolbox {
             throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Tool \(name) not found in dynamic tools"])
         }
 
+        // Validate JSON arguments and schema before server or script dispatch
+        guard let data = jsonArguments.data(using: .utf8),
+              let argsDict = try? JSONDecoder().decode([String: AnyCodable].self, from: data) else {
+            throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON arguments for tool \(name)"])
+        }
+
+        if let params = tool.schema["parameters"] as? [String: Any] {
+            let properties = (params["properties"] as? [String: Any]) ?? [:]
+            let required = (params["required"] as? [String]) ?? []
+
+            for req in required {
+                if argsDict[req] == nil {
+                    throw NSError(domain: "DynamicToolbox", code: -2, userInfo: [
+                        NSLocalizedDescriptionKey: "Tool '\(name)' invocation failed schema validation: missing required parameter '\(req)'"
+                    ])
+                }
+            }
+
+            if !properties.isEmpty {
+                for key in argsDict.keys {
+                    if properties[key] == nil {
+                        throw NSError(domain: "DynamicToolbox", code: -3, userInfo: [
+                            NSLocalizedDescriptionKey: "Tool '\(name)' invocation failed schema validation: undeclared parameter '\(key)'"
+                        ])
+                    }
+                }
+            }
+        }
+
         if let mcpServerId = tool.mcpServerId {
             guard let config = MCPManager.shared.servers.first(where: { $0.id == mcpServerId }) else {
                 throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "MCP Server config not found"])
             }
             let client = MCPManager.shared.getClient(for: config)
-
-            guard let data = jsonArguments.data(using: .utf8),
-                  let argsDict = try? JSONDecoder().decode([String: AnyCodable].self, from: data) else {
-                throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON arguments for tool \(name)"])
-            }
 
             let result = try await client.callTool(name: name, arguments: argsDict)
             let texts = result.content.compactMap { $0.text }

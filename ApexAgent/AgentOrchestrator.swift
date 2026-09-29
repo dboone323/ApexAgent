@@ -827,7 +827,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     func compactContextIfNeeded() async {
         let totalChars = messages.reduce(0) { $0 + $1.content.count }
         guard totalChars > AgentOrchestrator.contextCompactionThreshold else { return }
-        guard messages.count > 5 else { return }
+        guard messages.count > 5 || totalChars > 20000 else { return }
 
         print("[DIAG] compactContextIfNeeded start; totalChars=\(totalChars) count=\(messages.count)")
 
@@ -856,7 +856,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
             guard archivedCount > 0 else { return }
 
-            let remainingMessages = self.messages.suffix(4)
+            let remainingMessages = self.messages.suffix(max(0, self.messages.count - archivedCount))
             let remainingIds = Set(remainingMessages.map { $0.id })
             self.messages = compacted
 

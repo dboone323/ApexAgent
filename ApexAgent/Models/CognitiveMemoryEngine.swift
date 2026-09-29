@@ -349,11 +349,19 @@ public final class CognitiveMemoryEngine {
         botId: UUID,
         summarizer: (String) async throws -> String
     ) async throws -> (compacted: [ChatMessage], archivedCount: Int) {
-        guard messages.count > keepRecent + 1 else {
+        let totalChars = messages.reduce(0) { $0 + $1.content.count }
+        let effectiveKeepRecent: Int
+        if messages.count <= keepRecent + 1 && totalChars > 20000 && messages.count > 1 {
+            effectiveKeepRecent = 1
+        } else {
+            effectiveKeepRecent = keepRecent
+        }
+
+        guard messages.count > effectiveKeepRecent + 1 || (totalChars > 20000 && messages.count > 1) else {
             return (messages, 0)
         }
         
-        let splitIndex = max(0, messages.count - keepRecent)
+        let splitIndex = max(1, messages.count - effectiveKeepRecent)
         let olderMessages = Array(messages[..<splitIndex])
         let recentMessages = Array(messages[splitIndex...])
         

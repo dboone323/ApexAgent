@@ -99,4 +99,53 @@ struct MCPResilienceTests {
 
         await client.stop()
     }
+
+    // MARK: - Schema Validation & Hallucination Prevention Tests
+
+    @Test @MainActor func testDynamicToolboxRejectsMissingRequiredParameters() async throws {
+        let toolbox = DynamicToolbox.shared
+        let toolName = "test_schema_tool_\(UUID().uuidString.prefix(6))"
+        let schema: [String: Any] = [
+            "name": toolName,
+            "description": "Schema test tool",
+            "parameters": [
+                "type": "object",
+                "properties": [
+                    "targetPath": ["type": "string", "description": "Target file path"],
+                    "count": ["type": "integer", "description": "Count"]
+                ],
+                "required": ["targetPath"]
+            ]
+        ]
+        let entry = DynamicToolbox.DynamicToolEntry(
+            name: toolName,
+            description: "Schema test tool",
+            scriptPath: nil,
+            schema: schema,
+            mcpServerId: UUID() // mock server ID to hit schema check before server lookup
+        )
+
+        toolbox.registerToolForTesting(name: toolName, entry: entry)
+        defer {
+            toolbox.removeToolForTesting(name: toolName)
+        }
+
+        // 1. Missing required parameter 'targetPath'
+        do {
+            _ = try await toolbox.executeTool(name: toolName, jsonArguments: "{\"count\": 5}")
+            Issue.record("Expected missing required parameter validation error")
+        } catch {
+            let nsError = error as NSError
+            #expect(nsError.localizedDescription.contains("missing required parameter 'targetPath'"))
+        }
+
+        // 2. Hallucinated/undeclared parameter 'hallucinatedExtra'
+        do {
+            _ = try await toolbox.executeTool(name: toolName, jsonArguments: "{\"targetPath\": \"/tmp/test\", \"hallucinatedExtra\": true}")
+            Issue.record("Expected undeclared parameter validation error")
+        } catch {
+            let nsError = error as NSError
+            #expect(nsError.localizedDescription.contains("undeclared parameter 'hallucinatedExtra'"))
+        }
+    }
 }
