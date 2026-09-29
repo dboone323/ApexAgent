@@ -98,4 +98,34 @@ import Foundation
         #expect(record.sizeInBytes == 12582912)
         #expect(record.isolationLevel == .standard)
     }
+
+    @MainActor
+    @Test func testContainerSnapshotLifecycleAndAutomaticRollback() async throws {
+        let manager = ContainerManager.shared
+        let testContainerId = "test-container-\(UUID().uuidString.prefix(8))"
+
+        let snap1 = try await manager.createSnapshot(name: "Pre-Task Baseline", description: "State 1", containerId: testContainerId)
+        #expect(!snap1.id.isEmpty)
+        #expect(snap1.name == "Pre-Task Baseline")
+
+        // Wait a brief moment to ensure distinct timestamp ordering
+        try? await Task.sleep(for: .milliseconds(20))
+
+        let snap2 = try await manager.createSnapshot(name: "Post-Task Mutation", description: "State 2", containerId: testContainerId)
+        #expect(!snap2.id.isEmpty)
+        #expect(snap2.name == "Post-Task Mutation")
+
+        let allSnaps = await manager.listSnapshots(containerId: testContainerId)
+        #expect(allSnaps.count >= 2)
+        #expect(allSnaps.contains(where: { $0.id == snap1.id }))
+        #expect(allSnaps.contains(where: { $0.id == snap2.id }))
+
+        // Test automatic rollback to last snapshot
+        let rollbackSuccess = try await manager.rollbackToLastSnapshot(containerId: testContainerId)
+        #expect(rollbackSuccess == true)
+
+        // Clean up
+        try await manager.deleteSnapshot(id: snap1.id, containerId: testContainerId)
+        try await manager.deleteSnapshot(id: snap2.id, containerId: testContainerId)
+    }
 }

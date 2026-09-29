@@ -212,4 +212,41 @@ struct SandboxTests {
         #expect(compactionEpisode?.summary == summary)
         #expect(compactionEpisode?.metadata["compactedTurnCount"] == "4")
     }
+
+    @Test func testContextCompactionTriggersOnMassivePayloadWithFewTurns() async throws {
+        let testBotId = UUID()
+        let engine = CognitiveMemoryEngine.shared
+        defer {
+            let home = FileManager.default.homeDirectoryForCurrentUser
+            let botDir = home.appendingPathComponent(".apex/memory/\(testBotId.uuidString)")
+            try? FileManager.default.removeItem(at: botDir)
+        }
+
+        // Only 3 messages (<= 5), but first message is massive (25,000 characters > 20,000 threshold)
+        let massivePayload = String(repeating: "diff --git a/file.swift b/file.swift\n+ line of code\n", count: 600)
+        #expect(massivePayload.count > 20000)
+
+        let msgs = [
+            ChatMessage(role: .user, content: massivePayload),
+            ChatMessage(role: .assistant, content: "Analyzed git diff."),
+            ChatMessage(role: .user, content: "Now patch line 42")
+        ]
+
+        var summarizerCalled = false
+        let (compacted, archivedCount) = try await engine.compactMessages(
+            messages: msgs,
+            keepRecent: 4,
+            maxChars: 4000,
+            botId: testBotId
+        ) { transcript in
+            summarizerCalled = true
+            return "Summarized 25k massive git diff into concise digest."
+        }
+
+        #expect(summarizerCalled == true)
+        #expect(archivedCount >= 1)
+        #expect(compacted.count >= 2)
+        #expect(compacted.first?.role == .system)
+        #expect(compacted.first?.content.contains("Summarized 25k massive git diff") == true)
+    }
 }

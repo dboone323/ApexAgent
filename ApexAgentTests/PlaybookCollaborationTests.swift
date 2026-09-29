@@ -788,4 +788,117 @@ struct PlaybookCollaborationTests {
         #expect(turn.isSimulated == true)
         #expect(turn.botName == "Old Bot")
     }
+
+    // MARK: - Test: BotManager Active Playbook Runner Approval Resolution
+
+    @Test @MainActor func testBotManagerActivePlaybookApprovalResolution() async throws {
+        let orchestrator = AgentOrchestrator()
+        let computer = Computer()
+        let manager = BotManager(orchestrator: orchestrator, computer: computer)
+        if manager.allBots.isEmpty {
+            _ = manager.createBot(name: "Apex", title: "General Assistant", descriptionText: "Helpful assistant")
+            let cos = manager.createBot(name: "Chief of Staff", title: "Executive Coordinator", descriptionText: "Workflow manager")
+            cos.isChiefOfStaff = true
+            _ = manager.createBot(name: "Code Architect", title: "Senior Engineer", descriptionText: "Architecture lead")
+            _ = manager.createBot(name: "Researcher", title: "Deep Research Specialist", descriptionText: "Research lead")
+            _ = manager.createBot(name: "Automator", title: "macOS System Automator", descriptionText: "Automation lead")
+        }
+
+        var approvalHookCalled = false
+        var observedRunnerDuringHook: PlaybookRunner?
+
+        let report = try await manager.executeCollaborationPlaybook(
+            preset: .fullPRReviewLoop,
+            context: "PR #429 real functional review",
+            onApprovalRequired: { card in
+                approvalHookCalled = true
+                observedRunnerDuringHook = manager.activePlaybookRunner
+                #expect(observedRunnerDuringHook != nil)
+                #expect(observedRunnerDuringHook?.pendingApprovalCard?.id == card.id)
+                // Resolve approval using BotManager API
+                let handled = manager.resolvePlaybookApproval(cardId: card.id, approved: true, notes: "Approved by test auditor")
+                #expect(handled == true)
+            }
+        )
+
+        #expect(approvalHookCalled == true)
+        #expect(report.isSuccessful == true)
+        #expect(report.approvalCards.count == 1)
+        #expect(report.approvalCards.first?.status == PlaybookApprovalStatus.approved)
+        #expect(report.approvalCards.first?.resolutionNotes == "Approved by test auditor")
+
+        // Active runner must be nil after execution completes
+        #expect(manager.activePlaybookRunner == nil)
+    }
+
+    @Test @MainActor func testBotManagerActivePlaybookRejectionResolution() async throws {
+        let orchestrator = AgentOrchestrator()
+        let computer = Computer()
+        let manager = BotManager(orchestrator: orchestrator, computer: computer)
+        if manager.allBots.isEmpty {
+            _ = manager.createBot(name: "Apex", title: "General Assistant", descriptionText: "Helpful assistant")
+            let cos = manager.createBot(name: "Chief of Staff", title: "Executive Coordinator", descriptionText: "Workflow manager")
+            cos.isChiefOfStaff = true
+            _ = manager.createBot(name: "Code Architect", title: "Senior Engineer", descriptionText: "Architecture lead")
+            _ = manager.createBot(name: "Researcher", title: "Deep Research Specialist", descriptionText: "Research lead")
+            _ = manager.createBot(name: "Automator", title: "macOS System Automator", descriptionText: "Automation lead")
+        }
+
+        var rejectionHookCalled = false
+
+        await #expect(throws: PlaybookExecutionError.self) {
+            try await manager.executeCollaborationPlaybook(
+                preset: .fullPRReviewLoop,
+                context: "PR #430 rejection check",
+                onApprovalRequired: { card in
+                    rejectionHookCalled = true
+                    manager.rejectActivePlaybookStage(reason: "Rejected by test auditor")
+                }
+            )
+        }
+
+        #expect(rejectionHookCalled == true)
+        #expect(manager.activePlaybookRunner == nil)
+    }
+
+    @Test @MainActor func testConcurrentPlaybookApprovalsRoutedByCardId() async throws {
+        let orchestrator = AgentOrchestrator()
+        let computer = Computer()
+        let manager = BotManager(orchestrator: orchestrator, computer: computer)
+        if manager.allBots.isEmpty {
+            _ = manager.createBot(name: "Apex", title: "General Assistant", descriptionText: "Helpful assistant")
+            let cos = manager.createBot(name: "Chief of Staff", title: "Executive Coordinator", descriptionText: "Workflow manager")
+            cos.isChiefOfStaff = true
+            _ = manager.createBot(name: "Code Architect", title: "Senior Engineer", descriptionText: "Architecture lead")
+            _ = manager.createBot(name: "Researcher", title: "Deep Research Specialist", descriptionText: "Research lead")
+            _ = manager.createBot(name: "Automator", title: "macOS System Automator", descriptionText: "Automation lead")
+        }
+
+        async let task1 = manager.executeCollaborationPlaybook(
+            preset: .fullPRReviewLoop,
+            context: "PR #1 concurrent test",
+            onApprovalRequired: { card in
+                let resolved = await MainActor.run {
+                    manager.resolvePlaybookApproval(cardId: card.id, approved: true, notes: "Approved PR 1")
+                }
+                #expect(resolved == true)
+            }
+        )
+
+        async let task2 = manager.executeCollaborationPlaybook(
+            preset: .fullPRReviewLoop,
+            context: "PR #2 concurrent test",
+            onApprovalRequired: { card in
+                let resolved = await MainActor.run {
+                    manager.resolvePlaybookApproval(cardId: card.id, approved: true, notes: "Approved PR 2")
+                }
+                #expect(resolved == true)
+            }
+        )
+
+        let (report1, report2) = try await (task1, task2)
+        #expect(report1.isSuccessful == true)
+        #expect(report2.isSuccessful == true)
+        #expect(manager.activePlaybookRunners.isEmpty == true)
+    }
 }

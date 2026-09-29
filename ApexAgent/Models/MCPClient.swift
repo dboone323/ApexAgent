@@ -512,14 +512,24 @@ actor MCPClient {
     nonisolated var maxRetryCount: Int { config.maxRetries }
 
     private func handleIncomingMessage(_ data: Data) {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let id = json["id"] as? Int else {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             return
         }
 
-        if let continuation = pendingRequests.removeValue(forKey: id) {
-            continuation.resume(returning: data)
+        let requestId: Int?
+        if let idInt = json["id"] as? Int {
+            requestId = idInt
+        } else if let idStr = json["id"] as? String, let parsed = Int(idStr) {
+            requestId = parsed
+        } else {
+            requestId = nil
         }
+
+        guard let id = requestId, let continuation = pendingRequests.removeValue(forKey: id) else {
+            return
+        }
+
+        continuation.resume(returning: data)
     }
     
     private func handleTermination(status: Int32) async {
@@ -905,7 +915,7 @@ public struct DynamicScriptResult: Sendable, Equatable {
 }
 
 // AnyCodable helper to serialize dictionary payloads containing String/Int/Double/Bool/Array/Dictionary
-struct AnyCodable: Codable {
+struct AnyCodable: Codable, @unchecked Sendable {
     let value: Any
 
     init(_ value: Any) {

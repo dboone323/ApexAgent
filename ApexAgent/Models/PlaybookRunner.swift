@@ -229,11 +229,6 @@ final class PlaybookRunner {
                     ]
                 )
 
-                // PROJECT M2 contract hook: let the host surface the card in UI.
-                // If the hook throws (e.g. non-interactive Siri context), the
-                // error propagates and aborts execution immediately.
-                try await onApprovalRequired?(card)
-
                 // Suspend execution until approved, rejected, or timed out.
                 // The fail-safe timeout guarantees a stage can never hang
                 // forever when no UI surfaces the card.
@@ -243,6 +238,19 @@ final class PlaybookRunner {
                     self.approvalTimeoutTask = Task { [weak self] in
                         try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
                         await self?.resolveApprovalAsTimedOut()
+                    }
+
+                    // PROJECT M2 contract hook: let the host surface the card in UI.
+                    // Fired after continuation registration so onApprovalRequired handlers
+                    // or event listeners can resolve the card immediately without deadlocking.
+                    if let hook = onApprovalRequired {
+                        Task { @MainActor [weak self] in
+                            do {
+                                try await hook(card)
+                            } catch {
+                                self?.rejectPendingStage(reason: "Approval required callback failed: \(error.localizedDescription)")
+                            }
+                        }
                     }
                 }
                 approvalTimeoutTask?.cancel()

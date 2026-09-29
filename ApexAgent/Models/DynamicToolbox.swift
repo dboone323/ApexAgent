@@ -195,16 +195,47 @@ class DynamicToolbox {
             throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Tool \(name) not found in dynamic tools"])
         }
 
+        // Validate JSON arguments and schema before server or script dispatch
+        guard let data = jsonArguments.data(using: .utf8),
+              let argsDict = try? JSONDecoder().decode([String: AnyCodable].self, from: data) else {
+            throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON arguments for tool \(name)"])
+        }
+
+        if let params = tool.schema["parameters"] as? [String: Any] {
+            let properties = (params["properties"] as? [String: Any]) ?? [:]
+            let required = (params["required"] as? [String]) ?? []
+
+            for req in required {
+                if argsDict[req] == nil {
+                    throw NSError(domain: "DynamicToolbox", code: -2, userInfo: [
+                        NSLocalizedDescriptionKey: "Tool '\(name)' invocation failed schema validation: missing required parameter '\(req)'"
+                    ])
+                }
+            }
+
+            if !properties.isEmpty {
+                for (key, val) in argsDict {
+                    guard let propDef = properties[key] as? [String: Any] else {
+                        throw NSError(domain: "DynamicToolbox", code: -3, userInfo: [
+                            NSLocalizedDescriptionKey: "Tool '\(name)' invocation failed schema validation: undeclared parameter '\(key)'"
+                        ])
+                    }
+                    if let expectedType = propDef["type"] as? String {
+                        if !Self.matchesType(value: val.value, expectedType: expectedType) {
+                            throw NSError(domain: "DynamicToolbox", code: -4, userInfo: [
+                                NSLocalizedDescriptionKey: "Tool '\(name)' invocation failed schema validation: parameter '\(key)' expected type '\(expectedType)' but received '\(type(of: val.value))'"
+                            ])
+                        }
+                    }
+                }
+            }
+        }
+
         if let mcpServerId = tool.mcpServerId {
             guard let config = MCPManager.shared.servers.first(where: { $0.id == mcpServerId }) else {
                 throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "MCP Server config not found"])
             }
             let client = MCPManager.shared.getClient(for: config)
-
-            guard let data = jsonArguments.data(using: .utf8),
-                  let argsDict = try? JSONDecoder().decode([String: AnyCodable].self, from: data) else {
-                throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON arguments for tool \(name)"])
-            }
 
             let result = try await client.callTool(name: name, arguments: argsDict)
             let texts = result.content.compactMap { $0.text }
@@ -325,6 +356,25 @@ class DynamicToolbox {
         }
 
         return dict
+    }
+
+    private static func matchesType(value: Any, expectedType: String) -> Bool {
+        switch expectedType.lowercased() {
+        case "string":
+            return value is String
+        case "integer", "int":
+            return value is Int
+        case "number", "float", "double":
+            return (value is Int) || (value is Double) || (value is Float)
+        case "boolean", "bool":
+            return value is Bool
+        case "array":
+            return value is [Any]
+        case "object":
+            return value is [String: Any]
+        default:
+            return true
+        }
     }
 
     #if DEBUG
