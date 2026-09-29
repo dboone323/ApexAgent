@@ -860,4 +860,45 @@ struct PlaybookCollaborationTests {
         #expect(rejectionHookCalled == true)
         #expect(manager.activePlaybookRunner == nil)
     }
+
+    @Test @MainActor func testConcurrentPlaybookApprovalsRoutedByCardId() async throws {
+        let orchestrator = AgentOrchestrator()
+        let computer = Computer()
+        let manager = BotManager(orchestrator: orchestrator, computer: computer)
+        if manager.allBots.isEmpty {
+            _ = manager.createBot(name: "Apex", title: "General Assistant", descriptionText: "Helpful assistant")
+            let cos = manager.createBot(name: "Chief of Staff", title: "Executive Coordinator", descriptionText: "Workflow manager")
+            cos.isChiefOfStaff = true
+            _ = manager.createBot(name: "Code Architect", title: "Senior Engineer", descriptionText: "Architecture lead")
+            _ = manager.createBot(name: "Researcher", title: "Deep Research Specialist", descriptionText: "Research lead")
+            _ = manager.createBot(name: "Automator", title: "macOS System Automator", descriptionText: "Automation lead")
+        }
+
+        async let task1 = manager.executeCollaborationPlaybook(
+            preset: .fullPRReviewLoop,
+            context: "PR #1 concurrent test",
+            onApprovalRequired: { card in
+                let resolved = await MainActor.run {
+                    manager.resolvePlaybookApproval(cardId: card.id, approved: true, notes: "Approved PR 1")
+                }
+                #expect(resolved == true)
+            }
+        )
+
+        async let task2 = manager.executeCollaborationPlaybook(
+            preset: .fullPRReviewLoop,
+            context: "PR #2 concurrent test",
+            onApprovalRequired: { card in
+                let resolved = await MainActor.run {
+                    manager.resolvePlaybookApproval(cardId: card.id, approved: true, notes: "Approved PR 2")
+                }
+                #expect(resolved == true)
+            }
+        )
+
+        let (report1, report2) = try await (task1, task2)
+        #expect(report1.isSuccessful == true)
+        #expect(report2.isSuccessful == true)
+        #expect(manager.activePlaybookRunners.isEmpty == true)
+    }
 }

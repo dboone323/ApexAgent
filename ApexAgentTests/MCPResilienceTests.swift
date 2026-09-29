@@ -147,5 +147,14 @@ struct MCPResilienceTests {
             let nsError = error as NSError
             #expect(nsError.localizedDescription.contains("undeclared parameter 'hallucinatedExtra'"))
         }
+
+        // 3. Type mismatch: count expected type 'integer', received string 'five'
+        do {
+            _ = try await toolbox.executeTool(name: toolName, jsonArguments: "{\"targetPath\": \"/tmp/test\", \"count\": \"five\"}")
+            Issue.record("Expected parameter type mismatch validation error")
+        } catch {
+            let nsError = error as NSError
+            #expect(nsError.localizedDescription.contains("expected type 'integer'"))
+        }
     }
 }

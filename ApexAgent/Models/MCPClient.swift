@@ -915,7 +915,7 @@ public struct DynamicScriptResult: Sendable, Equatable {
 }
 
 // AnyCodable helper to serialize dictionary payloads containing String/Int/Double/Bool/Array/Dictionary
-struct AnyCodable: Codable {
+struct AnyCodable: Codable, @unchecked Sendable {
     let value: Any
 
     init(_ value: Any) {

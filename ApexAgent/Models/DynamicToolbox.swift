@@ -214,11 +214,18 @@ class DynamicToolbox {
             }
 
             if !properties.isEmpty {
-                for key in argsDict.keys {
-                    if properties[key] == nil {
+                for (key, val) in argsDict {
+                    guard let propDef = properties[key] as? [String: Any] else {
                         throw NSError(domain: "DynamicToolbox", code: -3, userInfo: [
                             NSLocalizedDescriptionKey: "Tool '\(name)' invocation failed schema validation: undeclared parameter '\(key)'"
                         ])
+                    }
+                    if let expectedType = propDef["type"] as? String {
+                        if !Self.matchesType(value: val.value, expectedType: expectedType) {
+                            throw NSError(domain: "DynamicToolbox", code: -4, userInfo: [
+                                NSLocalizedDescriptionKey: "Tool '\(name)' invocation failed schema validation: parameter '\(key)' expected type '\(expectedType)' but received '\(type(of: val.value))'"
+                            ])
+                        }
                     }
                 }
             }
@@ -349,6 +356,25 @@ class DynamicToolbox {
         }
 
         return dict
+    }
+
+    private static func matchesType(value: Any, expectedType: String) -> Bool {
+        switch expectedType.lowercased() {
+        case "string":
+            return value is String
+        case "integer", "int":
+            return value is Int
+        case "number", "float", "double":
+            return (value is Int) || (value is Double) || (value is Float)
+        case "boolean", "bool":
+            return value is Bool
+        case "array":
+            return value is [Any]
+        case "object":
+            return value is [String: Any]
+        default:
+            return true
+        }
     }
 
     #if DEBUG
