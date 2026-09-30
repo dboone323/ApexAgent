@@ -58,7 +58,12 @@ struct NativeAppleEngine: AgentEngine {
         }
 
         // Extract semantic RAG context (the portion appended to orchestrator.agentInstructions)
-        let semanticContext = instructions.replacingOccurrences(of: orchestrator.agentInstructions, with: "")
+        let semanticContext: String
+        if !orchestrator.agentInstructions.isEmpty && instructions.hasPrefix(orchestrator.agentInstructions) {
+            semanticContext = String(instructions.dropFirst(orchestrator.agentInstructions.count))
+        } else {
+            semanticContext = ""
+        }
         let promptWithContext = prompt + semanticContext
         let explicitToolDirective: String
         if lowerPrompt.contains("convene_meeting") {
@@ -136,19 +141,21 @@ struct NativeAppleEngine: AgentEngine {
 
                 for turn in 0..<maxTurns {
                     let turnPrompt = currentPrompt
+                    let timeoutSeconds = customSession == nil ? 180 : 90
                     let responseTask = Task { @MainActor in
                         try await session.respond(to: turnPrompt, options: options)
                     }
+                    defer { responseTask.cancel() }
                     let response = try await withThrowingTaskGroup(of: LanguageModelSession.Response.self) { group in
                         group.addTask {
                             try await responseTask.value
                         }
                         group.addTask {
-                            try await Task.sleep(for: .seconds(90))
+                            try await Task.sleep(for: .seconds(timeoutSeconds))
                             throw NSError(
                                 domain: "NativeAppleEngine",
-                                code: 90,
-                                userInfo: [NSLocalizedDescriptionKey: "On-device model response timed out after 90 seconds."]
+                                code: timeoutSeconds,
+                                userInfo: [NSLocalizedDescriptionKey: "On-device model response timed out after \(timeoutSeconds) seconds."]
                             )
                         }
 
@@ -172,17 +179,15 @@ struct NativeAppleEngine: AgentEngine {
                         orchestrator.updateMessage(id: id, content: fullText)
                     }
 
-                    // Check if model emitted text announcing future delegation or pseudo-status without having executed it
+                    // Check if supervisor emitted text announcing future delegation or pseudo-status on turn 0 without having executed it
                     let lower = text.lowercased()
-                    let announcesFutureDelegation = lower.contains("will now delegate")
+                    let announcesFutureDelegation = customSession == nil && turn == 0 && (
+                        lower.contains("will now delegate")
                         || lower.contains("delegate these tasks")
                         || lower.contains("i will delegate")
                         || lower.contains("proceed to delegate")
                         || lower.contains("delegating these tasks")
-                        || (lower.contains("delegate") && lower.contains("now"))
-                        || (lower.contains("delegat") && lower.contains("action"))
                         || lower.contains("performing a deep-dive")
-                        || lower.contains("standing by")
                         || lower.contains("currently mapping")
                         || lower.contains("mapping & analysis phase")
                         || lower.contains("has initiated a multi-dimensional audit")
@@ -199,6 +204,7 @@ struct NativeAppleEngine: AgentEngine {
                         || lower.contains("i am now performing a direct")
                         || lower.contains("monitoring status")
                         || lower.contains("i am currently awaiting")
+                    )
 
                     if announcesFutureDelegation && turn < maxTurns - 1 {
                         currentPrompt = "Proceed to execute the delegation immediately using `dispatch_swarm`, `delegate_task`, or `convene_meeting`. Do not merely state what you will do or narrate in-progress status in text; invoke the tool call now to perform the actions."
@@ -282,6 +288,15 @@ func base64String(from image: NSImage) -> String? {
 @MainActor
 func getParsedSchemas() -> [[String: Any]] {
     var array: [[String: Any]] = []
+    var seenNames: Set<String> = []
+
+    func appendIfUnique(_ dict: [String: Any]) {
+        if let name = dict["name"] as? String {
+            guard !seenNames.contains(name) else { return }
+            seenNames.insert(name)
+        }
+        array.append(dict)
+    }
 
     // Extract dynamic schemas from all active tools
     let orchestrator = MCPManager.shared.orchestrator
@@ -289,7 +304,7 @@ func getParsedSchemas() -> [[String: Any]] {
         if let jsonStr = tool.schemaJSON,
            let data = jsonStr.data(using: .utf8),
            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            array.append(dict)
+            appendIfUnique(dict)
         }
     }
 
@@ -298,13 +313,17 @@ func getParsedSchemas() -> [[String: Any]] {
         if let url = Bundle.main.url(forResource: "ToolSchemas", withExtension: "json"),
            let data = try? Data(contentsOf: url),
            let staticList = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
-            array = staticList
+            for dict in staticList {
+                appendIfUnique(dict)
+            }
         }
     }
 
     // Inject dynamic tools from toolbox
     let dynamicSchemas = DynamicToolbox.shared.dynamicTools.values.map { $0.schema }
-    array.append(contentsOf: dynamicSchemas)
+    for dict in dynamicSchemas {
+        appendIfUnique(dict)
+    }
     return array
 }
 

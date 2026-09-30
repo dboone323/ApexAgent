@@ -274,10 +274,16 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
         }
 
         print("\n=== FINAL RESPONSE ===")
-        if let lastMessage = orchestrator.messages.last(where: { $0.role == .assistant }) {
-            print(lastMessage.content)
-        } else {
+        let assistantMessages = orchestrator.messages.filter { $0.role == .assistant && !$0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        if assistantMessages.isEmpty {
             print("No response received")
+        } else {
+            for (idx, msg) in assistantMessages.enumerated() {
+                if idx > 0 {
+                    print("\n---")
+                }
+                print(msg.content)
+            }
         }
         print("=======================")
         exit(0)

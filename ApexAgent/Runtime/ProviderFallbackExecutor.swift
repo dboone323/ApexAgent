@@ -24,6 +24,7 @@ public final class ProviderFallbackExecutor {
         toolCallingMode: AgentToolCallingMode = .auto,
         bot: BotProfile? = nil,
         session: LanguageModelSession? = nil,
+        allowedTools: [String]? = nil,
         orchestrator: AgentOrchestrator,
         requestId: UUID = UUID(),
         onEvent: (@Sendable (RuntimeEvent) -> Void)? = nil,
@@ -56,6 +57,7 @@ public final class ProviderFallbackExecutor {
                 for: candidate.provider,
                 bot: bot,
                 session: session,
+                allowedTools: allowedTools,
                 orchestrator: orchestrator
             )
 

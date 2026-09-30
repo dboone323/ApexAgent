@@ -717,7 +717,14 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     }
 
     func appendMessage(_ message: ChatMessage) {
-        messages.append(message)
+        if let activeId = activeAssistantMessageId,
+           let activeIdx = messages.firstIndex(where: { $0.id == activeId }) {
+            var copy = messages
+            copy.insert(message, at: activeIdx)
+            messages = copy
+        } else {
+            messages.append(message)
+        }
     }
 
     func updateMessage(id: UUID, content: String) {

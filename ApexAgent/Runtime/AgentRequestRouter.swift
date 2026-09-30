@@ -60,6 +60,14 @@ public final class AgentRequestRouter {
 
         let effectiveInstructions = resolvedContext.effectiveInstructions
         let effectiveProvider = resolvedContext.effectiveProvider
+        let effectiveAllowedTools: [String]? = switch resolvedContext.source {
+        case .archetype, .botProfileOverride:
+            resolvedContext.effectiveAllowedTools.filter {
+                $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm"
+            }
+        case .globalDefault:
+            resolvedContext.effectiveAllowedTools.isEmpty ? nil : resolvedContext.effectiveAllowedTools
+        }
 
         // 3. Build candidate chain
         let candidates = ModelRegistry.buildCandidateChain(
@@ -68,6 +76,7 @@ public final class AgentRequestRouter {
             prompt: request.prompt,
             history: history,
             instructions: effectiveInstructions,
+            tools: effectiveAllowedTools ?? [],
             hasAttachments: !request.attachments.isEmpty
         )
 
@@ -81,6 +90,7 @@ public final class AgentRequestRouter {
             toolCallingMode: request.toolCallingMode,
             bot: bot,
             session: session,
+            allowedTools: effectiveAllowedTools,
             orchestrator: orchestrator,
             requestId: request.id,
             onEvent: { [weak self] event in

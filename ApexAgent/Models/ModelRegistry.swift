@@ -335,9 +335,12 @@ public struct ModelRegistry {
         for provider: ModelProvider,
         bot: BotProfile? = nil,
         session: LanguageModelSession? = nil,
+        allowedTools: [String]? = nil,
         orchestrator: AgentOrchestrator
     ) -> any AgentEngine {
-        let botAllowedTools: [String]? = if let bot, !bot.allowedToolNames.isEmpty {
+        let resolvedAllowedTools: [String]? = if let allowedTools, !allowedTools.isEmpty {
+            allowedTools
+        } else if let bot, !bot.allowedToolNames.isEmpty {
             bot.allowedToolNames
         } else {
             nil
@@ -349,7 +352,7 @@ public struct ModelRegistry {
             if let session {
                 effectiveSession = session
             } else if let bot {
-                let safeTools = (botAllowedTools ?? []).filter { $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm" }
+                let safeTools = (resolvedAllowedTools ?? []).filter { $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm" }
                 let profile = SpecializedAgentProfile(
                     instructions: bot.systemInstructions,
                     model: SystemLanguageModel.default,
@@ -383,10 +386,10 @@ public struct ModelRegistry {
                 }
                 return NativeAppleEngine(orchestrator: orchestrator, customSession: geminiSession)
             } else {
-                return OllamaAgentEngine(orchestrator: orchestrator, bot: bot, allowedTools: botAllowedTools)
+                return OllamaAgentEngine(orchestrator: orchestrator, bot: bot, allowedTools: resolvedAllowedTools)
             }
         case .localOllama:
-            return OllamaAgentEngine(orchestrator: orchestrator, bot: bot, allowedTools: botAllowedTools)
+            return OllamaAgentEngine(orchestrator: orchestrator, bot: bot, allowedTools: resolvedAllowedTools)
         case .localMLX:
             return MLXAgentEngine(orchestrator: orchestrator, bot: bot)
         }

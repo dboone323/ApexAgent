@@ -79,6 +79,7 @@ struct OllamaAgentEngine: AgentEngine {
 
         var accumulated = ""
         let maxLoops = 8
+        var disableToolsOnNextTurn = false
         for loop in 0..<maxLoops {
             var body: [String: Any] = [
                 "model": model,
@@ -89,7 +90,9 @@ struct OllamaAgentEngine: AgentEngine {
                     "num_ctx": 16384
                 ]
             ]
-            if !tools.isEmpty { body["tools"] = tools }
+            if !tools.isEmpty && !disableToolsOnNextTurn && loop < maxLoops - 1 {
+                body["tools"] = tools
+            }
 
             guard let httpBody = try? JSONSerialization.data(withJSONObject: body) else {
                 throw NSError(domain: "OllamaAgentEngine", code: -2, userInfo: [NSLocalizedDescriptionKey: "Failed to serialize Ollama request."])
@@ -149,15 +152,14 @@ struct OllamaAgentEngine: AgentEngine {
             // No tool calls -> final answer, we're done (unless it hallucinated future delegation without calling tools)
             if toolCalls.isEmpty {
                 let lower = loopText.lowercased()
-                let announcesFutureDelegation = lower.contains("will now delegate")
+                let canDelegate = allowedTools == nil || allowedTools?.contains("delegate_task") == true
+                let announcesFutureDelegation = loop == 0 && canDelegate && (
+                    lower.contains("will now delegate")
                     || lower.contains("delegate these tasks")
                     || lower.contains("i will delegate")
                     || lower.contains("proceed to delegate")
                     || lower.contains("delegating these tasks")
-                    || (lower.contains("delegate") && lower.contains("now"))
-                    || (lower.contains("delegat") && lower.contains("action"))
                     || lower.contains("performing a deep-dive")
-                    || lower.contains("standing by")
                     || lower.contains("currently mapping")
                     || lower.contains("mapping & analysis phase")
                     || lower.contains("has initiated a multi-dimensional audit")
@@ -174,6 +176,7 @@ struct OllamaAgentEngine: AgentEngine {
                     || lower.contains("i am now performing a direct")
                     || lower.contains("monitoring status")
                     || lower.contains("i am currently awaiting")
+                )
 
                 if announcesFutureDelegation && loop < maxLoops - 1 {
                     messages.append(["role": "assistant", "content": loopText])
@@ -206,12 +209,18 @@ struct OllamaAgentEngine: AgentEngine {
 
             // Execute each tool through the existing safety pipeline and feed
             // the result back as a tool message.
+            var seenCallKeysInBatch: Set<String> = []
             for call in toolCalls {
                 guard let function = call["function"] as? [String: Any],
                       let name = function["name"] as? String else { continue }
                 let callId = (call["id"] as? String) ?? UUID().uuidString
                 let rawArgs = function["arguments"] as? [String: Any] ?? [:]
-                let argsString = (try? JSONSerialization.data(withJSONObject: rawArgs)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+                let argsString = (try? JSONSerialization.data(withJSONObject: rawArgs, options: [.sortedKeys])).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+                let batchKey = "\(name):\(argsString)"
+                if seenCallKeysInBatch.contains(batchKey) {
+                    continue
+                }
+                seenCallKeysInBatch.insert(batchKey)
 
                 if let allowed = allowedTools, !allowed.contains(name) {
                     let msg = "ERROR: Tool '\(name)' is not permitted for this agent."
@@ -238,6 +247,9 @@ struct OllamaAgentEngine: AgentEngine {
                 }
                 print("📋 [Ollama Tool Result] \(name) -> \(output.prefix(160))\n")
                 fflush(stdout)
+                if output.hasPrefix("Loop detected:") {
+                    disableToolsOnNextTurn = true
+                }
                 messages.append(["role": "tool", "content": output, "name": name, "tool_name": name, "tool_call_id": callId])
             }
             // Continue the loop so the model can act on tool results.
