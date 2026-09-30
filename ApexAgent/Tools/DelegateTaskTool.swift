@@ -60,15 +60,23 @@ struct DelegateTaskTool: Tool {
                 }
                 let startMessage = "\(indicatorPrefix) is starting task:\n> \(arguments.taskDescription)\n\n"
                 
-                // 1. Create the initial placeholder chat message on MainActor
-                let messageId = await MainActor.run {
+                // 1. Create the initial placeholder chat message and isolated sub-agent session on MainActor
+                let safeTools = agent.allowedTools.filter { $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm" }
+                let (messageId, subAgentSession) = await MainActor.run {
                     let chatMsg = ChatMessage(role: .assistant, content: startMessage, isStreaming: true)
                     orchestrator.appendMessage(chatMsg)
-                    return chatMsg.id
+                    let session = orchestrator.sessionForAgent(
+                        agent: agent,
+                        preference: orchestrator.modelPreference,
+                        instructions: agent.systemPrompt,
+                        allowedTools: safeTools,
+                        toolCallingMode: .allowed,
+                        prompt: arguments.taskDescription
+                    )
+                    return (chatMsg.id, session)
                 }
 
                 // 2. Generate the sub-agent response with AgentRequestRouter resilience & fallback
-                let subStartTime = Date()
                 let agentType = AgentType(rawValue: agent.name) ?? .developer
                 let request = AgentRequest(
                     senderIdentity: .archetype(agentType),
@@ -78,6 +86,7 @@ struct DelegateTaskTool: Tool {
 
                 let terminalState = await AgentRequestRouter.shared.route(
                     request,
+                    session: subAgentSession,
                     history: [],
                     instructions: agent.systemPrompt,
                     orchestrator: orchestrator,

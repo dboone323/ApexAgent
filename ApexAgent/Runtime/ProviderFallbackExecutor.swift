@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import FoundationModels
 
 // MARK: - Provider Fallback Executor
 //
@@ -22,6 +23,7 @@ public final class ProviderFallbackExecutor {
         instructions: String = "",
         toolCallingMode: AgentToolCallingMode = .auto,
         bot: BotProfile? = nil,
+        session: LanguageModelSession? = nil,
         orchestrator: AgentOrchestrator,
         requestId: UUID = UUID(),
         onEvent: (@Sendable (RuntimeEvent) -> Void)? = nil,
@@ -53,6 +55,7 @@ public final class ProviderFallbackExecutor {
             let engine = ModelRegistry.engine(
                 for: candidate.provider,
                 bot: bot,
+                session: session,
                 orchestrator: orchestrator
             )
 
@@ -65,18 +68,23 @@ public final class ProviderFallbackExecutor {
                     toolCallingMode: toolCallingMode,
                     onUpdate: { partial in
                         accumulatedText = partial
-                        onUpdate?(partial)
-                        onEvent?(.streamingDelta(requestId: requestId, delta: partial))
+                        if !partial.hasPrefix("⚠️ The on-device model returned no output") || index == candidates.count - 1 {
+                            onUpdate?(partial)
+                            onEvent?(.streamingDelta(requestId: requestId, delta: partial))
+                        }
                     }
                 )
 
                 let trimmed = accumulatedText.trimmingCharacters(in: .whitespacesAndNewlines)
-                if trimmed.isEmpty {
-                    let emptyMsg = "Provider \(candidate.provider.displayName) returned empty output."
+                let isNativeFallbackPlaceholder = trimmed.hasPrefix("⚠️ The on-device model returned no output")
+                if trimmed.isEmpty || (isNativeFallbackPlaceholder && index < candidates.count - 1) {
+                    let emptyMsg = isNativeFallbackPlaceholder
+                        ? "Provider \(candidate.provider.displayName) unavailable or failed."
+                        : "Provider \(candidate.provider.displayName) returned empty output."
                     attemptedErrors.append("[\(candidate.provider.rawValue)] \(emptyMsg)")
                     if index < candidates.count - 1 {
                         continue // Fallback to next candidate
-                    } else {
+                    } else if trimmed.isEmpty {
                         return .emptyOutput
                     }
                 }

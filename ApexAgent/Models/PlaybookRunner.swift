@@ -237,7 +237,8 @@ final class PlaybookRunner {
                     let timeout = max(self.approvalTimeout, 0)
                     self.approvalTimeoutTask = Task { [weak self] in
                         try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-                        await self?.resolveApprovalAsTimedOut()
+                        guard !Task.isCancelled else { return }
+                        self?.resolveApprovalAsTimedOut()
                     }
 
                     // PROJECT M2 contract hook: let the host surface the card in UI.

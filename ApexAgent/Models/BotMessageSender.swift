@@ -69,6 +69,7 @@ extension BotSession {
             let terminalState = await AgentRequestRouter.shared.route(
                 request,
                 bot: self.bot,
+                session: self.session,
                 history: self.messages,
                 instructions: self.systemInstructions,
                 orchestrator: orch,

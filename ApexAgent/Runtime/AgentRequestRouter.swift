@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import FoundationModels
 
 // MARK: - Canonical Agent Request Router
 //
@@ -33,6 +34,7 @@ public final class AgentRequestRouter {
     func route(
         _ request: AgentRequest,
         bot: BotProfile? = nil,
+        session: LanguageModelSession? = nil,
         history: [ChatMessage] = [],
         instructions: String = "",
         orchestrator: AgentOrchestrator,
@@ -78,6 +80,7 @@ public final class AgentRequestRouter {
             instructions: effectiveInstructions,
             toolCallingMode: request.toolCallingMode,
             bot: bot,
+            session: session,
             orchestrator: orchestrator,
             requestId: request.id,
             onEvent: { [weak self] event in

@@ -11,9 +11,9 @@ public final class ApexGatewayServer {
     /// Connections that have presented the pre-shared token (C2).
     private var authenticatedConnections: Set<UUID> = []
     /// Max inbound frame body — caps the unbounded UInt32 length prefix (C2 DoS).
-    private static let maxFrameBytes: UInt32 = 8 * 1024 * 1024
+    nonisolated private static let maxFrameBytes: UInt32 = 8 * 1024 * 1024
     /// Keychain account for the pre-shared gateway token (C2).
-    static let gatewayTokenKeychainKey = "apex.gatewayToken"
+    nonisolated static let gatewayTokenKeychainKey = "apex.gatewayToken"
     
     private var lastTerminalMessageId: UUID?
     

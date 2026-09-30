@@ -240,7 +240,7 @@ struct ChatInputBar: View {
     @Binding var inputText: String
     @FocusState.Binding var isInputFocused: Bool
     @State private var isHovered = false
-    @ObservedObject private var voiceController = VoiceController.shared
+    private var voiceController: VoiceController { VoiceController.shared }
     
     private var gatewayClient: ApexGatewayClient { ApexGatewayClient.shared }
     
@@ -359,10 +359,14 @@ struct ChatInputBar: View {
                         .accessibilityIdentifier("chatInputField")
                         .onKeyPress(.return) {
                             if NSEvent.modifierFlags.contains(.shift) {
-                                inputText += "\n"
+                                Task { @MainActor in
+                                    inputText += "\n"
+                                }
                                 return .handled
                             } else {
-                                send()
+                                Task { @MainActor in
+                                    send()
+                                }
                                 return .handled
                             }
                         }

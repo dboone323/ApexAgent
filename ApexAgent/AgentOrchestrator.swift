@@ -885,6 +885,25 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         print("[DIAG] compactContextIfNeeded complete")
     }
 
+    /// Returns true when the prompt is a pure conversational greeting or courtesy
+    /// phrase that does not request any system, file, web, or multi-agent action.
+    nonisolated static func isConversationalGreetingOrSmallTalk(_ text: String) -> Bool {
+        let normalized = text
+            .lowercased()
+            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters))
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        let conversationalPhrases: Set<String> = [
+            "hey", "hi", "hello", "howdy", "yo", "sup", "hola", "greetings",
+            "hey there", "hi there", "hello there",
+            "hey apex", "hi apex", "hello apex",
+            "good morning", "good afternoon", "good evening", "good night",
+            "how are you", "how are you doing", "how is it going", "hows it going",
+            "whats up", "what's up", "what is up",
+            "thanks", "thank you", "thanks a lot", "thank you so much", "thx", "ty"
+        ]
+        return conversationalPhrases.contains(normalized)
+    }
+
     @MainActor
     private func runMessageGeneration(text: String) async {
         // Check if we need to initialize a SwiftData Conversation
@@ -934,7 +953,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         defer {
             onStateChanged?()
         }
-        let semanticContext = self.getSemanticContext(for: text)
+        let semanticContext = Self.isConversationalGreetingOrSmallTalk(text) ? "" : self.getSemanticContext(for: text)
         var finalInstructions = self.agentInstructions + semanticContext
         let lowerText = text.lowercased()
             let isAuditRequested = lowerText.contains("audit")
@@ -952,6 +971,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 || lowerText.contains("don't use tools")
                 || lowerText.contains("do not use tools")
                 || lowerText.contains("without running any tools")
+                || (attachmentsToSend.isEmpty && Self.isConversationalGreetingOrSmallTalk(text))
 
             let effectiveToolCallingMode: AgentToolCallingMode = explicitlyNoTools ? .disabled : self.toolCallingMode
 
@@ -1468,7 +1488,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         // APEX_TEST_MODE=1), so test behavior is preserved while the
         // production bypass is gone.
         #if DEBUG
-        return true
+        if NSClassFromString("XCTestCase") != nil
+            || getenv("APEX_TEST_MODE") != nil
+            || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest") {
+            return true
+        }
         #endif
 
         // O3/O6: auto-grant fast path. The destructive/sensitive guards outrank

@@ -12,9 +12,18 @@ import Network
 
 final class WebhookServer: @unchecked Sendable {
 
-    enum ServerError: Error {
+    enum ServerError: Error, LocalizedError {
         case invalidPort
         case startFailed(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .invalidPort:
+                return "Invalid webhook listener port."
+            case .startFailed(let reason):
+                return "Webhook listener failed to start: \(reason)"
+            }
+        }
     }
 
     /// Thread-safe slot for values produced on the listener queue.
@@ -61,12 +70,15 @@ final class WebhookServer: @unchecked Sendable {
         }
 
         // M2: bind localhost only, matching the documented contract above —
-        // without this NWListener binds all interfaces.
+        // without this NWListener binds all interfaces. Because requiredLocalEndpoint
+        // already carries `nwPort`, use `NWListener(using: params)` rather than
+        // `NWListener(using: params, on: nwPort)` (which fails with EINVAL on
+        // non-zero ports: "Local endpoint has port set, cannot override").
         params.requiredLocalEndpoint = NWEndpoint.hostPort(host: NWEndpoint.Host("127.0.0.1"), port: nwPort)
 
         let listener: NWListener
         do {
-            listener = try NWListener(using: params, on: nwPort)
+            listener = try NWListener(using: params)
         } catch {
             throw ServerError.startFailed(error.localizedDescription)
         }

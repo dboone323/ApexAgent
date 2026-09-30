@@ -214,6 +214,7 @@ final class GroupChatSession {
         let terminalState = await AgentRequestRouter.shared.route(
             request,
             bot: bot,
+            session: session.session,
             history: [],
             instructions: instructions,
             orchestrator: orchestrator,

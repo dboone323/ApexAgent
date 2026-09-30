@@ -345,7 +345,25 @@ public struct ModelRegistry {
 
         switch provider {
         case .autoPicker, .appleOnDevice, .applePCC, .fmCLI:
-            return NativeAppleEngine(orchestrator: orchestrator, customSession: session)
+            let effectiveSession: LanguageModelSession?
+            if let session {
+                effectiveSession = session
+            } else if let bot {
+                let safeTools = (botAllowedTools ?? []).filter { $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm" }
+                let profile = SpecializedAgentProfile(
+                    instructions: bot.systemInstructions,
+                    model: SystemLanguageModel.default,
+                    toolCallingMode: .allowed,
+                    orchestrator: orchestrator,
+                    allowedTools: safeTools,
+                    reasoningLevel: orchestrator.configuredReasoningLevel,
+                    maxResponseTokens: orchestrator.configuredMaxResponseTokens
+                )
+                effectiveSession = LanguageModelSession(profile: profile, history: Transcript(entries: []))
+            } else {
+                effectiveSession = nil
+            }
+            return NativeAppleEngine(orchestrator: orchestrator, customSession: effectiveSession)
         case .cloudGemini:
             if !geminiAPIKey().isEmpty {
                 let geminiModel = CloudGeminiLanguageModel(apiKey: geminiAPIKey())

@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import Speech
 import AVFoundation
 
@@ -7,15 +8,16 @@ public enum TTSProvider: String, CaseIterable, Sendable {
     case elevenLabs = "ElevenLabs"
 }
 
+@Observable
 @MainActor
-class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate {
+final class VoiceController: NSObject, SFSpeechRecognizerDelegate, AVSpeechSynthesizerDelegate, AVAudioPlayerDelegate {
     static let shared = VoiceController()
     
-    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
-    private var recognitionTask: SFSpeechRecognitionTask?
-    private let audioEngine = AVAudioEngine()
+    @ObservationIgnored private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    @ObservationIgnored private var recognitionTask: SFSpeechRecognitionTask?
+    @ObservationIgnored private let audioEngine = AVAudioEngine()
     
-    private var _speechSynthesizer: AVSpeechSynthesizer?
+    @ObservationIgnored private var _speechSynthesizer: AVSpeechSynthesizer?
     private var speechSynthesizer: AVSpeechSynthesizer {
         if let synth = _speechSynthesizer {
             return synth
@@ -26,17 +28,17 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         return synth
     }
     
-    @Published private(set) var isRecording = false
-    @Published private(set) var isSpeaking = false
+    private(set) var isRecording = false
+    private(set) var isSpeaking = false
     
-    @Published var selectedProvider: TTSProvider = .system
-    private var audioPlayer: AVAudioPlayer?
+    var selectedProvider: TTSProvider = .system
+    @ObservationIgnored private var audioPlayer: AVAudioPlayer?
     
     override init() {
         super.init()
     }
     
-    @Published private(set) var permissionGranted: Bool = false
+    private(set) var permissionGranted: Bool = false
 
     func requestPermissions() async -> Bool {
         let result = await withCheckedContinuation { continuation in
@@ -47,13 +49,17 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
                         if !granted {
                             print("[VoiceController] Permission denied — speech= \(authStatus), audio= \(audioGranted)")
                         }
-                        self.permissionGranted = granted
+                        if self.permissionGranted != granted {
+                            self.permissionGranted = granted
+                        }
                         continuation.resume(returning: granted)
                     }
                 }
             }
         }
-        self.permissionGranted = result
+        if self.permissionGranted != result {
+            self.permissionGranted = result
+        }
         return result
     }
     
@@ -112,12 +118,16 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
                     inputNode.removeTap(onBus: 0)
                     self.recognitionRequest = nil
                     self.recognitionTask = nil
-                    self.isRecording = false
+                    if self.isRecording {
+                        self.isRecording = false
+                    }
                 }
             }
         }
         
-        isRecording = true
+        if !isRecording {
+            isRecording = true
+        }
         print("Speech recognition started.")
     }
     
@@ -126,7 +136,9 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         audioEngine.stop()
         audioEngine.inputNode.removeTap(onBus: 0)
         recognitionRequest?.endAudio()
-        isRecording = false
+        if isRecording {
+            isRecording = false
+        }
         print("Speech recognition stopped.")
     }
     
@@ -152,7 +164,9 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         utterance.rate = configuredRate > 0 ? configuredRate : 0.52 // Natural speaking rate
         
         speechSynthesizer.speak(utterance)
-        isSpeaking = true
+        if !isSpeaking {
+            isSpeaking = true
+        }
     }
     
     private func speakWithElevenLabs(text: String, key: String) {
@@ -169,7 +183,9 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         let body: [String: Any] = ["text": text, "model_id": "eleven_turbo_v2_5"]
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
         
-        isSpeaking = true
+        if !isSpeaking {
+            isSpeaking = true
+        }
         Task {
             do {
                 let (data, response) = try await URLSession.shared.data(for: request)
@@ -254,21 +270,29 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
         if let synth = _speechSynthesizer, synth.isSpeaking {
             synth.stopSpeaking(at: .word)
         }
-        audioPlayer?.stop()
-        isSpeaking = false
+        if let player = audioPlayer, player.isPlaying {
+            player.stop()
+        }
+        if isSpeaking {
+            isSpeaking = false
+        }
     }
     
     // MARK: - AVSpeechSynthesizerDelegate
     
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         Task { @MainActor in
-            VoiceController.shared.isSpeaking = false
+            if VoiceController.shared.isSpeaking {
+                VoiceController.shared.isSpeaking = false
+            }
         }
     }
     
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         Task { @MainActor in
-            VoiceController.shared.isSpeaking = false
+            if VoiceController.shared.isSpeaking {
+                VoiceController.shared.isSpeaking = false
+            }
         }
     }
     
@@ -276,7 +300,9 @@ class VoiceController: NSObject, ObservableObject, SFSpeechRecognizerDelegate, A
     
     nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
-            VoiceController.shared.isSpeaking = false
+            if VoiceController.shared.isSpeaking {
+                VoiceController.shared.isSpeaking = false
+            }
         }
     }
 }

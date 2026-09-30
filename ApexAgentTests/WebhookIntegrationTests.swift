@@ -130,4 +130,13 @@ struct WebhookServerTests {
         #expect(String(decoding: badData, as: UTF8.self).contains(#""accepted":false"#))
         #expect(triggered == 1)
     }
+
+    @Test func liveServerBindsExplicitNonZeroPort() throws {
+        let manager = WebhookManager()
+        let server = WebhookServer(manager: manager)
+        let explicitPort = UInt16.random(in: 29100...29900)
+        try server.start(preferredPort: explicitPort)
+        defer { server.stop() }
+        #expect(server.port == explicitPort)
+    }
 }

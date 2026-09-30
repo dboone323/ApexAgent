@@ -47,6 +47,7 @@ struct NativeAppleEngine: AgentEngine {
             || lowerPrompt.contains("don't use tools")
             || lowerPrompt.contains("do not use tools")
             || lowerPrompt.contains("without running any tools")
+            || (attachments.isEmpty && AgentOrchestrator.isConversationalGreetingOrSmallTalk(prompt))
 
         var options = GenerationOptions()
         let effectiveMode: AgentToolCallingMode = explicitlyNoTools ? .disabled : toolCallingMode
@@ -75,7 +76,7 @@ struct NativeAppleEngine: AgentEngine {
                 allTools: orchestrator.allTools
             )
             onUpdate(result)
-            if let id = orchestrator.activeAssistantMessageId {
+            if customSession == nil, let id = orchestrator.activeAssistantMessageId {
                 orchestrator.updateMessage(id: id, content: result)
                 orchestrator.updateMessage(id: id, isStreaming: false)
             }
@@ -105,7 +106,7 @@ struct NativeAppleEngine: AgentEngine {
                 let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !text.isEmpty {
                     onUpdate(text)
-                    if let id = orchestrator.activeAssistantMessageId {
+                    if customSession == nil, let id = orchestrator.activeAssistantMessageId {
                         orchestrator.updateMessage(id: id, content: text)
                         orchestrator.updateMessage(id: id, isStreaming: false)
                     }
@@ -167,7 +168,7 @@ struct NativeAppleEngine: AgentEngine {
                     }
 
                     onUpdate(fullText)
-                    if let id = orchestrator.activeAssistantMessageId {
+                    if customSession == nil, let id = orchestrator.activeAssistantMessageId {
                         orchestrator.updateMessage(id: id, content: fullText)
                     }
 
@@ -208,7 +209,7 @@ struct NativeAppleEngine: AgentEngine {
                 }
 
                 if !fullText.isEmpty {
-                    if let id = orchestrator.activeAssistantMessageId {
+                    if customSession == nil, let id = orchestrator.activeAssistantMessageId {
                         orchestrator.updateMessage(id: id, content: fullText)
                         orchestrator.updateMessage(id: id, isStreaming: false)
                     }
