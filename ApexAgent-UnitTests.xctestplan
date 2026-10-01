@@ -28,6 +28,18 @@
         {
           "containerPath" : "container:ApexAgent.xcodeproj",
           "name" : "MCPKit"
+        },
+        {
+          "containerPath" : "container:ApexAgent.xcodeproj",
+          "name" : "SharedModels"
+        },
+        {
+          "containerPath" : "container:ApexAgent.xcodeproj",
+          "name" : "SharedLogging"
+        },
+        {
+          "containerPath" : "container:ApexAgent.xcodeproj",
+          "name" : "ApexAgentIntents"
         }
       ]
     },

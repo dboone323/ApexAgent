@@ -111,46 +111,30 @@ struct ConveneMeetingTool: Tool {
                         orchestrator.updateMessage(id: messageId, content: accumulatedText + turnHeader)
                     }
 
-                    // Hydrate session with the conversation history so far
                     let instructions = String(agent.systemPrompt.prefix(1200))
-                    let preference = await orchestrator.modelPreference
-                    let session = await createVisualSession(
-                        agent: agent,
-                        preference: preference,
-                        instructions: instructions,
-                        topic: arguments.topic,
-                        debateHistory: debateHistory
-                    )
-
                     let topic = String(arguments.topic.prefix(600))
-                    let prompt = "Act as the \(agent.name) specialist. For '\(topic)', propose one actionable ApexAgent improvement, why it matters, and the next implementation step. Do not report readiness or ask for files."
-                    let responseTask = Task { @MainActor in
-                        try await session.respond(to: Prompt(prompt), options: GenerationOptions(toolCallingMode: .allowed))
+                    let priorContext = debateHistory.suffix(4).map { "\($0.agentName): \(prunedContent($0.statement, maxChars: 400))" }.joined(separator: "\n")
+                    let prompt: String
+                    if priorContext.isEmpty {
+                        prompt = "Act as the \(agent.name) specialist. For '\(topic)', propose one actionable ApexAgent improvement, why it matters, and the next implementation step without using tools. Do not report readiness or ask for files."
+                    } else {
+                        prompt = "Act as the \(agent.name) specialist. Previous discussion:\n\(priorContext)\n\nFor '\(topic)', respond concisely with your specialist recommendation and concrete next step without using tools."
                     }
-                    let finalTurnContent: String
-                    do {
-                        let response = try await withThrowingTaskGroup(of: LanguageModelSession.Response.self) { group in
-                            group.addTask {
-                                try await responseTask.value
-                            }
-                            group.addTask {
-                                try await Task.sleep(for: .seconds(45))
-                                throw NSError(
-                                    domain: "ConveneMeetingTool",
-                                    code: 45,
-                                    userInfo: [NSLocalizedDescriptionKey: "Meeting participant response timed out after 45 seconds."]
-                                )
-                            }
-                            guard let response = try await group.next() else {
-                                throw CancellationError()
-                            }
-                            group.cancelAll()
-                            return response
-                        }
-                        finalTurnContent = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-                    } catch {
-                        finalTurnContent = "Participant response unavailable: \(error.localizedDescription)"
-                    }
+
+                    let agentType = AgentType(rawValue: agent.name) ?? .developer
+                    let request = AgentRequest(
+                        senderIdentity: .archetype(agentType),
+                        prompt: prompt,
+                        toolCallingMode: .disabled
+                    )
+                    let terminalState = await AgentRequestRouter.shared.route(
+                        request,
+                        history: [],
+                        instructions: instructions,
+                        orchestrator: orchestrator
+                    )
+                    let trimmed = terminalState.userFacingMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let finalTurnContent = trimmed.isEmpty ? "Completed with no output." : trimmed
                     await MainActor.run {
                         orchestrator.updateMessage(id: messageId, content: accumulatedText + "\n\n🤖 [\(displayName)]: \(finalTurnContent)")
                     }

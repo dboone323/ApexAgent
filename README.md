@@ -25,15 +25,13 @@ open ApexAgent.xcodeproj
 
 Or build/test from the command line:
 ```bash
-export DEVELOPER_DIR=/Applications/Xcode-beta.app/Contents/Developer
+# Xcodebuild (entitlement-preserving ad-hoc signing "-" embeds ApexAgent.entitlements):
+xcodebuild build -project ApexAgent.xcodeproj -scheme ApexAgent -destination "platform=macOS"
+xcodebuild test -project ApexAgent.xcodeproj -scheme ApexAgent -testPlan ApexAgent-UnitTests -destination "platform=macOS"
 
-# Xcodebuild (recommended for full macOS app & extensions):
-xcodebuild build -project ApexAgent.xcodeproj -scheme ApexAgent -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO
-xcodebuild test -project ApexAgent.xcodeproj -scheme ApexAgent -destination "platform=macOS" CODE_SIGNING_ALLOWED=NO
-
-# Or Swift Package Manager:
-swift build
-swift test
+# Or Swift Package Manager (with code coverage and zero skipped tests):
+xcrun swift build
+xcrun swift test --parallel --enable-code-coverage
 ```
 
 > **Note:** The Foundation Models framework does NOT work in the iOS/macOS Simulator. Run on a real device.
@@ -45,7 +43,7 @@ swift test
 The on-device Apple Foundation Model needs **no key**. Keys are only needed for optional providers:
 
 - **Google Gemini** — paste your key in **Settings**; stored in the Keychain.
-- **Ollama** — point Apex at your local Ollama host URL (default `http://localhost:11434`).
+- **Ollama** — point Apex at your local Ollama host URL (default `http://localhost:11434`, default model `gemma4:12b` with multimodal vision + `nomic-embed-text:latest` for semantic memory embeddings).
 - **Brave Search** (optional web search) — Brave primary with a no-config DuckDuckGo fallback. Add a Brave key in Settings for higher-quality results.
 
 ---
@@ -55,9 +53,9 @@ The on-device Apple Foundation Model needs **no key**. Keys are only needed for 
 - **On-device Apple Foundation Models** (default) — `NativeAppleEngine`
 - **Private Cloud Compute** — Apple's PCC when available
 - **Cloud Gemini** — optional, Keychain-backed
-- **Local Ollama** — optional, self-hosted
+- **Local Ollama** — optional, self-hosted (`gemma4:12b` default with multimodal image attachments + `nomic-embed-text:latest` embeddings)
 
-Per-agent model preferences are supported (`localSystem` / `privateCloud` / `cloudGemini` / `localOllama` / `hybrid`).
+Per-agent model preferences are supported (`localSystem` / `privateCloud` / `cloudGemini` / `localOllama` / `localMLX` / `hybrid`).
 
 ---
 
@@ -95,19 +93,19 @@ Apex ships **63 tools** the model can call, including:
 
 ## 🔌 Model Context Protocol (MCP)
 
-Apex is an MCP client: it launches and supervises external MCP servers (filesystem, git, and any you configure in **Settings**) over stdio JSON-RPC, with circuit-breaking and auto-restart. Server workspace and interpreter paths are resolved at runtime — no hardcoded developer paths.
+Apex is an MCP client: it launches and supervises external MCP servers (filesystem, git, `xcodebuildmcp`, `xcode-native` via `xcrun mcpbridge`, and any you configure in **Settings**) over stdio JSON-RPC, with circuit-breaking, live latency probing, and auto-restart. It also ships the `ApexAgentXcodePlugin` MCP server for Xcode 27 with live Spotlight (`mdfind`) search.
 
 ---
 
 ## 🎙️ Voice
 
-Voice input/output is supported via on-device speech recognition and synthesis.
+Voice input/output is supported via on-device speech recognition and synthesis (`VoiceController`) across both `ChatView` and `BotChatView`.
 
 ---
 
-## 🤖 Multi-Agent
+## 🤖 Multi-Agent & Playbooks
 
-Specialized sub-agents (developer, executor, controller, researcher, planner, UI designer, linter) can be delegated to individually or convened in a panel meeting to reach consensus.
+Specialized bots (`Apex`, `Chief of Staff`, `Code Architect`, `Researcher`, `Automator`) can be delegated to individually, convened in a panel meeting, or orchestrated via multi-stage **Collaboration Playbooks** (`PlaybookRunner`) with sequential/parallel turn dispatching and interactive human-in-the-loop approval banners (`PlaybookApprovalBannerView`).
 
 ---
 
@@ -116,7 +114,7 @@ Specialized sub-agents (developer, executor, controller, researcher, planner, UI
 - **Confirmation Gate** — Destructive actions (file deletion, dangerous shell commands, AppleScript) require explicit approval
 - **60s Auto-deny** — Unreviewed confirmations are automatically denied
 - **On-device by default** — With the Apple Foundation Model, your data never leaves your Mac
-- **Sandbox fallback** — Apple Container / Docker sandbox fallback for execution contexts where needed
+- **Sandbox Isolation** — Apple Container (`ContainerManager` + `sandboxctl` with `.strict`, `.standard`, `.ephemeralOverlay` isolation and APFS snapshots) / Docker sandbox support
 
 ---
 
@@ -133,9 +131,11 @@ Or edit the **System Prompt** directly in Settings to customize Apex's behavior.
 
 ## 🧪 Testing
 
-Current test-target inventory (**103 test files**): `ApexAgentTests` 85 · `ApexAgentContainerTests` 1 · `ApexAgentIntelligenceTests` 10 · `ApexAgentUITests` 7 — covering the R1–R4 suites (creation sheets, playbook collaboration, container isolation security, MCP dashboard, E2E feature matrix, adversarial stress) plus real macOS UI e2e via XCUITest.
-
-> **2026-09-24:** historical PASS claims are unverified for the current sources — the newest test artifacts predate the current test sources (2026-09-21). Run `swift test` on a green build before treating any result as green (see AUDIT_2026-09-24.md §7).
+Current verified test-target inventory (**103 test files · 669 `@Test` functions · 23 `XCTestCase` classes**):
+- `ApexAgentTests`: 85 files (591 `@Test` + 17 `XCTestCase`) — covering M1–M4 (`CreationSheetsTests`, `PlaybookCollaborationTests`, `R1R2AdversarialStressTests`, `ContainerIsolationSecurityTests`, `MCPServerDashboardTests`, `E2EFeatureMatrixTests`, `CognitiveMemoryTests`)
+- `ApexAgentContainerTests`: 1 file (7 `@Test`) — `ContainerManagerTests`
+- `ApexAgentIntelligenceTests`: 10 files (71 `@Test`) — on-device intelligence, vision, and runtime contracts
+- `ApexAgentUITests`: 7 files (6 `XCTestCase`) — real macOS UI e2e via XCUITest
 
 ---
 

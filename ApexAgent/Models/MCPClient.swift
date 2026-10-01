@@ -275,6 +275,10 @@ actor MCPClient {
             merged.append(p)
         }
         env["PATH"] = merged.joined(separator: ":")
+        if env["DEVELOPER_DIR"] == nil,
+           FileManager.default.fileExists(atPath: "/Applications/Xcode-beta.app/Contents/Developer") {
+            env["DEVELOPER_DIR"] = "/Applications/Xcode-beta.app/Contents/Developer"
+        }
         
         if isRestricted {
             let fm = FileManager.default

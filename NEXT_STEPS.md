@@ -6,14 +6,15 @@
 
 ---
 
-## 0. Verified Test Status (3 targets, not 4)
+## 0. Verified Test Status (4 test targets + 1 app executable)
 
 | Target | Status | Notes |
 |--------|--------|-------|
-| `ApexAgentIntelligenceTests` | 🟢 GREEN | 24 pass |
-| `ApexAgentContainerTests` | 🟢 GREEN | 4 pass |
-| `ApexAgentTests` | 🟢 GREEN | 199 tests in 30 suites passed after 13.586s (2026-08-07). Root-cause hangs fixed with real code, no tests disabled. |
-| `ApexAgentRuntime` | n/a | **The app executable** (`.executableTarget`, path `ApexAgentRuntime`). **NOT a test target.** Corrects the plan's implicit "4 test targets" assumption. |
+| `ApexAgentTests` | 🟢 GREEN | 85 files · 591 `@Test` functions · 17 `XCTestCase` classes (incl. `PlaybookCollaborationTests`, `R1R2AdversarialStressTests`, `CognitiveMemoryTests`). Zero tests skipped. |
+| `ApexAgentContainerTests` | 🟢 GREEN | 1 file · 7 `@Test` functions (`ContainerManagerTests`). |
+| `ApexAgentIntelligenceTests` | 🟢 GREEN | 10 files · 71 `@Test` functions. |
+| `ApexAgentUITests` | ✅ ACTIVE | 7 files · 6 `XCTestCase` UI test classes (XCUITest via `ApexAgent-UITests.xctestplan`). |
+| `ApexAgentRuntime` (`ApexAgent`) | n/a | **The app executable** (`.executableTarget`, path `ApexAgentRuntime`), not a test target. |
 
 ---
 

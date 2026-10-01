@@ -41,13 +41,22 @@ class DynamicToolbox {
         // 2. Load dynamically created skills
         loadScriptsFromDir(skillsDir)
 
-        // 3. Load MCP tools asynchronously (skipped in test mode so background
-        // tasks and MCP child processes don't collide or corrupt runloop autorelease pools)
+        // 3. Load MCP tools asynchronously (skipped in test mode and in CLI mode when
+        // the prompt does not require external MCP servers, preventing duplicate server
+        // startup and 96-schema token bloat on standard CLI invocations)
         loadMCPToolsTask?.cancel()
         let isTesting = getenv("APEX_TEST_MODE") != nil
             || ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest")
             || NSClassFromString("XCTestCase") != nil
-        if !isTesting {
+        let args = CommandLine.arguments
+        let isSkippedForCLI: Bool
+        if let cliIdx = args.firstIndex(of: "--cli"), cliIdx + 1 < args.count {
+            let cliPrompt = args[(cliIdx + 1)...].joined(separator: " ")
+            isSkippedForCLI = !IntentToolSelector.requiresMCPServers(for: cliPrompt)
+        } else {
+            isSkippedForCLI = false
+        }
+        if !isTesting && !isSkippedForCLI {
             loadMCPToolsTask = Task { await loadMCPTools() }
         }
     }

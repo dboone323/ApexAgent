@@ -21,12 +21,22 @@ struct DispatchSwarmTool: Tool, @unchecked Sendable {
         @Guide(description: "Comma-separated list of target bot names, e.g. 'Codex, Nexus, Auditor, Oracle'")
         var targetBots: String
 
-        @Guide(description: "Single string containing the task prompt or instructions for the swarm")
+        @Guide(description: "Single string or |||-delimited / JSON array of task prompts for the swarm")
         var taskPrompts: String
 
         enum CodingKeys: String, CodingKey {
             case targetBots, bots, botNames, target
-            case taskPrompts, taskPrompt, prompt, task, instructions
+            case taskPrompts, taskPrompt, prompt, task, tasks, instructions
+        }
+
+        struct TaskItem: Decodable {
+            let agent: String?
+            let bot: String?
+            let prompt: String?
+            let task: String?
+
+            var resolvedAgent: String? { agent ?? bot }
+            var resolvedPrompt: String? { prompt ?? task }
         }
 
         init(targetBots: String, taskPrompts: String) {
@@ -37,21 +47,51 @@ struct DispatchSwarmTool: Tool, @unchecked Sendable {
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
 
-            if let botsList = (try? container.decode([String].self, forKey: .targetBots)) ?? (try? container.decode([String].self, forKey: .bots)) ?? (try? container.decode([String].self, forKey: .botNames)) {
-                self.targetBots = botsList.joined(separator: ", ")
-            } else if let botsStr = (try? container.decode(String.self, forKey: .targetBots)) ?? (try? container.decode(String.self, forKey: .bots)) ?? (try? container.decode(String.self, forKey: .botNames)) ?? (try? container.decode(String.self, forKey: .target)) {
-                self.targetBots = botsStr
-            } else {
-                self.targetBots = ""
+            var parsedBots: [String] = []
+            var parsedPrompts: [String] = []
+
+            let taskKeys: [CodingKeys] = [.tasks, .taskPrompts]
+            for key in taskKeys where parsedPrompts.isEmpty {
+                if let items = try? container.decode([TaskItem].self, forKey: key) {
+                    for item in items {
+                        if let a = item.resolvedAgent, !a.isEmpty {
+                            parsedBots.append(a)
+                        }
+                        if let p = item.resolvedPrompt, !p.isEmpty {
+                            parsedPrompts.append(p)
+                        }
+                    }
+                }
             }
 
-            if let promptsList = (try? container.decode([String].self, forKey: .taskPrompts)) ?? (try? container.decode([String].self, forKey: .taskPrompt)) ?? (try? container.decode([String].self, forKey: .prompt)) {
-                self.taskPrompts = promptsList.joined(separator: "\n")
-            } else if let promptStr = (try? container.decode(String.self, forKey: .taskPrompts)) ?? (try? container.decode(String.self, forKey: .taskPrompt)) ?? (try? container.decode(String.self, forKey: .prompt)) ?? (try? container.decode(String.self, forKey: .task)) ?? (try? container.decode(String.self, forKey: .instructions)) {
-                self.taskPrompts = promptStr
-            } else {
-                self.taskPrompts = ""
+            let botKeys: [CodingKeys] = [.targetBots, .bots, .botNames, .target]
+            var resolvedTargetBots = ""
+            for key in botKeys where resolvedTargetBots.isEmpty {
+                if let list = try? container.decode([String].self, forKey: key), !list.isEmpty {
+                    resolvedTargetBots = list.joined(separator: ", ")
+                } else if let str = try? container.decode(String.self, forKey: key), !str.isEmpty {
+                    resolvedTargetBots = str
+                }
             }
+            if resolvedTargetBots.isEmpty && !parsedBots.isEmpty {
+                resolvedTargetBots = parsedBots.joined(separator: ", ")
+            }
+            self.targetBots = resolvedTargetBots
+
+            let promptKeys: [CodingKeys] = [.taskPrompts, .taskPrompt, .prompt, .task, .tasks, .instructions]
+            var resolvedTaskPrompts = ""
+            if !parsedPrompts.isEmpty {
+                resolvedTaskPrompts = parsedPrompts.joined(separator: " ||| ")
+            } else {
+                for key in promptKeys where resolvedTaskPrompts.isEmpty {
+                    if let list = try? container.decode([String].self, forKey: key), !list.isEmpty {
+                        resolvedTaskPrompts = list.joined(separator: " ||| ")
+                    } else if let str = try? container.decode(String.self, forKey: key), !str.isEmpty {
+                        resolvedTaskPrompts = str
+                    }
+                }
+            }
+            self.taskPrompts = resolvedTaskPrompts
         }
     }
 
@@ -66,56 +106,103 @@ struct DispatchSwarmTool: Tool, @unchecked Sendable {
             return "ERROR: BotManager is unavailable."
         }
 
-        let botNames = arguments.targetBots
+        let argsString = "targetBots: \(arguments.targetBots), taskPrompts: \(arguments.taskPrompts)"
+        await MainActor.run {
+            botManager.orchestrator?.logToolStart(name: self.name, arguments: argsString)
+            botManager.orchestrator?.updateToolStatus(name: self.name, status: .running)
+        }
+
+        var botNames = arguments.targetBots
             .components(separatedBy: ",")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
 
         // Split task prompts:
-        // Check for explicit delimiters (|||, \n---\n, \n===\n, or pipe |)
-        let prompts: [String]
+        // 1. Check if rawPrompts is a JSON array (either [{"agent":"...","prompt":"..."}] or ["prompt1","prompt2"])
+        // 2. Otherwise check for explicit delimiters (|||, \n---\n, \n===\n, or pipe |)
+        var prompts: [String] = []
         let rawPrompts = arguments.taskPrompts.trimmingCharacters(in: .whitespacesAndNewlines)
-        if rawPrompts.contains("|||") {
-            prompts = rawPrompts.components(separatedBy: "|||")
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-        } else if rawPrompts.contains("\n---\n") {
-            prompts = rawPrompts.components(separatedBy: "\n---\n")
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-        } else if rawPrompts.contains("\n===\n") {
-            prompts = rawPrompts.components(separatedBy: "\n===\n")
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-        } else if rawPrompts.contains("|") && !rawPrompts.contains("\n") {
-            prompts = rawPrompts.components(separatedBy: "|")
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-        } else {
-            // If single prompt or multi-line markdown prompt without explicit delimiters,
-            // provide the full prompt to each bot rather than breaking markdown lines.
-            prompts = [rawPrompts]
+        if rawPrompts.hasPrefix("["), let jsonData = rawPrompts.data(using: .utf8) {
+            if let dictArray = try? JSONSerialization.jsonObject(with: jsonData) as? [[String: Any]] {
+                var jsonBots: [String] = []
+                for item in dictArray {
+                    if let p = (item["prompt"] as? String) ?? (item["task"] as? String) ?? (item["instructions"] as? String) {
+                        prompts.append(p.trimmingCharacters(in: .whitespacesAndNewlines))
+                    }
+                    if let a = (item["agent"] as? String) ?? (item["bot"] as? String) {
+                        jsonBots.append(a.trimmingCharacters(in: .whitespacesAndNewlines))
+                    }
+                }
+                if botNames.isEmpty && !jsonBots.isEmpty {
+                    botNames = jsonBots
+                }
+            } else if let strArray = try? JSONSerialization.jsonObject(with: jsonData) as? [String] {
+                prompts = strArray.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            }
+        }
+
+        if prompts.isEmpty {
+            if rawPrompts.contains("|||") {
+                prompts = rawPrompts.components(separatedBy: "|||")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+            } else if rawPrompts.contains("\n---\n") {
+                prompts = rawPrompts.components(separatedBy: "\n---\n")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+            } else if rawPrompts.contains("\n===\n") {
+                prompts = rawPrompts.components(separatedBy: "\n===\n")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+            } else if rawPrompts.contains("|") && !rawPrompts.contains("\n") {
+                prompts = rawPrompts.components(separatedBy: "|")
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty }
+            } else if !rawPrompts.isEmpty {
+                // If single prompt or multi-line markdown prompt without explicit delimiters,
+                // provide the full prompt to each bot rather than breaking markdown lines.
+                prompts = [rawPrompts]
+            }
         }
 
         guard !botNames.isEmpty else {
-            return "ERROR: No target bots provided."
+            let err = "ERROR: No target bots provided."
+            await MainActor.run {
+                botManager.orchestrator?.logToolEnd(name: self.name, result: err, status: .failed(err))
+            }
+            return err
         }
 
         guard !prompts.isEmpty else {
-            return "ERROR: No task prompts provided."
+            let err = "ERROR: No task prompts provided."
+            await MainActor.run {
+                botManager.orchestrator?.logToolEnd(name: self.name, result: err, status: .failed(err))
+            }
+            return err
         }
 
         // Pair bots with prompts (repeat last prompt if counts mismatch)
-        var assignments: [(String, String)] = []
+        var assignments: [(String, String, Bool)] = []
         for (idx, name) in botNames.enumerated() {
             let basePrompt = idx < prompts.count ? prompts[idx] : (prompts.last ?? "")
-            let botPrompt = """
-            [INSTRUCTION FOR \(name.uppercased())]:
-            You are \(name). Act immediately on the task prompt below using your available tools. Perform real analysis, inspect files, check configurations, and return your concrete findings and audit results. Do NOT merely acknowledge readiness or state what you plan to do; execute your tools and deliver the completed report.
+            let needsTools = IntentToolSelector.shouldEnableTools(for: basePrompt)
+            let botPrompt: String
+            if needsTools {
+                botPrompt = """
+                [INSTRUCTION FOR \(name.uppercased())]:
+                You are \(name). Act immediately on the task prompt below using your available tools. Perform real analysis, inspect files, check configurations, and return your concrete findings and audit results. Do NOT merely acknowledge readiness or state what you plan to do; execute your tools and deliver the completed report.
 
-            \(basePrompt)
-            """
-            assignments.append((name, botPrompt))
+                \(basePrompt)
+                """
+            } else {
+                botPrompt = """
+                [INSTRUCTION FOR \(name.uppercased())]:
+                You are \(name). Answer the task prompt below directly and concisely from your domain expertise without calling any tools.
+
+                \(basePrompt)
+                """
+            }
+            assignments.append((name, botPrompt, needsTools))
         }
 
         // Bounded parallel execution across swarm bots (max 4 concurrent workers)
@@ -124,7 +211,7 @@ struct DispatchSwarmTool: Tool, @unchecked Sendable {
 
         try await withThrowingTaskGroup(of: SwarmResult.self) { group in
             var submitted = 0
-            for (botName, taskPrompt) in assignments {
+            for (botName, taskPrompt, needsTools) in assignments {
                 if submitted >= maxConcurrency {
                     if let res = try await group.next() {
                         results.append(res)
@@ -141,26 +228,20 @@ struct DispatchSwarmTool: Tool, @unchecked Sendable {
                             return SecretRedactor.redact(text: rawOut)
                         } else if let agent = AgentRegistry.shared.resolve(name: botName) {
                             if let orchestrator = botManager.orchestrator {
-                                let safeTools = agent.allowedTools.filter {
-                                    $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm"
-                                }
-                                let engine = OllamaAgentEngine(orchestrator: orchestrator, allowedTools: safeTools)
-                                var subOutput = ""
-                                do {
-                                    try await engine.streamResponse(
-                                        prompt: sanitizedPrompt,
-                                        attachments: [],
-                                        history: [],
-                                        instructions: agent.systemPrompt,
-                                        toolCallingMode: .auto,
-                                        onUpdate: { partial in
-                                            subOutput = partial
-                                        }
-                                    )
-                                } catch {
-                                    subOutput = "ERROR: Agent execution failed: \(error.localizedDescription)"
-                                }
-                                let raw = subOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+                                let mode: AgentToolCallingMode = needsTools ? .auto : .disabled
+                                let agentType = AgentType(rawValue: agent.name) ?? .developer
+                                let request = AgentRequest(
+                                    senderIdentity: .archetype(agentType),
+                                    prompt: sanitizedPrompt,
+                                    toolCallingMode: mode
+                                )
+                                let terminalState = await AgentRequestRouter.shared.route(
+                                    request,
+                                    history: [],
+                                    instructions: agent.systemPrompt,
+                                    orchestrator: orchestrator
+                                )
+                                let raw = terminalState.userFacingMessage.trimmingCharacters(in: .whitespacesAndNewlines)
                                 return raw.isEmpty ? "Completed with no output." : SecretRedactor.redact(text: raw)
                             }
                             return "ERROR: Orchestrator unavailable for agent '\(botName)'."
@@ -181,6 +262,10 @@ struct DispatchSwarmTool: Tool, @unchecked Sendable {
         for res in results.sorted(by: { $0.botName < $1.botName }) {
             let icon = res.success ? "✅" : "⚠️"
             report += "### \(icon) [\(res.botName)]\n\(res.output)\n\n"
+        }
+
+        await MainActor.run {
+            botManager.orchestrator?.logToolEnd(name: self.name, result: report, status: .success)
         }
         return report
     }

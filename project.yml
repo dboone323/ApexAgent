@@ -209,6 +209,40 @@ targets:
       - package: Containerization
         product: ContainerizationOCI
 
+  apexflow:
+    type: com.apple.product-type.tool
+    platform: macOS
+    deploymentTarget: "27.0"
+    sources:
+      - path: Tools/apexflow
+    settings:
+      base:
+        PRODUCT_NAME: apexflow
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.apexflow
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: YES
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent.entitlements
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks
+    dependencies:
+      - target: ApexAgentCore
+
+  benchmark-repro:
+    type: com.apple.product-type.tool
+    platform: macOS
+    deploymentTarget: "27.0"
+    sources:
+      - path: Tools/benchmark-repro
+    settings:
+      base:
+        PRODUCT_NAME: benchmark-repro
+        PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.benchmark-repro
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: YES
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent.entitlements
+        LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks
+
   # ── Tests ──
   ApexAgentTests:
     type: bundle.unit-test

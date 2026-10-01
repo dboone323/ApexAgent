@@ -45,8 +45,7 @@ struct OllamaAgentEngine: AgentEngine {
            !botOverride.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             model = botOverride.trimmingCharacters(in: .whitespacesAndNewlines)
         } else {
-            model = (UserDefaults.standard.string(forKey: "apex.ollamaModel") ?? "gemma4:12b")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+            model = ModelRegistry.ollamaModel()
         }
         let useTools = toolCallingMode != .disabled
 
@@ -58,16 +57,34 @@ struct OllamaAgentEngine: AgentEngine {
             case .assistant: "assistant"
             case .system: "system"
             }
-            messages.append(["role": role, "content": msg.content])
+            var entry: [String: Any] = ["role": role, "content": msg.content]
+            if !msg.attachments.isEmpty {
+                let historyImages = msg.attachments.compactMap { base64String(from: $0) }
+                if !historyImages.isEmpty {
+                    entry["images"] = historyImages
+                }
+            }
+            messages.append(entry)
         }
-        messages.append(["role": "user", "content": prompt])
+        messages.append(Self.buildUserMessage(prompt: prompt, attachments: attachments))
 
         // Build Ollama function-tool schemas from the live tool registry.
+        let allSchemas = getParsedSchemas()
+        let effectiveAllowed: Set<String>? = if let allowed = allowedTools {
+            Set(allowed)
+        } else if useTools {
+            Set(IntentToolSelector.selectRelevantToolNames(for: prompt, allSchemas: allSchemas))
+        } else {
+            nil
+        }
+
         var tools: [[String: Any]] = []
+        var availableToolNames = Set<String>()
         if useTools {
-            for schema in getParsedSchemas() {
+            for schema in allSchemas {
                 guard let name = schema["name"] as? String else { continue }
-                if let allowed = allowedTools, !allowed.contains(name) {
+                availableToolNames.insert(name)
+                if let allowed = effectiveAllowed, !allowed.contains(name) {
                     continue
                 }
                 tools.append(["type": "function", "function": schema])
@@ -78,6 +95,7 @@ struct OllamaAgentEngine: AgentEngine {
         let enableThinking = reasoningBudget != "off" && reasoningBudget != "none" && toolCallingMode != .disabled
 
         var accumulated = ""
+        var lastToolOutput = ""
         let maxLoops = 8
         var disableToolsOnNextTurn = false
         for loop in 0..<maxLoops {
@@ -149,48 +167,92 @@ struct OllamaAgentEngine: AgentEngine {
                 }
             }
 
-            // No tool calls -> final answer, we're done (unless it hallucinated future delegation without calling tools)
+            // Fallback parser for 7B/8B models (e.g. qwen2.5-coder:7b) that emit raw JSON tool calls in message.content
+            if toolCalls.isEmpty && useTools && !disableToolsOnNextTurn && loop < maxLoops - 1 {
+                let recovered = Self.extractFallbackToolCalls(from: loopText, availableToolNames: availableToolNames)
+                if !recovered.isEmpty {
+                    toolCalls = recovered
+                    // Strip the raw JSON tool call from accumulated user-facing text
+                    if accumulated.hasSuffix(loopText) {
+                        accumulated = String(accumulated.dropLast(loopText.count)).trimmingCharacters(in: .whitespacesAndNewlines)
+                        onUpdate(accumulated)
+                    }
+                    loopText = ""
+                } else if loop == 0 && tools.count == 1,
+                          let singleFunc = tools.first?["function"] as? [String: Any],
+                          let singleName = singleFunc["name"] as? String {
+                    let params = singleFunc["parameters"] as? [String: Any]
+                    let requiredParams = (params?["required"] as? [String]) ?? []
+                    let promptLower = prompt.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                    let explicitlyRequestedSingleTool = promptLower.contains(singleName.lowercased())
+                        && (promptLower.hasPrefix("call ") || promptLower.hasPrefix("use ") || promptLower.hasPrefix("run "))
+                    if explicitlyRequestedSingleTool && requiredParams.isEmpty {
+                        toolCalls = [[
+                            "id": UUID().uuidString,
+                            "function": [
+                                "name": singleName,
+                                "arguments": [String: Any]()
+                            ]
+                        ]]
+                        accumulated = ""
+                        loopText = ""
+                    }
+                }
+            }
+
+            // No tool calls -> final answer, we're done (unless it hallucinated future delegation or tool narration without calling tools)
             if toolCalls.isEmpty {
                 let lower = loopText.lowercased()
                 let canDelegate = allowedTools == nil || allowedTools?.contains("delegate_task") == true
-                let announcesFutureDelegation = loop == 0 && canDelegate && (
-                    lower.contains("will now delegate")
-                    || lower.contains("delegate these tasks")
-                    || lower.contains("i will delegate")
-                    || lower.contains("proceed to delegate")
-                    || lower.contains("delegating these tasks")
-                    || lower.contains("performing a deep-dive")
-                    || lower.contains("currently mapping")
-                    || lower.contains("mapping & analysis phase")
-                    || lower.contains("has initiated a multi-dimensional audit")
-                    || lower.contains("active audit progress")
-                    || lower.contains("i am monitoring their progress")
-                    || lower.contains("once they have completed their respective segments")
-                    || lower.contains("auditing the \"trust boundaries\"")
-                    || lower.contains("auditing the trust boundaries")
-                    || lower.contains("running a series of \"execution paths\"")
-                    || lower.contains("running a series of execution paths")
-                    || lower.contains("dispatching the following specific tasks")
-                    || lower.contains("awaiting the first wave of granular results")
-                    || lower.contains("observing the concurrent output")
-                    || lower.contains("i am now performing a direct")
-                    || lower.contains("monitoring status")
-                    || lower.contains("i am currently awaiting")
+                let announcesFutureDelegation = loop == 0 && useTools && (
+                    (canDelegate && (
+                        lower.contains("will now delegate")
+                        || lower.contains("delegate these tasks")
+                        || lower.contains("i will delegate")
+                        || lower.contains("proceed to delegate")
+                        || lower.contains("delegating these tasks")
+                        || lower.contains("performing a deep-dive")
+                        || lower.contains("currently mapping")
+                        || lower.contains("mapping & analysis phase")
+                        || lower.contains("has initiated a multi-dimensional audit")
+                        || lower.contains("active audit progress")
+                        || lower.contains("i am monitoring their progress")
+                        || lower.contains("once they have completed their respective segments")
+                        || lower.contains("auditing the \"trust boundaries\"")
+                        || lower.contains("auditing the trust boundaries")
+                        || lower.contains("running a series of \"execution paths\"")
+                        || lower.contains("running a series of execution paths")
+                        || lower.contains("dispatching the following specific tasks")
+                        || lower.contains("awaiting the first wave of granular results")
+                        || lower.contains("observing the concurrent output")
+                        || lower.contains("i am now performing a direct")
+                        || lower.contains("monitoring status")
+                        || lower.contains("i am currently awaiting")
+                    ))
+                    || lower.contains("i'm retrieving")
+                    || lower.contains("i am retrieving")
+                    || lower.contains("i will retrieve")
+                    || lower.contains("let me retrieve")
+                    || lower.contains("i'll retrieve")
                 )
 
                 if announcesFutureDelegation && loop < maxLoops - 1 {
+                    accumulated = ""
                     messages.append(["role": "assistant", "content": loopText])
                     messages.append([
                         "role": "user",
-                        "content": "Proceed to execute the delegation immediately using `dispatch_swarm`, `delegate_task`, or `convene_meeting`. Do not merely state what you will do or narrate in-progress status in text; invoke the tool call now to perform the actions."
+                        "content": "Invoke the required tool call immediately using the function calling interface or output ONLY a JSON object {\"name\": \"<tool_name>\", \"arguments\": {...}}. Do not narrate in-progress status in text."
                     ])
                     continue
                 }
 
-                if loop == 0 && loopText.isEmpty {
-                    if !thinkingText.isEmpty {
+                if accumulated.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    if !lastToolOutput.isEmpty {
+                        accumulated = lastToolOutput
+                        onUpdate(accumulated)
+                    } else if !thinkingText.isEmpty {
                         onUpdate(thinkingText)
-                    } else {
+                    } else if loop == 0 {
                         onUpdate("⚠️ Ollama (\(model)) returned no text. Check the model is pulled and Ollama is running.")
                     }
                 }
@@ -245,6 +307,7 @@ struct OllamaAgentEngine: AgentEngine {
                 } catch {
                     output = "ERROR: Tool '\(name)' failed: \(error.localizedDescription)"
                 }
+                lastToolOutput = output
                 print("📋 [Ollama Tool Result] \(name) -> \(output.prefix(160))\n")
                 fflush(stdout)
                 if output.hasPrefix("Loop detected:") {
@@ -254,5 +317,74 @@ struct OllamaAgentEngine: AgentEngine {
             }
             // Continue the loop so the model can act on tool results.
         }
+    }
+
+    /// Parses raw JSON tool-call objects emitted inside `message.content` by models
+    /// (such as `qwen2.5-coder:7b`) that occasionally output `{"name": "...", "arguments": {...}}`
+    /// as text rather than populating Ollama's `message.tool_calls` array.
+    static func extractFallbackToolCalls(from content: String, availableToolNames: Set<String>) -> [[String: Any]] {
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+
+        var candidates: [String] = [trimmed]
+        if let startBrace = trimmed.firstIndex(of: "{"),
+           let endBrace = trimmed.lastIndex(of: "}"),
+           startBrace < endBrace {
+            candidates.append(String(trimmed[startBrace...endBrace]))
+        }
+
+        for candidate in candidates {
+            guard let data = candidate.data(using: .utf8),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                continue
+            }
+            let rawName = (obj["name"] as? String)
+                ?? (obj["tool"] as? String)
+                ?? ((obj["function"] as? [String: Any])?["name"] as? String)
+            guard let rawName else { continue }
+
+            let resolvedName: String
+            if availableToolNames.contains(rawName) {
+                resolvedName = rawName
+            } else if rawName == "system_info" && availableToolNames.contains("get_system_info") {
+                resolvedName = "get_system_info"
+            } else {
+                continue
+            }
+
+            let rawArgs: [String: Any]
+            if let argsDict = (obj["arguments"] as? [String: Any])
+                ?? (obj["parameters"] as? [String: Any])
+                ?? ((obj["function"] as? [String: Any])?["arguments"] as? [String: Any]) {
+                rawArgs = argsDict
+            } else if let argsStr = (obj["arguments"] as? String) ?? (obj["parameters"] as? String),
+                      let argsData = argsStr.data(using: .utf8),
+                      let parsedArgs = try? JSONSerialization.jsonObject(with: argsData) as? [String: Any] {
+                rawArgs = parsedArgs
+            } else {
+                rawArgs = [:]
+            }
+
+            return [[
+                "id": UUID().uuidString,
+                "function": [
+                    "name": resolvedName,
+                    "arguments": rawArgs
+                ]
+            ]]
+        }
+        return []
+    }
+
+    /// Builds an Ollama `/api/chat` user message dictionary, encoding any
+    /// attached `NSImage` instances as base64 PNG strings in the `"images"` array
+    /// for multimodal vision models (such as `gemma4:12b`).
+    static func buildUserMessage(prompt: String, attachments: [NSImage]) -> [String: Any] {
+        var userMessage: [String: Any] = ["role": "user", "content": prompt]
+        let encodedImages = attachments.compactMap { base64String(from: $0) }
+        if !encodedImages.isEmpty {
+            userMessage["images"] = encodedImages
+        }
+        return userMessage
     }
 }

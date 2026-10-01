@@ -53,6 +53,7 @@ let package = Package(
             name: "MCPKit",
             dependencies: ["SharedLogging"],
             path: "Modules/MCPKit",
+            exclude: ["README.md"],
             swiftSettings: [.enableUpcomingFeature("StrictConcurrency")]
         ),
         .target(
@@ -235,6 +236,9 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
             ],
             path: "ApexAgentTests",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
+            ],
             linkerSettings: [
                 .unsafeFlags([
                     "-Xlinker", "-weak_framework", "-Xlinker", "FoundationModels",
@@ -261,6 +265,9 @@ let package = Package(
                 "ApexAgentCore",
             ],
             path: "ApexAgentContainerTests",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
+            ],
             linkerSettings: [
                 .unsafeFlags([
                     "-Xlinker", "-weak_framework", "-Xlinker", "FoundationModels",
@@ -288,6 +295,9 @@ let package = Package(
                 "ApexAgentCore",
             ],
             path: "ApexAgentIntelligenceTests",
+            swiftSettings: [
+                .enableExperimentalFeature("StrictConcurrency")
+            ],
             linkerSettings: [
                 .unsafeFlags([
                     "-Xlinker", "-weak_framework", "-Xlinker", "FoundationModels",

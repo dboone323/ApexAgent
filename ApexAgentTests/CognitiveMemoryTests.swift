@@ -1,5 +1,7 @@
 import XCTest
 import Foundation
+import AppKit
+import SharedKit
 @testable import ApexAgentCore
 
 // MARK: - CognitiveMemoryTests: Real Functional Tests for 4-Tier Memory Architecture
@@ -325,5 +327,71 @@ final class CognitiveMemoryTests: XCTestCase {
         let after = engine.allEpisodes(forBotId: testBotId)
         XCTAssertFalse(after.contains(where: { $0.id == oldEntry.id }),
                        "Dream cycle must prune episodes older than 30 days")
+    }
+
+    // MARK: - Semantic Embeddings & AgentMemoryEntry Cosine Similarity Retrieval
+
+    func testSemanticEmbeddingsAndCosineSimilarityRetrieval() async {
+        // Test with unreachable host URL to deterministically exercise fallback, as well as default Ollama host
+        let swiftEntry = await engine.createMemoryEntry(
+            content: "Swift 6.4 strict concurrency actor isolation and Sendable conformance",
+            source: .userChat,
+            tags: ["swift", "concurrency"],
+            hostURL: "http://127.0.0.1:1"
+        )
+        let cookingEntry = await engine.createMemoryEntry(
+            content: "Sourdough bread baking recipe with flour water and starter fermentation",
+            source: .userChat,
+            tags: ["cooking"],
+            hostURL: "http://127.0.0.1:1"
+        )
+
+        XCTAssertFalse(swiftEntry.embedding.isEmpty, "AgentMemoryEntry.embedding must be populated")
+        let decodedSwift = CognitiveMemoryEngine.decodeEmbedding(swiftEntry.embedding)
+        XCTAssertNotNil(decodedSwift, "Encoded embedding must round-trip to [Double]")
+
+        let ranked = await engine.retrieveRelevantMemories(
+            query: "Swift 6.4 actor concurrency Sendable",
+            from: [cookingEntry, swiftEntry],
+            topK: 2,
+            hostURL: "http://127.0.0.1:1"
+        )
+        XCTAssertEqual(ranked.count, 2)
+        XCTAssertEqual(ranked.first?.entry.id, swiftEntry.id,
+                       "Swift concurrency memory must rank higher than cooking memory for a Swift concurrency query")
+        XCTAssertGreaterThan(ranked[0].similarity, ranked[1].similarity)
+    }
+
+    func testOllamaMultimodalUserMessageEncoding() {
+        let image = NSImage(size: NSSize(width: 16, height: 16))
+        image.lockFocus()
+        NSColor.systemBlue.setFill()
+        NSBezierPath(rect: NSRect(x: 0, y: 0, width: 16, height: 16)).fill()
+        image.unlockFocus()
+
+        let msg = OllamaAgentEngine.buildUserMessage(prompt: "Describe this screenshot", attachments: [image])
+        XCTAssertEqual(msg["role"] as? String, "user")
+        XCTAssertEqual(msg["content"] as? String, "Describe this screenshot")
+        let images = msg["images"] as? [String]
+        XCTAssertNotNil(images, "Multimodal user message must include base64 'images' array when attachments are provided")
+        XCTAssertEqual(images?.count, 1)
+        XCTAssertFalse(images?.first?.isEmpty ?? true)
+    }
+
+    func testMCPManagerAutoSeedsXcodeServers() {
+        let manager = MCPManager.shared
+        manager.loadConfigs()
+        if FileManager.default.fileExists(atPath: "/usr/bin/xcrun") {
+            XCTAssertTrue(
+                manager.servers.contains(where: { $0.name == "xcode-native" && $0.command == "/usr/bin/xcrun" && $0.arguments == ["mcpbridge"] }),
+                "MCPManager.loadConfigs() must auto-seed xcode-native when /usr/bin/xcrun exists"
+            )
+        }
+        if FileManager.default.fileExists(atPath: "/Users/danielstevens/.local/bin/xcodebuildmcp") {
+            XCTAssertTrue(
+                manager.servers.contains(where: { $0.name == "xcodebuildmcp" && $0.arguments == ["mcp"] }),
+                "MCPManager.loadConfigs() must auto-seed xcodebuildmcp when binary exists"
+            )
+        }
     }
 }

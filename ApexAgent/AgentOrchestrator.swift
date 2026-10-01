@@ -186,7 +186,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     }
 
     // MARK: Constants
-    private static let ragSimilarityThreshold: Double = 0.4
+    private static let ragSimilarityThreshold: Double = 0.62
     private static let ragTopK: Int = 3
     /// On-device FM (AFM 3) enforces a hard 4,096-token input ceiling. The
     /// rehydration window + per-message pruning below are tuned so `rehydrateSession()`
@@ -242,6 +242,17 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     var proactiveAuditResult: String = ""
     var toolCallingMode: AgentToolCallingMode = .auto
     var modelPreference: AgentModelPreference = {
+        if let envRaw = ProcessInfo.processInfo.environment["APEX_MODEL_PROVIDER"],
+           let envProvider = ModelProvider.parse(envRaw) {
+            switch envProvider {
+            case .autoPicker: return .autoPicker
+            case .appleOnDevice, .fmCLI: return .localSystem
+            case .applePCC: return .privateCloud
+            case .cloudGemini: return .cloudGemini
+            case .localOllama: return .localOllama
+            case .localMLX: return .localMLX
+            }
+        }
         if let saved = UserDefaults.standard.string(forKey: "apex.modelPreference"),
            let pref = AgentModelPreference(rawValue: saved) {
             return pref
@@ -624,6 +635,8 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             || ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest")
             || NSClassFromString("XCTestCase") != nil
             || CommandLine.arguments.contains("--cli")
+            || CommandLine.arguments.contains("--prompt")
+            || CommandLine.arguments.contains("-p")
             || CommandLine.arguments.contains("--daemon")
         if !isTesting {
             session?.prewarm(promptPrefix: Prompt("Analyze the following"))
@@ -960,9 +973,18 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         defer {
             onStateChanged?()
         }
-        let semanticContext = Self.isConversationalGreetingOrSmallTalk(text) ? "" : self.getSemanticContext(for: text)
-        var finalInstructions = self.agentInstructions + semanticContext
         let lowerText = text.lowercased()
+        let explicitlyNoTools = lowerText.contains("without tools")
+            || lowerText.contains("without running tools")
+            || lowerText.contains("without using tools")
+            || lowerText.contains("no tools")
+            || lowerText.contains("don't use tools")
+            || lowerText.contains("do not use tools")
+            || lowerText.contains("without running any tools")
+            || (attachmentsToSend.isEmpty && Self.isConversationalGreetingOrSmallTalk(text))
+
+        let semanticContext = explicitlyNoTools ? "" : self.getSemanticContext(for: text)
+        var finalInstructions = self.agentInstructions + semanticContext
             let isAuditRequested = lowerText.contains("audit")
                 || lowerText.contains("todo")
                 || lowerText.contains("health")
@@ -970,15 +992,6 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             if !self.proactiveAuditResult.isEmpty && isAuditRequested {
                 finalInstructions += "\n\n\(self.proactiveAuditResult)\nUse the above proactive audit report to suggest improvements, tasks, and fixes (e.g. missing tests or TODOs) when requested or appropriate."
             }
-
-            let explicitlyNoTools = lowerText.contains("without tools")
-                || lowerText.contains("without running tools")
-                || lowerText.contains("without using tools")
-                || lowerText.contains("no tools")
-                || lowerText.contains("don't use tools")
-                || lowerText.contains("do not use tools")
-                || lowerText.contains("without running any tools")
-                || (attachmentsToSend.isEmpty && Self.isConversationalGreetingOrSmallTalk(text))
 
             let effectiveToolCallingMode: AgentToolCallingMode = explicitlyNoTools ? .disabled : self.toolCallingMode
 

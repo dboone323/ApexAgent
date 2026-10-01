@@ -57,7 +57,7 @@ struct SettingsView: View {
     @State private var geminiModel: String = "gemini-3.5-flash"
     @State private var autoTieringStrategy: AutoTieringStrategy = .balanced
     @State private var ollamaHostURL: String = "http://localhost:11434"
-    @State private var ollamaModel: String = "qwen2.5-coder:latest"
+    @State private var ollamaModel: String = "gemma4:12b"
     @State private var localInstructions: String = ""
     @State private var showingResetConfirm = false
     @State private var showingQuickModeConfirm = false

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SharedKit
 
 @Observable
 @MainActor
@@ -406,6 +407,195 @@ public final class CognitiveMemoryEngine {
         compactedResult.append(contentsOf: recentMessages)
         
         return (compactedResult, olderMessages.count)
+    }
+    
+    // MARK: - Semantic Embeddings & Vector Memory Retrieval (Ollama nomic-embed-text:latest)
+    
+    /// Queries Ollama's `/api/embed` endpoint (`http://localhost:11434/api/embed` by default)
+    /// using `"nomic-embed-text:latest"` to produce a real semantic vector embedding.
+    /// Automatically falls back to `deterministicHashEmbedding(for:)` if Ollama is offline or unreachable.
+    public func generateEmbedding(
+        for text: String,
+        model: String = "nomic-embed-text:latest",
+        hostURL: String? = nil
+    ) async -> [Double] {
+        let resolvedHost = hostURL ?? UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434"
+        guard let baseURL = URL(string: resolvedHost) else {
+            return Self.deterministicHashEmbedding(for: text)
+        }
+        let endpoint = baseURL.appendingPathComponent("api/embed")
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 3.0
+        
+        let payload: [String: Any] = [
+            "model": model,
+            "input": text
+        ]
+        guard let body = try? JSONSerialization.data(withJSONObject: payload) else {
+            return Self.deterministicHashEmbedding(for: text)
+        }
+        request.httpBody = body
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+                  let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                return Self.deterministicHashEmbedding(for: text)
+            }
+            if let embeddings = json["embeddings"] as? [[Double]], let first = embeddings.first, !first.isEmpty {
+                return first
+            }
+            if let embeddingsNum = json["embeddings"] as? [[NSNumber]], let first = embeddingsNum.first, !first.isEmpty {
+                return first.map { $0.doubleValue }
+            }
+            if let single = json["embedding"] as? [Double], !single.isEmpty {
+                return single
+            }
+            if let singleNum = json["embedding"] as? [NSNumber], !singleNum.isEmpty {
+                return singleNum.map { $0.doubleValue }
+            }
+        } catch {
+            // Fall through to deterministic local hash embedding when Ollama is offline
+        }
+        return Self.deterministicHashEmbedding(for: text)
+    }
+    
+    /// Deterministic local hash embedding (token + character 3-gram feature hashing with L2 normalization)
+    /// used when Ollama `/api/embed` is offline.
+    public nonisolated static func deterministicHashEmbedding(for text: String, dimensions: Int = 64) -> [Double] {
+        let dim = max(dimensions, 8)
+        var vector = [Double](repeating: 0.0, count: dim)
+        let normalized = text.lowercased()
+        let tokens = normalized.split { !$0.isLetter && !$0.isNumber }.map(String.init)
+        
+        func fnv1a(_ str: String) -> UInt64 {
+            var hash: UInt64 = 14695981039346656037
+            for byte in str.utf8 {
+                hash ^= UInt64(byte)
+                hash = hash &* 1099511628211
+            }
+            return hash
+        }
+        
+        for token in tokens {
+            let h = fnv1a(token)
+            let idx = Int(h % UInt64(dim))
+            let sign: Double = ((h >> 32) & 1) == 0 ? 1.0 : -1.0
+            vector[idx] += sign * 1.5
+            
+            // Character 3-grams for subword similarity
+            let chars = Array(token)
+            if chars.count >= 3 {
+                for i in 0...(chars.count - 3) {
+                    let trigram = String(chars[i..<(i + 3)])
+                    let th = fnv1a(trigram)
+                    let tidx = Int(th % UInt64(dim))
+                    let tsign: Double = ((th >> 32) & 1) == 0 ? 1.0 : -1.0
+                    vector[tidx] += tsign * 0.5
+                }
+            }
+        }
+        
+        let norm = sqrt(vector.reduce(0.0) { $0 + $1 * $1 })
+        if norm > 0 {
+            for i in 0..<dim {
+                vector[i] /= norm
+            }
+        } else {
+            vector[0] = 1.0
+        }
+        return vector
+    }
+    
+    /// Encodes a `[Double]` embedding vector into `Data` for `AgentMemoryEntry.embedding`.
+    public nonisolated static func encodeEmbedding(_ vector: [Double]) -> Data {
+        (try? JSONEncoder().encode(vector)) ?? Data()
+    }
+    
+    /// Decodes a `[Double]` embedding vector from `AgentMemoryEntry.embedding`.
+    public nonisolated static func decodeEmbedding(_ data: Data) -> [Double]? {
+        guard !data.isEmpty else { return nil }
+        if let decoded = try? JSONDecoder().decode([Double].self, from: data), !decoded.isEmpty {
+            return decoded
+        }
+        return nil
+    }
+    
+    /// Computes cosine similarity between two embedding vectors in `[-1.0, 1.0]`.
+    public nonisolated static func cosineSimilarity(_ v1: [Double], _ v2: [Double]) -> Double {
+        guard v1.count == v2.count, !v1.isEmpty else { return 0.0 }
+        var dot = 0.0
+        var mag1 = 0.0
+        var mag2 = 0.0
+        for i in 0..<v1.count {
+            dot += v1[i] * v2[i]
+            mag1 += v1[i] * v1[i]
+            mag2 += v2[i] * v2[i]
+        }
+        let denom = sqrt(mag1) * sqrt(mag2)
+        guard denom > 0 else { return 0.0 }
+        return dot / denom
+    }
+    
+    /// Creates an `AgentMemoryEntry` populated with a semantic embedding vector from Ollama
+    /// `nomic-embed-text:latest` (or deterministic fallback if offline).
+    public func createMemoryEntry(
+        content: String,
+        source: MemorySource = .userChat,
+        tags: [String] = [],
+        model: String = "nomic-embed-text:latest",
+        hostURL: String? = nil
+    ) async -> AgentMemoryEntry {
+        let vector = await generateEmbedding(for: content, model: model, hostURL: hostURL)
+        let data = Self.encodeEmbedding(vector)
+        return AgentMemoryEntry(
+            content: content,
+            embedding: data,
+            source: source,
+            relevanceScore: 1.0,
+            tags: tags
+        )
+    }
+    
+    /// Ranks and retrieves `AgentMemoryEntry` items using cosine similarity against `entry.embedding`.
+    public func retrieveRelevantMemories(
+        query: String,
+        from entries: [AgentMemoryEntry],
+        topK: Int = 5,
+        minimumSimilarity: Double = -1.0,
+        model: String = "nomic-embed-text:latest",
+        hostURL: String? = nil
+    ) async -> [(entry: AgentMemoryEntry, similarity: Double)] {
+        guard !entries.isEmpty, topK > 0 else { return [] }
+        let queryVector = await generateEmbedding(for: query, model: model, hostURL: hostURL)
+        var scored: [(entry: AgentMemoryEntry, similarity: Double)] = []
+        let now = Date()
+        
+        for entry in entries {
+            let entryVector: [Double]
+            if let decoded = Self.decodeEmbedding(entry.embedding), decoded.count == queryVector.count {
+                entryVector = decoded
+            } else {
+                entryVector = Self.deterministicHashEmbedding(for: entry.content, dimensions: queryVector.count)
+            }
+            let sim: Double
+            if entryVector.count == queryVector.count {
+                sim = Self.cosineSimilarity(queryVector, entryVector)
+            } else {
+                let fallbackQuery = Self.deterministicHashEmbedding(for: query, dimensions: entryVector.count)
+                sim = Self.cosineSimilarity(fallbackQuery, entryVector)
+            }
+            entry.relevanceScore = sim
+            entry.lastAccessedAt = now
+            if sim >= minimumSimilarity {
+                scored.append((entry: entry, similarity: sim))
+            }
+        }
+        
+        scored.sort { $0.similarity > $1.similarity }
+        return Array(scored.prefix(topK))
     }
     
     // MARK: - Helper

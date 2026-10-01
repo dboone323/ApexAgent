@@ -139,8 +139,21 @@ struct SearchMemoryTool: Tool {
                         filtered = filtered.filter { $0.category.lowercased() == category }
                     }
                     if let query = arguments.query?.lowercased().trimTime(), !query.isEmpty {
-                        filtered = filtered.filter {
-                            $0.key.lowercased().contains(query) || $0.val.lowercased().contains(query)
+                        let normalizedQuery = query.replacingOccurrences(of: "_", with: " ")
+                        let queryTokens = normalizedQuery
+                            .components(separatedBy: CharacterSet.alphanumerics.union(CharacterSet(charactersIn: ".")).inverted)
+                            .filter { $0.count >= 2 }
+                        filtered = filtered.filter { memory in
+                            let keyLower = memory.key.lowercased()
+                            let valLower = memory.val.lowercased()
+                            if keyLower.contains(query) || valLower.contains(query) {
+                                return true
+                            }
+                            let combined = (keyLower.replacingOccurrences(of: "_", with: " ") + " " + valLower)
+                            guard !queryTokens.isEmpty else { return false }
+                            let matchedCount = queryTokens.filter { combined.contains($0) }.count
+                            return matchedCount == queryTokens.count
+                                || (queryTokens.count >= 3 && Double(matchedCount) / Double(queryTokens.count) >= 0.75)
                         }
                     } else if arguments.category == nil || arguments.category?.trimTime().isEmpty == true {
                         filtered = Array(filtered.prefix(20))

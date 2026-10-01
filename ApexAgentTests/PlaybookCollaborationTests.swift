@@ -14,7 +14,7 @@ import Foundation
 // 7. BotManager playbook execution and history tracking.
 // 8. Playbook JSON serialization and deserialization.
 
-@Suite("PlaybookCollaborationTests")
+@Suite("PlaybookCollaborationTests", .serialized)
 struct PlaybookCollaborationTests {
 
     // MARK: - Helper Roster Creation
@@ -900,5 +900,35 @@ struct PlaybookCollaborationTests {
         #expect(report1.isSuccessful == true)
         #expect(report2.isSuccessful == true)
         #expect(manager.activePlaybookRunners.isEmpty == true)
+    }
+
+    @Test @MainActor func testBotChatViewPlaybookApprovalBannerResolution() async throws {
+        let orchestrator = AgentOrchestrator()
+        let computer = Computer()
+        let manager = BotManager(orchestrator: orchestrator, computer: computer)
+        let apex = manager.createBot(name: "Apex", title: "General Assistant", descriptionText: "Helpful assistant")
+        let cos = manager.createBot(name: "Chief of Staff", title: "Executive Coordinator", descriptionText: "Workflow manager")
+        cos.isChiefOfStaff = true
+        _ = manager.createBot(name: "Code Architect", title: "Senior Engineer", descriptionText: "Architecture lead")
+        _ = manager.createBot(name: "Researcher", title: "Deep Research Specialist", descriptionText: "Research lead")
+        _ = manager.createBot(name: "Automator", title: "macOS System Automator", descriptionText: "Automation lead")
+
+        let session = manager.session(for: apex)
+        let report = try await manager.executeCollaborationPlaybook(
+            preset: .fullPRReviewLoop,
+            context: "Verify desktop PlaybookApprovalBannerView resolution",
+            onApprovalRequired: { card in
+                await MainActor.run {
+                    let chatView = BotChatView(session: session)
+                    ViewHost.host(chatView, pump: 0.05)
+                    #expect(manager.activePlaybookRunner?.pendingApprovalCard?.id == card.id)
+                    let resolved = manager.resolvePlaybookApproval(approved: true, notes: "Approved via BotChatView banner")
+                    #expect(resolved == true)
+                }
+            }
+        )
+        #expect(report.isSuccessful == true)
+        #expect(report.approvalCards.first?.status == .approved)
+        #expect(report.approvalCards.first?.resolutionNotes == "Approved via BotChatView banner")
     }
 }

@@ -34,20 +34,27 @@ struct NativeAppleEngine: AgentEngine {
         toolCallingMode: AgentToolCallingMode,
         onUpdate: @MainActor @escaping (String) -> Void
     ) async throws {
-        // NativeAppleEngine uses customSession (from BotSession) if provided, otherwise orchestrator's session
-        guard let session = customSession ?? orchestrator.session else {
+        let lowerPrompt = prompt.lowercased()
+        let explicitlyNoTools = !IntentToolSelector.shouldEnableTools(for: prompt, hasAttachments: !attachments.isEmpty)
+            || toolCallingMode == .disabled
+
+        // When explicitlyNoTools or toolCallingMode == .disabled is true, always use a lightweight
+        // tool-free session (even if customSession was passed) so the 3B on-device model does not
+        // carry 12-14 unused tool schemas or fail when options.toolCallingMode = .disallowed is set.
+        let session: LanguageModelSession
+        if explicitlyNoTools {
+            let cleanInst = "You are an expert AI assistant and Swift software engineer on macOS. Answer the user's request and write any requested code directly and concisely in your response."
+            session = orchestrator.sessionCoordinator.createCompactionSession(
+                model: SystemLanguageModel.default,
+                instructions: cleanInst
+            )
+        } else if let customSession {
+            session = customSession
+        } else if let defaultSession = orchestrator.session {
+            session = defaultSession
+        } else {
             throw NSError(domain: "NativeAppleEngine", code: -1, userInfo: [NSLocalizedDescriptionKey: "LanguageModelSession is not initialized."])
         }
-
-        let lowerPrompt = prompt.lowercased()
-        let explicitlyNoTools = lowerPrompt.contains("without tools")
-            || lowerPrompt.contains("without running tools")
-            || lowerPrompt.contains("without using tools")
-            || lowerPrompt.contains("no tools")
-            || lowerPrompt.contains("don't use tools")
-            || lowerPrompt.contains("do not use tools")
-            || lowerPrompt.contains("without running any tools")
-            || (attachments.isEmpty && AgentOrchestrator.isConversationalGreetingOrSmallTalk(prompt))
 
         var options = GenerationOptions()
         let effectiveMode: AgentToolCallingMode = explicitlyNoTools ? .disabled : toolCallingMode
@@ -59,7 +66,7 @@ struct NativeAppleEngine: AgentEngine {
 
         // Extract semantic RAG context (the portion appended to orchestrator.agentInstructions)
         let semanticContext: String
-        if !orchestrator.agentInstructions.isEmpty && instructions.hasPrefix(orchestrator.agentInstructions) {
+        if !explicitlyNoTools && !orchestrator.agentInstructions.isEmpty && instructions.hasPrefix(orchestrator.agentInstructions) {
             semanticContext = String(instructions.dropFirst(orchestrator.agentInstructions.count))
         } else {
             semanticContext = ""
@@ -78,6 +85,20 @@ struct NativeAppleEngine: AgentEngine {
             let result = try await orchestrator.toolDispatchEngine.executeToolByName(
                 name: "convene_meeting",
                 jsonArguments: directMeetingArguments,
+                allTools: orchestrator.allTools
+            )
+            onUpdate(result)
+            if customSession == nil, let id = orchestrator.activeAssistantMessageId {
+                orchestrator.updateMessage(id: id, content: result)
+                orchestrator.updateMessage(id: id, isStreaming: false)
+            }
+            return
+        }
+
+        if let directDelegateArguments = directDelegateTaskArguments(from: prompt) {
+            let result = try await orchestrator.toolDispatchEngine.executeToolByName(
+                name: "delegate_task",
+                jsonArguments: directDelegateArguments,
                 allTools: orchestrator.allTools
             )
             onUpdate(result)
@@ -238,6 +259,117 @@ struct NativeAppleEngine: AgentEngine {
     }
 }
 
+// MARK: - Apple Foundation Models CLI Engine (/usr/bin/fm)
+
+@MainActor
+struct FMCLIAgentEngine: AgentEngine {
+    let orchestrator: AgentOrchestrator
+    let backend: FMCLILanguageModel.Backend
+
+    func streamResponse(
+        prompt: String,
+        attachments: [NSImage],
+        history: [ChatMessage],
+        instructions: String,
+        toolCallingMode: AgentToolCallingMode,
+        onUpdate: @MainActor @escaping (String) -> Void
+    ) async throws {
+        let fmPath = "/usr/bin/fm"
+        guard FileManager.default.fileExists(atPath: fmPath) else {
+            throw NSError(
+                domain: "FMCLIAgentEngine",
+                code: 503,
+                userInfo: [NSLocalizedDescriptionKey: "fm CLI not found at /usr/bin/fm."]
+            )
+        }
+
+        let lowerPrompt = prompt.lowercased()
+        let explicitlyNoTools = !IntentToolSelector.shouldEnableTools(for: prompt, hasAttachments: !attachments.isEmpty)
+            || lowerPrompt.contains("without tools")
+            || lowerPrompt.contains("without running tools")
+            || lowerPrompt.contains("without using tools")
+            || lowerPrompt.contains("no tools")
+            || lowerPrompt.contains("don't use tools")
+            || lowerPrompt.contains("do not use tools")
+            || lowerPrompt.contains("without running any tools")
+            || (attachments.isEmpty && AgentOrchestrator.isConversationalGreetingOrSmallTalk(prompt))
+
+        // On free-tier Apple accounts without the paid com.apple.developer.private-cloud-compute
+        // provisioning profile, /usr/bin/fm --model pcc exits 1. Route cleanly to the licensed
+        // on-device Apple Foundation Model (--model system) instead.
+        let effectiveBackend: FMCLILanguageModel.Backend = (backend == .pcc && !AgentOrchestrator.isPrivateCloudComputeAvailable())
+            ? .system
+            : backend
+
+        var args = ["respond", "--model", effectiveBackend.rawValue, "--no-stream"]
+        let cleanInstructions = instructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !explicitlyNoTools && !cleanInstructions.isEmpty {
+            args += ["--instructions", cleanInstructions]
+        }
+        args.append(prompt.trimmingCharacters(in: .whitespacesAndNewlines))
+
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: fmPath)
+        process.arguments = args
+
+        let stdoutPipe = Pipe()
+        let stderrPipe = Pipe()
+        process.standardOutput = stdoutPipe
+        process.standardError = stderrPipe
+
+        do {
+            try process.run()
+        } catch {
+            throw NSError(
+                domain: "FMCLIAgentEngine",
+                code: 503,
+                userInfo: [NSLocalizedDescriptionKey: "Failed to launch /usr/bin/fm: \(error.localizedDescription)"]
+            )
+        }
+
+        let stdoutHandle = stdoutPipe.fileHandleForReading
+        var accumulated = ""
+
+        try await withTaskCancellationHandler {
+            for try await line in stdoutHandle.bytes.lines {
+                if Task.isCancelled {
+                    if process.isRunning { process.terminate() }
+                    throw CancellationError()
+                }
+                guard !line.isEmpty else { continue }
+                accumulated += (accumulated.isEmpty ? "" : "\n") + line
+                onUpdate(accumulated)
+                if let id = orchestrator.activeAssistantMessageId {
+                    orchestrator.updateMessage(id: id, content: accumulated)
+                }
+            }
+
+            process.waitUntilExit()
+            if process.terminationStatus != 0 {
+                let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                let stderr = (String(data: stderrData, encoding: .utf8) ?? "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if accumulated.isEmpty {
+                    throw NSError(
+                        domain: "FMCLIAgentEngine",
+                        code: 503,
+                        userInfo: [NSLocalizedDescriptionKey: "fm (\(backend.rawValue)) exited \(process.terminationStatus): \(stderr)"]
+                    )
+                }
+            }
+
+            if !accumulated.isEmpty, let id = orchestrator.activeAssistantMessageId {
+                orchestrator.updateMessage(id: id, content: accumulated)
+                orchestrator.updateMessage(id: id, isStreaming: false)
+            }
+        } onCancel: {
+            if process.isRunning {
+                process.terminate()
+            }
+        }
+    }
+}
+
 @MainActor
 private func directConveneMeetingArguments(from prompt: String) -> String? {
     let lowerPrompt = prompt.lowercased()
@@ -269,6 +401,43 @@ private func directConveneMeetingArguments(from prompt: String) -> String? {
     guard let data = try? JSONSerialization.data(withJSONObject: [
         "topic": topic,
         "participants": participants
+    ]) else { return nil }
+    return String(data: data, encoding: .utf8)
+}
+
+@MainActor
+private func directDelegateTaskArguments(from prompt: String) -> String? {
+    let lowerPrompt = prompt.lowercased()
+    guard lowerPrompt.hasPrefix("call delegate_task")
+        || lowerPrompt.hasPrefix("call the delegate_task")
+        || lowerPrompt.hasPrefix("use delegate_task")
+        || lowerPrompt.hasPrefix("invoke delegate_task") else {
+        return nil
+    }
+
+    let agentPattern = #"(?:agentName|agentType|agent)\s*[:=]?\s*['"]([^'"]+)['"]"#
+    guard let agentRegex = try? NSRegularExpression(pattern: agentPattern, options: [.caseInsensitive]),
+          let agentMatch = agentRegex.firstMatch(in: prompt, range: NSRange(prompt.startIndex..., in: prompt)),
+          let agentRange = Range(agentMatch.range(at: 1), in: prompt) else {
+        return nil
+    }
+    let agentType = String(prompt[agentRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !agentType.isEmpty else { return nil }
+
+    let taskPattern = #"(?:taskDescription|task|prompt)\s*[:=]?\s*['"](.+)[`'"]\s*\.?\s*$"#
+    let taskDescription: String
+    if let taskRegex = try? NSRegularExpression(pattern: taskPattern, options: [.caseInsensitive, .dotMatchesLineSeparators]),
+       let taskMatch = taskRegex.firstMatch(in: prompt, range: NSRange(prompt.startIndex..., in: prompt)),
+       let taskRange = Range(taskMatch.range(at: 1), in: prompt) {
+        taskDescription = String(prompt[taskRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+    } else {
+        return nil
+    }
+    guard !taskDescription.isEmpty else { return nil }
+
+    guard let data = try? JSONSerialization.data(withJSONObject: [
+        "agentType": agentType,
+        "taskDescription": taskDescription
     ]) else { return nil }
     return String(data: data, encoding: .utf8)
 }

@@ -109,6 +109,81 @@ func handle(_ request: [String: Any]) {
             ])
             return
         }
+        if tool.name == "search_spotlight" {
+            let arguments = params["arguments"] as? [String: Any] ?? [:]
+            let query = (arguments["query"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            guard !query.isEmpty else {
+                send([
+                    "jsonrpc": "2.0", "id": id ?? NSNull(),
+                    "result": [
+                        "content": [["type": "text", "text": "Error: 'query' argument is required for search_spotlight."]],
+                        "isError": true
+                    ]
+                ])
+                return
+            }
+
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/mdfind")
+            if let scope = (arguments["directory"] as? String) ?? (arguments["scope"] as? String),
+               !scope.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                process.arguments = ["-onlyin", scope, query]
+            } else {
+                process.arguments = [query]
+            }
+            let outPipe = Pipe()
+            let errPipe = Pipe()
+            process.standardOutput = outPipe
+            process.standardError = errPipe
+
+            do {
+                try process.run()
+                let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
+                let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
+                process.waitUntilExit()
+
+                if process.terminationStatus == 0 {
+                    let output = String(data: outData, encoding: .utf8) ?? ""
+                    let matches = output
+                        .split(whereSeparator: \.isNewline)
+                        .map(String.init)
+                        .filter { !$0.isEmpty }
+                    let capped = Array(matches.prefix(50))
+                    let resultText: String
+                    if capped.isEmpty {
+                        resultText = "No Spotlight matches found for query '\(query)'."
+                    } else {
+                        let header = "Found \(matches.count) Spotlight match(es) for '\(query)' (showing \(capped.count)):"
+                        resultText = ([header] + capped).joined(separator: "\n")
+                    }
+                    send([
+                        "jsonrpc": "2.0", "id": id ?? NSNull(),
+                        "result": [
+                            "content": [["type": "text", "text": resultText]],
+                            "isError": false
+                        ]
+                    ])
+                } else {
+                    let errText = String(data: errData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "mdfind exited with status \(process.terminationStatus)"
+                    send([
+                        "jsonrpc": "2.0", "id": id ?? NSNull(),
+                        "result": [
+                            "content": [["type": "text", "text": "Spotlight query failed: \(errText)"]],
+                            "isError": true
+                        ]
+                    ])
+                }
+            } catch {
+                send([
+                    "jsonrpc": "2.0", "id": id ?? NSNull(),
+                    "result": [
+                        "content": [["type": "text", "text": "Failed to launch mdfind: \(error.localizedDescription)"]],
+                        "isError": true
+                    ]
+                ])
+            }
+            return
+        }
         let ackResult: [String: Any] = [
             "jsonrpc": "2.0", "id": id ?? NSNull(),
             "result": [

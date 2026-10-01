@@ -446,20 +446,30 @@ final class BotManager {
     public var playbookHistory: [PlaybookExecutionReport] = []
     public private(set) var activePlaybookRunners: [PlaybookRunner] = []
     public var activePlaybookRunner: PlaybookRunner? {
-        activePlaybookRunners.last
+        activePlaybookRunners.last(where: { $0.pendingApprovalCard != nil }) ?? activePlaybookRunners.last
     }
 
     /// Approves the pending stage approval card on the currently active playbook runner.
     public func approveActivePlaybookStage(notes: String? = nil) {
-        activePlaybookRunners.last?.approvePendingStage(notes: notes)
+        activePlaybookRunner?.approvePendingStage(notes: notes)
     }
 
     /// Rejects the pending stage approval card on the currently active playbook runner.
     public func rejectActivePlaybookStage(reason: String = "Rejected by user") {
-        activePlaybookRunners.last?.rejectPendingStage(reason: reason)
+        activePlaybookRunner?.rejectPendingStage(reason: reason)
+    }
+
+    /// Resolves the currently active pending approval card across active playbook runners.
+    @discardableResult
+    public func resolvePlaybookApproval(approved: Bool, notes: String? = nil) -> Bool {
+        guard let runner = activePlaybookRunner, let card = runner.pendingApprovalCard else {
+            return false
+        }
+        return resolvePlaybookApproval(cardId: card.id, approved: approved, notes: notes)
     }
 
     /// Resolves a pending approval card by matching card ID across all currently active runners.
+    @discardableResult
     public func resolvePlaybookApproval(cardId: UUID, approved: Bool, notes: String? = nil) -> Bool {
         guard let runner = activePlaybookRunners.first(where: { $0.pendingApprovalCard?.id == cardId }) else {
             return false

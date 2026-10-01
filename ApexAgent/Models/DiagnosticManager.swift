@@ -118,8 +118,8 @@ struct DiagnosticManager {
         let fm = FileManager.default
         let searchPaths = ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"]
         if command.hasPrefix("xcode-select") {
-            return fm.fileExists(atPath: "/Applications/Xcode.app")
-                || fm.fileExists(atPath: "/Applications/Xcode-beta.app")
+            return fm.fileExists(atPath: "/Applications/Xcode-beta.app")
+                || fm.fileExists(atPath: "/Applications/Xcode.app")
                 || fm.fileExists(atPath: "/Library/Developer/CommandLineTools")
                 || fm.isExecutableFile(atPath: "/usr/bin/xcode-select")
         }

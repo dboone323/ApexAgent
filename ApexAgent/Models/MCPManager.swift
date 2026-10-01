@@ -78,8 +78,57 @@ final class MCPManager: OrchestratorProvider {
             ))
         }
         
+        // Auto-seed Xcode 27 MCP servers if their binaries exist on disk.
+        let xcodeBuildMCPPath = "/Users/danielstevens/.local/bin/xcodebuildmcp"
+        let resolvedXcodeBuildMCPPath = FileManager.default.fileExists(atPath: xcodeBuildMCPPath)
+            ? xcodeBuildMCPPath
+            : FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".local/bin/xcodebuildmcp").path
+        if FileManager.default.fileExists(atPath: resolvedXcodeBuildMCPPath),
+           !loadedServers.contains(where: { $0.name == "xcodebuildmcp" }) {
+            loadedServers.append(MCPServerConfig(
+                name: "xcodebuildmcp",
+                command: resolvedXcodeBuildMCPPath,
+                arguments: ["mcp"]
+            ))
+        }
+        
+        if let mcpBridgeCommand = Self.resolveXcodeMCPBridgeCommand() {
+            loadedServers.removeAll(where: { $0.name == "xcode-native" })
+            loadedServers.append(MCPServerConfig(
+                name: "xcode-native",
+                command: mcpBridgeCommand.command,
+                arguments: mcpBridgeCommand.arguments
+            ))
+        } else {
+            loadedServers.removeAll(where: { $0.name == "xcode-native" })
+        }
+        
         self.servers = loadedServers
         saveConfigs()
+    }
+
+    private static func resolveXcodeMCPBridgeCommand() -> (command: String, arguments: [String])? {
+        let directCandidates = [
+            "/Applications/Xcode-beta.app/Contents/Developer/usr/bin/mcpbridge",
+            "/Applications/Xcode.app/Contents/Developer/usr/bin/mcpbridge"
+        ]
+        for candidate in directCandidates where FileManager.default.isExecutableFile(atPath: candidate) {
+            return (candidate, [])
+        }
+        let xcrunPath = "/usr/bin/xcrun"
+        guard FileManager.default.fileExists(atPath: xcrunPath) else { return nil }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: xcrunPath)
+        process.arguments = ["--find", "mcpbridge"]
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+        do {
+            try process.run()
+            process.waitUntilExit()
+            return process.terminationStatus == 0 ? (xcrunPath, ["mcpbridge"]) : nil
+        } catch {
+            return nil
+        }
     }
     
     func saveConfigs() {

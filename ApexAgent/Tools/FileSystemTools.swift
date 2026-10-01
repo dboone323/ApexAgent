@@ -41,6 +41,12 @@ struct FileReadTool: Tool {
         @Guide(description: "Absolute or tilde-expanded path to the file to read")
         var path: String
 
+        @Guide(description: "1-indexed starting line number to read from (optional)")
+        var startLine: Int?
+
+        @Guide(description: "1-indexed ending line number to read to, inclusive (optional)")
+        var endLine: Int?
+
         @Guide(description: "Maximum number of lines to read. Reads entire file if not specified.", .range(1...10000))
         var maxLines: Int?
     }
@@ -127,14 +133,26 @@ struct FileReadTool: Tool {
                 return prefix + "BINARY FILE: \(effectivePath)\nSize: \(data.count) bytes\nFirst 128 bytes (hex): \(data.prefix(128).map { String(format: "%02x", $0) }.joined(separator: " "))"
             }
 
-            if let maxLines = arguments.maxLines {
+            if arguments.startLine != nil || arguments.endLine != nil || arguments.maxLines != nil {
                 let lines = content.components(separatedBy: "\n")
-                let truncated = lines.prefix(maxLines).joined(separator: "\n")
-                let remaining = max(0, lines.count - maxLines)
-                if remaining > 0 {
-                    return prefix + truncated + "\n\n[... \(remaining) more lines not shown ...]"
+                let startIdx = max(0, (arguments.startLine ?? 1) - 1)
+                guard startIdx < lines.count else {
+                    return prefix + "[Start line \(startIdx + 1) exceeds total line count (\(lines.count))]"
                 }
-                return prefix + truncated
+                let endIdx: Int
+                if let endLine = arguments.endLine {
+                    endIdx = min(lines.count, max(startIdx, endLine))
+                } else if let maxLines = arguments.maxLines {
+                    endIdx = min(lines.count, startIdx + maxLines)
+                } else {
+                    endIdx = lines.count
+                }
+                let sliced = lines[startIdx..<endIdx].joined(separator: "\n")
+                let remaining = max(0, lines.count - endIdx)
+                if remaining > 0 {
+                    return prefix + sliced + "\n\n[... \(remaining) more lines not shown ...]"
+                }
+                return prefix + sliced
             }
 
             return prefix + content

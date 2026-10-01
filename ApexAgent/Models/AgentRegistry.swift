@@ -57,7 +57,7 @@ public actor AgentRegistry {
         "controller": RegisteredAgent(
             name: "controller",
             systemPrompt: AgentType.controller.systemPrompt,
-            allowedTools: ["get_frontmost_app", "get_running_processes", "read_clipboard", "write_clipboard", "send_notification", "system_info", "control_accessibility", "control_app", "control_browser", "get_weather", "map_search", "get_directions", "computer_use", "run_shortcut", "network_diagnostics", "simctl", "mail_automation", "deep_link"]
+            allowedTools: ["get_frontmost_app", "get_running_processes", "read_clipboard", "write_clipboard", "send_notification", "get_system_info", "system_info", "control_accessibility", "control_app", "control_browser", "get_weather", "map_search", "get_directions", "computer_use", "run_shortcut", "network_diagnostics", "simctl", "mail_automation", "deep_link"]
         ),
         "researcher": RegisteredAgent(
             name: "researcher",
@@ -141,7 +141,7 @@ public actor AgentRegistry {
             return registeredAgents["controller"]
         case "oracle", "research", "researcher":
             return registeredAgents["researcher"]
-        case "auditor", "linter", "lint":
+        case "auditor", "linter", "lint", "critic", "reviewer", "security":
             return registeredAgents["linter"]
         case "aura", "uidesigner", "designer", "design", "ui designer":
             return registeredAgents["uiDesigner"] ?? registeredAgents["uidesigner"]
@@ -155,7 +155,7 @@ public actor AgentRegistry {
             if clean.contains("nexus") || clean.contains("exec") || clean.contains("auto") { return registeredAgents["executor"] }
             if clean.contains("pilot") || clean.contains("control") { return registeredAgents["controller"] }
             if clean.contains("oracle") || clean.contains("research") { return registeredAgents["researcher"] }
-            if clean.contains("audit") || clean.contains("lint") { return registeredAgents["linter"] }
+            if clean.contains("audit") || clean.contains("lint") || clean.contains("critic") || clean.contains("review") { return registeredAgents["linter"] }
             if clean.contains("aura") || clean.contains("design") { return registeredAgents["uiDesigner"] ?? registeredAgents["uidesigner"] }
             if clean.contains("chronos") || clean.contains("plan") { return registeredAgents["planner"] }
             if clean.contains("apex") || clean.contains("prime") || clean.contains("supervisor") { return registeredAgents["supervisor"] }

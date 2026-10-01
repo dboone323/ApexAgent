@@ -9,7 +9,12 @@ import FoundationModels
 struct BotChatView: View {
     @Bindable var session: BotSession
     @State private var inputText = ""
+    @State private var approvalNotes = ""
     @FocusState private var isInputFocused: Bool
+
+    private var botManager: BotManager? {
+        session.botManager ?? session.orchestrator?.botManager
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -18,6 +23,33 @@ struct BotChatView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
             
+            // Playbook approval card banner (when a stage requires human-in-the-loop approval)
+            if let botManager,
+               let card = botManager.activePlaybookRunner?.pendingApprovalCard {
+                PlaybookApprovalBannerView(
+                    card: card,
+                    notes: $approvalNotes,
+                    onApprove: {
+                        let cleanNotes = approvalNotes.trimmingCharacters(in: .whitespacesAndNewlines)
+                        _ = botManager.resolvePlaybookApproval(
+                            approved: true,
+                            notes: cleanNotes.isEmpty ? nil : cleanNotes
+                        )
+                        approvalNotes = ""
+                    },
+                    onReject: {
+                        let cleanNotes = approvalNotes.trimmingCharacters(in: .whitespacesAndNewlines)
+                        _ = botManager.resolvePlaybookApproval(
+                            approved: false,
+                            notes: cleanNotes.isEmpty ? "Rejected by user" : cleanNotes
+                        )
+                        approvalNotes = ""
+                    }
+                )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+            }
+
             // Generation state banner
             if session.isGenerating {
                 HStack(spacing: 8) {
@@ -92,6 +124,84 @@ struct BotChatView: View {
                 proxy.scrollTo("bottom", anchor: .bottom)
             }
         }
+    }
+}
+
+// MARK: - Playbook Approval Banner View
+
+struct PlaybookApprovalBannerView: View {
+    let card: PlaybookApprovalCard
+    @Binding var notes: String
+    let onApprove: () -> Void
+    let onReject: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Playbook Approval Required — \(card.stageTitle)")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(card.summary)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+
+            if !card.proposedActions.isEmpty {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(card.proposedActions, id: \.self) { action in
+                        HStack(spacing: 6) {
+                            Image(systemName: "circle.fill")
+                                .font(.system(size: 4))
+                                .foregroundStyle(.secondary)
+                            Text(action)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+
+            HStack(spacing: 8) {
+                TextField("Optional approval or rejection notes...", text: $notes)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 12))
+                    .accessibilityIdentifier("playbookApprovalNotesField")
+
+                Button(action: onReject) {
+                    Label("Reject", systemImage: "xmark.circle.fill")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .accessibilityIdentifier("playbookApprovalRejectButton")
+                .accessibilityLabel("Reject playbook stage")
+
+                Button(action: onApprove) {
+                    Label("Approve", systemImage: "checkmark.circle.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .accessibilityIdentifier("playbookApprovalApproveButton")
+                .accessibilityLabel("Approve playbook stage")
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.orange.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.orange.opacity(0.35), lineWidth: 1)
+                )
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("playbookApprovalBanner")
     }
 }
 
@@ -234,6 +344,7 @@ struct BotChatInputBar: View {
     @Binding var inputText: String
     @FocusState.Binding var isInputFocused: Bool
     @State private var isHovered = false
+    private var voiceController: VoiceController { VoiceController.shared }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -310,6 +421,21 @@ struct BotChatInputBar: View {
                     .help("Take and attach Screenshot")
                     .accessibilityIdentifier("attachScreenshotButton")
                     .accessibilityLabel("Attach screenshot")
+
+                    Button {
+                        toggleRecording()
+                    } label: {
+                        Image(systemName: voiceController.isRecording ? "mic.fill" : "mic")
+                            .font(.system(size: 15))
+                            .foregroundStyle(voiceController.isRecording ? .red : .secondary)
+                            .frame(width: 28, height: 28)
+                            .background(voiceController.isRecording ? Color.red.opacity(0.15) : Color(nsColor: .controlBackgroundColor), in: Circle())
+                            .overlay(Circle().stroke(voiceController.isRecording ? Color.red.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 0.5))
+                    }
+                    .buttonStyle(.plain)
+                    .help(voiceController.isRecording ? "Stop recording" : "Start recording (Speech-to-Text)")
+                    .accessibilityIdentifier("voiceRecordButton")
+                    .accessibilityLabel(voiceController.isRecording ? "Stop recording" : "Start recording")
                 }
                 
                 // Text input
@@ -467,5 +593,26 @@ struct BotChatInputBar: View {
         }
 
         return .ignored
+    }
+
+    private func toggleRecording() {
+        if voiceController.isRecording {
+            voiceController.stopRecording()
+        } else {
+            Task {
+                let granted = await voiceController.requestPermissions()
+                if granted {
+                    do {
+                        try voiceController.startRecording { transcription in
+                            inputText = transcription
+                        }
+                    } catch {
+                        print("Failed to start voice recording: \(error)")
+                    }
+                } else {
+                    print("Speech/Microphone permissions denied.")
+                }
+            }
+        }
     }
 }

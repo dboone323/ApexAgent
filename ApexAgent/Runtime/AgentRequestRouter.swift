@@ -60,14 +60,44 @@ public final class AgentRequestRouter {
 
         let effectiveInstructions = resolvedContext.effectiveInstructions
         let effectiveProvider = resolvedContext.effectiveProvider
-        let effectiveAllowedTools: [String]? = switch resolvedContext.source {
-        case .archetype, .botProfileOverride:
-            resolvedContext.effectiveAllowedTools.filter {
-                $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm"
-            }
-        case .globalDefault:
-            resolvedContext.effectiveAllowedTools.isEmpty ? nil : resolvedContext.effectiveAllowedTools
+        let effectiveToolCallingMode: AgentToolCallingMode = if request.toolCallingMode == .auto {
+            IntentToolSelector.shouldEnableTools(
+                for: request.prompt,
+                hasAttachments: !request.attachments.isEmpty
+            ) ? .auto : .disabled
+        } else {
+            request.toolCallingMode
         }
+
+        let effectiveAllowedTools: [String]? = {
+            switch resolvedContext.source {
+            case .archetype, .botProfileOverride:
+                let base = resolvedContext.effectiveAllowedTools.filter {
+                    $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm"
+                }
+                if !base.isEmpty {
+                    return base
+                } else if effectiveToolCallingMode == .disabled {
+                    return []
+                } else {
+                    return IntentToolSelector.selectRelevantToolNames(
+                        for: request.prompt,
+                        allSchemas: getParsedSchemas()
+                    )
+                }
+            case .globalDefault:
+                if !resolvedContext.effectiveAllowedTools.isEmpty {
+                    return resolvedContext.effectiveAllowedTools
+                } else if effectiveToolCallingMode == .disabled {
+                    return []
+                } else {
+                    return IntentToolSelector.selectRelevantToolNames(
+                        for: request.prompt,
+                        allSchemas: getParsedSchemas()
+                    )
+                }
+            }
+        }()
 
         // 3. Build candidate chain
         let candidates = ModelRegistry.buildCandidateChain(
@@ -87,7 +117,7 @@ public final class AgentRequestRouter {
             attachments: request.attachments,
             history: history,
             instructions: effectiveInstructions,
-            toolCallingMode: request.toolCallingMode,
+            toolCallingMode: effectiveToolCallingMode,
             bot: bot,
             session: session,
             allowedTools: effectiveAllowedTools,

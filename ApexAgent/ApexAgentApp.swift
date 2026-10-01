@@ -140,7 +140,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
         // Probe that `fm` actually responds (it is gated behind `sudo fm license` on macOS 27).
         let process = Process()
         process.executableURL = URL(fileURLWithPath: fmPath)
-        process.arguments = ["available"]
+        process.arguments = ["models"]
         let out = Pipe()
         let err = Pipe()
         process.standardOutput = out
@@ -226,10 +226,30 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
     public static func runCLIMode(prompt: String) async {
         setbuf(stdout, nil)
         setbuf(stderr, nil)
+        let activeProvider = ModelRegistry.activeProvider()
         print("=== RUNNING CLI TEST ===")
+        print("Provider: \(activeProvider.rawValue) (\(activeProvider.displayName))")
+        if activeProvider == .localOllama {
+            print("Ollama Model: \(ModelRegistry.ollamaModel())")
+        } else if activeProvider == .cloudGemini {
+            print("Gemini Model: \(ModelRegistry.geminiModel())")
+        }
         print("Prompt: \(prompt)")
 
-        let orchestrator = AgentOrchestrator()
+        AgentRequestRouter.shared.addEventListener { event in
+            switch event {
+            case .providerSelected(let provider, let reason):
+                print("🎯 [Provider Selected]: \(provider.rawValue) — \(reason ?? "primary")")
+            case .providerFallback(let from, let to, let error):
+                print("🔄 [Provider Fallback]: \(from.rawValue) -> \(to.rawValue) (reason: \(error))")
+            default:
+                break
+            }
+        }
+
+        let orchestrator = AppDelegate.sharedOrchestrator
+        MCPManager.shared.orchestrator = orchestrator
+        DynamicToolbox.shared.orchestrator = orchestrator
         let computer = Computer()
         let botManager = BotManager(orchestrator: orchestrator, computer: computer)
         orchestrator.botManager = botManager
@@ -286,6 +306,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
             }
         }
         print("=======================")
+        await MCPManager.shared.stopAll()
         exit(0)
     }
 }
@@ -293,7 +314,9 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
 @MainActor
 public func runDaemonMode() async {
     print("=== RUNNING DAEMON MODE ===")
-    let orchestrator = AgentOrchestrator()
+    let orchestrator = AppDelegate.sharedOrchestrator
+    MCPManager.shared.orchestrator = orchestrator
+    DynamicToolbox.shared.orchestrator = orchestrator
     do {
         let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self)
         let mainContext = ModelContext(container)

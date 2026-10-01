@@ -41,8 +41,14 @@ struct SimctlTool: Tool {
         }
         
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: riskDesc) {
+            var simEnv = ProcessInfo.processInfo.environment
+            if simEnv["DEVELOPER_DIR"] == nil,
+               FileManager.default.fileExists(atPath: "/Applications/Xcode-beta.app/Contents/Developer") {
+                simEnv["DEVELOPER_DIR"] = "/Applications/Xcode-beta.app/Contents/Developer"
+            }
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
+            process.environment = simEnv
             
             var args = ["simctl", arguments.action]
             
@@ -54,6 +60,7 @@ struct SimctlTool: Tool {
                 // Checking booted devices
                 let listProcess = Process()
                 listProcess.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
+                listProcess.environment = simEnv
                 listProcess.arguments = ["simctl", "list", "devices", "-j"]
                 let listPipe = Pipe()
                 listProcess.standardOutput = listPipe

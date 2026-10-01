@@ -36,6 +36,31 @@ public enum ModelProvider: String, CaseIterable, Sendable {
         case .fmCLI: "fm CLI (Apple)"
         }
     }
+
+    public static func parse(_ raw: String) -> ModelProvider? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let exact = ModelProvider(rawValue: trimmed) {
+            return exact
+        }
+        switch trimmed.lowercased() {
+        case "autopicker", "auto", "hybrid":
+            return .autoPicker
+        case "appleondevice", "applefoundation", "localsystem", "afm", "native", "apple":
+            return .appleOnDevice
+        case "applepcc", "privatecloud", "pcc":
+            return .applePCC
+        case "cloudgemini", "gemini":
+            return .cloudGemini
+        case "localollama", "ollamalocal", "ollama":
+            return .localOllama
+        case "localmlx", "mlxlocal", "mlx":
+            return .localMLX
+        case "fmcli", "fm":
+            return .fmCLI
+        default:
+            return nil
+        }
+    }
 }
 
 /// Represents an eligible provider candidate within a fallback chain.
@@ -167,15 +192,27 @@ public struct ModelRegistry {
 
     /// Default Gemini model to the latest Flash version (gemini-3.5-flash).
     public static func geminiModel() -> String {
-        UserDefaults.standard.string(forKey: geminiModelKey) ?? "gemini-3.5-flash"
+        if let envModel = ProcessInfo.processInfo.environment["APEX_GEMINI_MODEL"],
+           !envModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return envModel.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return UserDefaults.standard.string(forKey: geminiModelKey) ?? "gemini-3.5-flash"
     }
 
     public static func ollamaModel() -> String {
-        UserDefaults.standard.string(forKey: ollamaModelKey) ?? "gemma4:12b"
+        if let envModel = ProcessInfo.processInfo.environment["APEX_OLLAMA_MODEL"],
+           !envModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return envModel.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return UserDefaults.standard.string(forKey: ollamaModelKey) ?? "gemma4:12b"
     }
 
     public static func mlxModel() -> String {
-        UserDefaults.standard.string(forKey: mlxModelKey) ?? "gemma4:12bmlx"
+        if let envModel = ProcessInfo.processInfo.environment["APEX_MLX_MODEL"],
+           !envModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return envModel.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return UserDefaults.standard.string(forKey: mlxModelKey) ?? "gemma4:12bmlx"
     }
 
     public static func mlxHost() -> URL {
@@ -183,11 +220,15 @@ public struct ModelRegistry {
         return URL(string: raw) ?? URL(string: "http://localhost:8080")!
     }
 
-    /// Resolve the active provider from `UserDefaults` (`apex.modelProvider`),
-    /// falling back to `.autoPicker`.
+    /// Resolve the active provider from `APEX_MODEL_PROVIDER` environment override or
+    /// `UserDefaults` (`apex.modelProvider`), falling back to `.autoPicker`.
     public static func activeProvider() -> ModelProvider {
+        if let envRaw = ProcessInfo.processInfo.environment["APEX_MODEL_PROVIDER"],
+           let envProvider = ModelProvider.parse(envRaw) {
+            return envProvider
+        }
         if let raw = UserDefaults.standard.string(forKey: providerKey),
-           let provider = ModelProvider(rawValue: raw) {
+           let provider = ModelProvider.parse(raw) {
             return provider
         }
         return .autoPicker
@@ -347,7 +388,7 @@ public struct ModelRegistry {
         }
 
         switch provider {
-        case .autoPicker, .appleOnDevice, .applePCC, .fmCLI:
+        case .autoPicker, .appleOnDevice:
             let effectiveSession: LanguageModelSession?
             if let session {
                 effectiveSession = session
@@ -367,24 +408,65 @@ public struct ModelRegistry {
                 effectiveSession = nil
             }
             return NativeAppleEngine(orchestrator: orchestrator, customSession: effectiveSession)
-        case .cloudGemini:
-            if !geminiAPIKey().isEmpty {
-                let geminiModel = CloudGeminiLanguageModel(apiKey: geminiAPIKey())
-                let geminiSession: LanguageModelSession
+        case .applePCC:
+            if AgentOrchestrator.isPrivateCloudComputeAvailable() {
+                let pccModel = PrivateCloudComputeLanguageModel()
+                let pccSession: LanguageModelSession
                 if let existingSession = session {
-                    geminiSession = existingSession
-                } else {
-                    let profile = SupervisorAgentProfile(
-                        instructions: "",
-                        model: geminiModel,
+                    pccSession = existingSession
+                } else if let bot {
+                    let safeTools = (resolvedAllowedTools ?? []).filter { $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm" }
+                    let profile = SpecializedAgentProfile(
+                        instructions: bot.systemInstructions,
+                        model: pccModel,
                         toolCallingMode: .allowed,
                         orchestrator: orchestrator,
-                        reasoningLevel: nil,
-                        maxResponseTokens: nil
+                        allowedTools: safeTools,
+                        reasoningLevel: orchestrator.configuredReasoningLevel,
+                        maxResponseTokens: orchestrator.configuredMaxResponseTokens,
+                        usePrivateCloudIfAvailable: true
                     )
-                    geminiSession = LanguageModelSession(profile: profile, history: Transcript(entries: []))
+                    pccSession = LanguageModelSession(profile: profile, history: Transcript(entries: []))
+                } else {
+                    let profile = SupervisorAgentProfile(
+                        instructions: orchestrator.agentInstructions,
+                        model: pccModel,
+                        toolCallingMode: .allowed,
+                        orchestrator: orchestrator,
+                        reasoningLevel: orchestrator.configuredReasoningLevel,
+                        maxResponseTokens: orchestrator.configuredMaxResponseTokens
+                    )
+                    pccSession = LanguageModelSession(profile: profile, history: Transcript(entries: []))
                 }
-                return NativeAppleEngine(orchestrator: orchestrator, customSession: geminiSession)
+                return NativeAppleEngine(orchestrator: orchestrator, customSession: pccSession)
+            } else {
+                // Free-tier Apple account (no paid com.apple.developer.private-cloud-compute entitlement):
+                // use licensed Apple On-Device FoundationModel (SystemLanguageModel.default) with full tool support.
+                let effectiveSession: LanguageModelSession?
+                if let session {
+                    effectiveSession = session
+                } else if let bot {
+                    let safeTools = (resolvedAllowedTools ?? []).filter { $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm" }
+                    let profile = SpecializedAgentProfile(
+                        instructions: bot.systemInstructions,
+                        model: SystemLanguageModel.default,
+                        toolCallingMode: .allowed,
+                        orchestrator: orchestrator,
+                        allowedTools: safeTools,
+                        reasoningLevel: orchestrator.configuredReasoningLevel,
+                        maxResponseTokens: orchestrator.configuredMaxResponseTokens
+                    )
+                    effectiveSession = LanguageModelSession(profile: profile, history: Transcript(entries: []))
+                } else {
+                    effectiveSession = nil
+                }
+                return NativeAppleEngine(orchestrator: orchestrator, customSession: effectiveSession)
+            }
+        case .fmCLI:
+            return FMCLIAgentEngine(orchestrator: orchestrator, backend: .system)
+        case .cloudGemini:
+            if !geminiAPIKey().isEmpty {
+                return GeminiAgentEngine(orchestrator: orchestrator, bot: bot, allowedTools: resolvedAllowedTools)
             } else {
                 return OllamaAgentEngine(orchestrator: orchestrator, bot: bot, allowedTools: resolvedAllowedTools)
             }

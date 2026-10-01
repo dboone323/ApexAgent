@@ -253,6 +253,10 @@ class PTYSession: @unchecked Sendable {
         env["NO_COLOR"] = "1"
         let currentPath = env["PATH"] ?? ""
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + currentPath
+        if env["DEVELOPER_DIR"] == nil,
+           FileManager.default.fileExists(atPath: "/Applications/Xcode-beta.app/Contents/Developer") {
+            env["DEVELOPER_DIR"] = "/Applications/Xcode-beta.app/Contents/Developer"
+        }
         
         if isRestricted {
             let fm = FileManager.default
