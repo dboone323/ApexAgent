@@ -244,3 +244,82 @@ struct RoutineManagerSmokeTests {
         #expect(result == nil)
     }
 }
+
+// MARK: - Prompt Queue & Stop/Cancel Tests
+
+@MainActor
+@Suite("PromptQueueAndStopButtonTests")
+struct PromptQueueAndStopButtonTests {
+
+    @Test func queuedPromptInitAndEquality() {
+        let id = UUID()
+        let date = Date()
+        let prompt1 = QueuedPrompt(id: id, text: "Build the auth module", attachments: [], timestamp: date)
+        let prompt2 = QueuedPrompt(id: id, text: "Build the auth module", attachments: [], timestamp: date)
+
+        #expect(prompt1.id == prompt2.id)
+        #expect(prompt1.text == prompt2.text)
+        #expect(prompt1 == prompt2)
+    }
+
+    @Test func orchestratorQueueManagement() {
+        let orchestrator = AgentOrchestrator()
+        #expect(orchestrator.queuedPrompts.isEmpty)
+
+        let p1 = QueuedPrompt(text: "First queued prompt")
+        let p2 = QueuedPrompt(text: "Second queued prompt")
+        orchestrator.queuedPrompts.append(contentsOf: [p1, p2])
+
+        #expect(orchestrator.queuedPrompts.count == 2)
+
+        // Remove one prompt by ID
+        orchestrator.removeQueuedPrompt(id: p1.id)
+        #expect(orchestrator.queuedPrompts.count == 1)
+        #expect(orchestrator.queuedPrompts.first?.text == "Second queued prompt")
+
+        // Clear remaining queue
+        orchestrator.clearPromptQueue()
+        #expect(orchestrator.queuedPrompts.isEmpty)
+    }
+
+    @Test func orchestratorCancelGenerationClearsQueue() {
+        let orchestrator = AgentOrchestrator()
+        orchestrator.queuedPrompts.append(QueuedPrompt(text: "Queued action"))
+        #expect(orchestrator.queuedPrompts.count == 1)
+
+        orchestrator.cancelGeneration()
+        #expect(orchestrator.queuedPrompts.isEmpty)
+        #expect(orchestrator.isGenerating == false)
+    }
+
+    @Test func botSessionQueueManagement() {
+        let orchestrator = AgentOrchestrator()
+        let bot = BotProfile(name: "TestBot")
+        let session = BotSession(bot: bot, orchestrator: orchestrator)
+
+        #expect(session.queuedPrompts.isEmpty)
+
+        let q1 = QueuedPrompt(text: "Task 1")
+        let q2 = QueuedPrompt(text: "Task 2")
+        session.queuedPrompts.append(contentsOf: [q1, q2])
+        #expect(session.queuedPrompts.count == 2)
+
+        session.removeQueuedPrompt(id: q1.id)
+        #expect(session.queuedPrompts.count == 1)
+        #expect(session.queuedPrompts.first?.text == "Task 2")
+
+        session.reset()
+        #expect(session.queuedPrompts.isEmpty)
+    }
+
+    @Test func spaceManagerChannelCancellation() {
+        let spaceManager = SpaceManager()
+        let channelId = UUID()
+        spaceManager.channelGenerating[channelId] = true
+
+        #expect(spaceManager.channelGenerating[channelId] == true)
+
+        spaceManager.cancelChannelGeneration(channelId: channelId)
+        #expect(spaceManager.channelGenerating[channelId] == false)
+    }
+}

@@ -57,7 +57,7 @@ struct RoadmapHardeningTests {
 
         botManager.openConversation(with: chief)
 
-        let askBotTool = AskBotTool(botManager: botManager)
+        let askBotTool = AskBotTool(orchestrator: orchestrator, currentBotId: chief.id)
 
         // 1. Without grant -> blocked pending approval card
         let args = AskBotTool.Arguments(targetBot: "Researcher", message: "Find swift data docs")

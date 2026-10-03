@@ -23,6 +23,12 @@ if args.contains("--daemon") {
     exit(0)
 }
 
+if let spaceIdx = args.firstIndex(of: "--space-cli") {
+    let subArgs = Array(args.dropFirst(spaceIdx + 1))
+    await runSpaceCLIMode(subcommandArgs: subArgs)
+    exit(0)
+}
+
 if let cliIndex = args.firstIndex(where: { $0 == "--cli" || $0 == "--prompt" || $0 == "-p" }), cliIndex + 1 < args.count {
     let prompt = args[cliIndex + 1]
     await ApexAgentCore.AppDelegate.runCLIMode(prompt: prompt)

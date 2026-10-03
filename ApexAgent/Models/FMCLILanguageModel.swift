@@ -83,8 +83,8 @@ public struct FMCLILanguageModelExecutor: LanguageModelExecutor {
                 for segment in response.segments {
                     if case .text(let textSeg) = segment { promptText += "Assistant: " + textSeg.content + "\n" }
                 }
-            case .toolCalls, .toolOutput, .reasoning:
-                // `fm` (text CLI) does not participate in tool loops; skip.
+            case .toolCalls, .toolOutput, .reasoning, .data:
+                // `fm` (text CLI) does not participate in tool loops or data segments; skip.
                 break
             @unknown default:
                 break

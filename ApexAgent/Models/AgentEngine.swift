@@ -81,34 +81,6 @@ struct NativeAppleEngine: AgentEngine {
             explicitToolDirective = ""
         }
 
-        if let directMeetingArguments = directConveneMeetingArguments(from: prompt) {
-            let result = try await orchestrator.toolDispatchEngine.executeToolByName(
-                name: "convene_meeting",
-                jsonArguments: directMeetingArguments,
-                allTools: orchestrator.allTools
-            )
-            onUpdate(result)
-            if customSession == nil, let id = orchestrator.activeAssistantMessageId {
-                orchestrator.updateMessage(id: id, content: result)
-                orchestrator.updateMessage(id: id, isStreaming: false)
-            }
-            return
-        }
-
-        if let directDelegateArguments = directDelegateTaskArguments(from: prompt) {
-            let result = try await orchestrator.toolDispatchEngine.executeToolByName(
-                name: "delegate_task",
-                jsonArguments: directDelegateArguments,
-                allTools: orchestrator.allTools
-            )
-            onUpdate(result)
-            if customSession == nil, let id = orchestrator.activeAssistantMessageId {
-                orchestrator.updateMessage(id: id, content: result)
-                orchestrator.updateMessage(id: id, isStreaming: false)
-            }
-            return
-        }
-
         if !attachments.isEmpty {
             guard isMultimodalAttachmentSupported() else {
                 onUpdate("Error: On-device multimodal vision is not supported on this macOS build.")
@@ -370,77 +342,6 @@ struct FMCLIAgentEngine: AgentEngine {
     }
 }
 
-@MainActor
-private func directConveneMeetingArguments(from prompt: String) -> String? {
-    let lowerPrompt = prompt.lowercased()
-    guard lowerPrompt.contains("convene_meeting") else { return nil }
-
-    let participantPattern = #"participants\s*[:=]?\s*\[([^\]]+)\]"#
-    guard let participantRegex = try? NSRegularExpression(pattern: participantPattern, options: [.caseInsensitive]),
-          let participantMatch = participantRegex.firstMatch(in: prompt, range: NSRange(prompt.startIndex..., in: prompt)),
-          let participantRange = Range(participantMatch.range(at: 1), in: prompt) else {
-        return nil
-    }
-
-    let participantText = String(prompt[participantRange])
-    let participants = participantText
-        .split(separator: ",")
-        .map { $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\\\"'"))) }
-        .filter { !$0.isEmpty }
-    guard !participants.isEmpty else { return nil }
-
-    let topic: String
-    if let topicRange = prompt.range(of: "to discuss", options: [.caseInsensitive]) {
-        topic = String(prompt[topicRange.upperBound...])
-            .components(separatedBy: ". Actually").first?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? prompt
-    } else {
-        topic = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    guard let data = try? JSONSerialization.data(withJSONObject: [
-        "topic": topic,
-        "participants": participants
-    ]) else { return nil }
-    return String(data: data, encoding: .utf8)
-}
-
-@MainActor
-private func directDelegateTaskArguments(from prompt: String) -> String? {
-    let lowerPrompt = prompt.lowercased()
-    guard lowerPrompt.hasPrefix("call delegate_task")
-        || lowerPrompt.hasPrefix("call the delegate_task")
-        || lowerPrompt.hasPrefix("use delegate_task")
-        || lowerPrompt.hasPrefix("invoke delegate_task") else {
-        return nil
-    }
-
-    let agentPattern = #"(?:agentName|agentType|agent)\s*[:=]?\s*['"]([^'"]+)['"]"#
-    guard let agentRegex = try? NSRegularExpression(pattern: agentPattern, options: [.caseInsensitive]),
-          let agentMatch = agentRegex.firstMatch(in: prompt, range: NSRange(prompt.startIndex..., in: prompt)),
-          let agentRange = Range(agentMatch.range(at: 1), in: prompt) else {
-        return nil
-    }
-    let agentType = String(prompt[agentRange]).trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !agentType.isEmpty else { return nil }
-
-    let taskPattern = #"(?:taskDescription|task|prompt)\s*[:=]?\s*['"](.+)[`'"]\s*\.?\s*$"#
-    let taskDescription: String
-    if let taskRegex = try? NSRegularExpression(pattern: taskPattern, options: [.caseInsensitive, .dotMatchesLineSeparators]),
-       let taskMatch = taskRegex.firstMatch(in: prompt, range: NSRange(prompt.startIndex..., in: prompt)),
-       let taskRange = Range(taskMatch.range(at: 1), in: prompt) {
-        taskDescription = String(prompt[taskRange]).trimmingCharacters(in: .whitespacesAndNewlines)
-    } else {
-        return nil
-    }
-    guard !taskDescription.isEmpty else { return nil }
-
-    guard let data = try? JSONSerialization.data(withJSONObject: [
-        "agentType": agentType,
-        "taskDescription": taskDescription
-    ]) else { return nil }
-    return String(data: data, encoding: .utf8)
-}
 
 
 // MARK: - Helper Utilities & JSON Schemas

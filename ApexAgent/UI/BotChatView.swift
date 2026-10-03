@@ -1,21 +1,19 @@
 import SwiftUI
 import AppKit
-import FoundationModels
 
-// MARK: - Bot Chat View
+// MARK: - BotChatView: Interactive chat with a persistent Bot teammate
 
-/// Displays the chat for a specific Bot session. Resembles ChatView but
-/// driven by a BotSession instead of the global orchestrator.
+/// Presents the full conversation history, streaming responses, tool approval
+/// cards, system prompt inspector, and memory editor for a single Bot.
 struct BotChatView: View {
     @Bindable var session: BotSession
-    @State private var inputText = ""
-    @State private var approvalNotes = ""
+    @Environment(BotManager.self) private var botManager
+    @State private var inputText: String = ""
+    @State private var isShowingPromptInspector = false
+    @State private var isShowingMemoryEditor = false
+    @State private var approvalNotes: String = ""
     @FocusState private var isInputFocused: Bool
 
-    private var botManager: BotManager? {
-        session.botManager ?? session.orchestrator?.botManager
-    }
-    
     var body: some View {
         VStack(spacing: 0) {
             // Bot header
@@ -24,8 +22,7 @@ struct BotChatView: View {
                 .padding(.vertical, 8)
             
             // Playbook approval card banner (when a stage requires human-in-the-loop approval)
-            if let botManager,
-               let card = botManager.activePlaybookRunner?.pendingApprovalCard {
+            if let card = botManager.activePlaybookRunner?.pendingApprovalCard {
                 PlaybookApprovalBannerView(
                     card: card,
                     notes: $approvalNotes,
@@ -47,81 +44,79 @@ struct BotChatView: View {
                     }
                 )
                 .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .padding(.bottom, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
 
-            // Generation state banner
-            if session.isGenerating {
-                HStack(spacing: 8) {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Generating...")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.Palette.accent)
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(AppTheme.Palette.accent.opacity(0.06))
-                .overlay(
-                    Rectangle()
-                        .fill(AppTheme.Palette.accent.opacity(0.2))
-                        .frame(height: 0.5),
-                    alignment: .bottom
-                )
-            }
-            
-            // Messages area
+            Divider()
+
+            // Message scroll area
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(spacing: 16) {
+                    LazyVStack(spacing: 12) {
                         if session.messages.isEmpty {
                             BotWelcomeView(session: session)
-                                .padding(.top, 80)
-                                .allowsHitTesting(!session.isGenerating)
+                                .padding(.top, 40)
                         } else {
                             ForEach(session.messages) { message in
-                                MessageBubble(message: message)
+                                BotMessageRow(message: message, bot: session.bot)
                                     .id(message.id)
-                                    .opacity(message.isStreaming ? 0.7 : 1.0)
                             }
                         }
-                        
-                        Color.clear
-                            .frame(height: 1)
-                            .id("bottom")
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 16)
-                    .allowsHitTesting(!session.isGenerating)
+                    .padding(16)
                 }
-                .accessibilityLabel("Conversation messages list")
-                .accessibilityIdentifier("conversationScrollView")
-                .onChange(of: session.messages.count) {
-                    scrollToBottom(proxy: proxy)
-                }
-                .onChange(of: session.messages.last?.content) {
-                    scrollToBottom(proxy: proxy)
+                .onChange(of: session.messages.count) { _, _ in
+                    if let last = session.messages.last {
+                        withAnimation {
+                            proxy.scrollTo(last.id, anchor: .bottom)
+                        }
+                    }
                 }
             }
-            
+
             Divider()
-            
-            // Input area
+
+            // Input bar
             BotChatInputBar(
                 session: session,
                 inputText: $inputText,
                 isInputFocused: $isInputFocused
             )
         }
-        .background(Color(nsColor: .controlBackgroundColor))
-        .onAppear { isInputFocused = true }
-    }
-    
-    private func scrollToBottom(proxy: ScrollViewProxy) {
-        DispatchQueue.main.async {
-            withAnimation(.easeOut(duration: 0.2)) {
-                proxy.scrollTo("bottom", anchor: .bottom)
+        .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+        .toolbar {
+            ToolbarItemGroup(placement: .automatic) {
+                Button {
+                    isShowingPromptInspector.toggle()
+                } label: {
+                    Label("Instructions", systemImage: "doc.text")
+                }
+                .popover(isPresented: $isShowingPromptInspector) {
+                    BotPromptInspectorView(bot: session.bot)
+                        .frame(width: 360, height: 280)
+                }
+
+                Button {
+                    isShowingMemoryEditor.toggle()
+                } label: {
+                    Label("Memory", systemImage: "brain.head.profile")
+                }
+                .popover(isPresented: $isShowingMemoryEditor) {
+                    BotMemoryEditorView(bot: session.bot)
+                        .frame(width: 380, height: 320)
+                }
+
+                Menu {
+                    Button("Clear History", role: .destructive) {
+                        session.reset()
+                    }
+                    Button("Duplicate Bot") {
+                        _ = botManager.duplicateBot(session.bot)
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
             }
         }
     }
@@ -136,72 +131,43 @@ struct PlaybookApprovalBannerView: View {
     let onReject: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: "checkmark.shield.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                Image(systemName: "exclamationmark.shield.fill")
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.orange)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Playbook Approval Required — \(card.stageTitle)")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text(card.summary)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
+                Text("Stage Approval Required: \(card.stageTitle)")
+                    .font(.system(size: 12, weight: .semibold))
                 Spacer()
             }
 
-            if !card.proposedActions.isEmpty {
-                VStack(alignment: .leading, spacing: 3) {
-                    ForEach(card.proposedActions, id: \.self) { action in
-                        HStack(spacing: 6) {
-                            Image(systemName: "circle.fill")
-                                .font(.system(size: 4))
-                                .foregroundStyle(.secondary)
-                            Text(action)
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
+            if !card.summary.isEmpty {
+                Text(card.summary)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
             }
 
+            TextField("Resolution notes or instructions (optional)...", text: $notes)
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 11))
+
             HStack(spacing: 8) {
-                TextField("Optional approval or rejection notes...", text: $notes)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12))
-                    .accessibilityIdentifier("playbookApprovalNotesField")
-
-                Button(action: onReject) {
-                    Label("Reject", systemImage: "xmark.circle.fill")
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .buttonStyle(.bordered)
-                .tint(.red)
-                .accessibilityIdentifier("playbookApprovalRejectButton")
-                .accessibilityLabel("Reject playbook stage")
-
-                Button(action: onApprove) {
-                    Label("Approve", systemImage: "checkmark.circle.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
-                .accessibilityIdentifier("playbookApprovalApproveButton")
-                .accessibilityLabel("Approve playbook stage")
+                Spacer()
+                Button("Reject", role: .destructive, action: onReject)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                Button("Approve", action: onApprove)
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
             }
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.orange.opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.orange.opacity(0.35), lineWidth: 1)
-                )
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
         )
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("playbookApprovalBanner")
     }
 }
 
@@ -211,23 +177,19 @@ struct BotChatHeader: View {
     @Bindable var session: BotSession
     
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             // Avatar
-            Image(systemName: session.bot.avatarName)
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(.white)
-                .frame(width: 36, height: 36)
-                .background(
-                    LinearGradient(
-                        colors: [AppTheme.Palette.accent, .blue],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .clipShape(Circle())
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.15))
+                    .frame(width: 32, height: 32)
+                Image(systemName: session.bot.avatarName)
+                    .font(.system(size: 15))
+                    .foregroundStyle(Color.accentColor)
+            }
             
-            // Name + title
-            VStack(alignment: .leading, spacing: 1) {
+            // Name and title
+            VStack(alignment: .leading, spacing: 2) {
                 Text(session.bot.name)
                     .font(.system(size: 15, weight: .semibold))
                 if !session.bot.title.isEmpty {
@@ -255,14 +217,14 @@ struct BotChatHeader: View {
     }
     
     private var modelLabel: String {
-        switch session.modelPreference {
+        switch session.effectiveModelProvider {
         case .autoPicker: return "Auto"
-        case .localSystem: return "AFM 3"
-        case .privateCloud: return "PCC"
+        case .appleOnDevice: return "AFM 3"
+        case .applePCC: return "PCC"
         case .cloudGemini: return "Gemini"
         case .localOllama: return "Ollama"
         case .localMLX: return "MLX"
-        case .hybrid: return "Hybrid"
+        case .fmCLI: return "CLI"
         }
     }
 }
@@ -275,65 +237,161 @@ struct BotWelcomeView: View {
     let suggestions: [(String, String)] = [
         ("terminal.fill", "What's using the most disk space?"),
         ("safari.fill", "Search the web for WWDC 2026 highlights"),
-        ("folder.fill", "List my Downloads folder"),
-        ("applescript.fill", "Open the Calculator app"),
+        ("swift", "Review recent Swift commits"),
+        ("folder.fill", "List files in ~/Developer")
     ]
     
     var body: some View {
-        VStack(spacing: 24) {
-            // Logo
-            VStack(spacing: 8) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [AppTheme.Palette.accent, .blue, .cyan],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 56, height: 56)
-                    
-                    Image(systemName: session.bot.avatarName)
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundStyle(.white)
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(Color.accentColor.opacity(0.12))
+                    .frame(width: 64, height: 64)
+                Image(systemName: session.bot.avatarName)
+                    .font(.system(size: 28))
+                    .foregroundStyle(Color.accentColor)
+            }
+            
+            VStack(spacing: 4) {
+                Text(session.bot.name)
+                    .font(.title2.weight(.semibold))
+                if !session.bot.title.isEmpty {
+                    Text(session.bot.title)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-                .shadow(color: AppTheme.Palette.accent.opacity(0.4), radius: 12, y: 6)
-                
-                VStack(spacing: 2) {
-                    Text(session.bot.name)
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                    Text(session.bot.title.isEmpty ? "Your AI teammate" : session.bot.title)
-                        .font(.system(size: 12))
+                if !session.bot.descriptionText.isEmpty {
+                    Text(session.bot.descriptionText)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .padding(.horizontal, 32)
                 }
             }
             
-            // Description
-            if !session.bot.descriptionText.isEmpty {
-                Text(session.bot.descriptionText)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-            }
-            
-            // Suggestions
+            // Suggestion chips
             VStack(spacing: 8) {
                 Text("Try asking:")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.caption)
                     .foregroundStyle(.tertiary)
                 
-                ForEach(suggestions, id: \.1) { icon, text in
-                    SuggestionChip(icon: icon, text: text, color: AppTheme.Palette.accent) {
-                        session.sendMessage(text)
+                ForEach(suggestions, id: \.1) { icon, prompt in
+                    Button {
+                        session.sendMessage(prompt)
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: icon)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                            Text(prompt)
+                                .font(.system(size: 12))
+                            Spacer()
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(Color(nsColor: .controlBackgroundColor))
+                        .cornerRadius(8)
                     }
+                    .buttonStyle(.plain)
                 }
             }
+            .frame(maxWidth: 380)
+            .padding(.top, 8)
         }
-        .frame(maxWidth: 420, maxHeight: .infinity)
-        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Bot Message Row
+
+struct BotMessageRow: View {
+    let message: ChatMessage
+    let bot: BotProfile
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var isUser: Bool { message.role == .user }
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            if isUser {
+                Spacer()
+            } else {
+                // Bot avatar
+                ZStack {
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.15))
+                        .frame(width: 26, height: 26)
+                    Image(systemName: bot.avatarName)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.accentColor)
+                }
+                .padding(.top, 2)
+            }
+            
+            VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
+                // Sender label
+                if !isUser {
+                    Text(bot.name)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                
+                // Attachments preview if present
+                if !message.attachments.isEmpty {
+                    HStack(spacing: 6) {
+                        ForEach(0..<message.attachments.count, id: \.self) { idx in
+                            Image(nsImage: message.attachments[idx])
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 60, height: 60)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.1), lineWidth: 1))
+                        }
+                    }
+                    .padding(.bottom, 2)
+                }
+
+                // Message bubble
+                HStack {
+                    if message.isStreaming && message.content.isEmpty {
+                        HStack(spacing: 4) {
+                            ProgressView()
+                                .scaleEffect(0.6)
+                            Text("Thinking...")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                    } else {
+                        MarkdownText(content: message.content)
+                            .font(.system(size: 13))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                    }
+                }
+                .background(bubbleBackground)
+                .cornerRadius(12)
+                .frame(maxWidth: 540, alignment: isUser ? .trailing : .leading)
+            }
+            
+            if !isUser {
+                Spacer()
+            }
+        }
+    }
+    
+    private var bubbleBackground: some View {
+        Group {
+            if isUser {
+                Color.accentColor.opacity(0.18)
+            } else {
+                Color(nsColor: .controlBackgroundColor)
+            }
+        }
     }
 }
 
@@ -345,200 +403,186 @@ struct BotChatInputBar: View {
     @FocusState.Binding var isInputFocused: Bool
     @State private var isHovered = false
     private var voiceController: VoiceController { VoiceController.shared }
+
+    private var hasInputContent: Bool {
+        !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !session.pendingAttachments.isEmpty
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Pending attachments
+            // Queued Prompts Banner
+            if !session.queuedPrompts.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppTheme.Palette.accent)
+                        Text("\(session.queuedPrompts.count) prompt\(session.queuedPrompts.count == 1 ? "" : "s") queued")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppTheme.Palette.accent)
+                        Spacer()
+                        Button("Clear Queue") {
+                            session.clearPromptQueue()
+                        }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    }
+                    
+                    // Show queued list preview
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(session.queuedPrompts) { item in
+                                HStack(spacing: 4) {
+                                    Text(item.text)
+                                        .lineLimit(1)
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.primary)
+                                    Button {
+                                        session.removeQueuedPrompt(id: item.id)
+                                    } label: {
+                                        Image(systemName: "xmark")
+                                            .font(.system(size: 8, weight: .bold))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Color(nsColor: .controlBackgroundColor))
+                                .cornerRadius(6)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+                                )
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(AppTheme.Palette.accent.opacity(0.08))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(AppTheme.Palette.accent.opacity(0.2), lineWidth: 1)
+                )
+            }
+
+            // Attachment previews above the input
             if !session.pendingAttachments.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(0..<session.pendingAttachments.count, id: \.self) { idx in
                             ZStack(alignment: .topTrailing) {
                                 Image(nsImage: session.pendingAttachments[idx])
-                                    .resizable().scaledToFill()
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
                                     .frame(width: 52, height: 52)
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                                            .stroke(Color.primary.opacity(0.12), lineWidth: 1)
                                     )
                                 Button {
                                     session.pendingAttachments.remove(at: idx)
                                 } label: {
                                     Image(systemName: "xmark.circle.fill")
-                                        .foregroundStyle(.gray, Color(nsColor: .windowBackgroundColor))
                                         .font(.system(size: 14))
+                                        .foregroundStyle(.white, Color.black.opacity(0.6))
                                 }
                                 .buttonStyle(.plain)
-                                .offset(x: 5, y: -5)
+                                .offset(x: 4, y: -4)
                             }
-                            .padding(.top, 5)
-                            .padding(.trailing, 5)
                         }
                     }
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, 2)
+                    .padding(.top, 4)
                 }
-                .frame(height: 62)
             }
             
-            HStack(alignment: .bottom, spacing: 10) {
-                // Attachment buttons
-                HStack(spacing: 6) {
-                    Button {
-                        attachImageFile()
-                    } label: {
-                        Image(systemName: "photo")
-                            .font(.system(size: 15))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 28, height: 28)
-                            .background(Color(nsColor: .controlBackgroundColor), in: Circle())
-                            .overlay(Circle().stroke(Color(nsColor: .separatorColor), lineWidth: 0.5))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Attach Image file")
-                    .accessibilityIdentifier("attachImageButton")
-                    .accessibilityLabel("Attach image file")
-                    
-                    Button {
-                        Task {
-                            let countBefore = session.orchestrator?.pendingAttachments.count ?? 0
-                            await session.orchestrator?.captureAndAttachScreenshot()
-                            let countAfter = session.orchestrator?.pendingAttachments.count ?? 0
-                            if countAfter > countBefore,
-                               let photo = session.orchestrator?.pendingAttachments.removeLast() {
-                                session.pendingAttachments.append(photo)
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "camera")
-                            .font(.system(size: 15))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 28, height: 28)
-                            .background(Color(nsColor: .controlBackgroundColor), in: Circle())
-                            .overlay(Circle().stroke(Color(nsColor: .separatorColor), lineWidth: 0.5))
-                    }
-                    .buttonStyle(.plain)
-                    .help("Take and attach Screenshot")
-                    .accessibilityIdentifier("attachScreenshotButton")
-                    .accessibilityLabel("Attach screenshot")
-
-                    Button {
-                        toggleRecording()
-                    } label: {
-                        Image(systemName: voiceController.isRecording ? "mic.fill" : "mic")
-                            .font(.system(size: 15))
-                            .foregroundStyle(voiceController.isRecording ? .red : .secondary)
-                            .frame(width: 28, height: 28)
-                            .background(voiceController.isRecording ? Color.red.opacity(0.15) : Color(nsColor: .controlBackgroundColor), in: Circle())
-                            .overlay(Circle().stroke(voiceController.isRecording ? Color.red.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 0.5))
-                    }
-                    .buttonStyle(.plain)
-                    .help(voiceController.isRecording ? "Stop recording" : "Start recording (Speech-to-Text)")
-                    .accessibilityIdentifier("voiceRecordButton")
-                    .accessibilityLabel(voiceController.isRecording ? "Stop recording" : "Start recording")
-                }
-                
-                // Text input
-                ZStack(alignment: .bottomLeading) {
-                    if inputText.isEmpty {
-                        Text("Message \(session.bot.name)...")
-                            .foregroundStyle(.quaternary)
-                            .font(.system(size: 14))
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 8)
-                            .allowsHitTesting(false)
-                    }
-                    
-                    TextEditor(text: $inputText)
+            HStack(alignment: .center, spacing: 8) {
+                // Photo upload button
+                Button {
+                    attachImageFile()
+                } label: {
+                    Image(systemName: session.pendingAttachments.isEmpty ? "photo" : "photo.badge.checkmark")
                         .font(.system(size: 14))
-                        .frame(minHeight: 36, maxHeight: 160)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .scrollContentBackground(.hidden)
-                        .focused($isInputFocused)
-                        .accessibilityIdentifier("chatInputField")
-                        .onKeyPress(.return) {
-                            if NSEvent.modifierFlags.contains(.shift) {
-                                inputText += "\n"
-                                return .handled
-                            } else {
-                                send()
-                                return .handled
-                            }
-                        }
+                        .foregroundStyle(session.pendingAttachments.isEmpty ? .secondary : AppTheme.Palette.accent)
+                        .frame(width: 28, height: 28)
+                        .background(Color(nsColor: .controlBackgroundColor))
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color(nsColor: .windowBackgroundColor))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(isInputFocused ? AppTheme.Palette.accent.opacity(0.6) : Color(nsColor: .separatorColor), lineWidth: 1)
-                        )
-                        .shadow(color: isInputFocused ? AppTheme.Palette.accent.opacity(0.1) : .clear, radius: 6)
-                )
-                .onDrop(of: [.image, .fileURL], isTargeted: nil) { providers in
-                    for provider in providers {
-                        if provider.canLoadObject(ofClass: URL.self) {
-                            _ = provider.loadObject(ofClass: URL.self) { url, _ in
-                                if let url = url, let image = NSImage(contentsOf: url) {
+                .buttonStyle(.plain)
+                .frame(width: 28, height: 28)
+                .help("Attach image")
+
+                TextField(session.isGenerating ? "Queue next prompt..." : "Message \(session.bot.name)...", text: $inputText, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13))
+                    .focused($isInputFocused)
+                    .lineLimit(1...5)
+                    .onSubmit {
+                        send()
+                    }
+                    .onKeyPress(.return, phases: .down) { press in
+                        if press.modifiers.isEmpty {
+                            send()
+                            return .handled
+                        }
+                        return .ignored
+                    }
+                    .onKeyPress(.space, phases: .down) { _ in
+                        return .ignored
+                    }
+                    .onKeyPress(phases: .down) { press in
+                        if press.modifiers == .command && press.characters == "v" {
+                            return checkPasteboardAndPaste()
+                        }
+                        return .ignored
+                    }
+                    .onDrop(of: [.image, .fileURL], isTargeted: nil) { providers in
+                        for provider in providers {
+                            _ = provider.loadDataRepresentation(forTypeIdentifier: "public.image") { data, _ in
+                                if let data, let image = NSImage(data: data) {
                                     DispatchQueue.main.async {
                                         session.pendingAttachments.append(image)
                                     }
                                 }
                             }
                         }
+                        return true
                     }
-                    return true
-                }
-                .onKeyPress(phases: .down) { keyPress in
-                    if keyPress.key == "v" && keyPress.modifiers.contains(.command) {
-                        return checkPasteboardAndPaste()
-                    }
-                    return .ignored
-                }
                 
-                // Send/Stop button
-                if session.isGenerating {
-                    Button(action: {
-                        session.orchestrator?.cancelGeneration()
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.red.opacity(0.15))
-                                .frame(width: 38, height: 38)
-                            Image(systemName: "stop.fill")
-                                .font(.system(size: 13))
-                                .foregroundStyle(.red)
-                        }
+                if session.isGenerating { 
+                    Button {
+                        session.stopGeneration()
+                    } label: {
+                        Image(systemName: "stop.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.red)
                     }
                     .buttonStyle(.plain)
                     .help("Stop generation")
-                    .accessibilityIdentifier("stopGenerationButton")
-                    .accessibilityLabel("Stop generation")
                 } else {
+                    // Send button
                     Button(action: send) {
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    (inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && session.pendingAttachments.isEmpty)
-                                        ? AnyShapeStyle(Color(nsColor: .tertiaryLabelColor).opacity(0.3))
-                                        : AnyShapeStyle(LinearGradient(colors: [AppTheme.Palette.accent, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                )
-                                .frame(width: 38, height: 38)
-                            Image(systemName: "arrow.up")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.white)
-                        }
-                        .frame(width: 38, height: 38)
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(hasInputContent ? Color.accentColor : Color.secondary.opacity(0.4))
                     }
                     .buttonStyle(.plain)
-                    .accessibilityIdentifier("sendButton")
-                    .accessibilityLabel("Send message")
-                    .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && session.pendingAttachments.isEmpty)
-                    .help("Send message (Return)")
+                    .disabled(!hasInputContent)
+                    .keyboardShortcut(.return, modifiers: [])
                 }
             }
+            .padding(10)
+            .background(Color(nsColor: .controlBackgroundColor))
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+            )
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -548,9 +592,10 @@ struct BotChatInputBar: View {
     private func send() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || !session.pendingAttachments.isEmpty else { return }
-        guard !session.isGenerating else { return }
+        let attachments = session.pendingAttachments
+        session.pendingAttachments = []
         inputText = ""
-        session.sendMessage(text)
+        session.sendMessage(text, attachments: attachments)
     }
     
     private func attachImageFile() {
@@ -594,25 +639,76 @@ struct BotChatInputBar: View {
 
         return .ignored
     }
+}
 
-    private func toggleRecording() {
-        if voiceController.isRecording {
-            voiceController.stopRecording()
-        } else {
-            Task {
-                let granted = await voiceController.requestPermissions()
-                if granted {
-                    do {
-                        try voiceController.startRecording { transcription in
-                            inputText = transcription
-                        }
-                    } catch {
-                        print("Failed to start voice recording: \(error)")
-                    }
-                } else {
-                    print("Speech/Microphone permissions denied.")
-                }
+// MARK: - Bot Prompt Inspector View
+
+struct BotPromptInspectorView: View {
+    let bot: BotProfile
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "doc.text")
+                    .foregroundStyle(Color.accentColor)
+                Text("\(bot.name) Instructions")
+                    .font(.headline)
             }
+            
+            Divider()
+            
+            ScrollView {
+                Text(bot.systemInstructions)
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+            }
+        }
+        .padding(14)
+    }
+}
+
+// MARK: - Bot Memory Editor View
+
+struct BotMemoryEditorView: View {
+    @Bindable var bot: BotProfile
+    @Environment(\.dismiss) private var dismiss
+    @State private var memoryText: String = ""
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "brain.head.profile")
+                    .foregroundStyle(Color.accentColor)
+                Text("\(bot.name) Memory")
+                    .font(.headline)
+                Spacer()
+                Button("Done") {
+                    bot.memory = memoryText
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+            
+            Text("Working context, style rules, and facts this Bot retains across conversations.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            
+            TextEditor(text: $memoryText)
+                .font(.system(size: 12, design: .monospaced))
+                .padding(6)
+                .background(Color(nsColor: .controlBackgroundColor))
+                .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                )
+        }
+        .padding(14)
+        .onAppear {
+            memoryText = bot.memory
         }
     }
 }

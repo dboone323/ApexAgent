@@ -13,14 +13,18 @@ public struct ApexAgentApp: App {
     let orchestrator = AppDelegate.sharedOrchestrator
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var botManager: BotManager
+    @State private var spaceManager = SpaceManager.shared
     let computer: Computer
     @State private var skillManager = SkillManager.shared
     @State private var routineManager = RoutineManager.shared
 
     public init() {
         self.computer = Computer()
-        self.botManager = BotManager(orchestrator: orchestrator, computer: computer)
-        orchestrator.botManager = botManager
+        let bm = BotManager(orchestrator: orchestrator, computer: computer)
+        self.botManager = bm
+        orchestrator.botManager = bm
+        SpaceManager.shared.orchestrator = orchestrator
+        SpaceManager.shared.botManager = bm
         ContainerBridge.shared = ContainerManager.shared
         let args = CommandLine.arguments
         // Attempt to connect to background daemon gateway if explicitly requested or reachable.
@@ -40,8 +44,8 @@ public struct ApexAgentApp: App {
             ContentView()
                 .environment(orchestrator)
                 .environment(botManager)
+                .environment(spaceManager)
                 .environment(computer)
-                .environment(\.groupChatManager, GroupChatManager())
                 .environment(skillManager)
                 .environment(routineManager)
                 .frame(minWidth: 960, minHeight: 640)
@@ -51,7 +55,7 @@ public struct ApexAgentApp: App {
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
-        .modelContainer(for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self])
+        .modelContainer(for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self])
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button("New Conversation") {
@@ -255,11 +259,15 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
         orchestrator.botManager = botManager
 
         do {
-            let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self)
+            let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self)
             let mainContext = ModelContext(container)
             orchestrator.modelContext = mainContext
             botManager.modelContext = mainContext
             botManager.loadBotsFromDisk()
+            SpaceManager.shared.orchestrator = orchestrator
+            SpaceManager.shared.botManager = botManager
+            SpaceManager.shared.modelContext = mainContext
+            SpaceManager.shared.loadSpacesFromDisk()
             if let url = container.configurations.first?.url {
                 print("🧠 SwiftData Store URL: \(url.path)")
             }
@@ -318,7 +326,7 @@ public func runDaemonMode() async {
     MCPManager.shared.orchestrator = orchestrator
     DynamicToolbox.shared.orchestrator = orchestrator
     do {
-        let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self)
+        let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self)
         let mainContext = ModelContext(container)
         orchestrator.modelContext = mainContext
         if let url = container.configurations.first?.url {
@@ -332,6 +340,10 @@ public func runDaemonMode() async {
         orchestrator.botManager = botManager
         botManager.modelContext = mainContext
         botManager.loadBotsFromDisk()
+        SpaceManager.shared.orchestrator = orchestrator
+        SpaceManager.shared.botManager = botManager
+        SpaceManager.shared.modelContext = mainContext
+        SpaceManager.shared.loadSpacesFromDisk()
         RoutineManager.shared.modelContext = mainContext
         RoutineManager.shared.botManager = botManager
         RoutineManager.shared.loadRoutines()
@@ -369,6 +381,192 @@ public func runDaemonMode() async {
         }
     } catch {
         print("⚠️ Failed to start daemon server: \(error)")
+        exit(1)
+    }
+}
+
+@MainActor
+public func runSpaceCLIMode(subcommandArgs: [String]) async {
+    setbuf(stdout, nil)
+    setbuf(stderr, nil)
+
+    let orchestrator = AppDelegate.sharedOrchestrator
+    MCPManager.shared.orchestrator = orchestrator
+    DynamicToolbox.shared.orchestrator = orchestrator
+    let computer = Computer()
+    let botManager = BotManager(orchestrator: orchestrator, computer: computer)
+    orchestrator.botManager = botManager
+
+    let spaceManager = SpaceManager.shared
+    spaceManager.orchestrator = orchestrator
+    spaceManager.botManager = botManager
+
+    do {
+        let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self)
+        let mainContext = ModelContext(container)
+        orchestrator.modelContext = mainContext
+        botManager.modelContext = mainContext
+        botManager.loadBotsFromDisk()
+        spaceManager.modelContext = mainContext
+        spaceManager.loadSpacesFromDisk()
+    } catch {
+        print("⚠️ Failed to initialize SwiftData model context: \(error)")
+        exit(1)
+    }
+
+    guard let space = spaceManager.activeSpace else {
+        print("❌ No active Space found.")
+        exit(1)
+    }
+
+    let subcommand = subcommandArgs.first ?? "status"
+
+    switch subcommand {
+    case "status":
+        print("=== APEX SPACES STATUS ===")
+        for sp in spaceManager.spaces {
+            print("Space: \(sp.name) [id: \(sp.id.uuidString)]")
+            print("  Mode: \(sp.orchestrationMode.displayName)")
+            print("  Workspace: \(sp.workspacePath)")
+            print("  Invite URL: \(spaceManager.inviteURL(for: sp))")
+            print("  Humans (\(sp.humanParticipants.count)):")
+            for h in sp.humanParticipants {
+                print("    - \(h.displayName) (@\(h.handle)) [\(h.role.badgeLabel) • \(h.roleTitle)]")
+            }
+            print("  AI Agents (\(sp.agentParticipants.count)):")
+            for a in sp.agentParticipants {
+                print("    - \(a.displayName) (@\(a.handle)) [\(a.roleTitle)]")
+            }
+            print("  Channels (\(sp.sortedChannels.count)):")
+            for ch in sp.sortedChannels {
+                print("    - #\(ch.name) (\(ch.rootMessages.count) root msgs): \(ch.topic)")
+            }
+            print("  Shared Pages (\(sp.sortedPages.count)):")
+            for pg in space.sortedPages {
+                print("    - \(pg.title) (edited by \(pg.lastEditedByName))")
+            }
+        }
+
+    case "add-human":
+        let name = subcommandArgs.count > 1 ? subcommandArgs[1] : "Alex Rivera"
+        let handle = subcommandArgs.count > 2 ? subcommandArgs[2] : nil
+        let roleTitle = subcommandArgs.count > 3 ? subcommandArgs[3] : "Staff Engineer"
+        let participant = spaceManager.addHumanParticipant(
+            to: space,
+            displayName: name,
+            handle: handle,
+            roleTitle: roleTitle,
+            role: .member,
+            isRemote: true
+        )
+        print("✅ Added Human Participant: \(participant.displayName) (@\(participant.handle)) — \(participant.roleTitle)")
+        print("Total Humans in '\(space.name)': \(space.humanParticipants.count)")
+
+    case "page":
+        let title = subcommandArgs.count > 1 ? subcommandArgs[1] : "Architecture Decision Record"
+        let body = subcommandArgs.count > 2 ? subcommandArgs[2] : "## Context\nShared via Apex Spaces CLI."
+        let page = spaceManager.createPage(
+            in: space,
+            title: title,
+            markdownBody: body,
+            authorName: spaceManager.activeHumanSender?.displayName ?? "CLI User"
+        )
+        print("✅ Created Shared SpacePage: '\(page.title)' [id: \(page.id.uuidString)]")
+        print(page.markdownBody)
+
+    case "post":
+        let channelName = subcommandArgs.count > 1 ? SpaceChannel.normalizeChannelName(subcommandArgs[1]) : "general"
+        let senderHandle = subcommandArgs.count > 2 ? SpaceParticipant.normalizeHandle(subcommandArgs[2]) : (spaceManager.activeHumanSender?.handle ?? "owner")
+        let content = subcommandArgs.count > 3 ? subcommandArgs.dropFirst(3).joined(separator: " ") : "Hello @apex!"
+
+        let channel = space.channels.first(where: { $0.name == channelName }) ?? spaceManager.addChannel(to: space, name: channelName)
+        let sender = space.humanParticipants.first(where: { $0.handle == senderHandle })
+            ?? spaceManager.addHumanParticipant(to: space, displayName: senderHandle.capitalized, handle: senderHandle)
+
+        // Post without background fire-and-forget so we can await the real bot turns deterministically in CLI
+        guard let msg = spaceManager.postHumanMessage(content, in: channel, sender: sender, triggerAgents: false) else {
+            print("❌ Failed to post message.")
+            exit(1)
+        }
+        print("💬 [HUMAN • \(msg.senderName) (@\(msg.senderHandle)) in #\(channel.name)]: \(msg.content)")
+
+        let targetBots = spaceManager.resolveTargetBots(
+            for: content,
+            in: space,
+            channel: channel,
+            senderKind: .human
+        )
+        if targetBots.isEmpty {
+            print("🔇 [Orchestration Engine]: 0 bots triggered (Human-to-Human passive listener mode).")
+        } else {
+            print("🤖 [Orchestration Engine]: Dispatching live turn(s) to: \(targetBots.map { "\($0.name) (@\(SpaceParticipant.normalizeHandle($0.name)))" }.joined(separator: ", "))")
+            await spaceManager.dispatchBotTurns(
+                bots: targetBots,
+                in: space,
+                channel: channel,
+                triggerMessage: msg,
+                parallel: space.orchestrationMode == .parallelSwarm && targetBots.count > 1
+            )
+            let botReplies = channel.rootMessages.suffix(targetBots.count)
+            for reply in botReplies where reply.senderKind == .bot {
+                print("🤖 [AGENT • \(reply.senderName) (@\(reply.senderHandle)) in #\(channel.name)]:\n\(reply.content)\n")
+            }
+        }
+
+    case "serve-test":
+        print("🌐 Starting CollaborativeServer on ephemeral localhost port for live HTTP verification...")
+        CollaborativeServer.shared.start(port: 0)
+        // Wait up to 2s for NWListener to report ready and assign port
+        for _ in 0..<20 {
+            if CollaborativeServer.shared.isRunning && CollaborativeServer.shared.port != 0 && CollaborativeServer.shared.port != 1340 {
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        let port = CollaborativeServer.shared.port
+        print("✅ CollaborativeServer listening on http://127.0.0.1:\(port)")
+
+        let general = space.sortedChannels.first!
+        let ownerHandle = space.humanParticipants.first?.handle ?? "owner"
+        let postURL = URL(string: "http://127.0.0.1:\(port)/api/spaces/message")!
+        var postReq = URLRequest(url: postURL)
+        postReq.httpMethod = "POST"
+        postReq.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let payload = SpaceMessagePostPayload(
+            spaceId: space.id,
+            channelId: general.id,
+            senderName: "Elena Vance",
+            senderHandle: "elena",
+            content: "Hey @\(ownerHandle), posting live over HTTP into #\(general.name)!"
+        )
+        postReq.httpBody = try? JSONEncoder().encode(payload)
+
+        do {
+            let (postData, postResp) = try await URLSession.shared.data(for: postReq)
+            let statusCode = (postResp as? HTTPURLResponse)?.statusCode ?? 0
+            print("📤 POST /api/spaces/message -> HTTP \(statusCode): \(String(decoding: postData, as: UTF8.self))")
+
+            let getURL = URL(string: "http://127.0.0.1:\(port)/api/spaces")!
+            let (getData, getResp) = try await URLSession.shared.data(from: getURL)
+            let getStatus = (getResp as? HTTPURLResponse)?.statusCode ?? 0
+            let snapshots = try JSONDecoder().decode([SpaceSnapshotDTO].self, from: getData)
+            print("📥 GET /api/spaces -> HTTP \(getStatus) (decoded \(snapshots.count) Space snapshot(s))")
+            if let first = snapshots.first {
+                print("   Space: \(first.name) | Participants: \(first.participants.count) | Channels: \(first.channels.count) | Pages: \(first.pages.count)")
+                if let genDTO = first.channels.first(where: { $0.name == general.name }),
+                   let lastMsg = genDTO.messages.last {
+                    print("   Latest Message in #\(genDTO.name): [\(lastMsg.senderName) (@\(lastMsg.senderHandle))]: \(lastMsg.content)")
+                }
+            }
+        } catch {
+            print("❌ HTTP verification failed: \(error)")
+            CollaborativeServer.shared.stop()
+            exit(1)
+        }
+        CollaborativeServer.shared.stop()
+
+    default:
+        print("Unknown --space-cli subcommand: \(subcommand)")
         exit(1)
     }
 }

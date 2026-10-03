@@ -139,6 +139,8 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                 if !reasoningText.isEmpty {
                     ollamaMessages.append(["role": "assistant", "content": reasoningText])
                 }
+            case .data:
+                break
             @unknown default:
                 break
             }

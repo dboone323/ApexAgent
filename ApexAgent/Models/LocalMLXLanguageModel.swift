@@ -132,6 +132,8 @@ public struct LocalMLXLanguageModelExecutor: LanguageModelExecutor, DynamicToolR
                 if !text.isEmpty {
                     messages.append(["role": "assistant", "content": text])
                 }
+            case .data:
+                break
             @unknown default:
                 break
             }

@@ -18,6 +18,11 @@ final class ToolDispatchEngine {
 
     init() {}
 
+    func shouldConfirmTool(name: String, requireConfirmationForAll: Bool = false) -> Bool {
+        if requireConfirmationForAll { return true }
+        return Self.dangerousToolNames.contains(name)
+    }
+
     func buildAllTools(orchestrator: AgentOrchestrator, botManager: BotManager?) -> [AnyExecutableTool] {
         [
             AnyExecutableTool(ShellTool(orchestrator: orchestrator)),
@@ -56,7 +61,7 @@ final class ToolDispatchEngine {
             AnyExecutableTool(SpotlightSearchTool(orchestrator: orchestrator)),
             AnyExecutableTool(DynamicToolCallTool(orchestrator: orchestrator)),
             AnyExecutableTool(DailyBriefingTool(orchestrator: orchestrator)),
-            AnyExecutableTool(AskBotTool(botManager: botManager)),
+            AnyExecutableTool(AskBotTool(orchestrator: orchestrator)),
             AnyExecutableTool(ConfirmCompletionTool(orchestrator: orchestrator)),
             AnyExecutableTool(SaveReviewSessionTool(orchestrator: orchestrator)),
             AnyExecutableTool(ListReviewSessionsTool(orchestrator: orchestrator)),
@@ -74,7 +79,7 @@ final class ToolDispatchEngine {
             AnyExecutableTool(ScreenPerceptionTool(orchestrator: orchestrator)),
             AnyExecutableTool(FilePatchTool(orchestrator: orchestrator)),
             AnyExecutableTool(GitOperationsTool(orchestrator: orchestrator)),
-            AnyExecutableTool(DispatchSwarmTool(botManager: botManager)),
+            AnyExecutableTool(DispatchSwarmTool(orchestrator: orchestrator, botManager: botManager)),
             // M3: these tools were fully implemented but never registered,
             // so the agent could not call them at all.
             AnyExecutableTool(ComputerUseTool(orchestrator: orchestrator)),
@@ -95,11 +100,6 @@ final class ToolDispatchEngine {
         bot: BotProfile? = nil,
         agentIdentity: AgentIdentity? = nil
     ) async throws -> String {
-        let botName = bot?.name ?? {
-            if case .bot(_, let name) = agentIdentity { return name }
-            return nil
-        }()
-
         // RBAC Allowlist enforcement: If a Bot defines allowed tools, reject any disallowed tool
         if let bot = bot, !bot.allowedToolNames.isEmpty {
             if !bot.allowedToolNames.contains(name) {
@@ -112,69 +112,22 @@ final class ToolDispatchEngine {
             }
         }
 
-        let redactedInput = SecurityAuditor.redactSensitiveData(in: jsonArguments)
-
-        do {
-            guard AgentSecurity.isAllowed(name) else {
-                throw NSError(
-                    domain: "AgentSecurity",
-                    code: 403,
-                    userInfo: [NSLocalizedDescriptionKey: "Permission Denied: Tool '\(name)' is disabled by the global security denylist."]
-                )
-            }
-
-            // Enterprise zero-trust capability validation
-            if !AgentSecurity.validateCapabilityToken(for: name, botName: botName) {
-                throw NSError(domain: "AgentSecurity", code: 403, userInfo: [NSLocalizedDescriptionKey: "Enterprise Security: Missing or expired capability token for high-risk tool '\(name)'"])
-            }
-            
-            let result: String
-            if let speculativeResult = await SpeculativeToolExecutor.shared.resolve(toolName: name, jsonArguments: jsonArguments) {
-                result = speculativeResult
-            } else if let tool = allTools.first(where: { $0.name == name }) {
-                result = try await tool.execute(jsonArguments: jsonArguments)
-            } else if DynamicToolbox.shared.dynamicTools[name] != nil {
-                result = try await DynamicToolbox.shared.executeTool(name: name, jsonArguments: jsonArguments)
-            } else {
-                throw NSError(domain: "AgentOrchestrator", code: -2, userInfo: [NSLocalizedDescriptionKey: "Unknown tool: \(name)"])
-            }
-            
-            // Invalidate cache if a write tool executes
-            let speculableToolNames: Set<String> = [
-                "read_file", "file_search", "list_directory",
-                "get_system_info", "search_memory", "query_logs"
-            ]
-            if !speculableToolNames.contains(name) {
-                SpeculativeToolExecutor.shared.invalidateAll()
-            }
-            
-            let redactedOutput = SecurityAuditor.redactSensitiveData(in: String(result.prefix(500)))
-
-            // Audit log with redacted inputs & outputs
-            CryptographicAuditChain.shared.record(
-                toolName: name,
-                input: redactedInput,
-                output: redactedOutput,
-                status: "success",
-                botName: botName
+        guard AgentSecurity.isAllowed(name) else {
+            throw NSError(
+                domain: "AgentSecurity",
+                code: 403,
+                userInfo: [NSLocalizedDescriptionKey: "Tool '\(name)' is disabled by policy"]
             )
-            
-            return result
-        } catch {
-            let redactedError = SecurityAuditor.redactSensitiveData(in: error.localizedDescription)
-            CryptographicAuditChain.shared.record(
-                toolName: name,
-                input: redactedInput,
-                output: redactedError,
-                status: "error",
-                botName: botName
-            )
-            throw error
         }
-    }
 
-    func shouldConfirmTool(name: String, requireConfirmationForAll: Bool) -> Bool {
-        if requireConfirmationForAll { return true }
-        return Self.dangerousToolNames.contains(name) || AgentSecurity.requiresConfirmation(name)
+        guard let tool = allTools.first(where: { $0.name == name }) else {
+            throw NSError(
+                domain: "AgentSecurity",
+                code: 404,
+                userInfo: [NSLocalizedDescriptionKey: "Unknown tool: \(name)"]
+            )
+        }
+
+        return try await tool.execute(jsonArguments: jsonArguments)
     }
 }

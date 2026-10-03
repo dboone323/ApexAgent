@@ -91,6 +91,17 @@ struct BubbleContent: View {
             } else {
                 // Agent message — markdown content, left-aligned
                 VStack(alignment: .leading, spacing: 8) {
+                    if let botName = message.botName, !botName.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "bolt.badge.automatic.fill")
+                                .font(.system(size: 11))
+                            Text(botName)
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundStyle(AppTheme.Palette.accent)
+                        .padding(.bottom, 2)
+                    }
+
                     if !message.content.isEmpty {
                         MarkdownText(content: message.content)
                             .textSelection(.enabled)
@@ -140,256 +151,179 @@ struct MarkdownText: View {
         }
     }
 
-    // MARK: Block Parser
-
-    enum BlockType {
-        case text(String)
-        case code(String, String)
+    private func makeAttributedString(from text: String) -> AttributedString {
+        (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
+            ?? AttributedString(text)
     }
 
-    struct ContentBlock: Identifiable {
-        let id = UUID()
-        let type: BlockType
-    }
+    func parseBlocks(_ markdown: String) -> [MarkdownBlock] {
+        var blocks: [MarkdownBlock] = []
+        let lines = markdown.components(separatedBy: .newlines)
+        var inCode = false
+        var currentLang = ""
+        var codeAccumulator: [String] = []
+        var textAccumulator: [String] = []
 
-    private static let markdownRegex: NSRegularExpression = {
-        do {
-            return try NSRegularExpression(pattern: "```(\\w*)\n([\\s\\S]*?)```")
-        } catch {
-            // This pattern is static and known-good; if it somehow becomes invalid,
-            // fall back to an empty regex so parsing degrades gracefully instead of crashing.
-            return NSRegularExpression()
-        }
-    }()
-    private static let parseCache = NSCache<NSString, CachedBlocks>()
-
-    class CachedBlocks: NSObject {
-        let blocks: [ContentBlock]
-        init(_ blocks: [ContentBlock]) {
-            self.blocks = blocks
-        }
-    }
-
-    func parseBlocks(_ content: String) -> [ContentBlock] {
-        let cacheKey = content as NSString
-        if let cached = Self.parseCache.object(forKey: cacheKey) {
-            return cached.blocks
-        }
-
-        var blocks: [ContentBlock] = []
-        let matches = Self.markdownRegex.matches(in: content, range: NSRange(content.startIndex..., in: content))
-
-        var lastEnd = content.startIndex
-
-        for match in matches {
-            guard let matchRange = Range(match.range, in: content),
-                  let langRange = Range(match.range(at: 1), in: content),
-                  let codeRange = Range(match.range(at: 2), in: content) else {
-                continue
-            }
-
-            // Text before code block
-            let matchStart = matchRange.lowerBound
-            if lastEnd < matchStart {
-                let textSegment = String(content[lastEnd..<matchStart])
-                if !textSegment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    blocks.append(ContentBlock(type: .text(textSegment)))
+        for line in lines {
+            if line.hasPrefix("```") {
+                if inCode {
+                    // End code block
+                    blocks.append(MarkdownBlock(type: .code(language: currentLang, code: codeAccumulator.joined(separator: "\n"))))
+                    codeAccumulator = []
+                    currentLang = ""
+                    inCode = false
+                } else {
+                    // Start code block
+                    if !textAccumulator.isEmpty {
+                        let text = textAccumulator.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !text.isEmpty {
+                            blocks.append(MarkdownBlock(type: .text(text)))
+                        }
+                        textAccumulator = []
+                    }
+                    currentLang = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                    inCode = true
                 }
-            }
-
-            // Code block
-            let lang = String(content[langRange])
-            let code = String(content[codeRange])
-            blocks.append(ContentBlock(type: .code(lang, code)))
-
-            lastEnd = matchRange.upperBound
-        }
-
-        // Remaining text
-        if lastEnd < content.endIndex {
-            let remaining = String(content[lastEnd...])
-            if !remaining.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                blocks.append(ContentBlock(type: .text(remaining)))
+            } else if inCode {
+                codeAccumulator.append(line)
+            } else {
+                textAccumulator.append(line)
             }
         }
 
-        if blocks.isEmpty {
-            blocks.append(ContentBlock(type: .text(content)))
+        if inCode && !codeAccumulator.isEmpty {
+            blocks.append(MarkdownBlock(type: .code(language: currentLang, code: codeAccumulator.joined(separator: "\n"))))
+        } else if !textAccumulator.isEmpty {
+            let text = textAccumulator.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty {
+                blocks.append(MarkdownBlock(type: .text(text)))
+            }
         }
 
-        Self.parseCache.setObject(CachedBlocks(blocks), forKey: cacheKey)
         return blocks
-    }
-
-    func makeAttributedString(from text: String) -> AttributedString {
-        // Try to use AttributedString with markdown
-        if let attributed = try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
-            return attributed
-        }
-        return AttributedString(text)
     }
 }
 
-// MARK: - Code Block
+// MARK: - Supporting Types
+
+struct MarkdownBlock: Identifiable {
+    let id = UUID()
+    let type: BlockType
+
+    enum BlockType {
+        case text(String)
+        case code(language: String, code: String)
+    }
+}
 
 struct CodeBlock: View {
     let language: String
     let code: String
-    @State private var isCopied = false
-    @State private var isHovered = false
-    @FocusState private var isFocused: Bool
+    @State private var copied = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header bar
+            // Header
             HStack {
-                if !language.isEmpty {
-                    Text(language.uppercased())
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                }
+                Text(language.isEmpty ? "code" : language)
+                    .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.secondary)
                 Spacer()
-                Button {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(code, forType: .string)
-                    withAnimation { isCopied = true }
-                    Task {
-                        try? await Task.sleep(for: .seconds(2))
-                        withAnimation { isCopied = false }
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
-                            .font(.system(size: 10))
-                            .accessibilityHidden(true)
-                        Text(isCopied ? "Copied!" : "Copy")
-                            .font(.system(size: 10, weight: .medium))
-                    }
-                    .foregroundStyle(isCopied ? .green : .secondary)
+                Button(action: copyCode) {
+                    Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .background(Color(nsColor: .quaternaryLabelColor).opacity(0.3))
+            .padding(.vertical, 6)
+            .background(Color(nsColor: .controlBackgroundColor))
+
+            Divider()
 
             // Code content
             ScrollView(.horizontal, showsIndicators: false) {
-                Text(code.trimmingCharacters(in: .newlines))
+                Text(code)
                     .font(.system(size: 12, design: .monospaced))
                     .foregroundStyle(.primary)
-                    .textSelection(.enabled)
                     .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
             }
         }
-        .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
+        .background(Color(nsColor: .textBackgroundColor).opacity(0.6))
         .clipShape(RoundedRectangle(cornerRadius: 8))
-        .focusable()
-        .focused($isFocused)
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .stroke(isFocused ? AppTheme.Palette.accent : Color(nsColor: .separatorColor), lineWidth: isFocused ? 2 : 0.5)
+                .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
         )
     }
-}
 
-// MARK: - Bubble Shape
+    private func copyCode() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(code, forType: .string)
+        copied = true
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            copied = false
+        }
+    }
+}
 
 struct BubbleShape: Shape {
     let isUser: Bool
-    let radius: CGFloat = 18
 
     func path(in rect: CGRect) -> Path {
-        let path = CGMutablePath()
-        
-        let minX = rect.minX
-        let minY = rect.minY
-        let maxX = rect.maxX
-        let maxY = rect.maxY
-        
-        let topLeft = radius
-        let topRight = radius
-        let bottomLeft = isUser ? radius : 4
-        let bottomRight = isUser ? 4 : radius
-        
-        path.move(to: CGPoint(x: minX + topLeft, y: minY))
-        
-        path.addLine(to: CGPoint(x: maxX - topRight, y: minY))
-        path.addArc(tangent1End: CGPoint(x: maxX, y: minY), tangent2End: CGPoint(x: maxX, y: minY + topRight), radius: topRight)
-        
-        path.addLine(to: CGPoint(x: maxX, y: maxY - bottomRight))
-        path.addArc(tangent1End: CGPoint(x: maxX, y: maxY), tangent2End: CGPoint(x: maxX - bottomRight, y: maxY), radius: bottomRight)
-        
-        path.addLine(to: CGPoint(x: minX + bottomLeft, y: maxY))
-        path.addArc(tangent1End: CGPoint(x: minX, y: maxY), tangent2End: CGPoint(x: minX, y: maxY - bottomLeft), radius: bottomLeft)
-        
-        path.addLine(to: CGPoint(x: minX, y: minY + topLeft))
-        path.addArc(tangent1End: CGPoint(x: minX, y: minY), tangent2End: CGPoint(x: minX + topLeft, y: minY), radius: topLeft)
-        
-        return Path(path)
+        let radius: CGFloat = 16
+        return Path(roundedRect: rect, cornerRadius: radius)
     }
 }
 
-// MARK: - Typing Indicator
-
 struct TypingIndicator: View {
-    @State private var animating = false
+    @State private var phase = 0
 
     var body: some View {
-        HStack(spacing: 5) {
-            ForEach(0..<3, id: \.self) { index in
+        HStack(spacing: 4) {
+            ForEach(0..<3) { idx in
                 Circle()
-                    .fill(AppTheme.Palette.accent.opacity(0.6))
-                    .frame(width: 7, height: 7)
-                    .scaleEffect(animating ? 1.0 : 0.5)
+                    .fill(Color.secondary.opacity(phase == idx ? 1.0 : 0.3))
+                    .frame(width: 6, height: 6)
                     .animation(
-                        .easeInOut(duration: 0.5)
-                        .repeatForever(autoreverses: true)
-                        .delay(Double(index) * 0.15),
-                        value: animating
+                        .easeInOut(duration: 0.6)
+                        .repeatForever()
+                        .delay(Double(idx) * 0.2),
+                        value: phase
                     )
             }
         }
-        .onAppear { animating = true }
         .padding(.vertical, 4)
+        .onAppear { phase = 2 }
     }
 }
-
-// MARK: - Agent Avatar
 
 struct AgentAvatar: View {
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [AppTheme.Palette.accent, .blue],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 32, height: 32)
-            Image(systemName: "bolt.fill")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.white)
-                .accessibilityHidden(true)
-        }
+        Circle()
+            .fill(AppTheme.Palette.accent.gradient)
+            .frame(width: 28, height: 28)
+            .overlay(
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+            )
+            .shadow(color: AppTheme.Palette.accent.opacity(0.3), radius: 4, y: 2)
     }
 }
 
-// MARK: - User Avatar
-
 struct UserAvatar: View {
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(Color(nsColor: .tertiaryLabelColor).opacity(0.3))
-                .frame(width: 32, height: 32)
-            Image(systemName: "person.fill")
-                .font(.system(size: 13))
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-        }
+        Circle()
+            .fill(Color.secondary.opacity(0.2))
+            .frame(width: 28, height: 28)
+            .overlay(
+                Image(systemName: "person.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+            )
     }
 }

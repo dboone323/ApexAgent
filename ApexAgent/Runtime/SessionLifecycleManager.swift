@@ -9,7 +9,7 @@ import Foundation
 public final class SessionLifecycleManager {
     public static let shared = SessionLifecycleManager()
 
-    private var activeTasks: [UUID: Task<Void, Never>] = [:]
+    private var activeTasks: [UUID: (taskId: UUID, task: Task<Void, Never>)] = [:]
     private var activeProcesses: [UUID: Set<Process>] = [:]
     private var pendingConfirmations: [UUID: CheckedContinuation<Bool, Never>] = [:]
     private var sessionConfirmations: [UUID: Set<UUID>] = [:]
@@ -18,16 +18,24 @@ public final class SessionLifecycleManager {
 
     // MARK: - Generation Tasks
 
-    public func register(task: Task<Void, Never>, forSessionId sessionId: UUID) {
+    @discardableResult
+    public func register(task: Task<Void, Never>, forSessionId sessionId: UUID, taskId: UUID = UUID()) -> UUID {
         // Cancel existing task if any
         if let existing = activeTasks[sessionId] {
-            existing.cancel()
+            existing.task.cancel()
         }
-        activeTasks[sessionId] = task
+        activeTasks[sessionId] = (taskId: taskId, task: task)
+        return taskId
     }
 
-    public func unregister(sessionId: UUID) {
-        activeTasks.removeValue(forKey: sessionId)
+    public func unregister(sessionId: UUID, taskId: UUID? = nil) {
+        if let taskId = taskId {
+            if let existing = activeTasks[sessionId], existing.taskId == taskId {
+                activeTasks.removeValue(forKey: sessionId)
+            }
+        } else {
+            activeTasks.removeValue(forKey: sessionId)
+        }
     }
 
     // MARK: - Child Subprocesses
@@ -83,8 +91,8 @@ public final class SessionLifecycleManager {
 
     public func cancelSession(id: UUID, reason: String = "User requested cancellation") {
         // 1. Cancel generation task
-        if let task = activeTasks.removeValue(forKey: id) {
-            task.cancel()
+        if let entry = activeTasks.removeValue(forKey: id) {
+            entry.task.cancel()
         }
 
         // 2. Terminate child processes
@@ -105,8 +113,8 @@ public final class SessionLifecycleManager {
     }
 
     public func cancelAll() {
-        for (_, task) in activeTasks {
-            task.cancel()
+        for (_, entry) in activeTasks {
+            entry.task.cancel()
         }
         activeTasks.removeAll()
 
@@ -117,7 +125,7 @@ public final class SessionLifecycleManager {
         }
         activeProcesses.removeAll()
 
-        for (_, continuation) in pendingConfirmations {
+        for continuation in pendingConfirmations.values {
             continuation.resume(returning: false)
         }
         pendingConfirmations.removeAll()

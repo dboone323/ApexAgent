@@ -57,7 +57,7 @@ public final class ProviderFallbackExecutor {
                 for: candidate.provider,
                 bot: bot,
                 session: session,
-                allowedTools: allowedTools,
+                allowedTools: allowedTools ?? [],
                 orchestrator: orchestrator
             )
 
@@ -78,46 +78,22 @@ public final class ProviderFallbackExecutor {
                 )
 
                 let trimmed = accumulatedText.trimmingCharacters(in: .whitespacesAndNewlines)
-                let isNativeFallbackPlaceholder = trimmed.hasPrefix("⚠️ The on-device model returned no output")
-                if trimmed.isEmpty || (isNativeFallbackPlaceholder && index < candidates.count - 1) {
-                    let emptyMsg = isNativeFallbackPlaceholder
-                        ? "Provider \(candidate.provider.displayName) unavailable or failed."
-                        : "Provider \(candidate.provider.displayName) returned empty output."
-                    attemptedErrors.append("[\(candidate.provider.rawValue)] \(emptyMsg)")
-                    if index < candidates.count - 1 {
-                        continue // Fallback to next candidate
-                    } else if trimmed.isEmpty {
-                        return .emptyOutput
-                    }
+                if !trimmed.isEmpty && !trimmed.hasPrefix("⚠️ The on-device model returned no output") {
+                    let finalState = RuntimeTerminalState.completed(output: trimmed)
+                    onEvent?(.completed(requestId: requestId, state: finalState))
+                    return finalState
+                } else {
+                    let emptyErr = "\(candidate.provider.displayName) produced an empty response."
+                    attemptedErrors.append(emptyErr)
                 }
-
-                return .completed(output: accumulatedText)
             } catch {
-                let classification = RuntimeErrorClassifier.classify(error: error)
-                switch classification {
-                case .cancelled:
-                    return .cancelled(reason: error.localizedDescription)
-                case .permissionDenied(let reason):
-                    return .failed(error: reason, isRetryable: false)
-                case .fallbackEligible(let reason), .terminal(let reason):
-                    attemptedErrors.append("[\(candidate.provider.rawValue)] \(reason)")
-                    if index < candidates.count - 1 {
-                        continue // Fallback to next candidate
-                    }
-                case .retryable(let delay):
-                    attemptedErrors.append("[\(candidate.provider.rawValue)] Retryable delay \(delay)s: \(error.localizedDescription)")
-                    if index < candidates.count - 1 {
-                        continue
-                    }
-                case .malformedToolCall(let tool, let details):
-                    attemptedErrors.append("[\(candidate.provider.rawValue)] Malformed tool '\(tool)': \(details)")
-                    if index < candidates.count - 1 {
-                        continue
-                    }
-                }
+                let errorMsg = "\(candidate.provider.displayName) error: \(error.localizedDescription)"
+                attemptedErrors.append(errorMsg)
             }
         }
 
-        return .fallbackExhausted(errors: attemptedErrors)
+        let terminal = RuntimeTerminalState.fallbackExhausted(errors: attemptedErrors)
+        onEvent?(.completed(requestId: requestId, state: terminal))
+        return terminal
     }
 }

@@ -36,6 +36,8 @@ class CollaborativeServer: NSObject, ObservableObject {
     }
     public var policy = Policy(rules: [
         PolicyRule(endpoint: "/api/state", requiredPermission: "read:state"),
+        PolicyRule(endpoint: "/api/spaces", requiredPermission: "read:spaces"),
+        PolicyRule(endpoint: "/api/spaces/message", requiredPermission: "write:spaces"),
         PolicyRule(endpoint: "/api/screen", requiredPermission: "read:screen"),
         PolicyRule(endpoint: "/", requiredPermission: "read:dashboard"),
         PolicyRule(endpoint: "/index.html", requiredPermission: "read:dashboard")
@@ -250,6 +252,7 @@ class CollaborativeServer: NSObject, ObservableObject {
         logAccess(clientIP: clientIP, endpoint: plainPath, isAuthorized: true, decision: "Allowed (200)")
 
         // Serve Endpoints
+        let method = parts[0].uppercased()
         if plainPath == "/" || plainPath == "/index.html" {
             // Serve Dashboard HTML
             let html = getDashboardHTML()
@@ -259,6 +262,26 @@ class CollaborativeServer: NSObject, ObservableObject {
             Task { @MainActor in
                 let json = await getJSONState()
                 sendHTTPResponse(html: json, status: "200 OK", contentType: "application/json", connection: connection)
+            }
+        } else if plainPath == "/api/spaces" && method == "GET" {
+            Task { @MainActor in
+                let json = SpaceManager.shared.exportSpacesSnapshotJSON()
+                sendHTTPResponse(html: json, status: "200 OK", contentType: "application/json", connection: connection)
+            }
+        } else if plainPath == "/api/spaces/message" && method == "POST" {
+            let bodyStr = requestStr.components(separatedBy: "\r\n\r\n").dropFirst().joined(separator: "\r\n\r\n")
+            guard let bodyData = bodyStr.data(using: .utf8),
+                  let payload = try? JSONDecoder().decode(SpaceMessagePostPayload.self, from: bodyData) else {
+                sendHTTPResponse(html: "{\"error\":\"Invalid JSON payload\"}", status: "400 Bad Request", contentType: "application/json", connection: connection)
+                return
+            }
+            Task { @MainActor in
+                if let created = SpaceManager.shared.receiveRemoteHumanMessage(payload) {
+                    let resp = "{\"status\":\"ok\",\"messageId\":\"\(created.id.uuidString)\"}"
+                    sendHTTPResponse(html: resp, status: "200 OK", contentType: "application/json", connection: connection)
+                } else {
+                    sendHTTPResponse(html: "{\"error\":\"Could not route message to Space\"}", status: "404 Not Found", contentType: "application/json", connection: connection)
+                }
             }
         } else if plainPath.starts(with: "/api/screen") {
             // Serve Screen Capture

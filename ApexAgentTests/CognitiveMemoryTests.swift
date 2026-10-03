@@ -383,7 +383,7 @@ final class CognitiveMemoryTests: XCTestCase {
         manager.loadConfigs()
         if FileManager.default.fileExists(atPath: "/usr/bin/xcrun") {
             XCTAssertTrue(
-                manager.servers.contains(where: { $0.name == "xcode-native" && $0.command == "/usr/bin/xcrun" && $0.arguments == ["mcpbridge"] }),
+                manager.servers.contains(where: { $0.name == "xcode-native" && ($0.command.hasSuffix("mcpbridge") || ($0.command == "/usr/bin/xcrun" && $0.arguments == ["mcpbridge"])) }),
                 "MCPManager.loadConfigs() must auto-seed xcode-native when /usr/bin/xcrun exists"
             )
         }

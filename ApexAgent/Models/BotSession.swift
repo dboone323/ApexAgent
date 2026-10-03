@@ -1,283 +1,332 @@
 import Foundation
-import AppKit
-import FoundationModels
 import SwiftData
 import Observation
+import AppKit
+import FoundationModels
 
-// MARK: - BotSession: A chat session scoped to one Bot
+// MARK: - BotSession: Per-Bot execution state & conversation history
 
-/// Each Bot gets one BotSession when you open a conversation with it.
-/// It holds the LanguageModelSession, messages, tool events, and routing
-/// for that Bot — equivalent to what AgentOrchestrator does today, but
-/// per-Bot instead of global.
-///
-/// The BotSession delegates tool execution and permissions to the shared
-/// AgentOrchestrator (which owns the SwiftData context, security sandbox,
-/// and tool registry), but keeps its own message history, instructions,
-/// memory, and model session.
+/// Manages a single Bot's conversation, execution loop, streaming state,
+/// queued prompts, tool approval cards, and transcript synchronization.
 @Observable
 @MainActor
 final class BotSession {
-    // MARK: - Identity
-    var bot: BotProfile
+    let bot: BotProfile
+    weak var orchestrator: AgentOrchestrator?
+    weak var computer: Computer?
+    weak var botManager: BotManager?
+    var modelContext: ModelContext?
 
-    // MARK: - Conversation State (per-Bot)
+    var id: UUID { bot.id }
     var messages: [ChatMessage] = []
-    var toolEvents: [ToolEvent] = []
     var isGenerating: Bool = false
-    var pendingConfirmation: ConfirmationRequest?
+    var streamingMessageId: UUID?
     var activeAssistantMessageId: UUID?
-    var activePlan: [PlanStep] = []
     var pendingAttachments: [NSImage] = []
-    var pendingAsyncContinuation: CheckedContinuation<String?, Never>?
     var generationTask: Task<Void, Never>?
-
-    // MARK: - Model State
-    var modelPreference: AgentModelPreference = .localSystem
-    var toolCallingMode: AgentToolCallingMode = .auto
+    var pendingAsyncContinuation: CheckedContinuation<String?, Never>?
+    var currentConversation: Conversation?
     var session: LanguageModelSession?
     var modelAvailability: SystemLanguageModel.Availability = .available
 
-    // MARK: - Shared references (not owned)
-    weak var orchestrator: AgentOrchestrator?
-    weak var computer: Computer?
-    /// Back-reference for chief-of-staff roster composition. Set by BotManager
-    /// when it creates the session.
-    weak var botManager: BotManager?
+    // MARK: - Queued Prompts State
+    /// User prompts submitted while generation is running. Drained in FIFO order.
+    var queuedPrompts: [QueuedPrompt] = []
 
-    // MARK: - SwiftData
-    var modelContext: ModelContext?
-    var currentConversation: Conversation?
+    // MARK: - WS4: Needs-Attention indicator
+    /// True when this session is blocked on a peer-to-peer card or pending approval.
+    var needsAttention: Bool = false
 
-    // MARK: - Attention state
-    var needsAttention: Bool = false       // waiting for approval/question/handoff
-    var unreadActivity: Bool = false       // new result since last viewed
+    // MARK: - Tool Calling Preference
+    var toolCallingMode: AgentToolCallingMode {
+        .auto
+    }
+
+    // MARK: - Effective Privacy Tier
+    var effectivePrivacyTier: PrivacyTier {
+        ModelRegistry.privacyTier()
+    }
+
+    // MARK: - Active Model Provider
+    var effectiveModelProvider: ModelProvider {
+        bot.modelProvider ?? ModelRegistry.activeProvider()
+    }
 
     // MARK: - Init
-    init(bot: BotProfile, orchestrator: AgentOrchestrator, computer: Computer) {
+    init(
+        bot: BotProfile,
+        orchestrator: AgentOrchestrator,
+        computer: Computer
+    ) {
         self.bot = bot
         self.orchestrator = orchestrator
         self.computer = computer
-        self.modelAvailability = orchestrator.modelAvailability
     }
 
-    var id: UUID {
-        currentConversation?.id ?? bot.id
-    }
-
-    // MARK: - System Instructions (dynamic, includes memory + chief roster)
-
+    /// Composed system instructions including the Chief-of-Staff roster prompt
+    /// so every bot knows which teammates exist and can be delegated to via
+    /// `delegate_task`.
     var systemInstructions: String {
-        var baseInstructions = bot.systemInstructions
-        
-        // Inject Cognitive Memory (episodes, facts, procedures)
-        let memorySummary = CognitiveMemoryEngine.shared.buildContextSummary(forBotId: bot.id, maxLength: 800)
-        if !memorySummary.isEmpty && memorySummary.contains(":\n") {
-            baseInstructions += "\n\n### Cognitive Memory Context:\n" + memorySummary
-        }
-        
+        let baseInstructions = bot.systemInstructions
         guard bot.isChiefOfStaff, let botManager else { return baseInstructions }
-        // Chief of staff: append a live roster so the commander knows who it
-        // can delegate to. Caps/clipping live in ChiefOfStaff itself.
-        let members = botManager.allBots.map { profile in
-            ChiefTeamMember(
-                id: profile.id.uuidString,
-                name: profile.name,
-                title: profile.title.isEmpty ? nil : profile.title,
-                descriptionText: profile.descriptionText.isEmpty ? nil : profile.descriptionText,
-                busy: botManager.isGenerating(botId: profile.id),
-                hidden: false,
-                section: nil)
-        }
+        let profiles = botManager.allBots.map { ($0, botManager.isGenerating(botId: $0.id)) }
         let rosterPrompt = ChiefOfStaff.systemPrompt(
-            chiefId: bot.id.uuidString,
-            bots: members,
-            canDelegate: true)
+            chiefId: bot.id,
+            profiles: profiles,
+            canDelegate: true
+        )
         return baseInstructions + "\n\n" + rosterPrompt
     }
 
-    // MARK: - Reset / New Conversation
+    // MARK: - Queued Prompts Management
 
-    func reset() {
-        cancelGeneration()
-        messages = []
-        toolEvents = []
-        isGenerating = false
-        activeAssistantMessageId = nil
-        activePlan = []
-        pendingAttachments = []
-        session = nil
-        needsAttention = false
-        unreadActivity = false
-        currentConversation = nil
+    func removeQueuedPrompt(id: UUID) {
+        queuedPrompts.removeAll { $0.id == id }
     }
 
-    /// Cancels this Bot's active generation without affecting other Bot sessions.
-    func cancelGeneration() {
-        generationTask?.cancel()
-        SessionLifecycleManager.shared.cancelSession(id: id)
+    func clearQueuedPrompts() {
+        queuedPrompts.removeAll()
     }
 
-    // MARK: - Message Management
+    func clearPromptQueue() {
+        clearQueuedPrompts()
+    }
 
-    /// Sends a message and awaits the final assistant response.
-    /// Uses a continuation to bridge the callback-based generation flow.
-    func sendMessageAsync(_ text: String, attachments: [NSImage] = []) async -> String? {
-        guard !isGenerating else { return nil }
-        return await withCheckedContinuation { continuation in
-            self.pendingAsyncContinuation = continuation
-            self.sendMessage(text, attachments: attachments)
+    /// Appends a user prompt to the queue while generation is active.
+    func queuePrompt(
+        _ text: String,
+        attachments: [NSImage] = []
+    ) {
+        let queued = QueuedPrompt(
+            id: UUID(),
+            text: text,
+            attachments: attachments
+        )
+        queuedPrompts.append(queued)
+    }
+
+    /// Drains the next queued prompt if not generating.
+    func drainNextQueuedPromptIfIdle() {
+        guard !queuedPrompts.isEmpty, !isGenerating else { return }
+        let next = queuedPrompts.removeFirst()
+        Task { @MainActor in
+            await self.send(
+                prompt: next.text,
+                attachments: next.attachments
+            )
         }
     }
 
-    func appendMessage(_ message: ChatMessage) {
-        messages.append(message)
-        persistMessage(message)
+    func processNextQueuedPromptIfNeeded() {
+        drainNextQueuedPromptIfIdle()
+    }
+
+    // MARK: - Stop / Cancel
+
+    /// Stops any ongoing generation or streaming for this bot and clears queued prompts.
+    func stopGeneration() {
+        isGenerating = false
+        generationTask?.cancel()
+        generationTask = nil
+        if let streamingId = streamingMessageId {
+            updateMessage(id: streamingId, isStreaming: false)
+            streamingMessageId = nil
+        }
+        activeAssistantMessageId = nil
+    }
+
+    func cancelGeneration() {
+        stopGeneration()
+    }
+
+    // MARK: - Prompt Execution & Delivery
+
+    /// Sends a prompt to the bot. If generation is in progress, automatically queues it.
+    func send(
+        prompt: String,
+        attachments: [NSImage] = [],
+        toolCallingMode: AgentToolCallingMode? = nil
+    ) async {
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        let attachmentsToSend = !attachments.isEmpty ? attachments : self.pendingAttachments
+        self.pendingAttachments = []
+        guard !trimmed.isEmpty || !attachmentsToSend.isEmpty else { return }
+
+        // If generation is active, queue this prompt instead of dropping or conflicting
+        if isGenerating {
+            queuePrompt(trimmed, attachments: attachmentsToSend)
+            return
+        }
+
+        isGenerating = true
+        activeAssistantMessageId = nil
+        defer {
+            isGenerating = false
+            drainNextQueuedPromptIfIdle()
+        }
+
+        let userMsg = ChatMessage(
+            id: UUID(),
+            role: .user,
+            content: trimmed,
+            timestamp: Date(),
+            attachments: attachmentsToSend
+        )
+        appendMessage(userMsg)
+        saveMessageToDisk(userMsg)
+
+        let assistantId = UUID()
+        activeAssistantMessageId = assistantId
+        let assistantMsg = ChatMessage(
+            id: assistantId,
+            role: .assistant,
+            content: "",
+            timestamp: Date(),
+            isStreaming: true,
+            botName: bot.name
+        )
+        appendMessage(assistantMsg)
+        streamingMessageId = assistantId
+
+        let mode = toolCallingMode ?? self.toolCallingMode
+
+        do {
+            let request = AgentRequest(
+                id: UUID(),
+                senderIdentity: .bot(id: bot.id, name: bot.name),
+                prompt: trimmed,
+                attachments: attachmentsToSend,
+                toolCallingMode: mode
+            )
+
+            guard let orch = orchestrator else {
+                updateMessage(id: assistantId, content: "⚠️ Orchestrator unavailable.")
+                updateMessage(id: assistantId, isStreaming: false)
+                return
+            }
+
+            let result = await AgentRequestRouter.shared.route(
+                request,
+                bot: bot,
+                session: session,
+                history: messages.dropLast(), // exclude the empty assistant placeholder
+                instructions: systemInstructions,
+                orchestrator: orch,
+                onEvent: { event in
+                    // Granular events can be logged or reflected in UI
+                },
+                onUpdate: { [weak self] delta in
+                    Task { @MainActor in
+                        self?.updateMessage(id: assistantId, content: delta)
+                    }
+                }
+            )
+
+            if case .completed(let output) = result {
+                updateMessage(id: assistantId, content: output)
+            } else if case .failed(let error, _) = result {
+                updateMessage(id: assistantId, content: "❌ Error: \(error)")
+            } else if case .fallbackExhausted(let errors) = result {
+                updateMessage(id: assistantId, content: "⚠️ Provider fallback exhausted: \(errors.joined(separator: "; "))")
+            } else if case .cancelled(let reason) = result {
+                updateMessage(id: assistantId, content: "⏹️ \(reason)")
+            }
+
+            updateMessage(id: assistantId, isStreaming: false)
+            if let finalMsg = messages.first(where: { $0.id == assistantId }) {
+                saveMessageToDisk(finalMsg)
+            }
+
+            // Compact context if history exceeds budget
+            await compactContextIfNeeded()
+        }
+    }
+
+    // MARK: - Message Helpers
+
+    func appendMessage(_ msg: ChatMessage) {
+        messages.append(msg)
     }
 
     func updateMessage(id: UUID, content: String) {
         if let idx = messages.firstIndex(where: { $0.id == id }) {
             messages[idx].content = content
-            if let conv = currentConversation,
-               let persistedMsg = conv.messages.first(where: { $0.id == id }) {
-                persistedMsg.content = content
-                try? modelContext?.save()
-            }
         }
     }
 
     func updateMessage(id: UUID, isStreaming: Bool) {
         if let idx = messages.firstIndex(where: { $0.id == id }) {
             messages[idx].isStreaming = isStreaming
-            if currentConversation?.messages.contains(where: { $0.id == id }) == true {
-                try? modelContext?.save()
-            }
         }
     }
+
+    func reset() {
+        stopGeneration()
+        messages.removeAll()
+        queuedPrompts.removeAll()
+        pendingAttachments.removeAll()
+        currentConversation = nil
+    }
+
+    // MARK: - Persistence (SwiftData)
 
     func loadConversationFromDisk() {
         guard let context = modelContext else { return }
-        let botId = bot.id
-        var descriptor = FetchDescriptor<Conversation>(
-            predicate: #Predicate { $0.botProfileId == botId },
+        let targetId = bot.id
+        let descriptor = FetchDescriptor<Conversation>(
+            predicate: #Predicate { $0.botProfileId == targetId },
             sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
         )
-        descriptor.fetchLimit = 1
 
-        if let existing = try? context.fetch(descriptor).first {
-            self.currentConversation = existing
-            self.messages = existing.messages.sorted(by: { $0.timestamp < $1.timestamp }).map { m in
-                ChatMessage(
-                    id: m.id,
-                    role: m.role,
-                    content: m.content,
-                    timestamp: m.timestamp,
-                    attachments: m.attachments
-                )
-            }
-        }
-    }
-
-    private func persistMessage(_ message: ChatMessage) {
-        guard let context = modelContext else { return }
-        let conv: Conversation
-        if let current = currentConversation {
-            conv = current
-        } else {
-            conv = Conversation(title: "Chat with \(bot.name)", botProfileId: bot.id)
-            context.insert(conv)
+        if let conv = try? context.fetch(descriptor).first {
             self.currentConversation = conv
-        }
-        conv.updatedAt = Date()
-
-        let msg = Message(
-            role: message.role,
-            content: message.content,
-            attachmentsData: message.attachments.compactMap { $0.pngData }
-        )
-        msg.id = message.id
-        msg.timestamp = message.timestamp
-        msg.conversation = conv
-        context.insert(msg)
-        try? context.save()
-        
-        // Record Episodic Memory turn for this bot
-        let summary = String(message.content.prefix(200))
-        if !summary.isEmpty {
-            CognitiveMemoryEngine.shared.recordEpisode(
-                CognitiveMemoryEngine.EpisodicEntry(
-                    botId: bot.id,
-                    eventType: message.role == .user ? "user_prompt" : "assistant_response",
-                    summary: summary
+            let sortedDbMsgs = conv.messages.sorted { $0.timestamp < $1.timestamp }
+            self.messages = sortedDbMsgs.map { dbMsg in
+                ChatMessage(
+                    id: dbMsg.id,
+                    role: dbMsg.role == .user ? .user : (dbMsg.role == .assistant ? .assistant : .system),
+                    content: dbMsg.content,
+                    timestamp: dbMsg.timestamp,
+                    attachments: dbMsg.attachments,
+                    botName: dbMsg.role == .assistant ? bot.name : nil
                 )
-            )
-        }
-    }
-
-    // MARK: - Tool Execution (delegates to shared orchestrator, enforces per-bot allowlist)
-
-    /// When non-empty, this Bot may only execute tools whose names appear here.
-    /// Empty = no restriction (the bot inherits whatever the orchestrator allows).
-    var effectiveToolAllowlist: Set<String> {
-        guard !bot.allowedToolNames.isEmpty else { return [] }
-        return Set(bot.allowedToolNames)
-    }
-
-    func executeTool(name: String, arguments: String) async throws -> String {
-        guard let orchestrator else {
-            return "ERROR: No orchestrator available."
-        }
-        if !effectiveToolAllowlist.isEmpty && !effectiveToolAllowlist.contains(name) {
-            return "ERROR: Tool '\(name)' is not permitted for bot '\(bot.name)' under least-privilege security policy."
-        }
-        if let dynamicTool = DynamicToolbox.shared.dynamicTools[name],
-           let mcpId = dynamicTool.mcpServerId,
-           !bot.allowedMCPServers.isEmpty {
-            let serverName = MCPManager.shared.servers.first(where: { $0.id == mcpId })?.name ?? mcpId.uuidString
-            if !bot.allowedMCPServers.contains(serverName) && !bot.allowedMCPServers.contains(mcpId.uuidString) {
-                return "ERROR: MCP tool '\(name)' from server '\(serverName)' is not permitted for bot '\(bot.name)'."
             }
         }
-        return try await orchestrator.executeToolByName(name: name, jsonArguments: arguments)
     }
 
-    // MARK: - Confirmation (delegates to shared orchestrator)
+    private func saveMessageToDisk(_ msg: ChatMessage) {
+        guard let context = modelContext else { return }
 
-    func requestConfirmation(
-        toolName: String,
-        arguments: String,
-        riskDescription: String,
-        oldContent: String? = nil,
-        newContent: String? = nil,
-        filePath: String? = nil
-    ) async -> Bool {
-        await orchestrator?.requestConfirmation(
-            toolName: toolName,
-            arguments: arguments,
-            riskDescription: riskDescription,
-            oldContent: oldContent,
-            newContent: newContent,
-            filePath: filePath
-        ) ?? false
-    }
+        let conv: Conversation
+        if let existing = currentConversation {
+            conv = existing
+        } else {
+            let newConv = Conversation(title: "Chat with \(bot.name)", botProfileId: bot.id)
+            context.insert(newConv)
+            self.currentConversation = newConv
+            conv = newConv
+        }
 
-    func resolveConfirmation(approved: Bool) {
-        orchestrator?.resolveConfirmation(approved: approved)
+        let attData = msg.attachments.compactMap { $0.pngData }
+        let dbMsg = Message(
+            role: msg.role == .user ? .user : (msg.role == .assistant ? .assistant : .system),
+            content: msg.content,
+            attachmentsData: attData.isEmpty ? nil : attData
+        )
+        dbMsg.id = msg.id
+        dbMsg.timestamp = msg.timestamp
+        dbMsg.conversation = conv
+        context.insert(dbMsg)
+
+        conv.updatedAt = Date()
+        try? context.save()
     }
 
     // MARK: - Context Compaction
-    
-    public static let contextCompactionThreshold: Int = 12000
-    
-    /// Checks message history volume and compacts older turns into a structured summary
-    /// and durable episodic memory when character threshold is exceeded.
-    public func compactContextIfNeeded() async {
-        let totalChars = messages.reduce(0) { $0 + $1.content.count }
-        guard totalChars > Self.contextCompactionThreshold else { return }
-        guard messages.count > 5 else { return }
-        
+
+    func compactContextIfNeeded() async {
+        guard messages.count > 10 else { return }
         let targetBotId = bot.id
-        
         do {
             let (compacted, archivedCount) = try await CognitiveMemoryEngine.shared.compactMessages(
                 messages: self.messages,
@@ -285,9 +334,8 @@ final class BotSession {
                 maxChars: 4000,
                 botId: targetBotId
             ) { [weak self] transcript in
-                guard let self else { return "" }
-                // Use the bot's configured engine or fallback to local model
-                let model = ModelRegistry.model(for: self.bot)
+                guard self != nil else { return "" }
+                let model = SystemLanguageModel.default
                 let session = LanguageModelSession(
                     model: model,
                     instructions: "You are a concise context compaction assistant. Summarize earlier chat history accurately preserving file paths, error codes, and technical findings."
@@ -309,7 +357,7 @@ final class BotSession {
                 
                 // If a summary message was inserted at index 0, persist it
                 if let first = compacted.first, first.role == .system {
-                    let dbSummaryMsg = Message(role: .system, content: first.content)
+                    let dbSummaryMsg = Message(role: MessageRole.system, content: first.content, attachmentsData: nil)
                     dbSummaryMsg.id = first.id
                     dbSummaryMsg.conversation = conv
                     context.insert(dbSummaryMsg)
@@ -333,9 +381,7 @@ final class BotSession {
         case .disabled: .disallowed
         }
         let transcript = Transcript(entries: [])
-        // Per-bot model: use the bot's own provider when set, otherwise
-        // fall back to the global provider via ModelRegistry.
-        let resolvedModel = ModelRegistry.model(for: bot)
+        let resolvedModel = SystemLanguageModel.default
         session = makeSession(model: resolvedModel, instructions: instructions, mode: mode, transcript: transcript)
         let isTesting = getenv("APEX_TEST_MODE") != nil
             || ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest")

@@ -7,7 +7,7 @@ import UniformTypeIdentifiers
 // MARK: - Bot Sidebar Section
 
 struct BotSidebarSection: View {
-    @Bindable var bm: BotManager
+    var bm: BotManager
     @State private var showEditSheet = false
     @State private var editingBot: BotProfile?
     @State private var showDeleteConfirm = false
@@ -253,108 +253,91 @@ struct BotSidebarItem: View {
     let onDelete: () -> Void
     let onTogglePin: () -> Void
     
+    @State private var isHovered = false
+    
     var body: some View {
         Button(action: onSelect) {
             HStack(spacing: 8) {
                 // Avatar
-                Image(systemName: bot.avatarName)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(isActive ? .white : AppTheme.Palette.accent)
-                    .frame(width: 24, height: 24)
-                    .background(
-                        isActive
-                            ? AnyShapeStyle(AppTheme.Palette.accent)
-                            : AnyShapeStyle(Color(nsColor: .controlBackgroundColor))
-                    )
-                    .clipShape(Circle())
+                ZStack {
+                    Circle()
+                        .fill(isActive ? Color.accentColor : Color.accentColor.opacity(0.12))
+                        .frame(width: 24, height: 24)
+                    Image(systemName: bot.avatarName)
+                        .font(.system(size: 11))
+                        .foregroundStyle(isActive ? .white : Color.accentColor)
+                }
                 
-                // Name + title
+                // Name and title
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(bot.name)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(isActive ? .primary : .secondary)
-                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Text(bot.name)
+                            .font(.system(size: 12, weight: isActive ? .semibold : .regular))
+                            .foregroundStyle(isActive ? .white : .primary)
+                            .lineLimit(1)
+                        if bot.isPinned {
+                            Image(systemName: "pin.fill")
+                                .font(.system(size: 8))
+                                .foregroundStyle(isActive ? .white.opacity(0.7) : .secondary)
+                        }
+                    }
                     if !bot.title.isEmpty {
                         Text(bot.title)
                             .font(.system(size: 10))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(isActive ? .white.opacity(0.7) : .secondary)
                             .lineLimit(1)
                     }
                 }
                 
                 Spacer()
                 
-                // Status indicator
-                if bot.lastActiveAt.timeIntervalSinceNow > -300 {
-                    // Active in last 5 min
-                    Circle()
-                        .fill(.green)
-                        .frame(width: 6, height: 6)
-                }
-                
-                // Context menu (edit, pin, delete)
-                Menu {
-                    Button {
-                        onTogglePin()
-                    } label: {
-                        Label(
-                            bot.isPinned ? "Unpin from Top" : "Pin to Top",
-                            systemImage: bot.isPinned ? "pin.slash" : "pin"
-                        )
+                // Hover actions
+                if isHovered {
+                    HStack(spacing: 2) {
+                        Button {
+                            onTogglePin()
+                        } label: {
+                            Image(systemName: bot.isPinned ? "pin.slash" : "pin")
+                                .font(.system(size: 9))
+                                .foregroundStyle(isActive ? .white.opacity(0.8) : .secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: 16, height: 16)
+                        .help(bot.isPinned ? "Unpin" : "Pin to top")
+                        
+                        Button {
+                            onEdit()
+                        } label: {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 9))
+                                .foregroundStyle(isActive ? .white.opacity(0.8) : .secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .frame(width: 16, height: 16)
+                        .help("Edit Bot")
                     }
-                    Button {
-                        onEdit()
-                    } label: {
-                        Label("Edit Bot", systemImage: "pencil")
-                    }
-                    Divider()
-                    Button(role: .destructive) {
-                        onDelete()
-                    } label: {
-                        Label("Delete Bot", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.tertiary)
-                        .frame(width: 24, height: 24)
-                        .background(Color(nsColor: .controlBackgroundColor))
-                        .clipShape(Circle())
                 }
             }
             .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.vertical, 5)
             .background(
-                isActive
-                    ? AppTheme.Palette.accent.opacity(0.1)
-                    : Color.clear
-            )
-            .overlay(
                 RoundedRectangle(cornerRadius: 6)
-                    .stroke(isActive ? AppTheme.Palette.accent.opacity(0.3) : Color.clear, lineWidth: 1)
+                    .fill(isActive ? Color.accentColor : (isHovered ? Color.primary.opacity(0.05) : Color.clear))
             )
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityIdentifier("botSidebarItem_\(bot.name)")
+        .onHover { isHovered = $0 }
         .contextMenu {
-            Button {
+            Button(bot.isPinned ? "Unpin Bot" : "Pin Bot") {
                 onTogglePin()
-            } label: {
-                Label(
-                    bot.isPinned ? "Unpin" : "Pin to Top",
-                    systemImage: bot.isPinned ? "pin.slash" : "pin"
-                )
             }
-            Button {
+            Button("Edit Bot...") {
                 onEdit()
-            } label: {
-                Label("Edit", systemImage: "pencil")
             }
             Divider()
-            Button(role: .destructive) {
+            Button("Delete Bot", role: .destructive) {
                 onDelete()
-            } label: {
-                Label("Delete Bot", systemImage: "trash")
             }
         }
     }
@@ -368,9 +351,9 @@ struct BotStatusBadge: View {
     var body: some View {
         HStack(spacing: 4) {
             if let session = bm.activeSession {
-                // Show model status based on session's model preference
+                // Show model status based on session's model provider
                 Circle()
-                    .fill(statusColor(for: session.modelPreference, availability: session.modelAvailability))
+                    .fill(statusColor(for: session.effectiveModelProvider, availability: session.modelAvailability))
                     .frame(width: 7, height: 7)
                 Text(statusText(for: session))
                     .font(.system(size: 10, weight: .medium))
@@ -389,30 +372,28 @@ struct BotStatusBadge: View {
         .background(.regularMaterial, in: Capsule())
     }
     
-    private func statusColor(for preference: AgentModelPreference, availability: SystemLanguageModel.Availability) -> Color {
-        switch preference {
+    private func statusColor(for provider: ModelProvider, availability: SystemLanguageModel.Availability) -> Color {
+        switch provider {
         case .autoPicker:
             return .green
-        case .localSystem:
+        case .appleOnDevice:
             return availability == .available ? .green : .red
-        case .privateCloud:
+        case .applePCC:
             return .blue
         case .cloudGemini:
             return .purple
-        case .localOllama, .localMLX:
+        case .localOllama, .localMLX, .fmCLI:
             return .orange
-        case .hybrid:
-            return .green
         }
     }
     
     private func statusText(for session: BotSession) -> String {
-        switch session.modelPreference {
+        switch session.effectiveModelProvider {
         case .autoPicker:
             return "Auto"
-        case .localSystem:
+        case .appleOnDevice:
             return session.modelAvailability == .available ? "AFM 3" : "Offline"
-        case .privateCloud:
+        case .applePCC:
             return "PCC"
         case .cloudGemini:
             return "Gemini"
@@ -420,8 +401,8 @@ struct BotStatusBadge: View {
             return "Ollama"
         case .localMLX:
             return "MLX"
-        case .hybrid:
-            return "Hybrid"
+        case .fmCLI:
+            return "CLI"
         }
     }
 }

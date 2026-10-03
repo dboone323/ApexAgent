@@ -1,52 +1,11 @@
 import Foundation
-import FoundationModels
-import SwiftData
-import Observation
 import AppKit
-import SwiftUI
 
-// MARK: - GroupChatManagerEnvironmentValues: SwiftUI environment key for GroupChatManager
-
-struct GroupChatManagerEnvironmentValues {
-    var groupChatManager: GroupChatManager
-}
-
-extension EnvironmentValues {
-    var groupChatManager: GroupChatManager {
-        get { self[GroupChatManagerEnvironmentValuesKey.self] }
-        set { self[GroupChatManagerEnvironmentValuesKey.self] = newValue }
-    }
-}
-
-private struct GroupChatManagerEnvironmentValuesKey: EnvironmentKey {
-    static var defaultValue: GroupChatManager {
-        MainActor.assumeIsolated { GroupChatManager() }
-    }
-}
-
-// MARK: - GroupChatSession: A chat session involving multiple Bots
-
-/// A group chat lets two or more Bots collaborate on a conversation.
-/// Each participant Bot sends messages sequentially (round-robin), and
-/// the user can watch, steer, or join mid-flow. The session is ephemeral —
-/// it does not persist across app launches (that's Phase 3).
-///
-/// Group chats reuse the existing BotSession/BotMessageSender machinery:
-/// each participant gets a fresh BotSession, and messages from all
-/// participants appear in one shared ChatMessage list rendered in a
-/// single chat view. The user's own messages are tagged with the
-/// "host" role so the group knows the human is present.
-// MARK: - GroupToolPermission & allowlist (Grok Bot: group chat takes actions)
-
-/// Outcome of asking whether a group participant may run a given tool.
-enum GroupToolPermission: Equatable {
-    case allowed
-    case needsApproval
-    case denied(String)
-}
-
-/// Safe tools group participants may run without extra scoping. Filesystem-
-/// mutating, shell, and AppleScript tools are intentionally excluded by default.
+// MARK: - Default Tool Allowlist for Group Chat Sessions (WS6)
+//
+// These tools are safe to run automatically in group chats without prompting
+// for approval. Dangerous tools (run_shell_command, write_file, delete_file, etc.)
+// still require confirmation unless explicitly overridden.
 enum DefaultGroupToolAllowlist {
     static let set: Set<String> = [
         "web_search", "read_file", "list_directory", "file_search",
@@ -75,6 +34,8 @@ final class GroupChatSession {
     var generationOrder: [UUID]  // round-robin order (participant bot ids)
     var currentTurnIndex: Int = 0
     var maxTurnsPerParticipant: Int = 3  // stop after N turns each, or let user interrupt
+    private var isolatedSessions: [UUID: BotSession] = [:]
+    private var activeTurnTask: Task<Void, Never>?
 
     // MARK: - Group tool actions (WS6: bots can take real work, not just talk)
     var toolCallsEnabled = true
@@ -98,13 +59,22 @@ final class GroupChatSession {
         self.generationOrder = participants.map { $0.id }
     }
 
-    // MARK: - Computed
+    // MARK: - Session Management (Isolated from 1:1 sessions)
+    func session(for bot: BotProfile) -> BotSession {
+        if let existing = isolatedSessions[bot.id] {
+            return existing
+        }
+        let orch = self.orchestrator ?? AgentOrchestrator()
+        let comp = self.computer ?? Computer()
+        let s = BotSession(bot: bot, orchestrator: orch, computer: comp)
+        isolatedSessions[bot.id] = s
+        return s
+    }
+
     var participantSessions: [UUID: BotSession] {
         var map: [UUID: BotSession] = [:]
         for bot in participants {
-            if let bm = botManager {
-                map[bot.id] = bm.session(for: bot)
-            }
+            map[bot.id] = session(for: bot)
         }
         return map
     }
@@ -124,62 +94,48 @@ final class GroupChatSession {
         guard !generationOrder.isEmpty else { return }
         isGenerating = true
         currentTurnIndex = 0
-        // Reset each participant's session to give them a clean slate for the group
+        // Clean isolated sessions for this group round without touching user 1:1 sessions
         for bot in participants {
-            if let s = participantSessions[bot.id] {
-                s.reset()
-            }
+            isolatedSessions[bot.id]?.reset()
         }
-        // Seed the group with a system message describing who's present
-        let systemMsg = ChatMessage(
-            role: .system,
-            content: groupSystemMessage,
-            timestamp: Date(),
-            attachments: []
-        )
-        messages.append(systemMsg)
-        // Start the first participant's turn
         beginNextTurn()
     }
 
     func stop() {
+        activeTurnTask?.cancel()
+        activeTurnTask = nil
         isGenerating = false
-        for botId in participantsGenerating.keys {
-            participantsGenerating[botId] = false
-        }
         activeGeneratorId = nil
+        for bot in participants {
+            participantsGenerating[bot.id] = false
+        }
     }
 
-    func cancel() {
-        stop()
-    }
-
-    // MARK: - Turn orchestration
-    func beginNextTurn() {
+    // MARK: - Turn Execution (WS6)
+    private func beginNextTurn() {
         guard currentTurnIndex < generationOrder.count else {
             // All participants have had their turns — end the group round
             isGenerating = false
+            activeTurnTask = nil
             return
         }
         let botId = generationOrder[currentTurnIndex]
-        participantsGenerating[botId] = true
-        activeGeneratorId = botId
-        let bot = participants.first { $0.id == botId }!
-        Task { @MainActor in
-            await runParticipantTurn(bot)
-        }
-    }
-
-    private func runParticipantTurn(_ bot: BotProfile) async {
-        guard let session = participantSessions[bot.id],
-              let orchestrator = orchestrator else {
-            participantsGenerating[bot.id] = false
+        guard let bot = participants.first(where: { $0.id == botId }) else {
             advanceTurn()
             return
         }
+        runParticipantTurn(for: bot)
+    }
 
-        // Build the group context: all messages so far + a prompt telling this Bot
-        // it's in a group chat and should respond to the conversation/other Bots.
+    func runParticipantTurn(for bot: BotProfile) {
+        guard let orchestrator = orchestrator else { return }
+        participantsGenerating[bot.id] = true
+        activeGeneratorId = bot.id
+
+        let session = session(for: bot)
+        session.resetSession()
+
+        // Build context: all prior messages in the group chat
         let context = buildGroupContext(for: bot)
 
         // Add a "thinking" marker so the UI shows who's talking
@@ -188,7 +144,8 @@ final class GroupChatSession {
             content: "[\(bot.name) is thinking...]",
             timestamp: Date(),
             isStreaming: true,
-            attachments: []
+            attachments: [],
+            botName: bot.name
         )
         messages.append(thinkingMsg)
         let thinkingId = thinkingMsg.id
@@ -202,8 +159,7 @@ final class GroupChatSession {
         // Mandatory canonical runtime: GroupChat participant turns route through
         // AgentRequestRouter → buildCandidateChain → ProviderFallbackExecutor so
         // every participant gets candidate planning, bounded fallback, tool
-        // governance, and terminal-state normalization. Direct
-        // ModelRegistry.resolveEngine + engine.streamResponse is forbidden here.
+        // governance, and terminal-state normalization.
         let request = AgentRequest(
             conversationId: self.id,
             senderIdentity: .bot(id: bot.id, name: bot.name),
@@ -211,42 +167,79 @@ final class GroupChatSession {
             toolCallingMode: toolMode
         )
         let instructions = bot.systemInstructions + "\n\n" + groupBotInstructions(botName: bot.name)
-        let terminalState = await AgentRequestRouter.shared.route(
-            request,
-            bot: bot,
-            session: session.session,
-            history: [],
-            instructions: instructions,
-            orchestrator: orchestrator,
-            onUpdate: { [weak self] partialContent in
-                Task { @MainActor [weak self] in
-                    guard let self else { return }
-                    if let idx = self.messages.firstIndex(where: { $0.id == thinkingId }) {
-                        var copy = self.messages
-                        copy[idx].content = SecretRedactor.redact(text: partialContent)
-                        self.messages = copy
+        activeTurnTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            let terminalState = await AgentRequestRouter.shared.route(
+                request,
+                bot: bot,
+                session: session.session,
+                history: [],
+                instructions: instructions,
+                orchestrator: orchestrator,
+                onUpdate: { [weak self] partialContent in
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        if let idx = self.messages.firstIndex(where: { $0.id == thinkingId }) {
+                            var copy = self.messages
+                            copy[idx].content = SecretRedactor.redact(text: partialContent)
+                            self.messages = copy
+                        }
                     }
                 }
+            )
+            if !terminalState.isSuccess {
+                if let idx = self.messages.firstIndex(where: { $0.id == thinkingId }) {
+                    var copy = self.messages
+                    copy[idx].content = terminalState.userFacingMessage
+                    self.messages = copy
+                }
             }
-        )
-        if !terminalState.isSuccess {
+
+            // Mark the thought bubble as done (no longer streaming)
             if let idx = self.messages.firstIndex(where: { $0.id == thinkingId }) {
                 var copy = self.messages
-                copy[idx].content = terminalState.userFacingMessage
+                copy[idx].isStreaming = false
                 self.messages = copy
+
+                // Check for dynamic @mentions in the bot's generated response!
+                let finalContent = self.messages[idx].content
+                let mentions = SpaceManager.extractMentions(from: finalContent)
+                if !mentions.isEmpty {
+                    self.handleTurnMentions(mentions: mentions, speakingBot: bot)
+                }
             }
-        }
 
-        // Mark the thought bubble as done (no longer streaming)
-        if let idx = self.messages.firstIndex(where: { $0.id == thinkingId }) {
-            var copy = self.messages
-            copy[idx].isStreaming = false
-            self.messages = copy
+            self.participantsGenerating[bot.id] = false
+            self.activeGeneratorId = nil
+            self.advanceTurn()
         }
+    }
 
-        participantsGenerating[bot.id] = false
-        activeGeneratorId = nil
-        advanceTurn()
+    private func handleTurnMentions(mentions: [String], speakingBot: BotProfile) {
+        guard let bm = botManager else { return }
+        let matchedBots = SpaceManager.matchBots(for: mentions, in: nil, botManager: bm)
+            .filter { $0.id != speakingBot.id }
+
+        for mentionedBot in matchedBots {
+            if !participants.contains(where: { $0.id == mentionedBot.id }) {
+                participants.append(mentionedBot)
+                let joinNotice = ChatMessage(
+                    role: .system,
+                    content: "[\(mentionedBot.name) was tagged by \(speakingBot.name) and joined the group chat]",
+                    timestamp: Date(),
+                    attachments: []
+                )
+                messages.append(joinNotice)
+            }
+
+            // Insert mentioned bot right next in turn queue
+            let nextIndex = min(currentTurnIndex + 1, generationOrder.count)
+            if let existingFutureIdx = generationOrder.dropFirst(currentTurnIndex + 1).firstIndex(of: mentionedBot.id) {
+                generationOrder.remove(at: existingFutureIdx)
+            }
+            generationOrder.insert(mentionedBot.id, at: nextIndex)
+            isGenerating = true
+        }
     }
 
     func advanceTurn() {
@@ -299,6 +292,7 @@ final class GroupChatSession {
     func buildGroupContext(for bot: BotProfile) -> String {
         var context = "You are \(bot.name), participating in a group chat called '\(name)'.\n\n"
         context += "Here is the conversation so far:\n\n"
+        var lastSpeakerName = ""
         for msg in messages {
             let roleLabel: String
             switch msg.role {
@@ -310,173 +304,34 @@ final class GroupChatSession {
                 roleLabel = msg.botName ?? "Assistant"
             case .system: roleLabel = "System"
             }
+            lastSpeakerName = roleLabel
             context += "[\(roleLabel)] \(msg.content)\n\n"
         }
+
+        // Memory & Turn Priority injection
+        let cleanBotName = SpaceParticipant.normalizeHandle(bot.name).replacingOccurrences(of: "-", with: "")
+        if let lastMsg = messages.last(where: { $0.role != .system && !($0.content.hasPrefix("[") && $0.content.hasSuffix("]")) }) {
+            let mentions = SpaceManager.extractMentions(from: lastMsg.content)
+            let isMentioned = mentions.contains(where: {
+                let mClean = $0.replacingOccurrences(of: "-", with: "").replacingOccurrences(of: "_", with: "")
+                return mClean == cleanBotName || mClean == "all" || mClean == "agents" || mClean == "team"
+            })
+            if isMentioned {
+                context += "⚡️ Note: The previous speaker (\(lastSpeakerName)) directly mentioned you. Address their question or task directly.\n"
+            }
+        }
+
         context += "\nYour turn. Respond concisely (2-4 sentences)."
         return context
     }
 
     private func groupBotInstructions(botName: String) -> String {
         """
-        You are in a multi-Bot group chat. Follow these rules:
-        1. Be concise — 2-4 sentences per turn.
-        2. Address what the previous speaker said; don't repeat it.
-        3. If you disagree or have a different approach, say so respectfully.
-        4. Ask clarifying questions when the group is ambiguous.
-        5. You may call approved tools to get real work done when it helps the group.
-           Never modify files, run shell commands, or use AppleScript without approval.
-        6. Stay in character as \(botName).
+        You are in a collaborative group conversation.
+        - You are speaking on behalf of yourself (\(botName)).
+        - Respond concisely (2-4 sentences unless doing real work or asked for depth).
+        - If another bot asked you a question or mentioned you (@\(botName)), answer them directly.
+        - If you need input from a teammate, tag them using @BotName (e.g. @CodeArchitect, @Researcher).
         """
-    }
-
-    // MARK: - Group tool actions (permission + execution)
-
-    /// Pure preflight decision for whether a group participant may run `tool`.
-    /// Deterministic and side-effect free, so it is unit-testable without an
-    /// orchestrator or model.
-    func groupToolPermission(tool: String) -> GroupToolPermission {
-        guard toolCallsEnabled else {
-            return .denied("Group tool calls are disabled for this chat.")
-        }
-        guard allowedGroupTools.contains(tool) else {
-            return .denied("'\(tool)' is not an allowed group tool.")
-        }
-        return Self.riskyGroupTools.contains(tool) ? .needsApproval : .allowed
-    }
-
-    /// Runs a tool on behalf of a group participant, applying the allowlist and
-    /// the human confirmation gate. Never reaches the filesystem/network while
-    /// the permission is denied or the approval is refused.
-    func executeGroupTool(tool: String, arguments: String) async throws -> String {
-        switch groupToolPermission(tool: tool) {
-        case .allowed:
-            break
-        case .needsApproval:
-            let approved = await orchestrator?.requestConfirmation(
-                toolName: tool,
-                arguments: arguments,
-                riskDescription: "A Bot in the group '\(name)' wants to run '\(tool)'."
-            ) ?? false
-            guard approved else {
-                return "DECLINED: A Bot requested '\(tool)' but the approval was not granted."
-            }
-        case .denied(let reason):
-            return "DENIED: \(reason)"
-        }
-
-        guard let orchestrator else {
-            return "ERROR: No orchestrator available to execute '\(tool)'."
-        }
-        let result = try await orchestrator.executeToolByName(name: tool, jsonArguments: arguments)
-        toolExecutionLog.append("\(tool): \(result.prefix(200))")
-        return result
-    }
-
-    // MARK: - Reset
-    func reset() {
-        messages = []
-        isGenerating = false
-        activeGeneratorId = nil
-        participantsGenerating.removeAll()
-        currentTurnIndex = 0
-        pendingAttachments = []
-        toolExecutionLog = []
-    }
-}
-
-// MARK: - GroupChatManager: owns active group chats
-
-/// Lightweight manager for in-progress group chats.
-@Observable
-@MainActor
-final class GroupChatManager {
-    private var sessions: [UUID: GroupChatSession] = [:]
-    
-    var allGroups: [GroupChatSession] { Array(sessions.values) }
-    var activeGroupId: UUID?
-    
-    var activeGroup: GroupChatSession? { 
-        guard let id = activeGroupId else { return nil }
-        return sessions[id] 
-    }
-    
-    var runningGroupsCount: Int { 
-        sessions.values.filter { $0.isGenerating }.count 
-    }
-
-    weak var botManager: BotManager?
-    weak var orchestrator: AgentOrchestrator?
-
-    func startGroup(name: String, participantIds: [UUID], hostBotId: UUID? = nil) -> GroupChatSession {
-        let participants = participantIds.compactMap { botManager?.bot(byId: $0) }
-        let host = hostBotId.flatMap { botManager?.bot(byId: $0) }
-        let group = GroupChatSession(name: name, participants: participants, hostBot: host)
-        
-        group.botManager = botManager
-        group.orchestrator = orchestrator ?? botManager?.orchestrator
-        group.computer = botManager?.computer
-        
-        sessions[group.id] = group
-        activeGroupId = group.id
-        group.start()
-        
-        return group
-    }
-
-    func selectGroup(id: UUID) {
-        activeGroupId = id
-    }
-
-    func closeGroup(id: UUID) {
-        sessions[id]?.stop()
-        sessions.removeValue(forKey: id)
-        if activeGroupId == id {
-            activeGroupId = sessions.keys.first
-        }
-    }
-
-    func cancelAllGroups() {
-        for group in sessions.values {
-            group.cancel()
-        }
-        sessions.removeAll()
-        activeGroupId = nil
-    }
-
-    public func stopGroup() {
-        activeGroup?.stop()
-        if let id = activeGroupId {
-            sessions.removeValue(forKey: id)
-            activeGroupId = sessions.keys.first
-        }
-    }
-
-    public func cancelGroup() {
-        activeGroup?.cancel()
-        if let id = activeGroupId {
-            sessions.removeValue(forKey: id)
-            activeGroupId = sessions.keys.first
-        }
-    }
-
-    public func sendToGroup(_ text: String) {
-        activeGroup?.sendUserMessage(text)
-    }
-
-    public func sendToParticipant(_ text: String, botId: UUID) {
-        guard let group = activeGroup,
-              let bot = group.participants.first(where: { $0.id == botId }) else { return }
-        group.sendUserMessageToParticipant(text, addressedTo: bot)
-    }
-
-    public func endTurnEarly() {
-        guard let group = activeGroup else { return }
-        group.currentTurnIndex += 1
-        if group.currentTurnIndex < group.generationOrder.count {
-            group.beginNextTurn()
-        } else {
-            group.isGenerating = false
-            group.activeGeneratorId = nil
-        }
     }
 }

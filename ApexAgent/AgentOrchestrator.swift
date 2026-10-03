@@ -70,6 +70,26 @@ struct ChatMessage: Identifiable {
     }
 }
 
+// MARK: - Queued Prompt
+
+public struct QueuedPrompt: Identifiable, Sendable, Equatable {
+    public let id: UUID
+    public let text: String
+    public let attachments: [NSImage]
+    public let timestamp: Date
+
+    public init(id: UUID = UUID(), text: String, attachments: [NSImage] = [], timestamp: Date = Date()) {
+        self.id = id
+        self.text = text
+        self.attachments = attachments
+        self.timestamp = timestamp
+    }
+
+    public static func == (lhs: QueuedPrompt, rhs: QueuedPrompt) -> Bool {
+        lhs.id == rhs.id && lhs.text == rhs.text
+    }
+}
+
 // MARK: - Tool Calling Mode
 
 public enum AgentToolCallingMode: String, CaseIterable, Identifiable, Codable, Sendable {
@@ -218,6 +238,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     private(set) var messages: [ChatMessage] = []
     private(set) var toolEvents: [ToolEvent] = []
     private(set) var isGenerating: Bool = false
+    var queuedPrompts: [QueuedPrompt] = []
     // Internal (not private) setter: ViewHostingTests seeds a pending request
     // to drive ConfirmationOverlay's populated branch — requestConfirmation()
     // auto-approves in DEBUG builds so tests can't reach it otherwise.
@@ -763,12 +784,41 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         repeatDetector.settle(thread: "default")
     }
 
-    // MARK: Send Message
+    // MARK: - Queued Prompts Management
 
-    func sendMessage(_ text: String) {
+    func removeQueuedPrompt(id: UUID) {
+        queuedPrompts.removeAll { $0.id == id }
+    }
+
+    func clearPromptQueue() {
+        queuedPrompts.removeAll()
+    }
+
+    private func processNextQueuedPromptIfNeeded() {
+        guard !queuedPrompts.isEmpty, !isGenerating else { return }
+        let next = queuedPrompts.removeFirst()
+        Task { @MainActor [weak self] in
+            self?.sendMessage(next.text, attachments: next.attachments)
+        }
+    }
+
+    // MARK: - Send Message
+
+    func sendMessage(_ text: String, attachments: [NSImage] = []) {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty || !pendingAttachments.isEmpty else { return }
-        guard !isGenerating else { return }
+        let attachmentsToSend = !attachments.isEmpty ? attachments : self.pendingAttachments
+        guard !trimmedText.isEmpty || !attachmentsToSend.isEmpty else { return }
+
+        // If currently generating, queue the prompt to execute right after
+        if isGenerating {
+            let queued = QueuedPrompt(text: trimmedText, attachments: attachmentsToSend)
+            queuedPrompts.append(queued)
+            self.pendingAttachments = []
+            Logger.agent.info("Enqueued prompt while generating. Queue count: \(self.queuedPrompts.count)")
+            return
+        }
+
+        self.pendingAttachments = []
 
         // Stop any active text-to-speech playback
         VoiceController.shared.stopSpeaking()
@@ -786,6 +836,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 Task { TraceBus.shared.append(TraceEvent(source: "orchestrator", operation: "sendMessage", detail: "complete")) }
                 self.isGenerating = false
                 self.activeAssistantMessageId = nil
+                self.processNextQueuedPromptIfNeeded()
             }
             // 1. Asynchronously check and compact context if needed
             await compactContextIfNeeded()
@@ -796,7 +847,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             guard !Task.isCancelled else { return }
 
             // 3. Launch the main response generation
-            await runMessageGeneration(text: trimmedText)
+            await runMessageGeneration(text: trimmedText, attachments: attachmentsToSend)
         }
     }
 
@@ -925,7 +976,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     }
 
     @MainActor
-    private func runMessageGeneration(text: String) async {
+    private func runMessageGeneration(text: String, attachments: [NSImage] = []) async {
         // Check if we need to initialize a SwiftData Conversation
         if currentConversation == nil {
             let title = text.isEmpty ? "Image Attachment" : String(text.prefix(50))
@@ -939,16 +990,16 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
 
         let historyMessages = messages
-        let attachmentsToSend = pendingAttachments
+        let finalAttachments = !attachments.isEmpty ? attachments : pendingAttachments
         pendingAttachments = []
 
         // Add user message
-        let userMsg = ChatMessage(role: .user, content: text, attachments: attachmentsToSend)
+        let userMsg = ChatMessage(role: .user, content: text, attachments: finalAttachments)
         messages.append(userMsg)
 
         // Save user message to SwiftData
         if let conv = currentConversation, let context = modelContext {
-            let dbAttachments = attachmentsToSend.compactMap { $0.pngData }
+            let dbAttachments = finalAttachments.compactMap { $0.pngData }
             let dbUserMsg = Message(role: .user, content: text, attachmentsData: dbAttachments)
             dbUserMsg.id = userMsg.id
             dbUserMsg.conversation = conv
@@ -981,7 +1032,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             || lowerText.contains("don't use tools")
             || lowerText.contains("do not use tools")
             || lowerText.contains("without running any tools")
-            || (attachmentsToSend.isEmpty && Self.isConversationalGreetingOrSmallTalk(text))
+            || (finalAttachments.isEmpty && Self.isConversationalGreetingOrSmallTalk(text))
 
         let semanticContext = explicitlyNoTools ? "" : self.getSemanticContext(for: text)
         var finalInstructions = self.agentInstructions + semanticContext
@@ -1000,39 +1051,6 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             // bot allowlist. The former resolvedTools/supervisorTools computation
             // only affected ModelRegistry.resolveEngine's provider selection and
             // is no longer needed — AgentRequestRouter handles canonical routing.
-
-            // An explicitly named orchestration tool is an executable user
-            // instruction, not a request for the model to choose a tool. Route
-            // it through the same production dispatcher for every provider.
-            if let meetingArguments = directConveneMeetingArguments(from: text) {
-                do {
-                    let result = try await toolDispatchEngine.executeToolByName(
-                        name: "convene_meeting",
-                        jsonArguments: meetingArguments,
-                        allTools: allTools
-                    )
-                    var copy = self.messages
-                    if let idx = copy.firstIndex(where: { $0.id == assistantId }) {
-                        copy[idx].content = result
-                        self.messages = copy
-                    }
-                } catch {
-                    var copy = self.messages
-                    if let idx = copy.firstIndex(where: { $0.id == assistantId }) {
-                        copy[idx].content = self.userFacingMessage(for: error)
-                        self.messages = copy
-                    }
-                }
-                if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
-                    var copy = self.messages
-                    copy[idx].isStreaming = false
-                    self.messages = copy
-                }
-                self.activeAssistantMessageId = nil
-                self.isGenerating = false
-                ScreenStreamer.shared.stopCapture()
-                return
-            }
 
             Logger.agent.info("Generation started (AgentRequestRouter)")
             let generationSpan = AgentSignpost.begin("Generate", detail: "AgentRequestRouter")
@@ -1142,40 +1160,11 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             ScreenStreamer.shared.stopCapture()
     }
 
-    private func directConveneMeetingArguments(from prompt: String) -> String? {
-        let lowerPrompt = prompt.lowercased()
-        guard lowerPrompt.contains("convene_meeting"),
-              let openBracket = prompt.firstIndex(of: "["),
-              let closeBracket = prompt[openBracket...].firstIndex(of: "]") else {
-            return nil
-        }
-
-        let participantText = prompt[prompt.index(after: openBracket)..<closeBracket]
-        let participants = participantText
-            .split(separator: ",")
-            .map { $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: "\\\"'"))) }
-            .filter { !$0.isEmpty }
-        guard !participants.isEmpty else { return nil }
-
-        let topic: String
-        if let topicRange = prompt.range(of: "to discuss", options: [.caseInsensitive]) {
-            topic = String(prompt[topicRange.upperBound...])
-                .components(separatedBy: ". Actually").first?
-                .trimmingCharacters(in: .whitespacesAndNewlines) ?? prompt
-        } else {
-            topic = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        guard let data = try? JSONSerialization.data(withJSONObject: [
-            "topic": topic,
-            "participants": participants
-        ]) else { return nil }
-        return String(data: data, encoding: .utf8)
-    }
 
     func cancelGeneration() {
         currentTask?.cancel()
         currentTask = nil
+        clearPromptQueue()
 
         // Stop any active speech playback
         VoiceController.shared.stopSpeaking()
@@ -1319,6 +1308,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         // counter is only for the lower-level logging wrapper to avoid a
         // duplicate prompt for this same dispatch; it must never make a
         // nested sub-agent call inherit its parent's approval.
+        var userConfirmed = false
         if shouldConfirmTool(name: name) {
             let riskLevel = AgentSecurity.riskLevel(for: name)
             let approved = await requestConfirmation(
@@ -1335,18 +1325,22 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 logToolEnd(name: name, result: "Denied by confirmation gate", status: .denied)
                 throw err
             }
+            userConfirmed = true
         }
 
         confirmationDepth += 1
         defer { confirmationDepth = max(0, confirmationDepth - 1) }
 
-        return try await toolDispatchEngine.executeToolByName(
-            name: name,
-            jsonArguments: jsonArguments,
-            allTools: allTools,
-            bot: bot,
-            agentIdentity: agentIdentity
-        )
+        let confirmedToken = userConfirmed ? name : nil
+        return try await ToolConfirmationScope.$activeConfirmedToolName.withValue(confirmedToken) {
+            try await toolDispatchEngine.executeToolByName(
+                name: name,
+                jsonArguments: jsonArguments,
+                allTools: allTools,
+                bot: bot,
+                agentIdentity: agentIdentity
+            )
+        }
     }
 
 

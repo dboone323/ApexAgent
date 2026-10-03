@@ -132,6 +132,22 @@ public enum RuntimeEvent: Sendable {
     case completed(requestId: UUID, state: RuntimeTerminalState)
 }
 
+/// Represents a prioritized candidate provider in the fallback chain.
+public struct ProviderCandidate: Sendable {
+    public let provider: ModelProvider
+    public let modelName: String?
+    public let preferenceReason: String
+    public var reason: String? { preferenceReason }
+    public let priority: Int
+
+    public init(provider: ModelProvider, modelName: String? = nil, reason: String? = nil, priority: Int = 0) {
+        self.provider = provider
+        self.modelName = modelName
+        self.preferenceReason = reason ?? "Default"
+        self.priority = priority
+    }
+}
+
 /// Canonical request model dispatched to the AgentRequestRouter.
 public struct AgentRequest: Sendable {
     public let id: UUID

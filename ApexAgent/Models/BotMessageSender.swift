@@ -9,14 +9,25 @@ extension BotSession {
     /// running the generation, and handling tool calls.
     func sendMessage(_ text: String, attachments: [NSImage] = []) {
         let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty || !pendingAttachments.isEmpty else { return }
-        guard !isGenerating else { return }
+        let attachmentsToSend = !attachments.isEmpty ? attachments : self.pendingAttachments
+        guard !trimmedText.isEmpty || !attachmentsToSend.isEmpty else { return }
+
+        // If currently generating, queue the prompt to execute right after
+        if isGenerating {
+            queuedPrompts.append(QueuedPrompt(id: UUID(), text: trimmedText, attachments: attachmentsToSend))
+            self.pendingAttachments = []
+            return
+        }
+
+        // Drain pending attachments
+        self.pendingAttachments = []
 
         // Stop any active speech
         VoiceController.shared.stopSpeaking()
 
         isGenerating = true
         activeAssistantMessageId = nil
+        let taskId = UUID()
 
         let task = Task { [weak self] in
             guard let self else { return }
@@ -24,12 +35,13 @@ extension BotSession {
                 self.isGenerating = false
                 self.activeAssistantMessageId = nil
                 self.generationTask = nil
-                SessionLifecycleManager.shared.unregister(sessionId: self.id)
+                SessionLifecycleManager.shared.unregister(sessionId: self.id, taskId: taskId)
                 if let continuation = self.pendingAsyncContinuation {
                     let finalResponse = self.messages.last(where: { $0.role == .assistant })?.content
                     continuation.resume(returning: finalResponse)
                     self.pendingAsyncContinuation = nil
                 }
+                self.processNextQueuedPromptIfNeeded()
             }
 
             // 0. Compact context if conversation history has exceeded character limits
@@ -41,7 +53,7 @@ extension BotSession {
             self.resetSession()
 
             // 2. Add user message
-            let userMsg = ChatMessage(role: .user, content: trimmedText, attachments: attachments)
+            let userMsg = ChatMessage(id: UUID(), role: .user, content: trimmedText, timestamp: Date(), attachments: attachmentsToSend)
             self.appendMessage(userMsg)
 
             // Evaluate any onMessage triggered routines
@@ -51,17 +63,17 @@ extension BotSession {
             }
 
             // 3. Add placeholder assistant message
-            let assistantMsg = ChatMessage(role: .assistant, content: "", isStreaming: true)
+            let assistantMsg = ChatMessage(id: UUID(), role: .assistant, content: "", timestamp: Date(), isStreaming: true, botName: self.bot.name)
             self.appendMessage(assistantMsg)
             let assistantId = assistantMsg.id
             self.activeAssistantMessageId = assistantId
 
             // 4. Launch generation via canonical AgentRequestRouter
             let request = AgentRequest(
-                conversationId: self.id,
+                id: UUID(),
                 senderIdentity: .bot(id: self.bot.id, name: self.bot.name),
                 prompt: trimmedText,
-                attachments: attachments,
+                attachments: attachmentsToSend,
                 toolCallingMode: self.toolCallingMode
             )
             let orch = self.orchestrator ?? AgentOrchestrator()
@@ -94,11 +106,105 @@ extension BotSession {
             }
 
             self.activeAssistantMessageId = nil
+
+            // 5. Chained Bot @Mentions: If the bot tags another known bot in its reply, pull them in!
+            if let currentMessage = self.messages.first(where: { $0.id == assistantId }),
+               !currentMessage.content.isEmpty,
+               !Task.isCancelled {
+                let mentions = SpaceManager.extractMentions(from: currentMessage.content)
+                if !mentions.isEmpty, let bm = self.botManager ?? self.orchestrator?.botManager {
+                    let mentionedBots = SpaceManager.matchBots(for: mentions, in: nil, botManager: bm)
+                        .filter { $0.id != self.bot.id }
+                    if !mentionedBots.isEmpty {
+                        await self.dispatchMentionedBotsInSession(
+                            mentionedBots: Array(mentionedBots.prefix(2)),
+                            triggeredBy: self.bot,
+                            triggerPrompt: currentMessage.content
+                        )
+                    }
+                }
+            }
+
             self.isGenerating = false
         }
 
         generationTask = task
-        SessionLifecycleManager.shared.register(task: task, forSessionId: self.id)
+        SessionLifecycleManager.shared.register(task: task, forSessionId: self.id, taskId: taskId)
     }
 
+    /// Asynchronously sends a prompt to the bot and awaits the completed response string.
+    func sendMessageAsync(_ text: String, attachments: [NSImage] = []) async -> String? {
+        if isGenerating {
+            return nil
+        }
+        await send(prompt: text, attachments: attachments)
+        return messages.last(where: { $0.role == .assistant })?.content
+    }
+
+    /// Dispatches chained turns for other bots that were @mentioned in a 1:1 conversation.
+    func dispatchMentionedBotsInSession(
+        mentionedBots: [BotProfile],
+        triggeredBy: BotProfile,
+        triggerPrompt: String
+    ) async {
+        guard !Task.isCancelled else { return }
+        let orch = self.orchestrator ?? AgentOrchestrator()
+
+        for targetBot in mentionedBots {
+            guard !Task.isCancelled else { break }
+
+            let assistantMsg = ChatMessage(
+                id: UUID(),
+                role: .assistant,
+                content: "",
+                timestamp: Date(),
+                isStreaming: true,
+                botName: targetBot.name
+            )
+            self.appendMessage(assistantMsg)
+            let assistantId = assistantMsg.id
+            self.activeAssistantMessageId = assistantId
+
+            let instructions = targetBot.systemInstructions + """
+            
+            [COLLABORATION CONTEXT]: You are \(targetBot.name). You were explicitly mentioned via @\(SpaceParticipant.normalizeHandle(targetBot.name)) by \(triggeredBy.name) in this conversation.
+            Respond directly to the task or question that was addressed to you concisely.
+            """
+
+            let request = AgentRequest(
+                id: UUID(),
+                senderIdentity: .bot(id: targetBot.id, name: targetBot.name),
+                prompt: triggerPrompt,
+                toolCallingMode: self.toolCallingMode
+            )
+
+            let terminalState = await AgentRequestRouter.shared.route(
+                request,
+                bot: targetBot,
+                session: self.session,
+                history: self.messages,
+                instructions: instructions,
+                orchestrator: orch,
+                onUpdate: { [weak self] partialContent in
+                    Task { @MainActor [weak self] in
+                        guard let self else { return }
+                        if let idx = self.messages.firstIndex(where: { $0.id == assistantId }) {
+                            var copy = self.messages
+                            copy[idx].content = partialContent
+                            self.messages = copy
+                        }
+                    }
+                }
+            )
+
+            if let currentMessage = self.messages.first(where: { $0.id == assistantId }) {
+                let finalContent = (!terminalState.isSuccess || currentMessage.content.isEmpty)
+                    ? terminalState.userFacingMessage
+                    : currentMessage.content
+                self.updateMessage(id: assistantId, content: finalContent)
+                self.updateMessage(id: assistantId, isStreaming: false)
+            }
+            self.activeAssistantMessageId = nil
+        }
+    }
 }

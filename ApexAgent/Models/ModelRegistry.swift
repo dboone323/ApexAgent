@@ -1,232 +1,150 @@
 import Foundation
-import Synchronization
+import SwiftUI
 import FoundationModels
 
-/// Central, single-Swift-API model selector for ApexAgent.
-///
-/// ApexAgent conforms to Apple's `LanguageModel` protocol across multiple
-/// providers:
-/// 1. Apple On-Device (AFM 3 via FoundationModels)
-/// 2. Cloud Gemini (Flash / Pro via Google Generative AI API)
-/// 3. Local Ollama (gemma4:12bmlx / llama / qwen on localhost:11434)
-/// 4. Local MLX (gemma4:12bmlx on localhost:8080)
-/// 5. Apple Private Cloud Compute (PCC)
-/// 6. fm CLI (Apple on-device CLI)
-///
-/// The Auto Model Picker dynamically resolves the best LLM on each turn
-/// based on context token size, task complexity, tool count, vision attachments,
-/// and provider availability.
-public enum ModelProvider: String, CaseIterable, Sendable {
-    case autoPicker
-    case appleOnDevice
-    case applePCC
-    case cloudGemini
-    case localOllama
-    case localMLX
-    case fmCLI
-
-    public var displayName: String {
-        switch self {
-        case .autoPicker: "Auto Model Picker (Native → Gemini Flash → Ollama)"
-        case .appleOnDevice: "Apple On-Device (AFM 3)"
-        case .applePCC: "Apple Private Cloud Compute"
-        case .cloudGemini: "Cloud Gemini (Flash / Pro)"
-        case .localOllama: "Local Ollama (gemma4:12bmlx)"
-        case .localMLX: "Local MLX (gemma4:12bmlx)"
-        case .fmCLI: "fm CLI (Apple)"
-        }
-    }
-
-    public static func parse(_ raw: String) -> ModelProvider? {
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let exact = ModelProvider(rawValue: trimmed) {
-            return exact
-        }
-        switch trimmed.lowercased() {
-        case "autopicker", "auto", "hybrid":
-            return .autoPicker
-        case "appleondevice", "applefoundation", "localsystem", "afm", "native", "apple":
-            return .appleOnDevice
-        case "applepcc", "privatecloud", "pcc":
-            return .applePCC
-        case "cloudgemini", "gemini":
-            return .cloudGemini
-        case "localollama", "ollamalocal", "ollama":
-            return .localOllama
-        case "localmlx", "mlxlocal", "mlx":
-            return .localMLX
-        case "fmcli", "fm":
-            return .fmCLI
-        default:
-            return nil
-        }
-    }
-}
-
-/// Represents an eligible provider candidate within a fallback chain.
-public struct ProviderCandidate: Equatable, Sendable {
-    public let provider: ModelProvider
-    public let modelName: String?
-    public let reason: String?
-    public let priority: Int
-
-    public init(provider: ModelProvider, modelName: String? = nil, reason: String? = nil, priority: Int = 0) {
-        self.provider = provider
-        self.modelName = modelName
-        self.reason = reason
-        self.priority = priority
-    }
-}
-
-public enum ModelSelectionStrategy: Sendable {
-    /// Use exactly the requested provider.
-    case explicit(ModelProvider)
-    /// Replicate the fallback chain: on-device (<=4k) → Gemini Flash (>4k / High-complexity) → Ollama → MLX.
-    case automatic
-}
-
-public enum AutoTieringStrategy: String, CaseIterable, Identifiable {
-    case balanced = "balanced"        // On-Device (0-3.2k) -> Local Ollama (3.2k-32k) -> Cloud Gemini (>32k + Vision)
-    case cloudFirst = "cloudFirst"    // On-Device (0-3.2k) -> Cloud Gemini (>3.2k) -> Ollama fallback
-    case localFirst = "localFirst"    // On-Device (0-3.2k) -> Local Ollama (>3.2k) -> Gemini fallback
+// MARK: - Auto Tiering Routing Strategy
+public enum AutoTieringStrategy: String, CaseIterable, Identifiable, Codable, Sendable {
+    case balanced = "balanced"
+    case cloudFirst = "cloudFirst"
+    case localFirst = "localFirst"
 
     public var id: String { rawValue }
 
     public var displayName: String {
         switch self {
         case .balanced:
-            return "Balanced (Ollama 4k-32k, Gemini >32k)"
+            return "Balanced (AFM 3 → Ollama → Gemini)"
         case .cloudFirst:
-            return "Performance First (Gemini >4k)"
+            return "Performance First (AFM 3 → Gemini → Ollama)"
         case .localFirst:
-            return "Local First (Ollama >4k)"
+            return "Local First (AFM 3 → Ollama)"
         }
     }
 }
 
-public struct ModelRegistry {
+// MARK: - Model Provider
+public enum ModelProvider: String, CaseIterable, Identifiable, Codable, Sendable {
+    case autoPicker = "autoPicker"
+    case appleOnDevice = "appleOnDevice"
+    case applePCC = "applePCC"
+    case cloudGemini = "cloudGemini"
+    case localOllama = "localOllama"
+    case localMLX = "localMLX"
+    case fmCLI = "fmCLI"
 
-    /// Keys mirrored from Settings & Keychain implementations.
-    private static let geminiKeyKey = "apex.geminiKey"
-    private static let geminiModelKey = "apex.geminiModel"
-    private static let ollamaModelKey = "apex.ollamaModel"
-    private static let mlxHostKey = "apex.mlxHost"
-    private static let mlxModelKey = "apex.mlxModel"
-    public static let providerKey = "apex.modelProvider"
-    public static let tieringStrategyKey = "apex.autoTieringStrategy"
+    public var id: String { rawValue }
 
-    /// Serializes the read-migrate-write cycle in `geminiAPIKey()` and the
-    /// delete in `saveGeminiAPIKey()` so concurrent callers (e.g. parallel
-    /// tests, or multi-agent provider resolution) can't race the legacy-key
-    /// migration into writing a stale/real key back to the keychain right
-    /// after a test (or logout) deleted it.
-    private static let geminiKeyMutex = Mutex(())
+    public var displayName: String {
+        switch self {
+        case .autoPicker: return "Auto (Balanced AFM 3 → Cloud Gemini → Ollama)"
+        case .appleOnDevice: return "Apple Intelligence (AFM 3 On-Device)"
+        case .applePCC: return "Apple Private Cloud Compute (PCC)"
+        case .cloudGemini: return "Google Gemini Cloud"
+        case .localOllama: return "Local Ollama"
+        case .localMLX: return "Local MLX-LM"
+        case .fmCLI: return "Apple FoundationModels CLI"
+        }
+    }
 
+    public static func parse(_ string: String) -> ModelProvider? {
+        let lower = string.lowercased()
+        if lower.contains("auto") { return .autoPicker }
+        if lower.contains("ondevice") || lower.contains("on-device") || lower.contains("system") || (lower.contains("local") && !lower.contains("ollama") && !lower.contains("mlx")) { return .appleOnDevice }
+        if lower.contains("pcc") || lower.contains("privatecloud") { return .applePCC }
+        if lower.contains("gemini") { return .cloudGemini }
+        if lower.contains("ollama") { return .localOllama }
+        if lower.contains("mlx") { return .localMLX }
+        if lower.contains("cli") { return .fmCLI }
+        return ModelProvider(rawValue: string)
+    }
+
+    public static func from(preference: String) -> ModelProvider {
+        parse(preference) ?? .autoPicker
+    }
+}
+
+// MARK: - Model Target
+public enum ModelTarget: Sendable {
+    case explicit(ModelProvider)
+    case auto(String)
+}
+
+// MARK: - Model Tier
+public enum ModelTier: String, CaseIterable, Identifiable, Codable, Sendable {
+    case standard = "standard"
+    case reasoning = "reasoning"
+    case coding = "coding"
+    case longContext = "longContext"
+    case vision = "vision"
+    case fast = "fast"
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .standard: return "Standard (AFM 3)"
+        case .reasoning: return "Deep Reasoning (PCC / Gemma 4 / Qwen)"
+        case .coding: return "Coding Specialist (Qwen 2.5 Coder)"
+        case .longContext: return "Long Context (>32k tokens)"
+        case .vision: return "Multimodal Vision (Gemini / Apple Vision)"
+        case .fast: return "Fast Response (AFM 3 / Llama 3.2 3B)"
+        }
+    }
+}
+
+// MARK: - Privacy Tier
+public enum PrivacyTier: String, CaseIterable, Identifiable, Codable, Sendable {
+    case strictlyOnDevice = "strictlyOnDevice"
+    case appleE2ECloud = "appleE2ECloud"
+    case enterpriseLocal = "enterpriseLocal"
+    case fullCloud = "fullCloud"
+
+    public var id: String { rawValue }
+
+    public var displayName: String {
+        switch self {
+        case .strictlyOnDevice: return "Strictly On-Device (0 bytes leave device)"
+        case .appleE2ECloud: return "Apple Private Cloud Compute (E2E Encrypted)"
+        case .enterpriseLocal: return "Local Server / Ollama / MLX"
+        case .fullCloud: return "Cloud AI (Gemini 2.5 Flash / Pro)"
+        }
+    }
+}
+
+// MARK: - Model Registry
+public struct ModelRegistry: Sendable {
+    public static let privacyTierKey = "apex.privacyTier"
+    public static let tieringStrategyKey = "apex.tieringStrategy"
+    public static let providerKey = "apex.model.provider"
+    public static let geminiAPIKeyKey = "apex.model.geminiAPIKey"
+    public static let geminiModelKey = "apex.model.geminiModel"
+    public static let ollamaHostKey = "apex.ollamaHostURL"
+    public static let ollamaModelKey = "apex.ollamaModel"
+    public static let mlxHostKey = "apex.mlxHostURL"
+    public static let mlxModelKey = "apex.mlxModel"
+
+    // Workload-specific default Ollama models
+    public static let defaultFastOllamaModel = "llama3.2:3b"
+    public static let defaultCodingOllamaModel = "qwen2.5-coder:7b"
+    public static let defaultResearchOllamaModel = "gemma4:12b"
+    public static let defaultAutomationOllamaModel = "qwen2.5-coder:7b"
+
+    /// Returns the active AutoTieringStrategy configured by the user.
     public static func activeTieringStrategy() -> AutoTieringStrategy {
         if let raw = UserDefaults.standard.string(forKey: tieringStrategyKey),
-           let strategy = AutoTieringStrategy(rawValue: raw) {
-            return strategy
+           let strat = AutoTieringStrategy(rawValue: raw) {
+            return strat
         }
         return .balanced
     }
 
-    /// Retrieves the Gemini API Key from Keychain (preferred) or environment.
-    /// Automatically migrates any legacy plaintext keys in ~/.apex/gemini_key or UserDefaults to Keychain and purges them.
-    public static func geminiAPIKey() -> String {
-        geminiKeyMutex.withLock { _ in
-        if let key = KeychainManager.get(key: "geminiAPIKey"), !key.isEmpty {
-            return key
-        }
-        if let key = KeychainManager.get(key: geminiKeyKey), !key.isEmpty {
-            return key
-        }
-        if let envKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"], !envKey.isEmpty {
-            return envKey
-        }
-
-        // Automatic legacy migration: check file then UserDefaults
-        let fileURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex/gemini_key")
-        var legacyKey: String?
-        if let fileKey = try? String(contentsOf: fileURL, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines), !fileKey.isEmpty {
-            legacyKey = fileKey
-            try? FileManager.default.removeItem(at: fileURL)
-        } else if let udKey = UserDefaults.standard.string(forKey: geminiKeyKey) ?? UserDefaults.standard.string(forKey: "geminiAPIKey"), !udKey.isEmpty {
-            legacyKey = udKey
-        }
-
-        // Purge legacy plaintext from UserDefaults
-        UserDefaults.standard.removeObject(forKey: geminiKeyKey)
-        UserDefaults.standard.removeObject(forKey: "geminiAPIKey")
-
-        if let found = legacyKey, !found.isEmpty {
-            KeychainManager.save(key: "geminiAPIKey", value: found)
-            KeychainManager.save(key: geminiKeyKey, value: found)
-            return found
-        }
-        return ""
-        }
+    /// Sets the active AutoTieringStrategy.
+    public static func setTieringStrategy(_ strategy: AutoTieringStrategy) {
+        UserDefaults.standard.set(strategy.rawValue, forKey: tieringStrategyKey)
     }
 
-    /// Persists the Gemini API Key securely in Keychain, purging any legacy plaintext file or UserDefaults entries.
-    public static func saveGeminiAPIKey(_ key: String) {
-        geminiKeyMutex.withLock { _ in
-        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            KeychainManager.delete(key: "geminiAPIKey")
-            KeychainManager.delete(key: geminiKeyKey)
-        } else {
-            KeychainManager.save(key: "geminiAPIKey", value: trimmed)
-            KeychainManager.save(key: geminiKeyKey, value: trimmed)
-        }
-
-        // Purge legacy plaintext storage
-        UserDefaults.standard.removeObject(forKey: "geminiAPIKey")
-        UserDefaults.standard.removeObject(forKey: geminiKeyKey)
-
-        let fileURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex/gemini_key")
-        if FileManager.default.fileExists(atPath: fileURL.path) {
-            try? FileManager.default.removeItem(at: fileURL)
-        }
-        }
-    }
-
-    /// Default Gemini model to the latest Flash version (gemini-3.5-flash).
-    public static func geminiModel() -> String {
-        if let envModel = ProcessInfo.processInfo.environment["APEX_GEMINI_MODEL"],
-           !envModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return envModel.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        return UserDefaults.standard.string(forKey: geminiModelKey) ?? "gemini-3.5-flash"
-    }
-
-    public static func ollamaModel() -> String {
-        if let envModel = ProcessInfo.processInfo.environment["APEX_OLLAMA_MODEL"],
-           !envModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return envModel.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        return UserDefaults.standard.string(forKey: ollamaModelKey) ?? "gemma4:12b"
-    }
-
-    public static func mlxModel() -> String {
-        if let envModel = ProcessInfo.processInfo.environment["APEX_MLX_MODEL"],
-           !envModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return envModel.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        return UserDefaults.standard.string(forKey: mlxModelKey) ?? "gemma4:12bmlx"
-    }
-
-    public static func mlxHost() -> URL {
-        let raw = UserDefaults.standard.string(forKey: mlxHostKey) ?? "http://localhost:8080"
-        return URL(string: raw) ?? URL(string: "http://localhost:8080")!
-    }
-
-    /// Resolve the active provider from `APEX_MODEL_PROVIDER` environment override or
-    /// `UserDefaults` (`apex.modelProvider`), falling back to `.autoPicker`.
+    /// Returns the currently active global provider.
     public static func activeProvider() -> ModelProvider {
-        if let envRaw = ProcessInfo.processInfo.environment["APEX_MODEL_PROVIDER"],
-           let envProvider = ModelProvider.parse(envRaw) {
-            return envProvider
-        }
         if let raw = UserDefaults.standard.string(forKey: providerKey),
            let provider = ModelProvider.parse(raw) {
             return provider
@@ -234,143 +152,244 @@ public struct ModelRegistry {
         return .autoPicker
     }
 
-    /// Estimates the token count for a prompt, history, instructions, and tool definitions (~4 characters per token + ~180 tokens per tool schema).
-    static func estimateTokenCount(prompt: String, history: [ChatMessage] = [], instructions: String = "", tools: [String] = []) -> Int {
-        let historyChars = history.reduce(0) { $0 + $1.content.count }
-        let totalChars = prompt.count + historyChars + instructions.count
-        let toolTokens = tools.count * 180
-        return max(1, (totalChars / 4) + toolTokens)
+    /// Sets the currently active global provider.
+    public static func setActiveProvider(_ provider: ModelProvider) {
+        UserDefaults.standard.set(provider.rawValue, forKey: providerKey)
     }
 
-    /// Resolves the optimal `ModelProvider` given task size, complexity, user preference, and system capabilities.
-    ///
-    /// Auto Model Picker Cascade:
-    /// 1. Apple Native On-Device (AFM) for standard tasks (<= 3,200 tokens, quick conversational, local tools).
-    /// 2. Local Ollama (gemma4:12b) for mid-size tasks (3,200–32,000 tokens) in Balanced mode to preserve cloud quota.
-    /// 3. Cloud Gemini Flash / Pro for massive context (>32,000 tokens), deep multi-agent planning, and multimodal vision.
-    /// 4. Apple PCC / Local MLX / fm CLI.
-    static func resolveProviderForTask(
-        preferred: ModelProvider?,
-        prompt: String,
-        history: [ChatMessage] = [],
+    /// Returns the currently active privacy tier.
+    public static func privacyTier() -> PrivacyTier {
+        guard let raw = UserDefaults.standard.string(forKey: privacyTierKey),
+              let tier = PrivacyTier(rawValue: raw) else {
+            return .strictlyOnDevice
+        }
+        return tier
+    }
+
+    /// Sets the privacy tier.
+    public static func setPrivacyTier(_ tier: PrivacyTier) {
+        UserDefaults.standard.set(tier.rawValue, forKey: privacyTierKey)
+    }
+
+    /// Retrieve the Gemini API key from Keychain, falling back to UserDefaults or environment variable.
+    public static func geminiAPIKey() -> String {
+        if let key = KeychainManager.get(key: "geminiAPIKey"), !key.isEmpty {
+            return key
+        }
+        if let key = UserDefaults.standard.string(forKey: geminiAPIKeyKey), !key.isEmpty {
+            return key
+        }
+        return ProcessInfo.processInfo.environment["GEMINI_API_KEY"] ?? ""
+    }
+
+    /// Sets the Gemini API key.
+    public static func setGeminiAPIKey(_ key: String) {
+        KeychainManager.save(key: "geminiAPIKey", value: key)
+        UserDefaults.standard.set(key, forKey: geminiAPIKeyKey)
+    }
+
+    /// Sets the Gemini API key (alias for setGeminiAPIKey).
+    public static func saveGeminiAPIKey(_ key: String) {
+        setGeminiAPIKey(key)
+    }
+
+    /// Returns the configured Gemini model name.
+    public static func geminiModel() -> String {
+        UserDefaults.standard.string(forKey: geminiModelKey) ?? "gemini-2.5-flash"
+    }
+
+    /// Sets the Gemini model name.
+    public static func setGeminiModel(_ model: String) {
+        UserDefaults.standard.set(model, forKey: geminiModelKey)
+    }
+
+    /// Returns the configured Ollama host URL.
+    public static func ollamaHost() -> String {
+        UserDefaults.standard.string(forKey: ollamaHostKey) ?? "http://localhost:11434"
+    }
+
+    /// Sets the Ollama host URL.
+    public static func setOllamaHost(_ host: String) {
+        UserDefaults.standard.set(host, forKey: ollamaHostKey)
+    }
+
+    /// Returns the configured Ollama model name.
+    public static func ollamaModel() -> String {
+        UserDefaults.standard.string(forKey: ollamaModelKey) ?? defaultFastOllamaModel
+    }
+
+    /// Sets the Ollama model name.
+    public static func setOllamaModel(_ model: String) {
+        UserDefaults.standard.set(model, forKey: ollamaModelKey)
+    }
+
+    /// Dynamically selects an appropriate workload-tiered Ollama model based on bot profile or role title.
+    /// Fast lightweight models (`llama3.2:3b`) for general chat / assistant;
+    /// Deep coder models (`qwen2.5-coder:7b`) for code architects & engineering;
+    /// Deep research models (`gemma4:12b` or `qwen2.5:14b`) for researcher & data synthesis.
+    static func ollamaModel(
+        for bot: BotProfile? = nil,
+        role: String? = nil,
+        prompt: String? = nil
+    ) -> String {
+        if let override = bot?.ollamaModelOverride, !override.isEmpty {
+            return override
+        }
+
+        let combined = [
+            bot?.name ?? "",
+            bot?.title ?? "",
+            role ?? "",
+            bot?.systemInstructions ?? "",
+            prompt ?? ""
+        ].joined(separator: " ").lowercased()
+
+        if combined.contains("architect") || combined.contains("coder") || combined.contains("engineer") || combined.contains("refactor") || combined.contains("swift") || combined.contains("compiler") || combined.contains("code") {
+            return defaultCodingOllamaModel
+        }
+
+        if combined.contains("research") || combined.contains("analyst") || combined.contains("synthesis") || combined.contains("deep dive") || combined.contains("survey") {
+            return defaultResearchOllamaModel
+        }
+
+        if combined.contains("automator") || combined.contains("devops") || combined.contains("bash") || combined.contains("terminal") {
+            return defaultAutomationOllamaModel
+        }
+
+        return defaultFastOllamaModel
+    }
+
+    /// Resolves the optimal provider for a task.
+    public static func resolveProviderForTask(
+        preferred: ModelProvider = .autoPicker,
+        prompt: String = "",
         instructions: String = "",
         tools: [String] = [],
         hasAttachments: Bool = false,
-        isPCCAvailable: Bool? = nil
+        isPCCAvailable: Bool = true
     ) -> (provider: ModelProvider, reason: String?) {
-        let targetProvider = preferred ?? activeProvider()
-        let tokens = estimateTokenCount(prompt: prompt, history: history, instructions: instructions, tools: tools)
-        let hasGeminiKey = !geminiAPIKey().isEmpty
-        let pccAvailable = isPCCAvailable ?? AgentOrchestrator.isPrivateCloudComputeAvailable()
-        let strategy = activeTieringStrategy()
+        let estimatedTokens = (prompt.count + instructions.count) / 4
 
-        // If explicitly requested a specific fixed provider, honor it
-        if targetProvider != .autoPicker && targetProvider != .appleOnDevice {
-            return (targetProvider, nil)
+        if preferred != .autoPicker && preferred != .appleOnDevice {
+            return (preferred, nil)
         }
 
-        // 1. Multimodal / Image attachments
-        if hasAttachments {
-            if hasGeminiKey {
-                return (.cloudGemini, "Multimodal task with attachments. Auto-routing to Cloud Gemini Flash (high-fidelity vision).")
-            }
-            return (.appleOnDevice, "Multimodal task with attachments. Routing to Apple On-Device Vision.")
-        }
-
-        // 2. Context Window & Size overflow (>3,200 tokens exceeds on-device AFM 4k limit)
-        if tokens > 3200 {
-            switch strategy {
-            case .cloudFirst:
-                if hasGeminiKey {
-                    let model = geminiModel()
-                    return (.cloudGemini, "Task context is ~\(tokens) tokens (>4k safe limit). Auto-tiering to Cloud Gemini (\(model)).")
-                } else if pccAvailable {
-                    return (.applePCC, "Task context is ~\(tokens) tokens (>4k safe limit). Auto-tiering to Apple Private Cloud Compute.")
-                } else {
-                    return (.localOllama, "Task context is ~\(tokens) tokens (>4k safe limit) and Cloud Gemini is unkeyed. Auto-tiering to Local Ollama (\(ollamaModel())).")
-                }
-
-            case .balanced:
-                // Balanced mode:
-                // - High complexity or very large context (>32k tokens) routes to Cloud Gemini (fast, prevents local GPU strain).
-                // - If Apple PCC is available, use PCC for mid-size tasks (>3.2k) before taxing local Ollama resources.
-                // - Otherwise route to Local Ollama in the 3.2k-32k window to preserve Gemini quota!
-                let isComplex = isTaskHighComplexity(prompt: prompt, instructions: instructions, tools: tools)
-                if (tokens > 32000 || isComplex) && hasGeminiKey {
-                    let model = geminiModel()
-                    let reason = tokens > 32000
-                        ? "Large context (~\(tokens) tokens > 32k). Auto-tiering to Cloud Gemini (\(model)) for high-speed cloud reasoning."
-                        : "High-complexity architecture task. Auto-routing to Cloud Gemini (\(model)) for deep reasoning."
-                    return (.cloudGemini, reason)
-                } else if pccAvailable {
-                    return (.applePCC, "Task context is ~\(tokens) tokens (>3.2k). Auto-tiering to Apple Private Cloud Compute.")
-                } else {
-                    return (.localOllama, "Task context is ~\(tokens) tokens (3.2k–32k band). Preserving Gemini API quota with Local Ollama (\(ollamaModel())).")
-                }
-
-            case .localFirst:
-                if pccAvailable && tokens > 32000 {
-                    return (.applePCC, "Task context is ~\(tokens) tokens (>32k limit). Auto-tiering to Apple Private Cloud Compute.")
-                }
-                return (.localOllama, "Task context is ~\(tokens) tokens. Local First mode active (\(ollamaModel())).")
-            }
-        }
-
-        // 3. Mathematical & Analytical Calculation (auto-routes to cloud or deep local model when in autoPicker)
-        if targetProvider == .autoPicker && isTaskMathOrAnalytical(prompt: prompt) {
-            if hasGeminiKey && strategy == .cloudFirst {
-                let model = geminiModel()
-                return (.cloudGemini, "Mathematical calculation detected. Auto-routing to Cloud Gemini (\(model)) for AI reasoning.")
-            } else if pccAvailable {
-                return (.applePCC, "Mathematical calculation detected. Auto-routing to Apple Private Cloud Compute.")
-            } else {
-                return (.localOllama, "Mathematical calculation detected. Auto-routing to Local Ollama (\(ollamaModel())) for AI reasoning.")
-            }
-        }
-
-        // 4. Complexity heuristic (deep coding / large multi-file refactoring / heavy playbook orchestration)
-        if targetProvider == .autoPicker && isTaskHighComplexity(prompt: prompt, instructions: instructions, tools: tools) {
-            if hasGeminiKey {
-                let model = geminiModel()
-                return (.cloudGemini, "High-complexity architecture/code task detected. Auto-routing to Cloud Gemini (\(model)) for deep reasoning.")
-            }
-        }
-
-        // 5. Default Tier 1: Apple Native on-device
-        if targetProvider == .autoPicker || targetProvider == .appleOnDevice {
+        if estimatedTokens <= 3200 && !hasAttachments {
             return (.appleOnDevice, nil)
         }
 
-        return (targetProvider, nil)
+        if isPCCAvailable && preferred == .appleOnDevice {
+            return (.applePCC, "Context tokens (\(estimatedTokens)) exceed 3.2k on-device ceiling; tiering to Apple Private Cloud Compute.")
+        }
+
+        if hasAttachments && !geminiAPIKey().isEmpty {
+            return (.cloudGemini, "Attachments require multimodal vision processing; tiering to Cloud Gemini.")
+        }
+
+        return (.localOllama, "Context tokens (\(estimatedTokens)) exceed 3.2k limit; auto-tiering to Local Ollama.")
     }
 
-    /// Evaluates if the task involves mathematical calculations, arithmetic, or analytical reasoning.
-    public static func isTaskMathOrAnalytical(prompt: String) -> Bool {
-        let text = prompt.lowercased()
-        let mathKeywords = [
-            "calculate", "arithmetic", "equation", "formula", "integral", "derivative",
-            "algebra", "two plus two", "2+2", "2 + 2", "plus", "minus",
-            "multiplied by", "divided by", "square root", "factorial"
-        ]
-        return mathKeywords.contains { text.contains($0) }
+    /// Creates and returns the FoundationModels `LanguageModel` for the given target.
+    public static func model(for target: ModelTarget) -> any LanguageModel {
+        switch target {
+        case .explicit(let provider):
+            switch provider {
+            case .appleOnDevice, .applePCC, .autoPicker, .fmCLI:
+                return SystemLanguageModel.default
+            case .cloudGemini:
+                return CloudGeminiLanguageModel(apiKey: geminiAPIKey())
+            case .localOllama:
+                let url = URL(string: ollamaHost()) ?? URL(string: "http://localhost:11434")!
+                return LocalOllamaLanguageModel(hostURL: url)
+            case .localMLX:
+                let urlStr = UserDefaults.standard.string(forKey: mlxHostKey) ?? "http://localhost:8080"
+                let url = URL(string: urlStr) ?? URL(string: "http://localhost:8080")!
+                return LocalMLXLanguageModel(hostURL: url)
+            }
+        case .auto(let prompt):
+            let (provider, _) = resolveProviderForTask(preferred: .autoPicker, prompt: prompt)
+            return model(for: .explicit(provider))
+        }
     }
 
-    /// Evaluates if the task has high architectural or reasoning complexity.
-    public static func isTaskHighComplexity(prompt: String, instructions: String = "", tools: [String] = []) -> Bool {
-        let text = (prompt + " " + instructions).lowercased()
-        let complexityKeywords = [
-            "refactor", "architecture", "playbook", "security review",
-            "full pr review", "migration", "benchmark", "multi-agent", "convene_meeting",
-            "optimize performance", "debug crash", "codebase overhaul"
-        ]
-        let matches = complexityKeywords.filter { text.contains($0) }
-        return matches.count >= 2 || tools.contains("convene_meeting")
+    /// Builds a candidate fallback chain based on user preference, bot configuration, context budget, and workload tier.
+    static func buildCandidateChain(
+        preferred: ModelProvider? = .autoPicker,
+        bot: BotProfile? = nil,
+        prompt: String = "",
+        history: [ChatMessage] = [],
+        instructions: String = "",
+        tools: [String] = [],
+        hasAttachments: Bool = false
+    ) -> [ProviderCandidate] {
+        var candidates: [ProviderCandidate] = []
+        let estimatedTokens = (prompt.count + instructions.count + history.reduce(0) { $0 + $1.content.count }) / 4
+        let strategy = activeTieringStrategy()
+        let target = preferred ?? .autoPicker
+
+        if target != .autoPicker {
+            candidates.append(ProviderCandidate(provider: target, modelName: target == .localOllama ? ollamaModel(for: bot, prompt: prompt) : nil, reason: "User or Bot Preferred: \(target.displayName)", priority: 1))
+            if target != .localOllama {
+                candidates.append(ProviderCandidate(provider: .localOllama, modelName: ollamaModel(for: bot, prompt: prompt), reason: "Local Ollama Fallback", priority: 2))
+            }
+            if target != .cloudGemini && !geminiAPIKey().isEmpty {
+                candidates.append(ProviderCandidate(provider: .cloudGemini, modelName: geminiModel(), reason: "Cloud Gemini Fallback", priority: 3))
+            }
+            if target != .appleOnDevice {
+                candidates.append(ProviderCandidate(provider: .appleOnDevice, reason: "On-Device AFM Fallback", priority: 4))
+            }
+            return candidates
+        }
+
+        // Auto Tiering logic
+        if hasAttachments {
+            if !geminiAPIKey().isEmpty {
+                candidates.append(ProviderCandidate(provider: .cloudGemini, modelName: geminiModel(), reason: "Multimodal Vision (Gemini)", priority: 1))
+            }
+            candidates.append(ProviderCandidate(provider: .localOllama, modelName: ollamaModel(for: bot, prompt: prompt), reason: "Local Ollama Fallback", priority: 2))
+            candidates.append(ProviderCandidate(provider: .appleOnDevice, reason: "On-Device Fallback", priority: 3))
+            return candidates
+        }
+
+        switch strategy {
+        case .balanced:
+            if estimatedTokens <= 3200 {
+                candidates.append(ProviderCandidate(provider: .appleOnDevice, reason: "Fast on-device response (<=3.2k tokens)", priority: 1))
+                candidates.append(ProviderCandidate(provider: .localOllama, modelName: ollamaModel(for: bot, prompt: prompt), reason: "Local Ollama Fallback", priority: 2))
+                if !geminiAPIKey().isEmpty {
+                    candidates.append(ProviderCandidate(provider: .cloudGemini, modelName: geminiModel(), reason: "Cloud Gemini Fallback", priority: 3))
+                }
+            } else if estimatedTokens <= 32000 {
+                candidates.append(ProviderCandidate(provider: .localOllama, modelName: ollamaModel(for: bot, prompt: prompt), reason: "Local Ollama Specialist (3.2k-32k tokens)", priority: 1))
+                if !geminiAPIKey().isEmpty {
+                    candidates.append(ProviderCandidate(provider: .cloudGemini, modelName: geminiModel(), reason: "Cloud Gemini Fallback", priority: 2))
+                }
+                candidates.append(ProviderCandidate(provider: .appleOnDevice, reason: "On-Device Fallback", priority: 3))
+            } else {
+                if !geminiAPIKey().isEmpty {
+                    candidates.append(ProviderCandidate(provider: .cloudGemini, modelName: geminiModel(), reason: "Large Context Cloud Processing (>32k tokens)", priority: 1))
+                }
+                candidates.append(ProviderCandidate(provider: .localOllama, modelName: ollamaModel(for: bot, prompt: prompt), reason: "Local Ollama Fallback", priority: 2))
+            }
+
+        case .cloudFirst:
+            if estimatedTokens <= 3200 {
+                candidates.append(ProviderCandidate(provider: .appleOnDevice, reason: "Fast on-device response (<=3.2k tokens)", priority: 1))
+            }
+            if !geminiAPIKey().isEmpty {
+                candidates.append(ProviderCandidate(provider: .cloudGemini, modelName: geminiModel(), reason: "High Performance Cloud Gemini", priority: candidates.isEmpty ? 1 : 2))
+            }
+            candidates.append(ProviderCandidate(provider: .localOllama, modelName: ollamaModel(for: bot, prompt: prompt), reason: "Local Ollama Fallback", priority: candidates.count + 1))
+
+        case .localFirst:
+            candidates.append(ProviderCandidate(provider: .appleOnDevice, reason: "Strict Local On-Device AFM", priority: 1))
+            candidates.append(ProviderCandidate(provider: .localOllama, modelName: ollamaModel(for: bot, prompt: prompt), reason: "Local Ollama Specialist", priority: 2))
+        }
+
+        return candidates
     }
 
-    /// Creates an `AgentEngine` for a specific `ModelProvider`.
-    /// Sole instantiation path used by `ProviderFallbackExecutor` for canonical
-    /// runtime routing (candidate planning + bounded fallback + tool governance).
-    /// Nothing outside the fallback executor may construct an engine directly.
+    /// Returns the corresponding execution engine for the given provider.
     @MainActor
     static func engine(
         for provider: ModelProvider,
@@ -379,210 +398,34 @@ public struct ModelRegistry {
         allowedTools: [String]? = nil,
         orchestrator: AgentOrchestrator
     ) -> any AgentEngine {
-        let resolvedAllowedTools: [String]? = if let allowedTools, !allowedTools.isEmpty {
-            allowedTools
-        } else if let bot, !bot.allowedToolNames.isEmpty {
-            bot.allowedToolNames
-        } else {
-            nil
-        }
-
         switch provider {
-        case .autoPicker, .appleOnDevice:
-            let effectiveSession: LanguageModelSession?
-            if let session {
-                effectiveSession = session
-            } else if let bot {
-                let safeTools = (resolvedAllowedTools ?? []).filter { $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm" }
-                let profile = SpecializedAgentProfile(
-                    instructions: bot.systemInstructions,
-                    model: SystemLanguageModel.default,
-                    toolCallingMode: .allowed,
-                    orchestrator: orchestrator,
-                    allowedTools: safeTools,
-                    reasoningLevel: orchestrator.configuredReasoningLevel,
-                    maxResponseTokens: orchestrator.configuredMaxResponseTokens
-                )
-                effectiveSession = LanguageModelSession(profile: profile, history: Transcript(entries: []))
-            } else {
-                effectiveSession = nil
-            }
-            return NativeAppleEngine(orchestrator: orchestrator, customSession: effectiveSession)
-        case .applePCC:
-            if AgentOrchestrator.isPrivateCloudComputeAvailable() {
-                let pccModel = PrivateCloudComputeLanguageModel()
-                let pccSession: LanguageModelSession
-                if let existingSession = session {
-                    pccSession = existingSession
-                } else if let bot {
-                    let safeTools = (resolvedAllowedTools ?? []).filter { $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm" }
-                    let profile = SpecializedAgentProfile(
-                        instructions: bot.systemInstructions,
-                        model: pccModel,
-                        toolCallingMode: .allowed,
-                        orchestrator: orchestrator,
-                        allowedTools: safeTools,
-                        reasoningLevel: orchestrator.configuredReasoningLevel,
-                        maxResponseTokens: orchestrator.configuredMaxResponseTokens,
-                        usePrivateCloudIfAvailable: true
-                    )
-                    pccSession = LanguageModelSession(profile: profile, history: Transcript(entries: []))
-                } else {
-                    let profile = SupervisorAgentProfile(
-                        instructions: orchestrator.agentInstructions,
-                        model: pccModel,
-                        toolCallingMode: .allowed,
-                        orchestrator: orchestrator,
-                        reasoningLevel: orchestrator.configuredReasoningLevel,
-                        maxResponseTokens: orchestrator.configuredMaxResponseTokens
-                    )
-                    pccSession = LanguageModelSession(profile: profile, history: Transcript(entries: []))
-                }
-                return NativeAppleEngine(orchestrator: orchestrator, customSession: pccSession)
-            } else {
-                // Free-tier Apple account (no paid com.apple.developer.private-cloud-compute entitlement):
-                // use licensed Apple On-Device FoundationModel (SystemLanguageModel.default) with full tool support.
-                let effectiveSession: LanguageModelSession?
-                if let session {
-                    effectiveSession = session
-                } else if let bot {
-                    let safeTools = (resolvedAllowedTools ?? []).filter { $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm" }
-                    let profile = SpecializedAgentProfile(
-                        instructions: bot.systemInstructions,
-                        model: SystemLanguageModel.default,
-                        toolCallingMode: .allowed,
-                        orchestrator: orchestrator,
-                        allowedTools: safeTools,
-                        reasoningLevel: orchestrator.configuredReasoningLevel,
-                        maxResponseTokens: orchestrator.configuredMaxResponseTokens
-                    )
-                    effectiveSession = LanguageModelSession(profile: profile, history: Transcript(entries: []))
-                } else {
-                    effectiveSession = nil
-                }
-                return NativeAppleEngine(orchestrator: orchestrator, customSession: effectiveSession)
-            }
+        case .appleOnDevice, .applePCC:
+            return NativeAppleEngine(orchestrator: orchestrator, customSession: session)
         case .fmCLI:
             return FMCLIAgentEngine(orchestrator: orchestrator, backend: .system)
         case .cloudGemini:
-            if !geminiAPIKey().isEmpty {
-                return GeminiAgentEngine(orchestrator: orchestrator, bot: bot, allowedTools: resolvedAllowedTools)
-            } else {
-                return OllamaAgentEngine(orchestrator: orchestrator, bot: bot, allowedTools: resolvedAllowedTools)
-            }
+            return GeminiAgentEngine(orchestrator: orchestrator, bot: bot, allowedTools: allowedTools)
         case .localOllama:
-            return OllamaAgentEngine(orchestrator: orchestrator, bot: bot, allowedTools: resolvedAllowedTools)
+            return OllamaStreamingEngine(orchestrator: orchestrator, bot: bot, allowedTools: allowedTools)
         case .localMLX:
             return MLXAgentEngine(orchestrator: orchestrator, bot: bot)
+        case .autoPicker:
+            return NativeAppleEngine(orchestrator: orchestrator, customSession: session)
         }
-    }
-
-    /// Builds a prioritized, deduplicated fallback candidate chain.
-    static func buildCandidateChain(
-        preferred: ModelProvider? = nil,
-        bot: BotProfile? = nil,
-        prompt: String = "",
-        history: [ChatMessage] = [],
-        instructions: String = "",
-        tools: [String] = [],
-        hasAttachments: Bool = false
-    ) -> [ProviderCandidate] {
-        let preferredTarget = preferred ?? bot?.modelProvider ?? activeProvider()
-        let (primary, primaryReason) = resolveProviderForTask(
-            preferred: preferredTarget,
-            prompt: prompt,
-            history: history,
-            instructions: instructions,
-            tools: tools,
-            hasAttachments: hasAttachments
-        )
-
-        var candidates: [ProviderCandidate] = []
-        var seenProviders: Set<ModelProvider> = []
-
-        func addCandidate(_ provider: ModelProvider, reason: String?, modelName: String? = nil) {
-            guard !seenProviders.contains(provider) else { return }
-            seenProviders.insert(provider)
-            candidates.append(ProviderCandidate(
-                provider: provider,
-                modelName: modelName,
-                reason: reason,
-                priority: candidates.count
-            ))
-        }
-
-        let primaryModelName: String? = switch primary {
-        case .cloudGemini: geminiModel()
-        case .localOllama: bot?.ollamaModelOverride ?? ollamaModel()
-        case .localMLX: mlxModel()
-        default: nil
-        }
-        addCandidate(primary, reason: primaryReason ?? "Primary selected provider", modelName: primaryModelName)
-
-        let hasGeminiKey = !geminiAPIKey().isEmpty
-        if hasGeminiKey {
-            addCandidate(.cloudGemini, reason: "Cloud Gemini fallback", modelName: geminiModel())
-        }
-        addCandidate(.localOllama, reason: "Local Ollama fallback", modelName: bot?.ollamaModelOverride ?? ollamaModel())
-        addCandidate(.appleOnDevice, reason: "Apple On-Device fallback")
-        addCandidate(.localMLX, reason: "Local MLX fallback", modelName: mlxModel())
-
-        return candidates
-    }
-
-    /// Build a `LanguageModel` for the given strategy.
-    public static func model(
-        for strategy: ModelSelectionStrategy = .automatic,
-        apiKey: String? = nil
-    ) -> any LanguageModel {
-        let provider: ModelProvider = switch strategy {
-        case .explicit(let p): p
-        case .automatic: activeProvider()
-        }
-
-        switch provider {
-        case .autoPicker, .appleOnDevice:
-            return SystemLanguageModel.default
-        case .applePCC:
-            return PrivateCloudComputeLanguageModel()
-        case .cloudGemini:
-            return CloudGeminiLanguageModel(apiKey: apiKey ?? geminiAPIKey())
-        case .localOllama:
-            let host = URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434") ?? URL(string: "http://localhost:11434")!
-            return LocalOllamaLanguageModel(hostURL: host)
-        case .localMLX:
-            return LocalMLXLanguageModel(hostURL: mlxHost())
-        case .fmCLI:
-            return FMCLILanguageModel()
-        }
-    }
-
-    /// Build a `LanguageModel` for a specific Bot, respecting per-bot overrides.
-    static func model(
-        for bot: BotProfile,
-        apiKey: String? = nil
-    ) -> any LanguageModel {
-        let provider = bot.modelProvider ?? activeProvider()
-        return model(for: .explicit(provider), apiKey: apiKey)
-    }
-
-    /// Resolve the effective `ModelProvider` for a Bot — its own override,
-    /// or the global default.
-    static func effectiveProvider(for bot: BotProfile) -> ModelProvider {
-        bot.modelProvider ?? activeProvider()
     }
 }
 
+// MARK: - AgentModelPreference Bridge
 extension AgentModelPreference {
     public var toModelProvider: ModelProvider {
         switch self {
-        case .autoPicker: .autoPicker
-        case .localSystem: .appleOnDevice
-        case .privateCloud: .applePCC
-        case .cloudGemini: .cloudGemini
-        case .localOllama: .localOllama
-        case .localMLX: .localMLX
-        case .hybrid: .applePCC
+        case .autoPicker: return .autoPicker
+        case .localSystem: return .appleOnDevice
+        case .privateCloud: return .applePCC
+        case .cloudGemini: return .cloudGemini
+        case .localOllama: return .localOllama
+        case .localMLX: return .localMLX
+        case .hybrid: return .applePCC
         }
     }
 }

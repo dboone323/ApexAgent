@@ -1,81 +1,107 @@
 import Foundation
-import FoundationModels
 import SwiftData
 import Observation
-import AppKit
-import SharedKit
 
-// MARK: - BotManager: Central registry of Bots + their sessions
+// MARK: - BotManager: Coordinates the roster of Bots and their sessions
 
-/// BotManager owns all BotProfile instances (persisted in SwiftData) and their
-/// active BotSession instances (in-memory, one per open conversation). It is the
-/// entry point for creating Bots, switching between them, and routing messages.
-///
-/// It replaces the "one global AgentOrchestrator" model with a multi-Bot model
-/// where:
-///   - Each Bot has its own instructions, memory, avatar, and conversation
-///   - All Bots share the local Computer (filesystem, browser, terminal)
-///   - All Bots share the underlying model + tool registry via the shared
-///     AgentOrchestrator
-///   - The active Bot is what receives messages in the chat view
-///
-/// BotManager is @Observable so SwiftUI can react to Bot creation, switching,
-/// and attention states.
+/// `BotManager` is the single source of truth for all `BotProfile` instances.
+/// It owns their durable state, maps each Bot to a live `BotSession`, and
+/// provides reactive accessors for the sidebar and detail views.
 @Observable
 @MainActor
 final class BotManager {
-    // MARK: - Shared Infrastructure (references, not owned)
-    weak var orchestrator: AgentOrchestrator?
-    let computer: Computer
-
-    // MARK: - SwiftData
+    // MARK: - Injected Dependencies
     var modelContext: ModelContext?
+    weak var orchestrator: AgentOrchestrator?
+    weak var computer: Computer?
 
-    // MARK: - Bot Registry
-    public var bots: [BotProfile] = []
-    public var sessions: [UUID: BotSession] = [:]  // botId → active session
+    // MARK: - Durable State
+    private(set) var bots: [BotProfile] = []
 
-    // MARK: - Active Bot
+    // MARK: - Transient State
+    private(set) var sessions: [UUID: BotSession] = [:]
     var activeBotId: UUID?
-    var activeSession: BotSession? {
-        guard let botId = activeBotId else { return nil }
-        return sessions[botId]
+    var activePlaybookRunner: PlaybookRunner?
+
+    public var activeBot: BotProfile? {
+        guard let id = activeBotId else { return nil }
+        return bot(byId: id)
     }
 
-    // MARK: - Attention Tracking
-    /// Bots that need user attention (waiting for approval, have unread results).
-    var botsNeedingAttention: [BotProfile] {
-        bots.filter { bot in
-            guard let s = sessions[bot.id] else { return false }
-            return s.needsAttention || s.unreadActivity
-        }
+    public var activeSession: BotSession? {
+        guard let bot = activeBot else { return nil }
+        return session(for: bot)
     }
 
-    // MARK: - Init
-
-    init(orchestrator: AgentOrchestrator, computer: Computer) {
-        self.orchestrator = orchestrator
-        self.computer = computer
-    }
-
-    /// Single session factory so every session carries the manager
-    /// back-reference (chief-of-staff roster composition needs it).
-    private func makeSession(for bot: BotProfile) -> BotSession {
-        let session = BotSession(bot: bot, orchestrator: orchestrator!, computer: computer)
-        session.botManager = self
-        return session
-    }
-
-    /// Non-creating peek at whether a bot's session is mid-generation.
     func isGenerating(botId: UUID) -> Bool {
         sessions[botId]?.isGenerating ?? false
     }
 
-    // MARK: - Peer approvals (O9 wiring)
+    func setActiveBot(_ id: UUID) {
+        activeBotId = id
+        if let bot = bot(byId: id) {
+            touchBot(bot)
+        }
+    }
 
-    /// Gate for BOT-initiated contact with another bot (a chief delegating,
-    /// an ask-bot hand-off). User-typed messages never pass through here.
+    func openConversation(with bot: BotProfile) {
+        activeBotId = bot.id
+        touchBot(bot)
+    }
+
+    @discardableResult
+    func resolvePlaybookApproval(approved: Bool, notes: String? = nil) -> Bool {
+        guard let runner = activePlaybookRunner else { return false }
+        if approved {
+            runner.approvePendingStage(notes: notes)
+        } else {
+            runner.rejectPendingStage(reason: notes ?? "Rejected by user")
+        }
+        return true
+    }
+
+    // MARK: - Peer-to-Peer Approval State (WS4)
+    /// Tracks bounded peer-to-peer approvals (grants, pending requests, audit logs).
+    /// Kept in memory; grants can be persisted into bot descriptions/memory when permanent.
     let peerApprovals = PeerApprovalCoordinator()
+
+    // MARK: - Init
+    init(modelContext: ModelContext? = nil, orchestrator: AgentOrchestrator? = nil, computer: Computer? = nil) {
+        self.modelContext = modelContext
+        self.orchestrator = orchestrator
+        self.computer = computer
+        loadBotsFromDisk()
+    }
+
+    // MARK: - Session Mapping
+
+    /// Returns the live `BotSession` for the given Bot, creating one if needed.
+    func session(for bot: BotProfile) -> BotSession {
+        if let existing = sessions[bot.id] {
+            return existing
+        }
+        let session = makeSession(for: bot)
+        sessions[bot.id] = session
+        return session
+    }
+
+    /// Accessor by UUID (convenience)
+    func session(forBotId id: UUID) -> BotSession? {
+        guard let bot = bots.first(where: { $0.id == id }) else { return nil }
+        return session(for: bot)
+    }
+
+    private func makeSession(for bot: BotProfile) -> BotSession {
+        let orch = orchestrator ?? AgentOrchestrator()
+        let comp = computer ?? Computer()
+        let s = BotSession(bot: bot, orchestrator: orch, computer: comp)
+        s.modelContext = modelContext
+        s.botManager = self
+        s.loadConversationFromDisk()
+        return s
+    }
+
+    // MARK: - Peer Approval Governance (WS4)
 
     enum PeerDeliveryDecision: Equatable {
         /// A grant covered this pair — deliver immediately.
@@ -89,6 +115,7 @@ final class BotManager {
     /// raises a pending approval and flags the sender's session for attention;
     /// the caller must not deliver until it resolves to allow.
     func peerDeliveryDecision(from: BotProfile, to: BotProfile, message: String) -> PeerDeliveryDecision {
+        _ = peerApprovals.expireStale()
         let outcome = peerApprovals.requestApproval(
             fromBotId: from.id.uuidString,
             toBotId: to.id.uuidString,
@@ -163,122 +190,91 @@ final class BotManager {
         return copy
     }
 
-    /// Hides a Bot from the main list without deleting it.
-    func hideBot(_ bot: BotProfile) {
-        bot.isPinned = false
+    /// Updates a Bot's mutable fields and persists.
+    func updateBot(
+        _ bot: BotProfile,
+        name: String? = nil,
+        title: String? = nil,
+        descriptionText: String? = nil,
+        avatarName: String? = nil,
+        modelProvider: ModelProvider? = nil,
+        ollamaModelOverride: String? = nil,
+        memory: String? = nil,
+        allowedTools: [String]? = nil,
+        allowedMCPServers: [String]? = nil
+    ) {
+        if let name { bot.name = name }
+        if let title { bot.title = title }
+        if let descriptionText { bot.descriptionText = descriptionText }
+        if let avatarName { bot.avatarName = avatarName }
+        if let modelProvider { bot.modelProvider = modelProvider }
+        if let ollamaModelOverride { bot.ollamaModelOverride = ollamaModelOverride }
+        if let memory { bot.memory = memory }
+        if let allowedTools { bot.allowedToolNames = allowedTools }
+        if let allowedMCPServers { bot.allowedMCPServers = allowedMCPServers }
+        bot.updatedAt = Date()
+        saveBot(bot)
     }
 
-    /// Deletes a Bot's profile and session. Shared computer files remain.
+    func editBot(
+        _ bot: BotProfile,
+        name: String? = nil,
+        title: String? = nil,
+        descriptionText: String? = nil,
+        avatarName: String? = nil,
+        modelProvider: ModelProvider? = nil,
+        ollamaModelOverride: String? = nil,
+        memory: String? = nil,
+        allowedTools: [String]? = nil,
+        allowedMCPServers: [String]? = nil
+    ) {
+        updateBot(
+            bot,
+            name: name,
+            title: title,
+            descriptionText: descriptionText,
+            avatarName: avatarName,
+            modelProvider: modelProvider,
+            ollamaModelOverride: ollamaModelOverride,
+            memory: memory,
+            allowedTools: allowedTools,
+            allowedMCPServers: allowedMCPServers
+        )
+    }
+
+    /// Deletes a Bot and cleans up its session and saved conversation.
     func deleteBot(_ bot: BotProfile) {
-        sessions.removeValue(forKey: bot.id)
-        if activeBotId == bot.id {
-            activeBotId = bots.first { $0.id != bot.id }?.id
+        let id = bot.id
+        bots.removeAll { $0.id == id }
+        sessions[id]?.reset()
+        sessions.removeValue(forKey: id)
+        if activeBotId == id {
+            activeBotId = bots.first?.id
         }
         if let context = modelContext {
             context.delete(bot)
             try? context.save()
         }
-        bots.removeAll { $0.id == bot.id }
     }
 
-    /// Pins/unpins a Bot to keep it at the top of the sidebar.
+    /// Pins or unpins a Bot.
     func togglePin(_ bot: BotProfile) {
         bot.isPinned.toggle()
-        if bot.isPinned { bot.updatedAt = Date() }
-        try? modelContext?.save()
+        saveBot(bot)
     }
 
-    /// Edits a Bot's profile.
-    func editBot(_ bot: BotProfile, name: String? = nil, title: String? = nil, descriptionText: String? = nil, avatarName: String? = nil, memory: String? = nil) {
-        if let name = name { bot.name = name }
-        if let title = title { bot.title = title }
-        if let descriptionText = descriptionText { bot.descriptionText = descriptionText }
-        if let avatarName = avatarName { bot.avatarName = avatarName }
-        if let memory = memory { bot.memory = memory }
-        bot.updatedAt = Date()
-        try? modelContext?.save()
-    }
-
-    /// Updates a Bot's durable memory from the conversation.
-    func updateBotMemory(_ bot: BotProfile, newMemory: String) {
-        bot.memory = newMemory
-        bot.updatedAt = Date()
-        try? modelContext?.save()
-        if let session = sessions[bot.id] {
-            session.resetSession()
-        }
-    }
-
-    // MARK: - Session Management
-
-    /// Opens a conversation with a Bot — creates a new session if one doesn't exist.
-    func openConversation(with bot: BotProfile) {
-        if sessions[bot.id] == nil {
-            let session = makeSession(for: bot)
-            sessions[bot.id] = session
-        }
-        activeBotId = bot.id
+    /// Touches a Bot's `lastActiveAt` to sort it higher in the list.
+    func touchBot(_ bot: BotProfile) {
         bot.lastActiveAt = Date()
-        if let s = sessions[bot.id] {
-            s.unreadActivity = false
-            s.needsAttention = false
-        }
-        try? modelContext?.save()
+        saveBot(bot)
     }
 
-    /// Returns the active session for a Bot, creating one if needed.
-    func session(for bot: BotProfile) -> BotSession {
-        if let existing = sessions[bot.id] {
-            return existing
-        }
-        let session = makeSession(for: bot)
-        sessions[bot.id] = session
-        return session
-    }
-
-    // MARK: - Message Routing
-
-    /// Sends a message to the active Bot. If no Bot is active, creates a default
-    /// "Apex" Bot if one doesn't exist.
-    func sendMessage(_ text: String) {
-        guard let session = activeSession else {
-            if bots.isEmpty {
-                let defaultBot = createBot(
-                    name: "Apex",
-                    title: "General Assistant",
-                    descriptionText: "You are Apex, a helpful AI assistant running on this Mac. You can read files, run commands, search the web, and automate tasks. Be concise and helpful."
-                )
-                openConversation(with: defaultBot)
-            }
-            guard let s2 = activeSession else { return }
-            s2.sendMessage(text, attachments: [])
-            return
-        }
-        session.sendMessage(text)
-    }
-
-    /// Sends a message to a specific Bot (for inter-Bot messaging).
-    func sendMessageTo(_ bot: BotProfile, text: String, attachments: [NSImage] = []) {
-        let session = self.session(for: bot)
-        session.sendMessage(text, attachments: attachments)
-    }
-
-    /// Sets the active Bot.
-    func setActiveBot(_ botId: UUID) {
-        activeBotId = botId
-        if let bot = bots.first(where: { $0.id == botId }) {
-            bot.lastActiveAt = Date()
-            if let s = sessions[botId] {
-                s.unreadActivity = false
-            }
-        }
-        try? modelContext?.save()
-    }
-
-    // MARK: - Persistence
+    // MARK: - Persistence (SwiftData)
 
     func saveBot(_ bot: BotProfile) {
-        bots.append(bot)
+        if !bots.contains(where: { $0.id == bot.id }) {
+            bots.append(bot)
+        }
         if let context = modelContext {
             context.insert(bot)
             try? context.save()
@@ -286,15 +282,20 @@ final class BotManager {
     }
 
     func loadBotsFromDisk() {
-        guard let context = modelContext else { return }
-        let descriptor = FetchDescriptor<BotProfile>()
+        guard let context = modelContext else {
+            bots = []
+            return
+        }
+
+        let descriptor = FetchDescriptor<BotProfile>(
+            sortBy: [SortDescriptor(\.lastActiveAt, order: .reverse)]
+        )
+
         do {
             bots = try context.fetch(descriptor)
             for bot in bots {
                 if sessions[bot.id] == nil {
                     let session = makeSession(for: bot)
-                    session.modelContext = context
-                    session.loadConversationFromDisk()
                     sessions[bot.id] = session
                 } else {
                     sessions[bot.id]?.modelContext = context
@@ -313,6 +314,8 @@ final class BotManager {
                 descriptionText: "You are Apex, a helpful AI assistant running on this Mac. You can read files, run commands, search the web, and automate tasks. Be concise and helpful.",
                 avatarName: "bolt.fill"
             )
+            apex.ollamaModelOverride = ModelRegistry.defaultFastOllamaModel
+
             let cos = createBot(
                 name: "Chief of Staff",
                 title: "Executive Coordinator",
@@ -320,25 +323,32 @@ final class BotManager {
                 avatarName: "person.crop.square.fill"
             )
             cos.isChiefOfStaff = true
+            cos.ollamaModelOverride = ModelRegistry.defaultFastOllamaModel
             
-            _ = createBot(
+            let arch = createBot(
                 name: "Code Architect",
                 title: "Senior Engineer",
                 descriptionText: "You specialize in code review, architecture planning, debugging, and Swift/macOS development.",
                 avatarName: "chevron.left.forwardslash.chevron.right"
             )
-            _ = createBot(
+            arch.ollamaModelOverride = ModelRegistry.defaultCodingOllamaModel
+
+            let res = createBot(
                 name: "Researcher",
                 title: "Deep Research Specialist",
                 descriptionText: "You perform web search, technical analysis, documentation lookups, and structured reporting.",
                 avatarName: "magnifyingglass"
             )
-            _ = createBot(
+            res.ollamaModelOverride = ModelRegistry.defaultResearchOllamaModel
+
+            let auto = createBot(
                 name: "Automator",
                 title: "macOS System Automator",
                 descriptionText: "You run terminal commands, execute AppleScript/Shortcuts, manage files, and automate desktop tasks.",
                 avatarName: "terminal.fill"
             )
+            auto.ollamaModelOverride = ModelRegistry.defaultAutomationOllamaModel
+
             try? modelContext?.save()
             activeBotId = apex.id
         }
@@ -418,91 +428,27 @@ final class BotManager {
             if let memory = pb.memory, !memory.isEmpty {
                 bot.memory = memory
             }
-            try? modelContext?.save()
+            saveBot(bot)
             created.append(bot)
         }
         return created
     }
 
-    /// Imports a TeamPlaybook from a remote URL (e.g. a GitHub raw URL).
+    /// Fetches a TeamPlaybook from a remote URL (JSON or Markdown) and imports its bots.
+    @discardableResult
     func importPlaybookFromURL(_ url: URL) async throws -> [BotProfile] {
         let (data, _) = try await URLSession.shared.data(from: url)
-
-        // Try JSON first, then Markdown
-        let playbook: TeamPlaybook
-        if let jsonPlaybook = try? TeamPlaybook.decode(from: data) {
-            playbook = jsonPlaybook
-        } else if let markdown = String(data: data, encoding: .utf8) {
-            playbook = try TeamPlaybook.decodeFromMarkdown(markdown)
+        if let playbook = try? TeamPlaybook.decode(from: data) {
+            return importPlaybook(playbook)
+        } else if let str = String(data: data, encoding: .utf8),
+                  let playbook = try? TeamPlaybook.decodeFromMarkdown(str) {
+            return importPlaybook(playbook)
         } else {
-            throw NSError(domain: "BotManager", code: -1,
-                          userInfo: [NSLocalizedDescriptionKey: "Could not parse playbook from URL."])
+            throw NSError(
+                domain: "BotManager",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Unrecognized playbook format at \(url.absoluteString)"]
+            )
         }
-        return importPlaybook(playbook)
-    }
-
-    // MARK: - Collaboration Playbooks
-
-    public var playbookHistory: [PlaybookExecutionReport] = []
-    public private(set) var activePlaybookRunners: [PlaybookRunner] = []
-    public var activePlaybookRunner: PlaybookRunner? {
-        activePlaybookRunners.last(where: { $0.pendingApprovalCard != nil }) ?? activePlaybookRunners.last
-    }
-
-    /// Approves the pending stage approval card on the currently active playbook runner.
-    public func approveActivePlaybookStage(notes: String? = nil) {
-        activePlaybookRunner?.approvePendingStage(notes: notes)
-    }
-
-    /// Rejects the pending stage approval card on the currently active playbook runner.
-    public func rejectActivePlaybookStage(reason: String = "Rejected by user") {
-        activePlaybookRunner?.rejectPendingStage(reason: reason)
-    }
-
-    /// Resolves the currently active pending approval card across active playbook runners.
-    @discardableResult
-    public func resolvePlaybookApproval(approved: Bool, notes: String? = nil) -> Bool {
-        guard let runner = activePlaybookRunner, let card = runner.pendingApprovalCard else {
-            return false
-        }
-        return resolvePlaybookApproval(cardId: card.id, approved: approved, notes: notes)
-    }
-
-    /// Resolves a pending approval card by matching card ID across all currently active runners.
-    @discardableResult
-    public func resolvePlaybookApproval(cardId: UUID, approved: Bool, notes: String? = nil) -> Bool {
-        guard let runner = activePlaybookRunners.first(where: { $0.pendingApprovalCard?.id == cardId }) else {
-            return false
-        }
-        if approved {
-            runner.approvePendingStage(notes: notes)
-        } else {
-            runner.rejectPendingStage(reason: notes ?? "Rejected by user")
-        }
-        return true
-    }
-
-    @discardableResult
-    public func executeCollaborationPlaybook(
-        preset: PlaybookPresetKind,
-        context: String,
-        onApprovalRequired: ((PlaybookApprovalCard) async throws -> Void)? = nil,
-        onDelegationEvent: ((PlaybookDelegationEvent) -> Void)? = nil
-    ) async throws -> PlaybookExecutionReport {
-        let playbook = CollaborationPlaybook.preset(for: preset)
-        // Inject self so playbook turns use real BotSessions (live mode);
-        // direct PlaybookRunner(...) construction without a manager stays simulated.
-        let runner = PlaybookRunner(playbook: playbook, availableBots: allBots, botManager: self)
-        self.activePlaybookRunners.append(runner)
-        defer {
-            self.activePlaybookRunners.removeAll { $0 === runner }
-        }
-        let report = try await runner.execute(
-            contextInput: context,
-            onApprovalRequired: onApprovalRequired,
-            onDelegationEvent: onDelegationEvent
-        )
-        playbookHistory.append(report)
-        return report
     }
 }

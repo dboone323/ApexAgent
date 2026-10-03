@@ -1,5 +1,6 @@
 import SwiftUI
 import Speech
+import AppKit
 
 struct VoicePermissionStatus: View {
     @State private var status: SFSpeechRecognizerAuthorizationStatus = .notDetermined
@@ -123,601 +124,26 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                // MARK: Model Status
-                Section("Model Configuration") {
-                    @Bindable var orchestrator = orchestrator
-
-                    Picker("Model Provider", selection: $orchestrator.modelPreference) {
-                        ForEach(AgentModelPreference.allCases) { preference in
-                            Text(preference.rawValue).tag(preference)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .onChange(of: orchestrator.modelPreference) {
-                        orchestrator.resetSession()
-                    }
-
-                    HStack {
-                        Label("Availability Status", systemImage: "cpu")
-                            .foregroundStyle(AppTheme.Palette.textSecondary)
-                        Spacer()
-                        ModelStatusBadge()
-                    }
-
-                    HStack {
-                        Label(modelPrivacyText, systemImage: modelPrivacyIcon)
-                            .foregroundStyle(AppTheme.Palette.textSecondary)
-                        Spacer()
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(AppTheme.Palette.success)
-                    }
-                    .font(AppTheme.Font.body(12))
-                }
-
-                // MARK: Reasoning & Output Budget
-                Section("Reasoning & Output") {
-                    Picker("Reasoning Budget", selection: $reasoningBudget) {
-                        Text("Off").tag("off")
-                        Text("Light").tag("light")
-                        Text("Moderate").tag("moderate")
-                        Text("Deep").tag("deep")
-                    }
-                    .pickerStyle(.menu)
-                    .help("Controls on-device/PCC reasoning effort via the native DynamicProfile .reasoningLevel modifier.")
-
-                    Stepper("Max Response Tokens: \(maxResponseTokens)", value: $maxResponseTokens, in: 256...32768, step: 256)
-                        .help("Caps generated tokens via the native DynamicProfile .maximumResponseTokens modifier.")
-                }
-
-                // MARK: API Keys
-                Section("API Credentials (Keychain)") {
-                    SecureField("Brave Search API Key", text: $braveAPIKey)
-                        .font(AppTheme.Font.mono(13))
-                        .accessibilityLabel("Brave Search API Key")
-                        .onChange(of: braveAPIKey) {
-                            guard isLoaded else { return }
-                            braveSaveTask?.cancel()
-                            braveSaveTask = Task {
-                                try? await Task.sleep(for: .seconds(0.5))
-                                guard !Task.isCancelled else { return }
-                                KeychainManager.save(key: "braveSearchAPIKey", value: braveAPIKey)
-                            }
-                        }
-                        .onSubmit {
-                            braveSaveTask?.cancel()
-                            KeychainManager.save(key: "braveSearchAPIKey", value: braveAPIKey)
-                        }
-
-                    SecureField("Tavily Search API Key", text: $tavilyAPIKey)
-                        .font(AppTheme.Font.mono(13))
-                        .accessibilityLabel("Tavily Search API Key")
-                        .onChange(of: tavilyAPIKey) {
-                            guard isLoaded else { return }
-                            tavilySaveTask?.cancel()
-                            tavilySaveTask = Task {
-                                try? await Task.sleep(for: .seconds(0.5))
-                                guard !Task.isCancelled else { return }
-                                KeychainManager.save(key: "tavilyAPIKey", value: tavilyAPIKey)
-                            }
-                        }
-                        .onSubmit {
-                            tavilySaveTask?.cancel()
-                            KeychainManager.save(key: "tavilyAPIKey", value: tavilyAPIKey)
-                        }
-
-                    SecureField("Gemini API Key", text: $geminiAPIKey)
-                        .font(AppTheme.Font.mono(13))
-                        .accessibilityLabel("Gemini API Key")
-                        .onChange(of: geminiAPIKey) {
-                            guard isLoaded else { return }
-                            geminiSaveTask?.cancel()
-                            geminiSaveTask = Task {
-                                try? await Task.sleep(for: .seconds(0.5))
-                                guard !Task.isCancelled else { return }
-                                ModelRegistry.saveGeminiAPIKey(geminiAPIKey)
-                            }
-                        }
-                        .onSubmit {
-                            geminiSaveTask?.cancel()
-                            ModelRegistry.saveGeminiAPIKey(geminiAPIKey)
-                        }
-
-                    TextField("Gemini Model Name", text: $geminiModel)
-                        .font(AppTheme.Font.mono(13))
-                        .autocorrectionDisabled()
-                        .accessibilityLabel("Gemini Model Name")
-                        .onChange(of: geminiModel) {
-                            UserDefaults.standard.set(geminiModel, forKey: "apex.geminiModel")
-                        }
-
-                    HStack(spacing: AppTheme.Spacing.sm) {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 11))
-                            .foregroundStyle(AppTheme.Palette.textTertiary)
-                        Text("API Keys are saved securely in Keychain and persistent configuration.")
-                            .font(AppTheme.Font.caption(11))
-                            .foregroundStyle(AppTheme.Palette.textSecondary)
-                    }
-                }
-
-                // MARK: Auto Model Tiering Strategy
-                Section("Auto Model Tiering & Balance") {
-                    Picker("Routing Strategy", selection: $autoTieringStrategy) {
-                        ForEach(AutoTieringStrategy.allCases) { strategy in
-                            Text(strategy.displayName).tag(strategy)
-                        }
-                    }
-                    .accessibilityLabel("Routing Strategy")
-                    .onChange(of: autoTieringStrategy) {
-                        UserDefaults.standard.set(autoTieringStrategy.rawValue, forKey: ModelRegistry.tieringStrategyKey)
-                    }
-
-                    Text(tieringStrategyDescription)
-                        .font(AppTheme.Font.caption(11))
-                        .foregroundStyle(AppTheme.Palette.textSecondary)
-                }
-
-                // MARK: Ollama Host
-                Section("Ollama Settings") {
-                    TextField("Ollama Host URL", text: $ollamaHostURL)
-                        .font(AppTheme.Font.mono(13))
-                        .autocorrectionDisabled()
-                        .accessibilityLabel("Ollama Host URL")
-                        .onChange(of: ollamaHostURL) {
-                            ollamaURLSaveTask?.cancel()
-                            ollamaURLSaveTask = Task {
-                                try? await Task.sleep(for: .seconds(0.5))
-                                guard !Task.isCancelled else { return }
-                                UserDefaults.standard.set(ollamaHostURL, forKey: "apex.ollamaHostURL")
-                            }
-                        }
-                        .onSubmit {
-                            ollamaURLSaveTask?.cancel()
-                            UserDefaults.standard.set(ollamaHostURL, forKey: "apex.ollamaHostURL")
-                        }
-
-                    TextField("Ollama Model Name", text: $ollamaModel)
-                        .font(AppTheme.Font.mono(13))
-                        .autocorrectionDisabled()
-                        .accessibilityLabel("Ollama Model Name")
-                        .onChange(of: ollamaModel) {
-                            UserDefaults.standard.set(ollamaModel, forKey: "apex.ollamaModel")
-                        }
-                }
-
-                // MARK: Safety
-                Section("Safety & Orchestration") {
-                    Toggle(isOn: $requireConfirmAll) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Confirm all tool calls")
-                            Text("Ask for approval before every tool execution (not just destructive ones)")
-                                .font(AppTheme.Font.caption(11))
-                                .foregroundStyle(AppTheme.Palette.textSecondary)
-                        }
-                    }
-                    .onChange(of: requireConfirmAll) {
-                        orchestrator.requireConfirmationForAll = requireConfirmAll
-                    }
-
-                    Toggle(isOn: $multiAgentModeEnabled) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Enable Multi-Agent Collaboration")
-                            Text("Apex Prime coordinates specialized Codex, Nexus, Pilot, Oracle, Auditor, Aura, and Chronos agents")
-                                .font(AppTheme.Font.caption(11))
-                                .foregroundStyle(AppTheme.Palette.textSecondary)
-                        }
-                    }
-                    .onChange(of: multiAgentModeEnabled) {
-                        orchestrator.multiAgentModeEnabled = multiAgentModeEnabled
-                        orchestrator.resetSession()
-                    }
-                }
-
-                // MARK: Voice Settings
-                Section("Voice Settings") {
-                    Toggle(isOn: $voiceModeEnabled) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Speak responses (Voice Mode)")
-                            Text("Automatically speak the assistant's responses using system text-to-speech")
-                                .font(AppTheme.Font.caption(11))
-                                .foregroundStyle(AppTheme.Palette.textSecondary)
-                        }
-                    }
-
-                    if voiceModeEnabled {
-                        Picker("Voice Language", selection: $voiceLocale) {
-                            Text("English (US)").tag("en-US")
-                            Text("English (UK)").tag("en-GB")
-                            Text("Spanish (Spain)").tag("es-ES")
-                            Text("French (France)").tag("fr-FR")
-                            Text("German (Germany)").tag("de-DE")
-                            Text("Japanese (Japan)").tag("ja-JP")
-                            Text("Chinese (China)").tag("zh-CN")
-                        }
-                        .pickerStyle(.menu)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text("Speech Rate")
-                                Spacer()
-                                Text(String(format: "%.2f", voiceSpeechRate))
-                                    .font(AppTheme.Font.mono(11))
-                                    .foregroundStyle(AppTheme.Palette.textSecondary)
-                            }
-                            Slider(value: $voiceSpeechRate, in: 0.1...1.0, step: 0.05)
-                        }
-
-                        HStack {
-                            Label("Voice Permissions", systemImage: "mic.fill")
-                                .foregroundStyle(AppTheme.Palette.textSecondary)
-                            Spacer()
-                            VoicePermissionStatus()
-                                .font(AppTheme.Font.caption(11))
-                        }
-                        .padding(.top, 4)
-                    }
-                }
-
-                // MARK: Sandboxing & Isolation
-                Section("Sandboxing & Isolation") {
-                    Picker("Sandbox Mode", selection: isolationMode) {
-                        ForEach(IsolationMode.allCases) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-
-                    if appleContainersEnabled {
-                        TextField("Apple Container Image", text: $appleContainerImage)
-                            .font(AppTheme.Font.mono(13))
-                            .autocorrectionDisabled()
-                            .accessibilityLabel("Apple Container Image")
-                        
-                        Stepper("CPUs: \(containerCPUs)", value: $containerCPUs, in: 1...8)
-                        
-                        Stepper("Memory: \(containerMemoryMB) MB", value: $containerMemoryMB, in: 512...8192, step: 256)
-                        
-                        HStack {
-                            Text("Sandbox: \(sandboxStateDescription)")
-                                .font(AppTheme.Font.caption(11))
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            if isSandboxTransitioning {
-                                ProgressView()
-                                    .controlSize(.small)
-                            } else if isSandboxRunning {
-                                Button("Stop Sandbox") {
-                                    Task {
-                                        if let manager = ContainerBridge.shared {
-                                            try? await manager.stopContainer()
-                                            startSandboxStatusPolling()
-                                        }
-                                    }
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(.red)
-                            } else {
-                                Button("Start Sandbox") {
-                                    Task {
-                                        if let manager = ContainerBridge.shared {
-                                            try? await manager.startContainer()
-                                            startSandboxStatusPolling()
-                                        }
-                                    }
-                                }
-                                .buttonStyle(.bordered)
-                                .tint(.green)
-                            }
-                        }
-                        .padding(.top, 4)
-                    }
-
-                    if dockerSandboxingEnabled {
-                        TextField("Docker Image", text: $dockerImage)
-                            .font(AppTheme.Font.mono(13))
-                            .autocorrectionDisabled()
-                            .accessibilityLabel("Docker Image")
-                    }
-                }
-
-                // MARK: System & Folder Permissions
-                Section {
-                    if let perms = orchestrator.permissions {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("System Access Checks")
-                                .font(AppTheme.Font.headline(11, weight: .bold))
-                                .foregroundStyle(AppTheme.Palette.textSecondary)
-
-                            Toggle(isOn: Binding(
-                                get: { perms.accessibilityAllowed },
-                                set: { perms.accessibilityAllowed = $0; try? orchestrator.modelContext?.save() }
-                            )) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Accessibility Entitlement Check")
-                                    Text("Check and run GUI accessibility control tools.")
-                                        .font(AppTheme.Font.caption(11))
-                                        .foregroundStyle(AppTheme.Palette.textSecondary)
-                                }
-                            }
-
-                            Toggle(isOn: Binding(
-                                get: { perms.screenRecordingAllowed },
-                                set: { perms.screenRecordingAllowed = $0; try? orchestrator.modelContext?.save() }
-                            )) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Screen Recording Entitlement Check")
-                                    Text("Check and allow screen capture capabilities.")
-                                        .font(AppTheme.Font.caption(11))
-                                        .foregroundStyle(AppTheme.Palette.textSecondary)
-                                }
-                            }
-
-                            Toggle(isOn: Binding(
-                                get: { perms.systemAudioRecordingAllowed },
-                                set: { perms.systemAudioRecordingAllowed = $0; try? orchestrator.modelContext?.save() }
-                            )) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("System Audio Recording")
-                                    Text("Allow capturing microphone and system audio.")
-                                        .font(AppTheme.Font.caption(11))
-                                        .foregroundStyle(AppTheme.Palette.textSecondary)
-                                }
-                            }
-                        }
-                        .padding(.vertical, AppTheme.Spacing.xs)
-
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("User Folders Access")
-                                .font(AppTheme.Font.headline(11, weight: .bold))
-                                .foregroundStyle(AppTheme.Palette.textSecondary)
-                                .padding(.top, 4)
-
-                            Text("If any folder access is disabled, launched subprocesses will be sandboxed to prevent repeated OS TCC prompts.")
-                                .font(AppTheme.Font.caption(11))
-                                .foregroundStyle(AppTheme.Palette.textSecondary)
-                                .padding(.bottom, 4)
-
-                            Toggle("Music Folder (~/Music)", isOn: Binding(
-                                get: { perms.musicFolderAllowed },
-                                set: { perms.musicFolderAllowed = $0; try? orchestrator.modelContext?.save() }
-                            ))
-
-                            Toggle("Desktop Folder (~/Desktop)", isOn: Binding(
-                                get: { perms.desktopFolderAllowed },
-                                set: { perms.desktopFolderAllowed = $0; try? orchestrator.modelContext?.save() }
-                            ))
-
-                            Toggle("Documents Folder (~/Documents)", isOn: Binding(
-                                get: { perms.documentsFolderAllowed },
-                                set: { perms.documentsFolderAllowed = $0; try? orchestrator.modelContext?.save() }
-                            ))
-
-                            Toggle("Downloads Folder (~/Downloads)", isOn: Binding(
-                                get: { perms.downloadsFolderAllowed },
-                                set: { perms.downloadsFolderAllowed = $0; try? orchestrator.modelContext?.save() }
-                            ))
-                        }
-                        .padding(.vertical, AppTheme.Spacing.xs)
-                    } else {
-                        Text("Loading permissions...")
-                            .foregroundStyle(AppTheme.Palette.textSecondary)
-                    }
-                } header: {
-                    Text("Permissions & Sandboxing")
-                }
-
-
-                // MARK: Collaborative Server
-                Section("Team Collaboration Server") {
-                    CollaborativeServerSettingsSection()
-                }
-
-                // MARK: A2A Interoperability
-                Section("A2A Interoperability") {
-                    A2ASettingsSection()
-                }
-
-                // MARK: Cognitive Memory & Recall
-                Section("Cognitive Memory & Knowledge Graph") {
-                    CognitiveMemorySettingsSection()
-                }
-
-                // MARK: Enterprise Security & Virtualization
-                Section("Enterprise Security & Virtualization") {
-                    EnterpriseSecuritySettingsSection()
-                }
-
-                // MARK: Model Context Protocol (MCP) Registry
-                Section("Model Context Protocol (MCP) Servers") {
-                    DynamicToolboxManagerSection()
-                    RoutinesSection()
-                }
-
-                // MARK: Skills registry (H8: the section existed but was never
-                // added to Settings, so skills were unmanageable in the UI)
-                SkillsSection()
-
-                Section("Add New MCP Server") {
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-                    Text("Add New MCP Server")
-                        .font(AppTheme.Font.headline(11))
-                            .bold()
-                        TextField("Server Name (e.g. Postgres)", text: $newServerName)
-                            .accessibilityLabel("New Server Name")
-                        TextField("Command (e.g. node, npx, python)", text: $newServerCommand)
-                            .autocorrectionDisabled()
-                            .accessibilityLabel("New Server Command")
-                        TextField("Arguments (space-separated)", text: $newServerArgs)
-                            .autocorrectionDisabled()
-                            .accessibilityLabel("New Server Arguments")
-
-                        Button("Add Server & Load Tools") {
-                            let args = newServerArgs.split(separator: " ").map { String($0) }
-                            let config = MCPServerConfig(name: newServerName, command: newServerCommand, arguments: args)
-                            mcpManager.addServer(config)
-
-                            newServerName = ""
-                            newServerCommand = ""
-                            newServerArgs = ""
-
-                            DynamicToolbox.shared.loadTools()
-                        }
-                        .disabled(newServerName.isEmpty || newServerCommand.isEmpty)
-                        .buttonStyle(.bordered)
-                        .padding(.top, AppTheme.Spacing.sm)
-                    }
-                }
-
-                // MARK: 24/7 Background Daemon & Webhooks
-                Section("24/7 Background Daemon & Webhooks") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Supervised LaunchAgent Daemon")
-                                    .font(AppTheme.Font.headline(13, weight: .semibold))
-                                Text(isDaemonInstalled ? "Daemon is installed & supervised by launchd." : "Daemon is not installed.")
-                                    .font(AppTheme.Font.caption(11))
-                                    .foregroundStyle(AppTheme.Palette.textSecondary)
-                            }
-                            Spacer()
-                            Button(isDaemonInstalled ? "Uninstall Daemon" : "Install Daemon") {
-                                toggleDaemon()
-                            }
-                            .buttonStyle(.bordered)
-                            .tint(isDaemonInstalled ? .red : .green)
-                        }
-                        
-                        Divider()
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Webhook Ingress Endpoint")
-                                .font(AppTheme.Font.headline(12, weight: .semibold))
-                            Text("http://localhost:8800/hooks/<endpointId>")
-                                .font(AppTheme.Font.mono(11))
-                                .foregroundStyle(AppTheme.Palette.accent)
-                            Text("Authorization: Bearer <secret> or header x-apex-secret: <secret>")
-                                .font(AppTheme.Font.caption(10))
-                                .foregroundStyle(AppTheme.Palette.textSecondary)
-                        }
-                    }
-                    .padding(.vertical, AppTheme.Spacing.xs)
-                }
-
-                // MARK: Autonomous Bot Proactivity
-                Section("Autonomous Bot Proactivity") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Toggle("Autonomous Handoff & Confirmation Monitoring", isOn: $proactiveScheduler.isEnabled)
-                            .font(AppTheme.Font.headline(13, weight: .semibold))
-
-                        Text("Proactively monitors stalled bot handoffs, unresolved approval gates, and routine execution errors to nudge teammates and prevent blocked workflows.")
-                            .font(AppTheme.Font.caption(11))
-                            .foregroundStyle(AppTheme.Palette.textSecondary)
-
-                        if proactiveScheduler.isEnabled {
-                            HStack {
-                                Text("Active Proactive Findings: \(proactiveScheduler.activeFindings.count)")
-                                    .font(AppTheme.Font.caption(11))
-                                    .foregroundStyle(proactiveScheduler.activeFindings.isEmpty ? AppTheme.Palette.textSecondary : Color.orange)
-                                Spacer()
-                                Button("Run Scan Now") {
-                                    Task { await proactiveScheduler.evaluateNow() }
-                                }
-                                .font(AppTheme.Font.caption(11))
-                            }
-                        }
-                    }
-                    .padding(.vertical, AppTheme.Spacing.xs)
-                }
-
-                // MARK: Tool Governance & Auto-Approval Policy
-                Section("Tool Governance & Auto-Approval") {
-                    Toggle("Auto-Approve Safe Tool Calls", isOn: $autoApproveToolCalls)
-                    
-                    if !alwaysAllowKeys.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Remembered 'Always Allow' Grants")
-                                .font(AppTheme.Font.headline(12, weight: .semibold))
-                            ForEach(alwaysAllowKeys, id: \.self) { key in
-                                HStack {
-                                    Text(key)
-                                        .font(AppTheme.Font.mono(11))
-                                    Spacer()
-                                    Button("Revoke") {
-                                        revokeKey(key)
-                                    }
-                                    .buttonStyle(.borderless)
-                                    .foregroundStyle(.red)
-                                }
-                            }
-                        }
-                        .padding(.vertical, AppTheme.Spacing.xs)
-                    }
-                }
-
-                // MARK: Agent Persona
-                Section {
-                    TextEditor(text: $localInstructions)
-                        .font(AppTheme.Font.mono(12))
-                        .frame(minHeight: 180)
-
-                    HStack(spacing: AppTheme.Spacing.md) {
-                        Button("Reset to Default") {
-                            localInstructions = AgentSystemPrompt.default
-                        }
-                        .buttonStyle(.bordered)
-
-                        Spacer()
-
-                        Button("Apply") {
-                            orchestrator.updateInstructions(localInstructions)
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                } header: {
-                    Text("Agent Instructions (System Prompt)")
-                } footer: {
-                    Text("Changes take effect on the next new conversation.")
-                        .foregroundStyle(AppTheme.Palette.textSecondary)
-                }
-
-                // MARK: Agent Modes
-                Section("Quick Modes") {
-                    ModeButton(
-                        title: "💻 Coding Mode",
-                        description: "Focused on software development and file editing",
-                        color: .blue
-                    ) {
-                        selectQuickMode(instructions: AgentSystemPrompt.codingMode)
-                    }
-                    ModeButton(
-                        title: "🔍 Research Mode",
-                        description: "Heavy web search and information synthesis",
-                        color: .green
-                    ) {
-                        selectQuickMode(instructions: AgentSystemPrompt.researchMode)
-                    }
-                    ModeButton(
-                        title: "⚙️ System Mode",
-                        description: "Full system access for admin tasks",
-                        color: .orange
-                    ) {
-                        selectQuickMode(instructions: AgentSystemPrompt.systemMode)
-                    }
-                }
-
-                // MARK: Data
-                Section("Conversation Data") {
-                    Button(role: .destructive) {
-                        showingResetConfirm = true
-                    } label: {
-                        Label("Clear Conversation History", systemImage: "trash")
-                    }
-                    .confirmationDialog("Clear all conversations?", isPresented: $showingResetConfirm, titleVisibility: .visible) {
-                        Button("Clear All", role: .destructive) {
-                            orchestrator.clearAllConversations()
-                        }
-                    }
-                }
+                modelConfigSection
+                reasoningSection
+                apiCredentialsSection
+                tieringStrategySection
+                ollamaSection
+                safetySection
+                voiceSection
+                containersSection
+                permissionsSection
+                collaborativeSection
+                a2aSection
+                cognitiveMemorySection
+                enterpriseSecuritySection
+                mcpSection
+                daemonSection
+                proactivitySection
+                toolGovernanceSection
+                instructionsSection
+                quickModesSection
+                conversationDataSection
             }
             .formStyle(.grouped)
             .navigationTitle("Settings")
@@ -756,6 +182,640 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Subsections
+
+    @ViewBuilder
+    private var modelConfigSection: some View {
+        Section("Model Configuration") {
+            @Bindable var orch = orchestrator
+
+            Picker("Model Provider", selection: $orch.modelPreference) {
+                ForEach(AgentModelPreference.allCases) { preference in
+                    Text(preference.rawValue).tag(preference)
+                }
+            }
+            .pickerStyle(.menu)
+            .onChange(of: orchestrator.modelPreference) {
+                orchestrator.resetSession()
+            }
+
+            HStack {
+                Label("Availability Status", systemImage: "cpu")
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+                Spacer()
+                ModelStatusBadge()
+            }
+
+            HStack {
+                Label(modelPrivacyText, systemImage: modelPrivacyIcon)
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+                Spacer()
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(AppTheme.Palette.success)
+            }
+            .font(AppTheme.Font.body(12))
+        }
+    }
+
+    @ViewBuilder
+    private var reasoningSection: some View {
+        Section("Reasoning & Output") {
+            Picker("Reasoning Budget", selection: $reasoningBudget) {
+                Text("Off").tag("off")
+                Text("Light").tag("light")
+                Text("Moderate").tag("moderate")
+                Text("Deep").tag("deep")
+            }
+            .pickerStyle(.menu)
+            .help("Controls on-device/PCC reasoning effort via the native DynamicProfile .reasoningLevel modifier.")
+
+            Stepper("Max Response Tokens: \(maxResponseTokens)", value: $maxResponseTokens, in: 256...32768, step: 256)
+                .help("Caps generated tokens via the native DynamicProfile .maximumResponseTokens modifier.")
+        }
+    }
+
+    @ViewBuilder
+    private var apiCredentialsSection: some View {
+        Section("API Credentials (Keychain)") {
+            SecureField("Brave Search API Key", text: $braveAPIKey)
+                .font(AppTheme.Font.mono(13))
+                .accessibilityLabel("Brave Search API Key")
+                .onChange(of: braveAPIKey) {
+                    guard isLoaded else { return }
+                    braveSaveTask?.cancel()
+                    braveSaveTask = Task {
+                        try? await Task.sleep(for: .seconds(0.5))
+                        guard !Task.isCancelled else { return }
+                        KeychainManager.save(key: "braveSearchAPIKey", value: braveAPIKey)
+                    }
+                }
+                .onSubmit {
+                    braveSaveTask?.cancel()
+                    KeychainManager.save(key: "braveSearchAPIKey", value: braveAPIKey)
+                }
+
+            SecureField("Tavily Search API Key", text: $tavilyAPIKey)
+                .font(AppTheme.Font.mono(13))
+                .accessibilityLabel("Tavily Search API Key")
+                .onChange(of: tavilyAPIKey) {
+                    guard isLoaded else { return }
+                    tavilySaveTask?.cancel()
+                    tavilySaveTask = Task {
+                        try? await Task.sleep(for: .seconds(0.5))
+                        guard !Task.isCancelled else { return }
+                        KeychainManager.save(key: "tavilyAPIKey", value: tavilyAPIKey)
+                    }
+                }
+                .onSubmit {
+                    tavilySaveTask?.cancel()
+                    KeychainManager.save(key: "tavilyAPIKey", value: tavilyAPIKey)
+                }
+
+            SecureField("Gemini API Key", text: $geminiAPIKey)
+                .font(AppTheme.Font.mono(13))
+                .accessibilityLabel("Gemini API Key")
+                .onChange(of: geminiAPIKey) {
+                    guard isLoaded else { return }
+                    geminiSaveTask?.cancel()
+                    geminiSaveTask = Task {
+                        try? await Task.sleep(for: .seconds(0.5))
+                        guard !Task.isCancelled else { return }
+                        ModelRegistry.saveGeminiAPIKey(geminiAPIKey)
+                    }
+                }
+                .onSubmit {
+                    geminiSaveTask?.cancel()
+                    ModelRegistry.saveGeminiAPIKey(geminiAPIKey)
+                }
+
+            TextField("Gemini Model Name", text: $geminiModel)
+                .font(AppTheme.Font.mono(13))
+                .autocorrectionDisabled()
+                .accessibilityLabel("Gemini Model Name")
+                .onChange(of: geminiModel) {
+                    UserDefaults.standard.set(geminiModel, forKey: "apex.geminiModel")
+                }
+
+            HStack(spacing: AppTheme.Spacing.sm) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 11))
+                    .foregroundStyle(AppTheme.Palette.textTertiary)
+                Text("API Keys are saved securely in Keychain and persistent configuration.")
+                    .font(AppTheme.Font.caption(11))
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var tieringStrategySection: some View {
+        Section("Auto Model Tiering & Balance") {
+            Picker("Routing Strategy", selection: $autoTieringStrategy) {
+                ForEach(AutoTieringStrategy.allCases) { strategy in
+                    Text(strategy.displayName).tag(strategy)
+                }
+            }
+            .accessibilityLabel("Routing Strategy")
+            .onChange(of: autoTieringStrategy) {
+                UserDefaults.standard.set(autoTieringStrategy.rawValue, forKey: ModelRegistry.tieringStrategyKey)
+            }
+
+            Text(tieringStrategyDescription)
+                .font(AppTheme.Font.caption(11))
+                .foregroundStyle(AppTheme.Palette.textSecondary)
+        }
+    }
+
+    @ViewBuilder
+    private var ollamaSection: some View {
+        Section("Ollama Settings") {
+            TextField("Ollama Host URL", text: $ollamaHostURL)
+                .font(AppTheme.Font.mono(13))
+                .autocorrectionDisabled()
+                .accessibilityLabel("Ollama Host URL")
+                .onChange(of: ollamaHostURL) {
+                    ollamaURLSaveTask?.cancel()
+                    ollamaURLSaveTask = Task {
+                        try? await Task.sleep(for: .seconds(0.5))
+                        guard !Task.isCancelled else { return }
+                        UserDefaults.standard.set(ollamaHostURL, forKey: "apex.ollamaHostURL")
+                    }
+                }
+                .onSubmit {
+                    ollamaURLSaveTask?.cancel()
+                    UserDefaults.standard.set(ollamaHostURL, forKey: "apex.ollamaHostURL")
+                }
+
+            TextField("Ollama Model Name", text: $ollamaModel)
+                .font(AppTheme.Font.mono(13))
+                .autocorrectionDisabled()
+                .accessibilityLabel("Ollama Model Name")
+                .onChange(of: ollamaModel) {
+                    UserDefaults.standard.set(ollamaModel, forKey: "apex.ollamaModel")
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var safetySection: some View {
+        Section("Safety & Orchestration") {
+            Toggle(isOn: $requireConfirmAll) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Confirm all tool calls")
+                    Text("Ask for approval before every tool execution (not just destructive ones)")
+                        .font(AppTheme.Font.caption(11))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                }
+            }
+            .onChange(of: requireConfirmAll) {
+                orchestrator.requireConfirmationForAll = requireConfirmAll
+            }
+
+            Toggle(isOn: $multiAgentModeEnabled) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Enable Multi-Agent Collaboration")
+                    Text("Apex Prime coordinates specialized Codex, Nexus, Pilot, Oracle, Auditor, Aura, and Chronos agents")
+                        .font(AppTheme.Font.caption(11))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                }
+            }
+            .onChange(of: multiAgentModeEnabled) {
+                orchestrator.multiAgentModeEnabled = multiAgentModeEnabled
+                orchestrator.resetSession()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var voiceSection: some View {
+        Section("Voice Settings") {
+            Toggle(isOn: $voiceModeEnabled) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Speak responses (Voice Mode)")
+                    Text("Automatically speak the assistant's responses using system text-to-speech")
+                        .font(AppTheme.Font.caption(11))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                }
+            }
+
+            if voiceModeEnabled {
+                Picker("Voice Language", selection: $voiceLocale) {
+                    Text("English (US)").tag("en-US")
+                    Text("English (UK)").tag("en-GB")
+                    Text("Spanish (Spain)").tag("es-ES")
+                    Text("French (France)").tag("fr-FR")
+                    Text("German (Germany)").tag("de-DE")
+                    Text("Japanese (Japan)").tag("ja-JP")
+                    Text("Chinese (China)").tag("zh-CN")
+                }
+                .pickerStyle(.menu)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Speech Rate")
+                        Spacer()
+                        Text(String(format: "%.2f", voiceSpeechRate))
+                            .font(AppTheme.Font.mono(11))
+                            .foregroundStyle(AppTheme.Palette.textSecondary)
+                    }
+                    Slider(value: $voiceSpeechRate, in: 0.1...1.0, step: 0.05)
+                }
+
+                HStack {
+                    Label("Voice Permissions", systemImage: "mic.fill")
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                    Spacer()
+                    VoicePermissionStatus()
+                        .font(AppTheme.Font.caption(11))
+                }
+                .padding(.top, 4)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var containersSection: some View {
+        Section("Sandboxing & Isolation") {
+            Picker("Sandbox Mode", selection: isolationMode) {
+                ForEach(IsolationMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            if appleContainersEnabled {
+                TextField("Apple Container Image", text: $appleContainerImage)
+                    .font(AppTheme.Font.mono(13))
+                    .autocorrectionDisabled()
+                    .accessibilityLabel("Apple Container Image")
+                
+                Stepper("CPUs: \(containerCPUs)", value: $containerCPUs, in: 1...8)
+                
+                Stepper("Memory: \(containerMemoryMB) MB", value: $containerMemoryMB, in: 512...8192, step: 256)
+                
+                HStack {
+                    Text("Sandbox: \(sandboxStateDescription)")
+                        .font(AppTheme.Font.caption(11))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    if isSandboxTransitioning {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else if isSandboxRunning {
+                        Button("Stop Sandbox") {
+                            Task {
+                                if let manager = ContainerBridge.shared {
+                                    try? await manager.stopContainer()
+                                    startSandboxStatusPolling()
+                                }
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.red)
+                    } else {
+                        Button("Start Sandbox") {
+                            Task {
+                                if let manager = ContainerBridge.shared {
+                                    try? await manager.startContainer()
+                                    startSandboxStatusPolling()
+                                }
+                            }
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.green)
+                    }
+                }
+                .padding(.top, 4)
+            }
+
+            if dockerSandboxingEnabled {
+                TextField("Docker Image", text: $dockerImage)
+                    .font(AppTheme.Font.mono(13))
+                    .autocorrectionDisabled()
+                    .accessibilityLabel("Docker Image")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var permissionsSection: some View {
+        Section {
+            if let perms = orchestrator.permissions {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("System Access Checks")
+                        .font(AppTheme.Font.headline(11, weight: .bold))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+
+                    Toggle(isOn: Binding(
+                        get: { perms.accessibilityAllowed },
+                        set: { perms.accessibilityAllowed = $0; try? orchestrator.modelContext?.save() }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Accessibility Entitlement Check")
+                            Text("Check and run GUI accessibility control tools.")
+                                .font(AppTheme.Font.caption(11))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
+                        }
+                    }
+
+                    Toggle(isOn: Binding(
+                        get: { perms.screenRecordingAllowed },
+                        set: { perms.screenRecordingAllowed = $0; try? orchestrator.modelContext?.save() }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Screen Recording Entitlement Check")
+                            Text("Check and allow screen capture capabilities.")
+                                .font(AppTheme.Font.caption(11))
+                        }
+                    }
+
+                    Toggle(isOn: Binding(
+                        get: { perms.systemAudioRecordingAllowed },
+                        set: { perms.systemAudioRecordingAllowed = $0; try? orchestrator.modelContext?.save() }
+                    )) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("System Audio Recording")
+                            Text("Allow capturing microphone and system audio.")
+                                .font(AppTheme.Font.caption(11))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
+                        }
+                    }
+                }
+                .padding(.vertical, AppTheme.Spacing.xs)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("User Folders Access")
+                        .font(AppTheme.Font.headline(11, weight: .bold))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                        .padding(.top, 4)
+
+                    Text("If any folder access is disabled, launched subprocesses will be sandboxed to prevent repeated OS TCC prompts.")
+                        .font(AppTheme.Font.caption(11))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                        .padding(.bottom, 4)
+
+                    Toggle("Music Folder (~/Music)", isOn: Binding(
+                        get: { perms.musicFolderAllowed },
+                        set: { perms.musicFolderAllowed = $0; try? orchestrator.modelContext?.save() }
+                    ))
+
+                    Toggle("Desktop Folder (~/Desktop)", isOn: Binding(
+                        get: { perms.desktopFolderAllowed },
+                        set: { perms.desktopFolderAllowed = $0; try? orchestrator.modelContext?.save() }
+                    ))
+
+                    Toggle("Documents Folder (~/Documents)", isOn: Binding(
+                        get: { perms.documentsFolderAllowed },
+                        set: { perms.documentsFolderAllowed = $0; try? orchestrator.modelContext?.save() }
+                    ))
+
+                    Toggle("Downloads Folder (~/Downloads)", isOn: Binding(
+                        get: { perms.downloadsFolderAllowed },
+                        set: { perms.downloadsFolderAllowed = $0; try? orchestrator.modelContext?.save() }
+                    ))
+                }
+                .padding(.vertical, AppTheme.Spacing.xs)
+            } else {
+                Text("Loading permissions...")
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+            }
+        } header: {
+            Text("Permissions & Sandboxing")
+        }
+    }
+
+    @ViewBuilder
+    private var collaborativeSection: some View {
+        Section("Team Collaboration Server") {
+            CollaborativeServerSettingsSection()
+        }
+    }
+
+    @ViewBuilder
+    private var a2aSection: some View {
+        Section("A2A Interoperability") {
+            A2ASettingsSection()
+        }
+    }
+
+    @ViewBuilder
+    private var cognitiveMemorySection: some View {
+        Section("Cognitive Memory & Knowledge Graph") {
+            CognitiveMemorySettingsSection()
+        }
+    }
+
+    @ViewBuilder
+    private var enterpriseSecuritySection: some View {
+        Section("Enterprise Security & Virtualization") {
+            EnterpriseSecuritySettingsSection()
+        }
+    }
+
+    @ViewBuilder
+    private var mcpSection: some View {
+        Section("Model Context Protocol (MCP) Servers") {
+            DynamicToolboxManagerSection()
+            RoutinesSection()
+        }
+
+        SkillsSection()
+
+        Section("Add New MCP Server") {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
+                Text("Add New MCP Server")
+                    .font(AppTheme.Font.headline(11))
+                    .bold()
+                TextField("Server Name (e.g. Postgres)", text: $newServerName)
+                    .accessibilityLabel("New Server Name")
+                TextField("Command (e.g. node, npx, python)", text: $newServerCommand)
+                    .autocorrectionDisabled()
+                    .accessibilityLabel("New Server Command")
+                TextField("Arguments (space-separated)", text: $newServerArgs)
+                    .autocorrectionDisabled()
+                    .accessibilityLabel("New Server Arguments")
+
+                Button("Add Server & Load Tools") {
+                    let args = newServerArgs.split(separator: " ").map { String($0) }
+                    let config = MCPServerConfig(name: newServerName, command: newServerCommand, arguments: args)
+                    mcpManager.addServer(config)
+
+                    newServerName = ""
+                    newServerCommand = ""
+                    newServerArgs = ""
+
+                    DynamicToolbox.shared.loadTools()
+                }
+                .disabled(newServerName.isEmpty || newServerCommand.isEmpty)
+                .buttonStyle(.bordered)
+                .padding(.top, AppTheme.Spacing.sm)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var daemonSection: some View {
+        Section("24/7 Background Daemon & Webhooks") {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Supervised LaunchAgent Daemon")
+                            .font(AppTheme.Font.headline(13, weight: .semibold))
+                        Text(isDaemonInstalled ? "Daemon is installed & supervised by launchd." : "Daemon is not installed.")
+                            .font(AppTheme.Font.caption(11))
+                            .foregroundStyle(AppTheme.Palette.textSecondary)
+                    }
+                    Spacer()
+                    Button(isDaemonInstalled ? "Uninstall Daemon" : "Install Daemon") {
+                        toggleDaemon()
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(isDaemonInstalled ? .red : .green)
+                }
+                
+                Divider()
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Webhook Ingress Endpoint")
+                        .font(AppTheme.Font.headline(12, weight: .semibold))
+                    Text("http://localhost:8800/hooks/<endpointId>")
+                        .font(AppTheme.Font.mono(11))
+                        .foregroundStyle(AppTheme.Palette.accent)
+                    Text("Authorization: Bearer <secret> or header x-apex-secret: <secret>")
+                        .font(AppTheme.Font.caption(10))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                }
+            }
+            .padding(.vertical, AppTheme.Spacing.xs)
+        }
+    }
+
+    @ViewBuilder
+    private var proactivitySection: some View {
+        Section("Autonomous Bot Proactivity") {
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Autonomous Handoff & Confirmation Monitoring", isOn: $proactiveScheduler.isEnabled)
+                    .font(AppTheme.Font.headline(13, weight: .semibold))
+
+                Text("Proactively monitors stalled bot handoffs, unresolved approval gates, and routine execution errors to nudge teammates and prevent blocked workflows.")
+                    .font(AppTheme.Font.caption(11))
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+
+                if proactiveScheduler.isEnabled {
+                    HStack {
+                        Text("Active Proactive Findings: \(proactiveScheduler.activeFindings.count)")
+                            .font(AppTheme.Font.caption(11))
+                            .foregroundStyle(proactiveScheduler.activeFindings.isEmpty ? AppTheme.Palette.textSecondary : Color.orange)
+                        Spacer()
+                        Button("Run Scan Now") {
+                            Task { await proactiveScheduler.evaluateNow() }
+                        }
+                        .font(AppTheme.Font.caption(11))
+                    }
+                }
+            }
+            .padding(.vertical, AppTheme.Spacing.xs)
+        }
+    }
+
+    @ViewBuilder
+    private var toolGovernanceSection: some View {
+        Section("Tool Governance & Auto-Approval") {
+            Toggle("Auto-Approve Safe Tool Calls", isOn: $autoApproveToolCalls)
+            
+            if !alwaysAllowKeys.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Remembered 'Always Allow' Grants")
+                        .font(AppTheme.Font.headline(12, weight: .semibold))
+                    ForEach(alwaysAllowKeys, id: \.self) { key in
+                        HStack {
+                            Text(key)
+                                .font(AppTheme.Font.mono(11))
+                            Spacer()
+                            Button("Revoke") {
+                                revokeKey(key)
+                            }
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(.red)
+                        }
+                    }
+                }
+                .padding(.vertical, AppTheme.Spacing.xs)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var instructionsSection: some View {
+        Section {
+            TextEditor(text: $localInstructions)
+                .font(AppTheme.Font.mono(12))
+                .frame(minHeight: 180)
+
+            HStack(spacing: AppTheme.Spacing.md) {
+                Button("Reset to Default") {
+                    localInstructions = AgentSystemPrompt.default
+                }
+                .buttonStyle(.bordered)
+
+                Spacer()
+
+                Button("Apply") {
+                    orchestrator.updateInstructions(localInstructions)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+        } header: {
+            Text("Agent Instructions (System Prompt)")
+        } footer: {
+            Text("Changes take effect on the next new conversation.")
+                .foregroundStyle(AppTheme.Palette.textSecondary)
+        }
+    }
+
+    @ViewBuilder
+    private var quickModesSection: some View {
+        Section("Quick Modes") {
+            ModeButton(
+                title: "💻 Coding Mode",
+                description: "Focused on software development and file editing",
+                color: .blue
+            ) {
+                selectQuickMode(instructions: AgentSystemPrompt.codingMode)
+            }
+            ModeButton(
+                title: "🔍 Research Mode",
+                description: "Heavy web search and information synthesis",
+                color: .green
+            ) {
+                selectQuickMode(instructions: AgentSystemPrompt.researchMode)
+            }
+            ModeButton(
+                title: "⚙️ System Mode",
+                description: "Full system access for admin tasks",
+                color: .orange
+            ) {
+                selectQuickMode(instructions: AgentSystemPrompt.systemMode)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var conversationDataSection: some View {
+        Section("Conversation Data") {
+            Button(role: .destructive) {
+                showingResetConfirm = true
+            } label: {
+                Label("Clear Conversation History", systemImage: "trash")
+            }
+            .confirmationDialog("Clear all conversations?", isPresented: $showingResetConfirm, titleVisibility: .visible) {
+                Button("Clear All", role: .destructive) {
+                    orchestrator.clearAllConversations()
+                }
+            }
+        }
+    }
+
     private var tieringStrategyDescription: String {
         switch autoTieringStrategy {
         case .balanced:
@@ -790,8 +850,6 @@ struct SettingsView: View {
         case .hybrid: return "lock.icloud"
         }
     }
-
-
 
     private func selectQuickMode(instructions: String) {
         pendingQuickModeAction = {
@@ -858,14 +916,14 @@ struct CollaborativeServerSettingsSection: View {
     var body: some View {
         Toggle(isOn: $collaborativeServerEnabled) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Enable Team Sharing Server")
-                Text("Broadcasts agent activity, plan status, and vision captures to local network")
+                Text("Enable Collaborative Server")
+                Text("Allow authorized team members and agents on your local network to collaborate.")
                     .font(AppTheme.Font.caption(11))
                     .foregroundStyle(AppTheme.Palette.textSecondary)
             }
         }
-        .onChange(of: collaborativeServerEnabled) {
-            if collaborativeServerEnabled {
+        .onChange(of: collaborativeServerEnabled) { _, newValue in
+            if newValue {
                 CollaborativeServer.shared.start(port: UInt16(collaborativeServerPort))
             } else {
                 CollaborativeServer.shared.stop()
@@ -874,29 +932,28 @@ struct CollaborativeServerSettingsSection: View {
 
         if collaborativeServerEnabled {
             HStack {
-                Text("Sharing Port")
+                Text("Server Port")
                 Spacer()
                 TextField("Port", value: $collaborativeServerPort, format: .number)
+                    .textFieldStyle(.roundedBorder)
                     .frame(width: 80)
-                    .multilineTextAlignment(.trailing)
-                    .accessibilityLabel("Sharing Port")
+                    .onChange(of: collaborativeServerPort) { _, newPort in
+                        if collaborativeServerEnabled {
+                            CollaborativeServer.shared.stop()
+                            CollaborativeServer.shared.start(port: UInt16(newPort))
+                        }
+                    }
             }
-            .onChange(of: collaborativeServerPort) { _, newValue in
-                if newValue < 1 {
-                    collaborativeServerPort = 1340
-                } else if newValue > 65535 {
-                    collaborativeServerPort = 65535
+
+            Toggle(isOn: $lanModeEnabled) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Require Authentication Token (LAN Mode)")
+                    Text("Only clients presenting the secret token can connect.")
+                        .font(AppTheme.Font.caption(11))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
                 }
             }
 
-            Toggle("Allow LAN Access", isOn: $lanModeEnabled)
-                .onChange(of: lanModeEnabled) {
-                    if collaborativeServerEnabled {
-                        CollaborativeServer.shared.stop()
-                        CollaborativeServer.shared.start(port: UInt16(collaborativeServerPort))
-                    }
-                }
-            
             if lanModeEnabled {
                 HStack {
                     Text("Auth Token")
@@ -1057,75 +1114,35 @@ struct A2ASettingsSection: View {
 // MARK: - Cognitive Memory Settings Section
 
 struct CognitiveMemorySettingsSection: View {
-    @Environment(AgentOrchestrator.self) private var orchestrator
-    @State private var isConsolidating = false
-    @State private var consolidationMessage: String?
+    @AppStorage("apex.memory.episodicEnabled") private var episodicEnabled: Bool = true
+    @AppStorage("apex.memory.compactionThreshold") private var compactionThreshold: Int = 16
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-            Text("Multi-Tier Cognitive Architecture")
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle("Episodic Memory Recording", isOn: $episodicEnabled)
                 .font(AppTheme.Font.headline(12, weight: .semibold))
-
-            Text("Provides Working, Episodic, Semantic, and Procedural memory tiers. Past interactions and tool successes form durable knowledge graphs.")
+            
+            Text("Persists timestamped events, summaries, and agent interactions across sessions in ~/.apex/memory.")
                 .font(AppTheme.Font.caption(11))
                 .foregroundStyle(AppTheme.Palette.textSecondary)
 
-            let bots = orchestrator.botManager?.allBots ?? []
-            let totalEpisodes = bots.reduce(0) { $0 + CognitiveMemoryEngine.shared.allEpisodes(forBotId: $1.id).count }
-            let allSemanticFacts = CognitiveMemoryEngine.shared.queryFacts(subject: nil, predicate: nil, object: nil)
+            Stepper("Auto-compaction turn threshold: \(compactionThreshold)", value: $compactionThreshold, in: 8...64, step: 4)
+                .font(AppTheme.Font.caption(11))
 
-            HStack(spacing: AppTheme.Spacing.md) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(totalEpisodes)")
-                        .font(AppTheme.Font.headline(14, weight: .bold))
-                    Text("Episodic Memories")
-                        .font(AppTheme.Font.caption(10))
-                        .foregroundStyle(AppTheme.Palette.textSecondary)
-                }
-
-                Divider()
-                    .frame(height: 24)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(allSemanticFacts.count)")
-                        .font(AppTheme.Font.headline(14, weight: .bold))
-                    Text("Semantic Facts")
-                        .font(AppTheme.Font.caption(10))
-                        .foregroundStyle(AppTheme.Palette.textSecondary)
-                }
-
+            HStack {
+                Text("Storage Location: ~/.apex/memory/")
+                    .font(AppTheme.Font.mono(11))
+                    .foregroundStyle(.secondary)
                 Spacer()
-
-                Button(action: {
-                    guard !isConsolidating else { return }
-                    isConsolidating = true
-                    Task {
-                        for bot in bots {
-                            await CognitiveMemoryEngine.shared.runConsolidationCycle(forBotId: bot.id)
-                        }
-                        consolidationMessage = "Consolidated \(bots.count) bot(s)"
-                        isConsolidating = false
+                Button("Open Folder") {
+                    let home = FileManager.default.homeDirectoryForCurrentUser
+                    let url = home.appendingPathComponent(".apex/memory", isDirectory: true)
+                    if !FileManager.default.fileExists(atPath: url.path) {
+                        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
                     }
-                }) {
-                    HStack(spacing: 4) {
-                        if isConsolidating {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Image(systemName: "moon.stars.fill")
-                        }
-                        Text("Trigger Dream Cycle")
-                    }
+                    NSWorkspace.shared.open(url)
                 }
-                .buttonStyle(.bordered)
-                .disabled(isConsolidating)
-            }
-            .padding(.vertical, 4)
-
-            if let message = consolidationMessage {
-                Text(message)
-                    .font(AppTheme.Font.caption(10))
-                    .foregroundStyle(AppTheme.Palette.accent)
+                .font(AppTheme.Font.caption(11))
             }
         }
         .padding(.vertical, AppTheme.Spacing.xs)
@@ -1135,66 +1152,24 @@ struct CognitiveMemorySettingsSection: View {
 // MARK: - Enterprise Security Settings Section
 
 struct EnterpriseSecuritySettingsSection: View {
-    @AppStorage("apex.enterprise.strictCapabilityTokens") private var strictCapabilityTokens: Bool = false
-    @AppStorage("apex.microvmSandboxEnabled") private var microvmSandboxEnabled: Bool = false
-    @State private var exportedLedgerStatus: String?
-    @State private var isExporting = false
+    @AppStorage("apex.security.strictContainerOnly") private var strictContainerOnly: Bool = false
+    @AppStorage("apex.security.requireGrantForP2P") private var requireGrantForP2P: Bool = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
-            Toggle(isOn: $strictCapabilityTokens) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Strict Capability Tokens (Zero-Trust)")
-                    Text("Enforces cryptographic HMAC-signed capability tokens for dangerous system tools (shell, delete, git).")
-                        .font(AppTheme.Font.caption(11))
-                        .foregroundStyle(AppTheme.Palette.textSecondary)
-                }
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            Toggle("Strict Isolation for External Scripts", isOn: $strictContainerOnly)
+                .font(AppTheme.Font.headline(12, weight: .semibold))
+            
+            Text("Forces all bash scripts and MCP binary executions to run inside isolated micro-virtualized sandboxes.")
+                .font(AppTheme.Font.caption(11))
+                .foregroundStyle(AppTheme.Palette.textSecondary)
 
-            Toggle(isOn: $microvmSandboxEnabled) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Virtualization MicroVM & APFS Sandbox")
-                    Text("Routes shell and terminal executions through ephemeral APFS copy-on-write sandboxes with automatic rollback.")
-                        .font(AppTheme.Font.caption(11))
-                        .foregroundStyle(AppTheme.Palette.textSecondary)
-                }
-            }
+            Toggle("Enforce Peer-to-Peer Agent Authorization Grants", isOn: $requireGrantForP2P)
+                .font(AppTheme.Font.headline(12, weight: .semibold))
 
-            Divider()
-                .padding(.vertical, 2)
-
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Cryptographic Audit Chain")
-                        .font(AppTheme.Font.headline(12, weight: .semibold))
-                    Text("Tamper-evident SHA-256 hash-chained ledger. Currently \(CryptographicAuditChain.shared.entries.count) signed entries.")
-                        .font(AppTheme.Font.caption(11))
-                        .foregroundStyle(AppTheme.Palette.textSecondary)
-                }
-
-                Spacer()
-
-                Button(action: {
-                    do {
-                        let data = try CryptographicAuditChain.shared.exportChain()
-                        let homeDir = FileManager.default.homeDirectoryForCurrentUser
-                        let exportURL = homeDir.appendingPathComponent("ApexAgent_Audit_Export.json")
-                        try data.write(to: exportURL)
-                        exportedLedgerStatus = "Exported to ~/ApexAgent_Audit_Export.json"
-                    } catch {
-                        exportedLedgerStatus = "Export failed: \(error.localizedDescription)"
-                    }
-                }) {
-                    Label("Export Audit Ledger", systemImage: "arrow.down.doc")
-                }
-                .buttonStyle(.bordered)
-            }
-
-            if let status = exportedLedgerStatus {
-                Text(status)
-                    .font(AppTheme.Font.caption(10))
-                    .foregroundStyle(AppTheme.Palette.accent)
-            }
+            Text("Requires user approval before any bot can send dynamic @mentions or task handoffs to another bot.")
+                .font(AppTheme.Font.caption(11))
+                .foregroundStyle(AppTheme.Palette.textSecondary)
         }
         .padding(.vertical, AppTheme.Spacing.xs)
     }

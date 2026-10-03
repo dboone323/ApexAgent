@@ -159,6 +159,8 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                         "parts": parts
                     ])
                 }
+            case .data:
+                break
             @unknown default:
                 break
             }

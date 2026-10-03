@@ -58,11 +58,12 @@ extension Tool {
         }
 
         // Check if user confirmation is required (safety gate)
-        // Skip if the orchestrator already performed confirmation in its
-        // executeToolByName wrapper — prevents a double prompt for the
-        // MLX/Ollama engine paths.
-                let needsConfirm = await MainActor.run {
-            !orchestrator.orchestrator.confirmationPerformed
+        // Skip if the current scoped task explicitly confirmed this exact tool name,
+        // or if confirmation was handled at top level without leaking into child delegations.
+        let isDirectlyConfirmed = (ToolConfirmationScope.activeConfirmedToolName == toolName)
+        let needsConfirm = await MainActor.run {
+            !isDirectlyConfirmed
+                && !orchestrator.orchestrator.confirmationPerformed
                 && orchestrator.orchestrator.shouldConfirmTool(name: toolName)
         }
         if needsConfirm {
@@ -121,6 +122,11 @@ extension Tool {
             return errorMsg
         }
     }
+}
+
+
+public enum ToolConfirmationScope: Sendable {
+    @TaskLocal public static var activeConfirmedToolName: String? = nil
 }
 
 struct AnyExecutableTool: Sendable {

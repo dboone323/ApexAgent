@@ -84,7 +84,6 @@ struct ChatView: View {
                         if displayMessages.isEmpty {
                             WelcomeView()
                                 .padding(.top, 80)
-                                .allowsHitTesting(!displayIsGenerating)
                         } else {
                             ForEach(displayMessages) { message in
                                 MessageBubble(message: message)
@@ -100,7 +99,6 @@ struct ChatView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
-                    .allowsHitTesting(!displayIsGenerating)
                 }
                 .accessibilityLabel("Conversation messages list")
                 .accessibilityIdentifier("conversationScrollView")
@@ -252,8 +250,66 @@ struct ChatInputBar: View {
         }
     }
 
+    private var hasInputContent: Bool {
+        !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !orchestrator.pendingAttachments.isEmpty
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Queued Prompts Banner
+            if !orchestrator.queuedPrompts.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppTheme.Palette.accent)
+                        Text("\(orchestrator.queuedPrompts.count) prompt\(orchestrator.queuedPrompts.count == 1 ? "" : "s") queued")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AppTheme.Palette.accent)
+                        Spacer()
+                        Button("Clear Queue") {
+                            orchestrator.clearPromptQueue()
+                        }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(Array(orchestrator.queuedPrompts.enumerated()), id: \.element.id) { index, queued in
+                                HStack(spacing: 4) {
+                                    Text("#\(index + 1)")
+                                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(.secondary)
+                                    Text(queued.text.isEmpty ? "Image Attachment" : queued.text)
+                                        .font(.system(size: 11))
+                                        .lineLimit(1)
+                                        .frame(maxWidth: 160, alignment: .leading)
+                                    Button {
+                                        orchestrator.removeQueuedPrompt(id: queued.id)
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .font(.system(size: 11))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Remove from queue")
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule()
+                                        .fill(AppTheme.Palette.accent.opacity(0.12))
+                                        .overlay(Capsule().stroke(AppTheme.Palette.accent.opacity(0.3), lineWidth: 0.5))
+                                )
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 4)
+                .padding(.vertical, 4)
+            }
+
             // Pending attachments thumbnails preview
             if !orchestrator.pendingAttachments.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -342,7 +398,7 @@ struct ChatInputBar: View {
                 // Text input
                 ZStack(alignment: .bottomLeading) {
                     if inputText.isEmpty {
-                        Text("Message Apex...")
+                        Text(displayIsGenerating ? "Queue next prompt..." : "Message Apex...")
                             .foregroundStyle(.quaternary)
                             .font(.system(size: 14))
                             .padding(.horizontal, 4)
@@ -413,34 +469,78 @@ struct ChatInputBar: View {
                     return .ignored
                 }
 
-                // Send / Cancel button
+                // Send / Stop / Queue buttons
                 if displayIsGenerating {
-                    Button(action: {
-                        if gatewayClient.isConnected {
-                            gatewayClient.cancelGeneration()
-                        } else {
-                            orchestrator.cancelGeneration()
-                        }
-                    }) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.red.opacity(0.15))
+                    if hasInputContent {
+                        // User has entered a prompt while generation is running:
+                        // Allow stopping all running actions OR queuing the new prompt.
+                        HStack(spacing: 6) {
+                            Button(action: {
+                                if gatewayClient.isConnected {
+                                    gatewayClient.cancelGeneration()
+                                } else {
+                                    orchestrator.cancelGeneration()
+                                }
+                            }) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.red.opacity(0.15))
+                                        .frame(width: 38, height: 38)
+                                    Image(systemName: "stop.fill")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(.red)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .help("Stop all running actions")
+                            .accessibilityIdentifier("stopGenerationButton")
+                            .accessibilityLabel("Stop generation")
+
+                            Button(action: send) {
+                                ZStack {
+                                    Circle()
+                                        .fill(LinearGradient(colors: [AppTheme.Palette.accent, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                        .frame(width: 38, height: 38)
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                }
                                 .frame(width: 38, height: 38)
-                            Image(systemName: "stop.fill")
-                                .font(.system(size: 13))
-                                .foregroundStyle(.red)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("sendButton")
+                            .accessibilityLabel("Queue message")
+                            .help("Queue message (Return)")
                         }
+                    } else {
+                        // Send button turns into Stop button while any part is running
+                        Button(action: {
+                            if gatewayClient.isConnected {
+                                gatewayClient.cancelGeneration()
+                            } else {
+                                orchestrator.cancelGeneration()
+                            }
+                        }) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.red.opacity(0.15))
+                                    .frame(width: 38, height: 38)
+                                Image(systemName: "stop.fill")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .help("Stop all running actions")
+                        .accessibilityIdentifier("stopGenerationButton")
+                        .accessibilityLabel("Stop generation")
                     }
-                    .buttonStyle(.plain)
-                    .help("Stop generation")
-                    .accessibilityIdentifier("stopGenerationButton")
-                    .accessibilityLabel("Stop generation")
                 } else {
                     Button(action: send) {
                         ZStack {
                             Circle()
                                 .fill(
-                                    (inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && orchestrator.pendingAttachments.isEmpty)
+                                    !hasInputContent
                                         ? AnyShapeStyle(Color(nsColor: .tertiaryLabelColor).opacity(0.3))
                                         : AnyShapeStyle(LinearGradient(colors: [AppTheme.Palette.accent, .blue], startPoint: .topLeading, endPoint: .bottomTrailing))
                                 )
@@ -454,7 +554,7 @@ struct ChatInputBar: View {
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("sendButton")
                     .accessibilityLabel("Send message")
-                    .disabled(inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && orchestrator.pendingAttachments.isEmpty)
+                    .disabled(!hasInputContent)
                     .help("Send message (Return)")
                 }
             }
@@ -467,7 +567,6 @@ struct ChatInputBar: View {
     private func send() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || !orchestrator.pendingAttachments.isEmpty else { return }
-        guard !displayIsGenerating else { return }
         inputText = ""
         
         if gatewayClient.isConnected {
@@ -479,7 +578,9 @@ struct ChatInputBar: View {
             orchestrator.pendingAttachments = []
             gatewayClient.sendMessage(text, attachments: pngs)
         } else {
-            orchestrator.sendMessage(text)
+            let attachments = orchestrator.pendingAttachments
+            orchestrator.pendingAttachments = []
+            orchestrator.sendMessage(text, attachments: attachments)
         }
     }
 

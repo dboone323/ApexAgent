@@ -158,8 +158,17 @@ struct ConveneMeetingTool: Tool {
 
             // Quorum and consensus calculations
             let totalExpected = validAgents.count * rounds
-            let successfulTurns = debateHistory.filter { !$0.statement.starts(with: "Participant response unavailable:") }
-            let failedTurns = debateHistory.filter { $0.statement.starts(with: "Participant response unavailable:") }
+            let isFailedTurn: (MeetingTurn) -> Bool = { turn in
+                let stmt = turn.statement.trimmingCharacters(in: .whitespacesAndNewlines)
+                return stmt.isEmpty
+                    || stmt == "Completed with no output."
+                    || stmt.hasPrefix("Participant response unavailable:")
+                    || stmt.hasPrefix("Error:")
+                    || stmt.hasPrefix("ERROR:")
+                    || stmt.hasPrefix("⚠️ Turn failed")
+            }
+            let successfulTurns = debateHistory.filter { !isFailedTurn($0) }
+            let failedTurns = debateHistory.filter { isFailedTurn($0) }
             let quorumMet = successfulTurns.count >= (validAgents.count / 2 + 1)
             let confidence = totalExpected > 0 ? Double(successfulTurns.count) / Double(totalExpected) : 0.0
 

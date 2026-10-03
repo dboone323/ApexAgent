@@ -3,6 +3,7 @@ import Foundation
 import SwiftData
 import SharedKit
 import Network
+import os
 @testable import ApexAgentCore
 
 @MainActor
@@ -61,13 +62,32 @@ import Network
         let connection = NWConnection(host: "127.0.0.1", port: nwPort, using: .tcp)
         defer { connection.cancel() }
 
+        let connectionResumed = OSAllocatedUnfairLock(initialState: false)
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             connection.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
-                    continuation.resume()
+                    let shouldResume = connectionResumed.withLock { isResumed -> Bool in
+                        if !isResumed {
+                            isResumed = true
+                            return true
+                        }
+                        return false
+                    }
+                    if shouldResume {
+                        continuation.resume()
+                    }
                 case .failed(let error):
-                    continuation.resume(throwing: error)
+                    let shouldResume = connectionResumed.withLock { isResumed -> Bool in
+                        if !isResumed {
+                            isResumed = true
+                            return true
+                        }
+                        return false
+                    }
+                    if shouldResume {
+                        continuation.resume(throwing: error)
+                    }
                 case .cancelled:
                     break
                 default:
@@ -78,31 +98,86 @@ import Network
         }
 
         // Receive broadcasted state frame (4 bytes length + JSON payload)
+        let actionResumed = OSAllocatedUnfairLock(initialState: false)
         let receivedAction: GatewayAction = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<GatewayAction, Error>) in
             connection.receive(minimumIncompleteLength: 4, maximumLength: 4) { lengthContent, _, _, lengthError in
                 if let lengthError {
-                    continuation.resume(throwing: lengthError)
+                    let shouldResume = actionResumed.withLock { isResumed -> Bool in
+                        if !isResumed {
+                            isResumed = true
+                            return true
+                        }
+                        return false
+                    }
+                    if shouldResume {
+                        continuation.resume(throwing: lengthError)
+                    }
                     return
                 }
                 guard let lengthContent, lengthContent.count == 4 else {
-                    continuation.resume(throwing: NSError(domain: "GatewayTest", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid length"]))
+                    let shouldResume = actionResumed.withLock { isResumed -> Bool in
+                        if !isResumed {
+                            isResumed = true
+                            return true
+                        }
+                        return false
+                    }
+                    if shouldResume {
+                        continuation.resume(throwing: NSError(domain: "GatewayTest", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid length"]))
+                    }
                     return
                 }
                 let length = lengthContent.withUnsafeBytes { $0.load(as: UInt32.self).bigEndian }
                 connection.receive(minimumIncompleteLength: Int(length), maximumLength: Int(length)) { bodyContent, _, _, bodyError in
                     if let bodyError {
-                        continuation.resume(throwing: bodyError)
+                        let shouldResume = actionResumed.withLock { isResumed -> Bool in
+                            if !isResumed {
+                                isResumed = true
+                                return true
+                            }
+                            return false
+                        }
+                        if shouldResume {
+                            continuation.resume(throwing: bodyError)
+                        }
                         return
                     }
                     guard let bodyContent else {
-                        continuation.resume(throwing: NSError(domain: "GatewayTest", code: 2, userInfo: [NSLocalizedDescriptionKey: "Empty body"]))
+                        let shouldResume = actionResumed.withLock { isResumed -> Bool in
+                            if !isResumed {
+                                isResumed = true
+                                return true
+                            }
+                            return false
+                        }
+                        if shouldResume {
+                            continuation.resume(throwing: NSError(domain: "GatewayTest", code: 2, userInfo: [NSLocalizedDescriptionKey: "Empty body"]))
+                        }
                         return
                     }
                     do {
                         let action = try JSONDecoder().decode(GatewayAction.self, from: bodyContent)
-                        continuation.resume(returning: action)
+                        let shouldResume = actionResumed.withLock { isResumed -> Bool in
+                            if !isResumed {
+                                isResumed = true
+                                return true
+                            }
+                            return false
+                        }
+                        if shouldResume {
+                            continuation.resume(returning: action)
+                        }
                     } catch {
-                        continuation.resume(throwing: error)
+                        let shouldResume = actionResumed.withLock { isResumed -> Bool in
+                            if !isResumed {
+                                isResumed = true
+                                return true
+                            }
+                            return false
+                        }
+                        if shouldResume {
+                            continuation.resume(throwing: error)
+                        }
                     }
                 }
             }
@@ -122,8 +197,17 @@ import Network
         var framedPacket = Data(bytes: &lengthBigEndian, count: 4)
         framedPacket.append(cancelData)
 
+        let sendResumed = OSAllocatedUnfairLock(initialState: false)
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             connection.send(content: framedPacket, completion: .contentProcessed { error in
+                let shouldResume = sendResumed.withLock { isResumed -> Bool in
+                    if !isResumed {
+                        isResumed = true
+                        return true
+                    }
+                    return false
+                }
+                guard shouldResume else { return }
                 if let error {
                     continuation.resume(throwing: error)
                 } else {

@@ -4,6 +4,7 @@ import SwiftData
 struct ContentView: View {
     @Environment(AgentOrchestrator.self) private var orchestrator
     @Environment(BotManager.self) private var botManager
+    @Environment(SpaceManager.self) private var spaceManager
     @Environment(Computer.self) private var computer
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Conversation.updatedAt, order: .reverse) private var conversations: [Conversation]
@@ -18,9 +19,14 @@ struct ContentView: View {
     
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            // MARK: - Sidebar: Bots + Conversations
+            // MARK: - Sidebar: Spaces + Bots + Conversations
             VStack(spacing: 0) {
-                // Bots section
+                // Spaces section (Multi-Human + Multi-Agent rooms)
+                SpacesSidebarSection(spaceManager: spaceManager)
+
+                Divider().padding(.horizontal, 12)
+
+                // Bots section (1:1 specialist sessions)
                 BotSidebarSection(bm: botManager)
                 
                 Divider().padding(.horizontal, 12)
@@ -29,20 +35,28 @@ struct ContentView: View {
                 SidebarView(
                     conversations: conversations,
                     selectedConversation: orchestrator.currentConversation,
-                    onSelectConversation: { orchestrator.loadConversation($0) },
+                    onSelectConversation: {
+                        botManager.activeBotId = nil
+                        spaceManager.activeSpaceId = nil
+                        orchestrator.loadConversation($0)
+                    },
                     onDeleteConversations: deleteSavedConversations
                 )
                 .frame(minHeight: 100)
             }
             .navigationSplitViewColumnWidth(min: 220, ideal: 280, max: 340)
-            .navigationTitle("Apex Bots")
+            .navigationTitle("Apex Spaces & Bots")
         } detail: {
-            // MARK: - Detail: Chat + Toggleable Sidebars
+            // MARK: - Detail: Space Workspace / Bot Chat + Toggleable Sidebars
             HStack(spacing: 0) {
                 VSplitView {
-                    // Chat view (driven by active Bot session or legacy orchestrator)
+                    // Chat view (driven by active 1:1 Bot session, active Space channel, or legacy orchestrator)
                     if let session = botManager.activeSession {
                         BotChatView(session: session)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .frame(minHeight: 200)
+                    } else if spaceManager.activeSpace != nil && orchestrator.currentConversation == nil {
+                        SpaceWorkspaceView(spaceManager: spaceManager)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .frame(minHeight: 200)
                     } else {
@@ -210,6 +224,11 @@ struct ContentView: View {
             // Wire the BotManager's modelContext
             botManager.modelContext = modelContext
             botManager.reloadBots()
+            // Wire SpaceManager's modelContext and load/seed Spaces
+            spaceManager.orchestrator = orchestrator
+            spaceManager.botManager = botManager
+            spaceManager.modelContext = modelContext
+            spaceManager.loadSpacesFromDisk()
         }
         .onReceive(NotificationCenter.default.publisher(for: .showDiagnosticsSheet)) { _ in
             showDiagnostics = true
