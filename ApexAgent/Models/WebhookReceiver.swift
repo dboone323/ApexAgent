@@ -54,6 +54,8 @@ enum WebhookReceiveOutcome: Equatable {
 }
 
 final class WebhookManager: @unchecked Sendable {
+    static let shared = WebhookManager()
+
     private let lock = NSLock()
     private var endpoints: [String: WebhookEndpoint] = [:]
     private var seenDeliveries: [String] = []   // bounded recent delivery ids per process

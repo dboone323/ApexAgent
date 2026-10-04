@@ -28,6 +28,7 @@ final class BotSession {
     var currentConversation: Conversation?
     var session: LanguageModelSession?
     var modelAvailability: SystemLanguageModel.Availability = .available
+    var activePlan: [PlanStep] = []
 
     // MARK: - Queued Prompts State
     /// User prompts submitted while generation is running. Drained in FIFO order.
@@ -36,10 +37,21 @@ final class BotSession {
     // MARK: - WS4: Needs-Attention indicator
     /// True when this session is blocked on a peer-to-peer card or pending approval.
     var needsAttention: Bool = false
+    var unreadActivity: Bool = false
 
-    // MARK: - Tool Calling Preference
-    var toolCallingMode: AgentToolCallingMode {
-        .auto
+    // MARK: - Tool Calling Preference Override
+    var toolCallingMode: AgentToolCallingMode = .auto
+
+    // MARK: - Dynamic Allowlist Computation
+    var effectiveToolAllowlist: [String] {
+        if !bot.allowedToolNames.isEmpty {
+            return bot.allowedToolNames
+        }
+        return [
+            "read_file", "write_file", "list_directory", "delete_file",
+            "run_shell_command", "web_search", "fetch_url", "take_screenshot",
+            "notification_tool", "system_info", "open_application"
+        ]
     }
 
     // MARK: - Effective Privacy Tier
@@ -56,11 +68,16 @@ final class BotSession {
     init(
         bot: BotProfile,
         orchestrator: AgentOrchestrator,
-        computer: Computer
+        computer: Computer = Computer()
     ) {
         self.bot = bot
         self.orchestrator = orchestrator
         self.computer = computer
+    }
+
+    func checkAvailability() {
+        let model = SystemLanguageModel.default
+        self.modelAvailability = model.availability
     }
 
     /// Composed system instructions including the Chief-of-Staff roster prompt
@@ -139,6 +156,49 @@ final class BotSession {
         stopGeneration()
     }
 
+    func captureAndAttachScreenshot() async {
+        if let orch = orchestrator {
+            await orch.captureAndAttachScreenshot()
+            if let screenshot = orch.pendingAttachments.popLast() {
+                pendingAttachments.append(screenshot)
+            }
+        }
+    }
+
+    // MARK: - Direct Tool Execution
+
+    func executeTool(name: String, arguments: String) async throws -> String {
+        guard let orch = orchestrator else {
+            return "ERROR: Orchestrator unavailable"
+        }
+
+        // RBAC Allowlist check
+        if !bot.allowedToolNames.isEmpty && !bot.allowedToolNames.contains(name) {
+            return "ERROR: Tool '\(name)' is not permitted for bot '\(bot.name)' under least-privilege security policy. Allowed tools: \(bot.allowedToolNames.joined(separator: ", "))"
+        }
+        // MCP Scoping check
+        if !bot.allowedMCPServers.isEmpty {
+            if let entry = DynamicToolbox.shared.dynamicTools[name], entry.mcpServerId != nil {
+                return "ERROR: Tool '\(name)' is not permitted for bot '\(bot.name)' under least-privilege MCP scoping policy."
+            }
+        }
+
+        do {
+            return try await orch.executeToolByName(
+                name: name,
+                jsonArguments: arguments,
+                bot: bot,
+                agentIdentity: AgentIdentity.bot(id: bot.id, name: bot.name)
+            )
+        } catch {
+            let desc = error.localizedDescription
+            if desc.contains("is not permitted for bot") || desc.contains("Permission Denied") || desc.contains("ERROR:") {
+                return desc
+            }
+            throw error
+        }
+    }
+
     // MARK: - Prompt Execution & Delivery
 
     /// Sends a prompt to the bot. If generation is in progress, automatically queues it.
@@ -173,7 +233,6 @@ final class BotSession {
             attachments: attachmentsToSend
         )
         appendMessage(userMsg)
-        saveMessageToDisk(userMsg)
 
         let assistantId = UUID()
         activeAssistantMessageId = assistantId
@@ -246,6 +305,7 @@ final class BotSession {
 
     func appendMessage(_ msg: ChatMessage) {
         messages.append(msg)
+        saveMessageToDisk(msg)
     }
 
     func updateMessage(id: UUID, content: String) {
@@ -260,12 +320,19 @@ final class BotSession {
         }
     }
 
+    func clearMessages() {
+        reset()
+    }
+
     func reset() {
         stopGeneration()
         messages.removeAll()
         queuedPrompts.removeAll()
         pendingAttachments.removeAll()
         currentConversation = nil
+        needsAttention = false
+        unreadActivity = false
+        activePlan.removeAll()
     }
 
     // MARK: - Persistence (SwiftData)

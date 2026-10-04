@@ -1,56 +1,27 @@
 import SwiftUI
 import AppKit
+import FoundationModels
+import SwiftData
 
-// MARK: - BotChatView: Interactive chat with a persistent Bot teammate
+// MARK: - Bot Chat View
 
-/// Presents the full conversation history, streaming responses, tool approval
-/// cards, system prompt inspector, and memory editor for a single Bot.
 struct BotChatView: View {
-    @Bindable var session: BotSession
+    var session: BotSession
     @Environment(BotManager.self) private var botManager
-    @State private var inputText: String = ""
-    @State private var isShowingPromptInspector = false
-    @State private var isShowingMemoryEditor = false
-    @State private var approvalNotes: String = ""
+    @State private var inputText = ""
     @FocusState private var isInputFocused: Bool
-
+    
     var body: some View {
         VStack(spacing: 0) {
-            // Bot header
-            BotChatHeader(session: session)
+            // Header bar
+            BotChatHeaderBar(session: session)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .padding(.vertical, 10)
+                .background(Color(nsColor: .windowBackgroundColor).opacity(0.8))
             
-            // Playbook approval card banner (when a stage requires human-in-the-loop approval)
-            if let card = botManager.activePlaybookRunner?.pendingApprovalCard {
-                PlaybookApprovalBannerView(
-                    card: card,
-                    notes: $approvalNotes,
-                    onApprove: {
-                        let cleanNotes = approvalNotes.trimmingCharacters(in: .whitespacesAndNewlines)
-                        _ = botManager.resolvePlaybookApproval(
-                            approved: true,
-                            notes: cleanNotes.isEmpty ? nil : cleanNotes
-                        )
-                        approvalNotes = ""
-                    },
-                    onReject: {
-                        let cleanNotes = approvalNotes.trimmingCharacters(in: .whitespacesAndNewlines)
-                        _ = botManager.resolvePlaybookApproval(
-                            approved: false,
-                            notes: cleanNotes.isEmpty ? "Rejected by user" : cleanNotes
-                        )
-                        approvalNotes = ""
-                    }
-                )
-                .padding(.horizontal, 16)
-                .padding(.bottom, 8)
-                .transition(.move(edge: .top).combined(with: .opacity))
-            }
-
             Divider()
-
-            // Message scroll area
+            
+            // Messages area
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 12) {
@@ -63,121 +34,46 @@ struct BotChatView: View {
                                     .id(message.id)
                             }
                         }
+                        
+                        Color.clear
+                            .frame(height: 1)
+                            .id("bottom")
                     }
-                    .padding(16)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
-                .onChange(of: session.messages.count) { _, _ in
-                    if let last = session.messages.last {
-                        withAnimation {
-                            proxy.scrollTo(last.id, anchor: .bottom)
-                        }
+                .onChange(of: session.messages.count) {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        proxy.scrollTo("bottom", anchor: .bottom)
+                    }
+                }
+                .onChange(of: session.messages.last?.content) {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        proxy.scrollTo("bottom", anchor: .bottom)
                     }
                 }
             }
-
+            
             Divider()
-
+            
             // Input bar
-            BotChatInputBar(
-                session: session,
-                inputText: $inputText,
-                isInputFocused: $isInputFocused
-            )
+            BotChatInputBar(session: session, inputText: $inputText, isInputFocused: $isInputFocused)
         }
-        .background(Color(nsColor: .textBackgroundColor).opacity(0.5))
-        .toolbar {
-            ToolbarItemGroup(placement: .automatic) {
-                Button {
-                    isShowingPromptInspector.toggle()
-                } label: {
-                    Label("Instructions", systemImage: "doc.text")
-                }
-                .popover(isPresented: $isShowingPromptInspector) {
-                    BotPromptInspectorView(bot: session.bot)
-                        .frame(width: 360, height: 280)
-                }
-
-                Button {
-                    isShowingMemoryEditor.toggle()
-                } label: {
-                    Label("Memory", systemImage: "brain.head.profile")
-                }
-                .popover(isPresented: $isShowingMemoryEditor) {
-                    BotMemoryEditorView(bot: session.bot)
-                        .frame(width: 380, height: 320)
-                }
-
-                Menu {
-                    Button("Clear History", role: .destructive) {
-                        session.reset()
-                    }
-                    Button("Duplicate Bot") {
-                        _ = botManager.duplicateBot(session.bot)
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-            }
+        .background(Color(nsColor: .controlBackgroundColor))
+        .onAppear {
+            isInputFocused = true
+            session.checkAvailability()
         }
     }
 }
 
-// MARK: - Playbook Approval Banner View
+// MARK: - Bot Chat Header Bar
 
-struct PlaybookApprovalBannerView: View {
-    let card: PlaybookApprovalCard
-    @Binding var notes: String
-    let onApprove: () -> Void
-    let onReject: () -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "exclamationmark.shield.fill")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.orange)
-                Text("Stage Approval Required: \(card.stageTitle)")
-                    .font(.system(size: 12, weight: .semibold))
-                Spacer()
-            }
-
-            if !card.summary.isEmpty {
-                Text(card.summary)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-
-            TextField("Resolution notes or instructions (optional)...", text: $notes)
-                .textFieldStyle(.roundedBorder)
-                .font(.system(size: 11))
-
-            HStack(spacing: 8) {
-                Spacer()
-                Button("Reject", role: .destructive, action: onReject)
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
-                Button("Approve", action: onApprove)
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-            }
-        }
-        .padding(12)
-        .background(Color.orange.opacity(0.1))
-        .cornerRadius(10)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-        )
-    }
-}
-
-// MARK: - Bot Chat Header
-
-struct BotChatHeader: View {
-    @Bindable var session: BotSession
+struct BotChatHeaderBar: View {
+    var session: BotSession
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             // Avatar
             ZStack {
                 Circle()
@@ -188,43 +84,67 @@ struct BotChatHeader: View {
                     .foregroundStyle(Color.accentColor)
             }
             
-            // Name and title
+            // Title & Specialty
             VStack(alignment: .leading, spacing: 2) {
-                Text(session.bot.name)
-                    .font(.system(size: 15, weight: .semibold))
-                if !session.bot.title.isEmpty {
-                    Text(session.bot.title)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Text(session.bot.name)
+                        .font(.system(size: 13, weight: .semibold))
+                    
+                    if session.bot.isChiefOfStaff {
+                        Text("Chief of Staff")
+                            .font(.system(size: 10, weight: .medium))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 1)
+                            .background(Color.accentColor.opacity(0.12))
+                            .foregroundStyle(Color.accentColor)
+                            .cornerRadius(4)
+                    }
+                    
+                    if AgentRegistry.builtInDefaults[session.bot.name.lowercased()] == nil {
+                        Text("Custom")
+                            .font(.system(size: 10, weight: .medium))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 1)
+                            .background(Color.secondary.opacity(0.12))
+                            .foregroundStyle(.secondary)
+                            .cornerRadius(4)
+                    }
                 }
+                
+                Text(session.bot.title.isEmpty ? session.bot.descriptionText : session.bot.title)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
             
             Spacer()
             
-            // Model badge
-            HStack(spacing: 4) {
-                Circle()
-                    .fill(session.modelAvailability == .available ? .green : .red)
-                    .frame(width: 6, height: 6)
-                Text(modelLabel)
-                    .font(.system(size: 10))
+            // Queued prompt indicator in header
+            if !session.queuedPrompts.isEmpty {
+                HStack(spacing: 4) {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 11))
+                    Text("\(session.queuedPrompts.count)")
+                        .font(.system(size: 11, weight: .bold))
+                }
+                .foregroundStyle(AppTheme.Palette.accent)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(AppTheme.Palette.accent.opacity(0.12))
+                .cornerRadius(10)
+                .help("\(session.queuedPrompts.count) queued prompt(s)")
+            }
+            
+            // Clear history button
+            Button {
+                session.clearMessages()
+            } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(.regularMaterial, in: Capsule())
-        }
-    }
-    
-    private var modelLabel: String {
-        switch session.effectiveModelProvider {
-        case .autoPicker: return "Auto"
-        case .appleOnDevice: return "AFM 3"
-        case .applePCC: return "PCC"
-        case .cloudGemini: return "Gemini"
-        case .localOllama: return "Ollama"
-        case .localMLX: return "MLX"
-        case .fmCLI: return "CLI"
+            .buttonStyle(.plain)
+            .help("Clear chat history")
         }
     }
 }
@@ -232,17 +152,11 @@ struct BotChatHeader: View {
 // MARK: - Bot Welcome View
 
 struct BotWelcomeView: View {
-    @Bindable var session: BotSession
-    
-    let suggestions: [(String, String)] = [
-        ("terminal.fill", "What's using the most disk space?"),
-        ("safari.fill", "Search the web for WWDC 2026 highlights"),
-        ("swift", "Review recent Swift commits"),
-        ("folder.fill", "List files in ~/Developer")
-    ]
+    var session: BotSession
     
     var body: some View {
         VStack(spacing: 16) {
+            // Large avatar
             ZStack {
                 Circle()
                     .fill(Color.accentColor.opacity(0.12))
@@ -252,55 +166,93 @@ struct BotWelcomeView: View {
                     .foregroundStyle(Color.accentColor)
             }
             
-            VStack(spacing: 4) {
-                Text(session.bot.name)
-                    .font(.title2.weight(.semibold))
-                if !session.bot.title.isEmpty {
-                    Text(session.bot.title)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                if !session.bot.descriptionText.isEmpty {
-                    Text(session.bot.descriptionText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .padding(.horizontal, 32)
-                }
+            VStack(spacing: 6) {
+                Text("Chat with \(session.bot.name)")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                
+                Text(session.bot.title.isEmpty ? session.bot.descriptionText : session.bot.title)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
             
-            // Suggestion chips
+            // Model indicator
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(session.modelAvailability == .available ? Color.green : Color.orange)
+                    .frame(width: 7, height: 7)
+                Text(session.bot.modelProvider?.displayName ?? "Apple Foundation Models")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Color(nsColor: .separatorColor).opacity(0.3))
+            .cornerRadius(12)
+            
+            // Builtin suggested prompts
             VStack(spacing: 8) {
-                Text("Try asking:")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                
-                ForEach(suggestions, id: \.1) { icon, prompt in
+                ForEach(suggestedPrompts(for: session.bot), id: \.self) { prompt in
                     Button {
                         session.sendMessage(prompt)
                     } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: icon)
-                                .font(.system(size: 11))
-                                .foregroundStyle(.secondary)
+                        HStack {
                             Text(prompt)
                                 .font(.system(size: 12))
+                                .foregroundStyle(.primary)
                             Spacer()
-                            Image(systemName: "arrow.up.right")
+                            Image(systemName: "arrow.up.forward")
                                 .font(.system(size: 10))
                                 .foregroundStyle(.tertiary)
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(Color(nsColor: .controlBackgroundColor))
+                        .background(Color(nsColor: .windowBackgroundColor))
                         .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+                        )
                     }
                     .buttonStyle(.plain)
                 }
             }
-            .frame(maxWidth: 380)
+            .frame(maxWidth: 420)
             .padding(.top, 8)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 24)
+    }
+    
+    private func suggestedPrompts(for bot: BotProfile) -> [String] {
+        if bot.isChiefOfStaff {
+            return [
+                "Summarize recent activity across all bots",
+                "Delegate a comprehensive architecture review to the team",
+                "What tasks are currently blocked or awaiting input?"
+            ]
+        }
+        let role = (bot.title + " " + bot.descriptionText).lowercased()
+        if role.contains("code") || role.contains("architect") {
+            return [
+                "Review the project structure and suggest improvements",
+                "Explain the concurrent tool execution model in ApexAgent"
+            ]
+        } else if role.contains("research") || role.contains("audit") {
+            return [
+                "Search documentation for Apple Foundation Models best practices",
+                "Analyze memory retention mechanisms across conversations"
+            ]
+        } else if role.contains("auto") || role.contains("ci") || role.contains("test") {
+            return [
+                "Run test suites and report any failures",
+                "Verify sandbox permissions for terminal tools"
+            ]
+        } else {
+            return [
+                "How can you assist me today?",
+                "List available tools and capabilities"
+            ]
         }
     }
 }
@@ -310,14 +262,13 @@ struct BotWelcomeView: View {
 struct BotMessageRow: View {
     let message: ChatMessage
     let bot: BotProfile
-    @Environment(\.colorScheme) private var colorScheme
     
-    var isUser: Bool { message.role == .user }
+    private var isUser: Bool { message.role == .user }
     
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             if isUser {
-                Spacer()
+                Spacer(minLength: 40)
             } else {
                 // Bot avatar
                 ZStack {
@@ -328,58 +279,58 @@ struct BotMessageRow: View {
                         .font(.system(size: 12))
                         .foregroundStyle(Color.accentColor)
                 }
-                .padding(.top, 2)
             }
             
-            VStack(alignment: isUser ? .trailing : .leading, spacing: 4) {
-                // Sender label
-                if !isUser {
-                    Text(bot.name)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                }
-                
-                // Attachments preview if present
+            VStack(alignment: isUser ? .trailing : .leading, spacing: 6) {
+                // Attachments preview
                 if !message.attachments.isEmpty {
                     HStack(spacing: 6) {
                         ForEach(0..<message.attachments.count, id: \.self) { idx in
                             Image(nsImage: message.attachments[idx])
                                 .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 60, height: 60)
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
-                                .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.1), lineWidth: 1))
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxHeight: 120)
+                                .cornerRadius(8)
                         }
                     }
-                    .padding(.bottom, 2)
                 }
-
-                // Message bubble
-                HStack {
-                    if message.isStreaming && message.content.isEmpty {
-                        HStack(spacing: 4) {
-                            ProgressView()
-                                .scaleEffect(0.6)
-                            Text("Thinking...")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
-                        }
+                
+                // Bubble content
+                if message.content.isEmpty && message.isStreaming {
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Thinking...")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color(nsColor: .controlBackgroundColor))
+                    .cornerRadius(12)
+                } else if !message.content.isEmpty {
+                    Text(LocalizedStringKey(message.content))
+                        .font(.system(size: 13))
+                        .textSelection(.enabled)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                    } else {
-                        MarkdownText(content: message.content)
-                            .font(.system(size: 13))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                    }
+                        .background(bubbleBackground)
+                        .cornerRadius(12)
                 }
-                .background(bubbleBackground)
-                .cornerRadius(12)
-                .frame(maxWidth: 540, alignment: isUser ? .trailing : .leading)
             }
             
-            if !isUser {
-                Spacer()
+            if isUser {
+                // User icon
+                ZStack {
+                    Circle()
+                        .fill(Color.secondary.opacity(0.15))
+                        .frame(width: 26, height: 26)
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                Spacer(minLength: 40)
             }
         }
     }
@@ -398,7 +349,9 @@ struct BotMessageRow: View {
 // MARK: - Bot Chat Input Bar
 
 struct BotChatInputBar: View {
-    @Bindable var session: BotSession
+    var session: BotSession
+    @Environment(BotManager.self) private var botManager
+    @Environment(AgentOrchestrator.self) private var orchestrator
     @Binding var inputText: String
     @FocusState.Binding var isInputFocused: Bool
     @State private var isHovered = false
@@ -478,46 +431,76 @@ struct BotChatInputBar: View {
                                 Image(nsImage: session.pendingAttachments[idx])
                                     .resizable()
                                     .aspectRatio(contentMode: .fill)
-                                    .frame(width: 52, height: 52)
+                                    .frame(width: 50, height: 50)
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 8)
-                                            .stroke(Color.primary.opacity(0.12), lineWidth: 1)
+                                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
                                     )
+                                
                                 Button {
                                     session.pendingAttachments.remove(at: idx)
                                 } label: {
                                     Image(systemName: "xmark.circle.fill")
                                         .font(.system(size: 14))
-                                        .foregroundStyle(.white, Color.black.opacity(0.6))
+                                        .foregroundStyle(.secondary, Color(nsColor: .windowBackgroundColor))
                                 }
                                 .buttonStyle(.plain)
                                 .offset(x: 4, y: -4)
                             }
+                            .padding(.top, 4)
+                            .padding(.trailing, 4)
                         }
                     }
-                    .padding(.horizontal, 2)
-                    .padding(.top, 4)
                 }
             }
-            
-            HStack(alignment: .center, spacing: 8) {
-                // Photo upload button
+
+            HStack(alignment: .bottom, spacing: 8) {
+                // Attach button
                 Button {
                     attachImageFile()
                 } label: {
-                    Image(systemName: session.pendingAttachments.isEmpty ? "photo" : "photo.badge.checkmark")
-                        .font(.system(size: 14))
-                        .foregroundStyle(session.pendingAttachments.isEmpty ? .secondary : AppTheme.Palette.accent)
-                        .frame(width: 28, height: 28)
-                        .background(Color(nsColor: .controlBackgroundColor))
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    Image(systemName: "photo")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .frame(width: 28, height: 28)
-                .help("Attach image")
+                .help("Attach Image")
+                
+                // Screenshot button
+                Button {
+                    Task {
+                        await session.captureAndAttachScreenshot()
+                    }
+                } label: {
+                    Image(systemName: "camera")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Take Screenshot")
+                
+                // Voice button
+                Button {
+                    if voiceController.isRecording {
+                        voiceController.stopRecording()
+                    } else {
+                        try? voiceController.startRecording { transcribed in
+                            if !transcribed.isEmpty {
+                                self.inputText = transcribed
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: voiceController.isRecording ? "mic.fill" : "mic")
+                        .font(.system(size: 15))
+                        .foregroundStyle(voiceController.isRecording ? .red : .secondary)
+                }
+                .buttonStyle(.plain)
+                .help(voiceController.isRecording ? "Stop Recording" : "Voice Input")
 
-                TextField(session.isGenerating ? "Queue next prompt..." : "Message \(session.bot.name)...", text: $inputText, axis: .vertical)
+                // Text field
+                TextField(session.isGenerating ? "Queue next prompt..." : "Message \(session.bot.name)... (type / for commands)", text: $inputText, axis: .vertical)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
                     .focused($isInputFocused)
@@ -595,6 +578,23 @@ struct BotChatInputBar: View {
         let attachments = session.pendingAttachments
         session.pendingAttachments = []
         inputText = ""
+
+        if BuiltinSlashCommandEngine.isSlashCommand(text) {
+            Task { @MainActor in
+                let targetOrch = session.orchestrator ?? orchestrator
+                if let result = await BuiltinSlashCommandEngine.shared.execute(
+                    input: text,
+                    orchestrator: targetOrch,
+                    botManager: botManager
+                ) {
+                    if !result.triggeredAgentExecution {
+                        session.appendMessage(ChatMessage(role: .assistant, content: result.outputMarkdown))
+                    }
+                }
+            }
+            return
+        }
+
         session.sendMessage(text, attachments: attachments)
     }
     
@@ -638,77 +638,5 @@ struct BotChatInputBar: View {
         }
 
         return .ignored
-    }
-}
-
-// MARK: - Bot Prompt Inspector View
-
-struct BotPromptInspectorView: View {
-    let bot: BotProfile
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "doc.text")
-                    .foregroundStyle(Color.accentColor)
-                Text("\(bot.name) Instructions")
-                    .font(.headline)
-            }
-            
-            Divider()
-            
-            ScrollView {
-                Text(bot.systemInstructions)
-                    .font(.system(size: 12, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)
-            }
-        }
-        .padding(14)
-    }
-}
-
-// MARK: - Bot Memory Editor View
-
-struct BotMemoryEditorView: View {
-    @Bindable var bot: BotProfile
-    @Environment(\.dismiss) private var dismiss
-    @State private var memoryText: String = ""
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "brain.head.profile")
-                    .foregroundStyle(Color.accentColor)
-                Text("\(bot.name) Memory")
-                    .font(.headline)
-                Spacer()
-                Button("Done") {
-                    bot.memory = memoryText
-                    dismiss()
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-            }
-            
-            Text("Working context, style rules, and facts this Bot retains across conversations.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            
-            TextEditor(text: $memoryText)
-                .font(.system(size: 12, design: .monospaced))
-                .padding(6)
-                .background(Color(nsColor: .controlBackgroundColor))
-                .cornerRadius(6)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-                )
-        }
-        .padding(14)
-        .onAppear {
-            memoryText = bot.memory
-        }
     }
 }

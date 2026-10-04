@@ -711,6 +711,38 @@ public final class SpaceManager {
         }
         saveContext()
 
+        if BuiltinSlashCommandEngine.isSlashCommand(trimmed) {
+            Task { @MainActor in
+                if let orch = self.orchestrator {
+                    if let res = await BuiltinSlashCommandEngine.shared.execute(
+                        input: trimmed,
+                        orchestrator: orch,
+                        botManager: self.botManager,
+                        spaceManager: self
+                    ) {
+                        let sysMsg = SpaceMessage(
+                            senderParticipantId: resolvedSender.id,
+                            senderName: "System",
+                            senderHandle: "system",
+                            senderKind: .system,
+                            senderAvatarSymbol: "bolt.shield.fill",
+                            content: res.outputMarkdown,
+                            threadParentId: threadParentId ?? self.activeThreadParentId
+                        )
+                        sysMsg.channel = targetChannel
+                        targetChannel.messages.append(sysMsg)
+                        targetChannel.updatedAt = Date()
+                        space.updatedAt = Date()
+                        if let context = self.modelContext {
+                            context.insert(sysMsg)
+                        }
+                        self.saveContext()
+                    }
+                }
+            }
+            return msg
+        }
+
         if triggerAgents {
             let targetBots = resolveTargetBots(
                 for: trimmed,

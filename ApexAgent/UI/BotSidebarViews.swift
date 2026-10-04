@@ -33,27 +33,38 @@ struct BotSidebarSection: View {
                 
                 // Playbook Actions Menu
                 Menu {
-                    Button {
-                        exportPlaybookJSON()
-                    } label: {
-                        Label("Export Team Playbook (JSON)...", systemImage: "square.and.arrow.up")
-                    }
-                    Button {
-                        exportPlaybookMarkdown()
-                    } label: {
-                        Label("Export Team Playbook (Markdown)...", systemImage: "doc.text")
+                    Section("Run Playbook") {
+                        ForEach(CollaborationPlaybook.builtInPresets) { preset in
+                            Button {
+                                runPlaybookPreset(preset)
+                            } label: {
+                                Label("Run \(preset.name)", systemImage: "play.circle")
+                            }
+                        }
                     }
                     Divider()
-                    Button {
-                        importPlaybookFromFile()
-                    } label: {
-                        Label("Import Playbook File...", systemImage: "square.and.arrow.down")
-                    }
-                    Button {
-                        importURLString = ""
-                        showImportURLAlert = true
-                    } label: {
-                        Label("Import Playbook from URL...", systemImage: "link")
+                    Section("Import / Export") {
+                        Button {
+                            exportPlaybookJSON()
+                        } label: {
+                            Label("Export Team Playbook (JSON)...", systemImage: "square.and.arrow.up")
+                        }
+                        Button {
+                            exportPlaybookMarkdown()
+                        } label: {
+                            Label("Export Team Playbook (Markdown)...", systemImage: "doc.text")
+                        }
+                        Button {
+                            importPlaybookFromFile()
+                        } label: {
+                            Label("Import Playbook File...", systemImage: "square.and.arrow.down")
+                        }
+                        Button {
+                            importURLString = ""
+                            showImportURLAlert = true
+                        } label: {
+                            Label("Import Playbook from URL...", systemImage: "link")
+                        }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -152,6 +163,15 @@ struct BotSidebarSection: View {
     
     // MARK: - Playbook Actions
     
+    private func runPlaybookPreset(_ preset: CollaborationPlaybook) {
+        let runner = PlaybookRunner(playbook: preset, availableBots: bm.allBots, botManager: bm)
+        bm.activePlaybookRunner = runner
+        notify("Running playbook: \(preset.name)")
+        Task {
+            _ = try? await runner.execute(contextInput: "Starting \(preset.name) run")
+        }
+    }
+
     private func exportPlaybookJSON() {
         let playbook = bm.exportPlaybook(name: "ApexAgent Team", description: "Exported team configuration")
         guard let data = try? playbook.encode(),
@@ -261,7 +281,7 @@ struct BotSidebarItem: View {
                 // Avatar
                 ZStack {
                     Circle()
-                        .fill(isActive ? Color.accentColor : Color.accentColor.opacity(0.12))
+                        .fill(isActive ? Color.white.opacity(0.2) : Color.accentColor.opacity(0.12))
                         .frame(width: 24, height: 24)
                     Image(systemName: bot.avatarName)
                         .font(.system(size: 11))
@@ -339,70 +359,6 @@ struct BotSidebarItem: View {
             Button("Delete Bot", role: .destructive) {
                 onDelete()
             }
-        }
-    }
-}
-
-// MARK: - Bot Status Badge
-
-struct BotStatusBadge: View {
-    @Environment(BotManager.self) private var bm
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            if let session = bm.activeSession {
-                // Show model status based on session's model provider
-                Circle()
-                    .fill(statusColor(for: session.effectiveModelProvider, availability: session.modelAvailability))
-                    .frame(width: 7, height: 7)
-                Text(statusText(for: session))
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
-            } else {
-                Circle()
-                    .fill(.orange)
-                    .frame(width: 7, height: 7)
-                Text("No Bot")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(.regularMaterial, in: Capsule())
-    }
-    
-    private func statusColor(for provider: ModelProvider, availability: SystemLanguageModel.Availability) -> Color {
-        switch provider {
-        case .autoPicker:
-            return .green
-        case .appleOnDevice:
-            return availability == .available ? .green : .red
-        case .applePCC:
-            return .blue
-        case .cloudGemini:
-            return .purple
-        case .localOllama, .localMLX, .fmCLI:
-            return .orange
-        }
-    }
-    
-    private func statusText(for session: BotSession) -> String {
-        switch session.effectiveModelProvider {
-        case .autoPicker:
-            return "Auto"
-        case .appleOnDevice:
-            return session.modelAvailability == .available ? "AFM 3" : "Offline"
-        case .applePCC:
-            return "PCC"
-        case .cloudGemini:
-            return "Gemini"
-        case .localOllama:
-            return "Ollama"
-        case .localMLX:
-            return "MLX"
-        case .fmCLI:
-            return "CLI"
         }
     }
 }

@@ -99,7 +99,7 @@ struct ContentView: View {
                     Text("Apex")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
-                    BotStatusBadge()
+                    ModelStatusBadge()
                 }
             }
             ToolbarItemGroup(placement: .primaryAction) {
@@ -123,6 +123,8 @@ struct ContentView: View {
                 .accessibilityIdentifier("createBotButton")
                 
                 Button {
+                    botManager.activeBotId = nil
+                    spaceManager.activeSpaceId = nil
                     orchestrator.startNewConversation()
                 } label: {
                     Image(systemName: "square.and.pencil")
@@ -205,6 +207,12 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
+                .environment(orchestrator)
+                .environment(botManager)
+                .environment(spaceManager)
+                .environment(computer)
+                .environment(SkillManager.shared)
+                .environment(RoutineManager.shared)
         }
         .sheet(isPresented: $showDiagnostics) {
             DiagnosticsView()
@@ -291,5 +299,5 @@ struct ModelStatusBadge: View {
 }
 
 extension Notification.Name {
-    static let showDiagnosticsSheet = Notification.Name("showDiagnosticsSheet")
+    public static let showDiagnosticsSheet = Notification.Name("showDiagnosticsSheet")
 }

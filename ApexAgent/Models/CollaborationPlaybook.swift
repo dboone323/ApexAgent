@@ -31,7 +31,13 @@ public enum PlaybookPresetKind: String, CaseIterable, Codable, Sendable, Identif
             return "Autonomous team standup: all bot specialists generate individual activity reports in parallel, followed by Chief of Staff synthesis and action item extraction."
         }
     }
+
+    public var playbook: CollaborationPlaybook {
+        CollaborationPlaybook.preset(for: self)
+    }
 }
+
+public typealias CollaborationPlaybookPreset = PlaybookPresetKind
 
 /// Execution dispatch mode for a playbook stage.
 public enum PlaybookDispatchMode: String, CaseIterable, Codable, Sendable, Equatable, Hashable {

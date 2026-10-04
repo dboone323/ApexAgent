@@ -109,7 +109,7 @@ struct CreateBotSheet: View {
                     .font(.system(size: 14, weight: .semibold))
                     .frame(maxWidth: .infinity)
                     .accessibilityIdentifier("saveBotButton")
-                    .disabled(name.isEmpty)
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             .navigationTitle("Create Bot")
@@ -118,11 +118,6 @@ struct CreateBotSheet: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                }
-            }
-            .onAppear {
-                if name.isEmpty {
-                    name = generateBotName()
                 }
             }
         }
@@ -141,14 +136,6 @@ struct CreateBotSheet: View {
         bot.ollamaModelOverride = trimmedOllama.isEmpty ? nil : trimmedOllama
         bm.openConversation(with: bot)
         dismiss()
-    }
-
-    private func generateBotName() -> String {
-        let prefixes = ["Nova", "Apollo", "Atlas", "Orion", "Sage", "Raven", "Luna", "Echo", "Flux", "Pulse"]
-        let suffixes = ["Bot", "Agent", "Assistant", "Helper", "Mate"]
-        let p = prefixes.randomElement() ?? "Nova"
-        let s = suffixes.randomElement() ?? "Bot"
-        return "\(p) \(s)"
     }
 }
 
@@ -234,7 +221,7 @@ struct EditBotSheet: View {
                                     .font(.system(size: 11))
                                     .foregroundStyle(.tertiary)
                             } else {
-                                Text("✱ \(memory.count) characters stored")
+                                Text("✻ \(memory.count) characters stored")
                                     .font(.system(size: 11))
                                     .foregroundStyle(.secondary)
                             }
@@ -294,19 +281,11 @@ struct EditBotSheet: View {
                     .frame(maxWidth: .infinity)
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-
-                Section {
-                    Button(role: .destructive) {
-                        dismiss()
-                    } label: {
-                        Text("Done (close sheet)")
-                    }
-                }
             }
             .navigationTitle("Edit Bot")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
+                    Button("Cancel") {
                         dismiss()
                     }
                 }
@@ -375,15 +354,15 @@ struct MemoryEditorSheet: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .navigationTitle("Durable Memory")
-            .onAppear {
-                draftMemory = memory
-            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
                         dismiss()
                     }
                 }
+            }
+            .onAppear {
+                draftMemory = memory
             }
         }
     }

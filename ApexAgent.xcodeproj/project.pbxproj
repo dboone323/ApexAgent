@@ -30,6 +30,7 @@
 		095090882B5CABB20C489A8E /* TurnWatchdog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35767072501619A9999B1A4E /* TurnWatchdog.swift */; };
 		09521627D95B181A2A56E4D4 /* AgentHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 780149AAB06313E8F9340157 /* AgentHandoff.swift */; };
 		0A5750EE81AA09A15B551DDB /* AgentSecurity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AEF83F4C3FF3DE5CEE7D425 /* AgentSecurity.swift */; };
+		0B5C246C5411A9708ADC6671 /* ContainerizationOS in Frameworks */ = {isa = PBXBuildFile; productRef = 6F4959F553229D815752D260 /* ContainerizationOS */; };
 		0B8AD7F964D6D49F8437597B /* GitHubTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BDF3009173359337D2F55AC /* GitHubTool.swift */; };
 		0D4D72AEEAB362E33AE2B5A8 /* SummarizeTextIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E3CE41DE16309351DAD34D1 /* SummarizeTextIntent.swift */; };
 		0E347768F232D921F37FCD6C /* SystemIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 909B2459E60F319A016108C4 /* SystemIntegrationTests.swift */; };
@@ -78,10 +79,12 @@
 		2B7203522605F9C5CA203A23 /* ApexAgentCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = BF959C9824A399A7C6398153 /* ApexAgentCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		2D3186492581119B7BF91EBF /* ProviderFallbackExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81BC29C5044A80EF656E2425 /* ProviderFallbackExecutor.swift */; };
 		2D6E731080CC761BABEBC9BA /* NativeToolsP0Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF09B13707FBA1B8A16A88B /* NativeToolsP0Tests.swift */; };
+		2D83D18ECF411807188495D2 /* IntentToolSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27416A7D6D7178263246418 /* IntentToolSelectorTests.swift */; };
 		2E022D5939C264AA895968A9 /* RoutineRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2839819F835E6B5DAB51A8CA /* RoutineRecorder.swift */; };
 		32A8413C79A55EDDBA5196F6 /* ANSIColorParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89FB6833BB17F9CF840D12D3 /* ANSIColorParser.swift */; };
 		335271F96C231C6E46E09F75 /* SkillManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1029F45266243C1D9237A2C /* SkillManager.swift */; };
 		335576BD55175117943481DA /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A92F5162C8780BEFB5CB9E9 /* ContentView.swift */; };
+		3387BBDE4A9B25A9ED7CAAE4 /* SpacesViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB444CB55101CE2B631AF69F /* SpacesViews.swift */; };
 		33B9365A7AA89DAA9677DAF9 /* BotProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 689A48458D7F980603576802 /* BotProfile.swift */; };
 		33D6894D15691A331BBBE3B4 /* TraceEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F89482D462F6253015846657 /* TraceEvent.swift */; };
 		33F9C880C6EBB07BA03D5186 /* FileSearchTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0F47A87FF1A9564B32255DA /* FileSearchTool.swift */; };
@@ -110,6 +113,7 @@
 		3F76C8704A6CFFEA7C5D6CBE /* ApexAgentIntents.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9A131F909A44858DAE6CCE10 /* ApexAgentIntents.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		3FD557F17A99B82B3E3B3DEE /* MLXAgentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20FF00E342751CE33CDFBDC /* MLXAgentEngine.swift */; };
 		406814A2ABAD8BB5F4544BB7 /* AgentRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB8480BA47D6667188C87338 /* AgentRegistryTests.swift */; };
+		410C948C8EEF39378FE972C7 /* SpaceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8CBDDD8539C304129ACCA2A /* SpaceModels.swift */; };
 		41AC7DA38810DC69D3ADF0C9 /* BotSecurityRBACPermissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4A4E1752AB10B822ECA961 /* BotSecurityRBACPermissionTests.swift */; };
 		41DC723F26F11802E58DEDBB /* WeeklyReflection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC816014A875377AB08C6513 /* WeeklyReflection.swift */; };
 		424832240A3119CE7A32C28A /* AgentProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 925A92C3B22F0B3846FAD195 /* AgentProfileTests.swift */; };
@@ -151,6 +155,7 @@
 		5DA2EAE8C986E8D1BD6514F1 /* MCPClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0934366B621AFB1BC59FE9 /* MCPClient.swift */; };
 		5DC292ECC70329965B06B002 /* AgentRuntimeContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17ED7C321076A96FDDE9E40B /* AgentRuntimeContract.swift */; };
 		5EE819D3D20980174115F79B /* AgentSignposts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A5CFA74AD14376E46D0926 /* AgentSignposts.swift */; };
+		622FA1AE19BD5DB47FCBCF0C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 8A76A2E2D0A9A5E1EC31FDEB /* README.md */; };
 		63239754582B8DB556DD4214 /* SimctlTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BA40A47DD2DFCE5FAAB4979 /* SimctlTool.swift */; };
 		6348986C871FD2B2B6E11D04 /* RoutineRun.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE7442F4F365046F261DD206 /* RoutineRun.swift */; };
 		63527CF79B773524315FBA6A /* DynamicToolCallTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4840ED594629D532C80ABDAE /* DynamicToolCallTool.swift */; };
@@ -170,10 +175,12 @@
 		6FBF6C27A0DE03E27650AA0E /* TestActivityHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3882037970AB767099F4AACB /* TestActivityHelper.swift */; };
 		70A58544394C6AEB3CBC52F6 /* BackendServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 200A57D45454655715897D6D /* BackendServiceTests.swift */; };
 		744B67EC04E466B41B8C5852 /* MultiBotParityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4E2B5131DC31C321E6339BD /* MultiBotParityTests.swift */; };
+		74CF3242C869E5FB36976EC0 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66C670673D82D5C8E6FB17EA /* main.swift */; };
 		750EE9D2CFB7EF0209C23B74 /* InteractiveAgentIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BE7C1E1B407FFE5EE225979 /* InteractiveAgentIntents.swift */; };
 		76DD974A834CB934FA85283A /* Skill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21F5227C12291168A19F3BEC /* Skill.swift */; };
 		76E67086939AD548AD3B3C52 /* CognitiveMemoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 233778068BAA57D6C4A7075D /* CognitiveMemoryTests.swift */; };
 		778149C2EFE71D27C8A0181A /* CronParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B970C1CD4106522ED9BB312 /* CronParser.swift */; };
+		778AA275FDFC4247DCD1C626 /* BuiltinSlashCommandEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85D9C0D93CA79A3EBFDF0017 /* BuiltinSlashCommandEngine.swift */; };
 		77B43298F41F2F83D0802258 /* AppGroupDataBus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60059FF9B1E135BD6AB89148 /* AppGroupDataBus.swift */; };
 		7AA7E819D103BC3CFFD5A4FF /* A2AServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7169AE21002560689A2AA70E /* A2AServer.swift */; };
 		7BD56A3BFD7C69A552A7E4CA /* RoutineManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB78074E8943E1B4B9CBFFA3 /* RoutineManager.swift */; };
@@ -197,6 +204,7 @@
 		8B6118B648EAEB749EE8E56B /* ToolSchemas.json in Resources */ = {isa = PBXBuildFile; fileRef = FE74A72CBB5D7208B59EA5DE /* ToolSchemas.json */; };
 		8B7703E7F9EDF15A68A807A5 /* LocalRetrievalIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACCCB1308EA171EF16B9F04C /* LocalRetrievalIndex.swift */; };
 		8C744A27445FDFE3D193A7C5 /* UITestActivityHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 422A4E02DABE81C2148BB63D /* UITestActivityHelper.swift */; };
+		8E1CE53C3F6C1700201E4D3E /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74A9B57C5B769BDD2B74027C /* main.swift */; };
 		90EF5FD9A45A83509FA4D342 /* NotificationTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16608A162DA38B28DD3CF9DE /* NotificationTool.swift */; };
 		913B6A538F62B4287435CE50 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DACB633859F62C64A5C1E54 /* Models.swift */; };
 		91D7398E489833978B07D683 /* RemoteCompanionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F064D929D23188DD1C6571B5 /* RemoteCompanionTests.swift */; };
@@ -221,6 +229,7 @@
 		9C9F9486F76B934A15596D8C /* CreateRoutineSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8384767A8FF764FAE2B9C90A /* CreateRoutineSheet.swift */; };
 		9CEC3EED56211CBFFC4CFD26 /* DailyBriefingTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D6924D7807351B7AE11F6F /* DailyBriefingTool.swift */; };
 		9CFB8A4AC3510F5EB2575F75 /* TraceBus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BF8A0C1FD9B49007751B0C2 /* TraceBus.swift */; };
+		9D122C3B0A2A8727176895DD /* ApexAgentCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF959C9824A399A7C6398153 /* ApexAgentCore.framework */; };
 		9D306D5EB228F1B13F385A70 /* TerminalToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D4EADB099DC18CACAB23D08 /* TerminalToolbar.swift */; };
 		9D74D84C59AA18181AF04B44 /* BotMessageSender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 938D73C7540BD48B4FF78EB3 /* BotMessageSender.swift */; };
 		9D8EF53FDC812E58FBC04C59 /* SandboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B13DBA979D085D47B5CB8AC /* SandboxTests.swift */; };
@@ -232,11 +241,11 @@
 		A131EDDC5255E880CBC741BB /* SecuritySandboxErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2018A7EA41B141C39D3F91A3 /* SecuritySandboxErrorTests.swift */; };
 		A371E1A73EA1612BB9B1A917 /* NativeToolsP1Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06953BB9CC2902177FFC6550 /* NativeToolsP1Tests.swift */; };
 		A4648C0FC60662438F001F6D /* SettingsAndMCPDashboardUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3948EA866B6B5C4A0AA66F62 /* SettingsAndMCPDashboardUITests.swift */; };
+		A51024D94F74D6C271680186 /* SpaceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AFCFEE361338674DFA1D09 /* SpaceManager.swift */; };
 		A5563BDE3900736E18214475 /* WeeklyReflectionTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73EBA0A13DA26623CD9B4AAD /* WeeklyReflectionTool.swift */; };
 		A57B72C9F0FBA34BF87BDDD4 /* AgentEvaluationRatingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CDAF9C16F93B862FF4A577B /* AgentEvaluationRatingEngine.swift */; };
 		A70AE07D38670C18F0212675 /* SharedLogging.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 694736B63E8080A09030C984 /* SharedLogging.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A7AD22CF8CBB9EED53EC8210 /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEBDD2E1BE7227175F6E00F9 /* Enums.swift */; };
-		A8C2504AE944634736A2E19F /* IntentToolSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8C109930FA42BE4BC08C61D /* IntentToolSelector.swift */; };
 		A907901AC2FBE09D3FB58EA3 /* TracingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F0624D77303AF383DE8AF0 /* TracingTests.swift */; };
 		A9249DBFEA92A09DF690FB74 /* LogicGapFillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E6A9A66CF3C285CD98595E /* LogicGapFillTests.swift */; };
 		A95F8B3029A159BEFC419B17 /* ReflectionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 475AA27E9CD4482A51D18B19 /* ReflectionManagerTests.swift */; };
@@ -244,11 +253,13 @@
 		A9F8EDCC8B3C86899C7F7718 /* SecurityGovernanceProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D721ADBD02CBB80273EB777 /* SecurityGovernanceProfile.swift */; };
 		A9F999F499EA9DC225A150AC /* CodeReviewPersistenceToolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B7F459F6D864CD347D5903 /* CodeReviewPersistenceToolsTests.swift */; };
 		AAE2322C586056DF514D8886 /* MapSearchTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = D326AF58C2BEFC04CC7F728A /* MapSearchTool.swift */; };
+		AB7EAA722A8D32D66D83EB24 /* SpaceManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD71F633296A0B0519110983 /* SpaceManagerTests.swift */; };
 		ABA644927935CD3D07C24A09 /* MCPKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA20C2A176DB00AD435BCD7 /* MCPKit.framework */; };
 		ABE246A75815AEB6DA146F67 /* SharedKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 837ED69F7602C780E28AB52F /* SharedKit.framework */; };
 		AC4A2F9F00ED8E2F6CA4B2DF /* ContainerManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62E462DE5554A24F8065D57D /* ContainerManagerTests.swift */; };
 		AC595BA868B47EA33BA6335F /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A58C8480F64F65678AC42C88 /* KeychainManager.swift */; };
 		ACB23594A08D3E29263CBBC3 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C7FD24B4097437D2259894 /* main.swift */; };
+		AE5A3BF4C86369D53416BD25 /* ContainerizationArchive in Frameworks */ = {isa = PBXBuildFile; productRef = 5B249060B9FE7884390C10CE /* ContainerizationArchive */; };
 		AEAC43E5925CDF2ACEA6E66A /* OSLogQueryTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB99CA7CFACAB86CCC063E03 /* OSLogQueryTool.swift */; };
 		AEC7693D71D8213D96C70149 /* SpeculativeToolExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B88A707090E123FFF55771AD /* SpeculativeToolExecutor.swift */; };
 		B119A8FCACA3F29DD39A00C3 /* AgentAuditLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01D36BE270D67C0F522A0602 /* AgentAuditLog.swift */; };
@@ -271,7 +282,6 @@
 		B75564663CF8304666A6449B /* NativeToolsP3Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3548B71CBDAD3A48C11556A7 /* NativeToolsP3Tests.swift */; };
 		B8B97E857F6B52A23350E186 /* SkillsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 861FB3A27CC72FE482ADEFC1 /* SkillsSection.swift */; };
 		B95B7D14FFF21FFFBE201AB9 /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E47159FE60C60728E4EC287D /* SidebarView.swift */; };
-		B9C2504AE944634736A2E1A0 /* IntentToolSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9C109930FA42BE4BC08C61E /* IntentToolSelectorTests.swift */; };
 		B9E6ADAC582942E2D4A42FB0 /* ScreenHighlightOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 283522708C14485797415040 /* ScreenHighlightOverlay.swift */; };
 		B9FB0F12B56E10B2733813B5 /* ContainerizationOCI in Frameworks */ = {isa = PBXBuildFile; productRef = E64C2E4EB93296112ABEB980 /* ContainerizationOCI */; };
 		BC24A76E9840F4295925183A /* MailAutomationTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25DB416322844D409684968E /* MailAutomationTool.swift */; };
@@ -354,6 +364,7 @@
 		F393E18FAF0D576978E3DE1A /* EphemeralCapabilityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 553432FE28D5E5F4B2CF6BD2 /* EphemeralCapabilityManager.swift */; };
 		F403C4FE08C9F2F4B3B6EF5E /* StateGraph.swift in Sources */ = {isa = PBXBuildFile; fileRef = 705720CD0FBDCE38AA83CDA7 /* StateGraph.swift */; };
 		F57554F6179212ABB26675EB /* Tracing.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA4B7FD790B3719020BA4735 /* Tracing.swift */; };
+		F5E35DAFCD16F22E8E44B4E8 /* IntentToolSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 838FA594F9669AEF5184D8FA /* IntentToolSelector.swift */; };
 		F6BF046366949198C62E0251 /* CodeReviewPersistenceTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9949529BB2BF8B5DE5F6EDC8 /* CodeReviewPersistenceTools.swift */; };
 		F6C78DA52AA10F77CB3C487A /* ApexAgentIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A131F909A44858DAE6CCE10 /* ApexAgentIntents.framework */; };
 		F76F25E0610A78EBE3D9233D /* PeerApproval.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2F37D805F4C0B38D081292B /* PeerApproval.swift */; };
@@ -379,13 +390,16 @@
 		FFC68BB0142F9CA67C85B7C0 /* CalendarTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA0CFEB045034DA2E00867F7 /* CalendarTool.swift */; };
 		FFF35877102F49AEB471F923 /* CollaborativeServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FC4D7F8B2ABDC095493EB9E /* CollaborativeServerTests.swift */; };
 		FFF7BF7793E9F1A72246F640 /* AgentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528F1631BDA859F3FE5E6EC3 /* AgentEngine.swift */; };
-		D1D2504AE944634736A2E101 /* SpaceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D109930FA42BE4BC08C601 /* SpaceModels.swift */; };
-		D1D2504AE944634736A2E102 /* SpaceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D109930FA42BE4BC08C602 /* SpaceManager.swift */; };
-		D1D2504AE944634736A2E103 /* SpacesViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D109930FA42BE4BC08C603 /* SpacesViews.swift */; };
-		D1D2504AE944634736A2E104 /* SpaceManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D109930FA42BE4BC08C604 /* SpaceManagerTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		0D292A9EA4FC56B38CB23433 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 39A304CAF52E92D2EBA80EA7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 61AFB82B28D8753880168205;
+			remoteInfo = ApexAgentCore;
+		};
 		123CF70359FAE73A053FB5E8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 39A304CAF52E92D2EBA80EA7 /* Project object */;
@@ -712,6 +726,7 @@
 		632C55C6A1AD13469FFAEABE /* CaptureWindowImageTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureWindowImageTool.swift; sourceTree = "<group>"; };
 		636D502A58B0A737F9DDFAAF /* OpenMausBotPortsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenMausBotPortsTests.swift; sourceTree = "<group>"; };
 		66A08240671167C4E4BBC3DE /* DiagnosticManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticManager.swift; sourceTree = "<group>"; };
+		66C670673D82D5C8E6FB17EA /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		67DC13F56D7B73401BA68A8D /* RepeatDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatDetector.swift; sourceTree = "<group>"; };
 		689A48458D7F980603576802 /* BotProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotProfile.swift; sourceTree = "<group>"; };
 		68D016D7149D71694D33F5F5 /* PlaybookRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybookRunner.swift; sourceTree = "<group>"; };
@@ -728,6 +743,8 @@
 		7169AE21002560689A2AA70E /* A2AServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = A2AServer.swift; sourceTree = "<group>"; };
 		733F3E47FEB39C118326CA51 /* AutomationWorkflows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationWorkflows.swift; sourceTree = "<group>"; };
 		73EBA0A13DA26623CD9B4AAD /* WeeklyReflectionTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReflectionTool.swift; sourceTree = "<group>"; };
+		74A9B57C5B769BDD2B74027C /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		74C1A776599B366D1F1D378E /* apexflow */ = {isa = PBXFileReference; includeInIndex = 0; path = apexflow; sourceTree = BUILT_PRODUCTS_DIR; };
 		74C7C320DE2DD5CA46182330 /* WebSearchTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchTool.swift; sourceTree = "<group>"; };
 		759CF2D90E843E4E6DED99EC /* NativeToolsP2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeToolsP2Tests.swift; sourceTree = "<group>"; };
 		75C1A7222124F7A13047F876 /* SharedTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedTask.swift; sourceTree = "<group>"; };
@@ -746,7 +763,9 @@
 		835966E6BB38D055D4FD2824 /* ProjectAuditTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectAuditTool.swift; sourceTree = "<group>"; };
 		837ED69F7602C780E28AB52F /* SharedKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SharedKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		8384767A8FF764FAE2B9C90A /* CreateRoutineSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateRoutineSheet.swift; sourceTree = "<group>"; };
+		838FA594F9669AEF5184D8FA /* IntentToolSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentToolSelector.swift; sourceTree = "<group>"; };
 		841BF98525C48FBFF94FC600 /* BotManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotManager.swift; sourceTree = "<group>"; };
+		85D9C0D93CA79A3EBFDF0017 /* BuiltinSlashCommandEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuiltinSlashCommandEngine.swift; sourceTree = "<group>"; };
 		8605872FF724956E1B1223B8 /* GeneratedContentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratedContentTests.swift; sourceTree = "<group>"; };
 		861FB3A27CC72FE482ADEFC1 /* SkillsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillsSection.swift; sourceTree = "<group>"; };
 		862AB6FC514E56FD8B4B3B21 /* DiscordBotTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscordBotTool.swift; sourceTree = "<group>"; };
@@ -757,6 +776,7 @@
 		8979D509E7A5E7869AF73729 /* MCPTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPTypes.swift; sourceTree = "<group>"; };
 		89FB6833BB17F9CF840D12D3 /* ANSIColorParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ANSIColorParser.swift; sourceTree = "<group>"; };
 		8A44BA8A4BE5198E5CAE1691 /* OllamaAgentEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaAgentEngine.swift; sourceTree = "<group>"; };
+		8A76A2E2D0A9A5E1EC31FDEB /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		8AEF83F4C3FF3DE5CEE7D425 /* AgentSecurity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSecurity.swift; sourceTree = "<group>"; };
 		8BA2C0DE52A04B8FBD5B0904 /* ProactiveScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProactiveScheduler.swift; sourceTree = "<group>"; };
 		8BDF3009173359337D2F55AC /* GitHubTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubTool.swift; sourceTree = "<group>"; };
@@ -775,6 +795,7 @@
 		912802BE945CEE3BA6BC7BF3 /* BotChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotChatView.swift; sourceTree = "<group>"; };
 		9191698BCE95CEF2C31266F8 /* DiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffView.swift; sourceTree = "<group>"; };
 		925A92C3B22F0B3846FAD195 /* AgentProfileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentProfileTests.swift; sourceTree = "<group>"; };
+		92AFCFEE361338674DFA1D09 /* SpaceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceManager.swift; sourceTree = "<group>"; };
 		92FD5D9CAEAE94E7CD483478 /* SecuritySandboxError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecuritySandboxError.swift; sourceTree = "<group>"; };
 		9339DA69FCF40209669906C3 /* SharedKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedKit.swift; sourceTree = "<group>"; };
 		938D73C7540BD48B4FF78EB3 /* BotMessageSender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotMessageSender.swift; sourceTree = "<group>"; };
@@ -803,7 +824,6 @@
 		A58C8480F64F65678AC42C88 /* KeychainManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainManager.swift; sourceTree = "<group>"; };
 		A5C56D68129B871DE2B9A38F /* ApexGatewayServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexGatewayServer.swift; sourceTree = "<group>"; };
 		A7BA9F284B4F43D9AFA30FD4 /* DemoRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoRecorder.swift; sourceTree = "<group>"; };
-		A8C109930FA42BE4BC08C61D /* IntentToolSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentToolSelector.swift; sourceTree = "<group>"; };
 		AA03C855AB52ADD679AC5FCA /* BenchmarkPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkPipelineTests.swift; sourceTree = "<group>"; };
 		AA4B7FD790B3719020BA4735 /* Tracing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tracing.swift; sourceTree = "<group>"; };
 		AB5B854D574C87899115615D /* EmptyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyState.swift; sourceTree = "<group>"; };
@@ -833,7 +853,6 @@
 		B88A707090E123FFF55771AD /* SpeculativeToolExecutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeculativeToolExecutor.swift; sourceTree = "<group>"; };
 		B893BFE62F99598A74867F59 /* ApexAgentTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ApexAgentTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B912F4246AE0A1B3A85BF2C8 /* CollaborationPlaybook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollaborationPlaybook.swift; sourceTree = "<group>"; };
-		B9C109930FA42BE4BC08C61E /* IntentToolSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentToolSelectorTests.swift; sourceTree = "<group>"; };
 		B9EE53D2F3A00D9A47D6628E /* ApexAgentModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexAgentModelTests.swift; sourceTree = "<group>"; };
 		BB08FB6B01A5EF21819F07F8 /* ContainerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerManager.swift; sourceTree = "<group>"; };
 		BB0934366B621AFB1BC59FE9 /* MCPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPClient.swift; sourceTree = "<group>"; };
@@ -842,6 +861,7 @@
 		BD0394B2675C1661BE2AC59D /* AgentProfiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentProfiles.swift; sourceTree = "<group>"; };
 		BD1C04DA82D92BFFD8F70417 /* UITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITests.swift; sourceTree = "<group>"; };
 		BEBDD2E1BE7227175F6E00F9 /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
+		BED4FD27120E7CDB12012858 /* benchmark-repro */ = {isa = PBXFileReference; includeInIndex = 0; path = "benchmark-repro"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BF2A9E60A8E2697DEB18902F /* SessionLifecycleManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionLifecycleManager.swift; sourceTree = "<group>"; };
 		BF959C9824A399A7C6398153 /* ApexAgentCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ApexAgentCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BFB12B5D9E38A45F5C8CEB2B /* DetectImageTextTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetectImageTextTool.swift; sourceTree = "<group>"; };
@@ -849,6 +869,7 @@
 		C17FC6ED4FAE93AFF42C94A4 /* AgentRequestRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentRequestRouter.swift; sourceTree = "<group>"; };
 		C20FF00E342751CE33CDFBDC /* MLXAgentEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLXAgentEngine.swift; sourceTree = "<group>"; };
 		C260F1D36EEFD1DFDF19EA69 /* ComputerUseAgent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComputerUseAgent.swift; sourceTree = "<group>"; };
+		C27416A7D6D7178263246418 /* IntentToolSelectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentToolSelectorTests.swift; sourceTree = "<group>"; };
 		C28FE6E5B75AC0891D6F2179 /* AppCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCard.swift; sourceTree = "<group>"; };
 		C2F37D805F4C0B38D081292B /* PeerApproval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerApproval.swift; sourceTree = "<group>"; };
 		C4C7FD24B4097437D2259894 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -862,6 +883,7 @@
 		CBAAB188A7C66445669B5F3A /* NetworkDiagnosticsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkDiagnosticsTool.swift; sourceTree = "<group>"; };
 		CBF6EC58E8437F751F288312 /* DiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsView.swift; sourceTree = "<group>"; };
 		CC816014A875377AB08C6513 /* WeeklyReflection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyReflection.swift; sourceTree = "<group>"; };
+		CD71F633296A0B0519110983 /* SpaceManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceManagerTests.swift; sourceTree = "<group>"; };
 		CDB982F99ED2ECD82AB8B499 /* R3R4AdversarialStressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = R3R4AdversarialStressTests.swift; sourceTree = "<group>"; };
 		CE6075D7FAEC023F344BCF82 /* MultiAgentDebateCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiAgentDebateCoordinator.swift; sourceTree = "<group>"; };
 		D167A0B5084A0E6678EF5C2C /* DynamicToolRouting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicToolRouting.swift; sourceTree = "<group>"; };
@@ -873,6 +895,7 @@
 		D3D6924D7807351B7AE11F6F /* DailyBriefingTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyBriefingTool.swift; sourceTree = "<group>"; };
 		D5B638C992A9831210C08E52 /* BenchmarkEvaluationPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkEvaluationPipeline.swift; sourceTree = "<group>"; };
 		D7925A2E01333706A532B2FC /* MultimodalCompanionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultimodalCompanionTests.swift; sourceTree = "<group>"; };
+		D8CBDDD8539C304129ACCA2A /* SpaceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceModels.swift; sourceTree = "<group>"; };
 		D91C06E7F88679C5C794F2D6 /* BrowserAndDaemonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserAndDaemonTests.swift; sourceTree = "<group>"; };
 		D955F9053CBEA47C64833342 /* ContextCompactor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextCompactor.swift; sourceTree = "<group>"; };
 		D9E7CB783A177E2CCB9AB6A3 /* ProjectManagementTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectManagementTools.swift; sourceTree = "<group>"; };
@@ -898,9 +921,10 @@
 		E96F71F584B17B7CACC9093B /* WebSearchHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchHelper.swift; sourceTree = "<group>"; };
 		E9A50D602B1E92B88411EE7F /* AutomationWorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationWorkflowTests.swift; sourceTree = "<group>"; };
 		E9FEC6CC55B91A30F4873DF8 /* VoiceOrbHUDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOrbHUDView.swift; sourceTree = "<group>"; };
+		EB444CB55101CE2B631AF69F /* SpacesViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesViews.swift; sourceTree = "<group>"; };
 		EB46EF2F8A2A2739DAAE4022 /* GlobalCommandPaletteHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalCommandPaletteHUD.swift; sourceTree = "<group>"; };
 		EC6DB015FFE58935502E7FF5 /* AutomationWorkflows+1to3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+1to3.swift"; sourceTree = "<group>"; };
-		EC6F91C40428542C96214A99 /* sandboxctl */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = sandboxctl; sourceTree = BUILT_PRODUCTS_DIR; };
+		EC6F91C40428542C96214A99 /* sandboxctl */ = {isa = PBXFileReference; includeInIndex = 0; path = sandboxctl; sourceTree = BUILT_PRODUCTS_DIR; };
 		ED747E3CBF4111855553A91F /* WatchPathsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPathsTool.swift; sourceTree = "<group>"; };
 		EE028F6E31492ECDF4117C22 /* AgentPrecedenceResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPrecedenceResolver.swift; sourceTree = "<group>"; };
 		EF48EBF7067949B2BC247A27 /* DynamicToolRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicToolRoutingTests.swift; sourceTree = "<group>"; };
@@ -925,10 +949,6 @@
 		FE74A72CBB5D7208B59EA5DE /* ToolSchemas.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = ToolSchemas.json; sourceTree = "<group>"; };
 		FE8AA257E4B0DA3933E569AC /* VirtualDisplayManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualDisplayManager.swift; sourceTree = "<group>"; };
 		FFCB9065FDED55591FED4679 /* ApexAgentIntelligenceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ApexAgentIntelligenceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		C1D109930FA42BE4BC08C601 /* SpaceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceModels.swift; sourceTree = "<group>"; };
-		C1D109930FA42BE4BC08C602 /* SpaceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceManager.swift; sourceTree = "<group>"; };
-		C1D109930FA42BE4BC08C603 /* SpacesViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesViews.swift; sourceTree = "<group>"; };
-		C1D109930FA42BE4BC08C604 /* SpaceManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceManagerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -967,6 +987,8 @@
 				68E0D0EBBF87EB2D2A53EE7F /* Logging in Frameworks */,
 				0271F3BC0E2E072E4773257E /* Containerization in Frameworks */,
 				3BE9ACC33858288F35E92BD4 /* ContainerizationOCI in Frameworks */,
+				AE5A3BF4C86369D53416BD25 /* ContainerizationArchive in Frameworks */,
+				0B5C246C5411A9708ADC6671 /* ContainerizationOS in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1026,6 +1048,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E9B5D4AFEA661A66BB9EA89F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9D122C3B0A2A8727176895DD /* ApexAgentCore.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -1047,6 +1077,8 @@
 				9A131F909A44858DAE6CCE10 /* ApexAgentIntents.framework */,
 				B893BFE62F99598A74867F59 /* ApexAgentTests.xctest */,
 				CA2E94027EFCA228615D6E42 /* ApexAgentUITests.xctest */,
+				74C1A776599B366D1F1D378E /* apexflow */,
+				BED4FD27120E7CDB12012858 /* benchmark-repro */,
 				ACA20C2A176DB00AD435BCD7 /* MCPKit.framework */,
 				EC6F91C40428542C96214A99 /* sandboxctl */,
 				837ED69F7602C780E28AB52F /* SharedKit.framework */,
@@ -1193,6 +1225,14 @@
 			path = sandboxctl;
 			sourceTree = "<group>";
 		};
+		57C7139FFAD4A615CAC57B79 /* apexflow */ = {
+			isa = PBXGroup;
+			children = (
+				66C670673D82D5C8E6FB17EA /* main.swift */,
+			);
+			path = apexflow;
+			sourceTree = "<group>";
+		};
 		5B728267982EDAF4565F7F46 /* MCPKit */ = {
 			isa = PBXGroup;
 			children = (
@@ -1200,6 +1240,7 @@
 				1ACE03336D4D24B3D016DB63 /* MCPServerListener.swift */,
 				53745D922C4FB32257EE8691 /* MCPServerProtocol.swift */,
 				8979D509E7A5E7869AF73729 /* MCPTypes.swift */,
+				8A76A2E2D0A9A5E1EC31FDEB /* README.md */,
 			);
 			path = MCPKit;
 			sourceTree = "<group>";
@@ -1274,9 +1315,9 @@
 				4D1F7E72D40053469FE8B8F4 /* SettingsView.swift */,
 				E47159FE60C60728E4EC287D /* SidebarView.swift */,
 				861FB3A27CC72FE482ADEFC1 /* SkillsSection.swift */,
+				EB444CB55101CE2B631AF69F /* SpacesViews.swift */,
 				C969C3513ACFED675B536F24 /* TerminalView.swift */,
 				94F7A6D8BD96CCBCA6C43C3D /* ToolActivityView.swift */,
-				C1D109930FA42BE4BC08C603 /* SpacesViews.swift */,
 				E9FEC6CC55B91A30F4873DF8 /* VoiceOrbHUDView.swift */,
 				C6BFC553F72EA059FA15375A /* Components */,
 				2A0C0221A81143B4D69663A6 /* Styles */,
@@ -1310,6 +1351,7 @@
 				938D73C7540BD48B4FF78EB3 /* BotMessageSender.swift */,
 				689A48458D7F980603576802 /* BotProfile.swift */,
 				F77ED7BAD97CEC1EEF7FD3E5 /* BotSession.swift */,
+				85D9C0D93CA79A3EBFDF0017 /* BuiltinSlashCommandEngine.swift */,
 				2961B4C4738E77BCEF8FAE0A /* ChiefOfStaff.swift */,
 				86D438ECBA5E6FA137A42141 /* CloudGeminiLanguageModel.swift */,
 				51B98606B9A9E8579CDBF301 /* CognitiveMemoryEngine.swift */,
@@ -1364,6 +1406,8 @@
 				21F5227C12291168A19F3BEC /* Skill.swift */,
 				98F17ED2F1596D4507BECD44 /* SkillCatalog.swift */,
 				B1029F45266243C1D9237A2C /* SkillManager.swift */,
+				92AFCFEE361338674DFA1D09 /* SpaceManager.swift */,
+				D8CBDDD8539C304129ACCA2A /* SpaceModels.swift */,
 				B88A707090E123FFF55771AD /* SpeculativeToolExecutor.swift */,
 				9D62C6D2EBD44EE1369EC3FF /* SpotlightIndexer.swift */,
 				705720CD0FBDCE38AA83CDA7 /* StateGraph.swift */,
@@ -1380,8 +1424,6 @@
 				ABA3F3C0A6C1C53A4AC18150 /* WebhookServer.swift */,
 				E96F71F584B17B7CACC9093B /* WebSearchHelper.swift */,
 				CC816014A875377AB08C6513 /* WeeklyReflection.swift */,
-				C1D109930FA42BE4BC08C601 /* SpaceModels.swift */,
-				C1D109930FA42BE4BC08C602 /* SpaceManager.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -1398,6 +1440,8 @@
 		AEF118ABDFECDC016B406359 /* Tools */ = {
 			isa = PBXGroup;
 			children = (
+				57C7139FFAD4A615CAC57B79 /* apexflow */,
+				DC19D6B4234288A927F68F37 /* benchmark-repro */,
 				52C044E1B59B2FC166923D0D /* sandboxctl */,
 			);
 			path = Tools;
@@ -1477,6 +1521,14 @@
 			path = ApexAgent;
 			sourceTree = "<group>";
 		};
+		DC19D6B4234288A927F68F37 /* benchmark-repro */ = {
+			isa = PBXGroup;
+			children = (
+				74A9B57C5B769BDD2B74027C /* main.swift */,
+			);
+			path = "benchmark-repro";
+			sourceTree = "<group>";
+		};
 		F031E34CDD92BC6B044F8081 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
@@ -1489,7 +1541,7 @@
 			isa = PBXGroup;
 			children = (
 				AE35948C77F3720F3C623A33 /* AgentSessionCoordinator.swift */,
-				A8C109930FA42BE4BC08C61D /* IntentToolSelector.swift */,
+				838FA594F9669AEF5184D8FA /* IntentToolSelector.swift */,
 				38A409930FA42BE4BC08C61D /* ToolDispatchEngine.swift */,
 			);
 			path = Coordinators;
@@ -1541,8 +1593,7 @@
 				1DB4AE52709A0E0EE2CBBCE7 /* FullDuplexVoiceTests.swift */,
 				892BE4093C46CC79832CBDF0 /* GatewayModelsTests.swift */,
 				4B3FBA365C67B55DC766C7D1 /* GrokBotFeatureTests.swift */,
-				B9C109930FA42BE4BC08C61E /* IntentToolSelectorTests.swift */,
-				C1D109930FA42BE4BC08C604 /* SpaceManagerTests.swift */,
+				C27416A7D6D7178263246418 /* IntentToolSelectorTests.swift */,
 				2A1D304F3445E264A9E852D8 /* LiveBotCommunicationTests.swift */,
 				093B0E7433BF91D55EB95A4F /* LiveMCPSupport.swift */,
 				57E6A9A66CF3C285CD98595E /* LogicGapFillTests.swift */,
@@ -1575,6 +1626,7 @@
 				30D42FF1852354B25ADFA0BB /* SecurityGovernanceTests.swift */,
 				2018A7EA41B141C39D3F91A3 /* SecuritySandboxErrorTests.swift */,
 				FE26C15832A4BFACD5769FAF /* SecurityTests.swift */,
+				CD71F633296A0B0519110983 /* SpaceManagerTests.swift */,
 				8FDF7A3F1ABAE91D2C04E5E4 /* StateGraphTests.swift */,
 				956392F1A536FFADFB510CAB /* SwiftDataPersistenceTests.swift */,
 				B4F34BBF01D73522C4A836C1 /* SwiftDataStressVerificationTests.swift */,
@@ -1621,6 +1673,23 @@
 			productName = ApexAgentTests;
 			productReference = B893BFE62F99598A74867F59 /* ApexAgentTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		2C1DA680D47478F5589B7501 /* benchmark-repro */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1A8FD5FE29818E30AAC4EA0C /* Build configuration list for PBXNativeTarget "benchmark-repro" */;
+			buildPhases = (
+				ABC0CA7A48EBA8E4E34A27D5 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "benchmark-repro";
+			packageProductDependencies = (
+			);
+			productName = "benchmark-repro";
+			productReference = BED4FD27120E7CDB12012858 /* benchmark-repro */;
+			productType = "com.apple.product-type.tool";
 		};
 		504A0D56914CD197196A441B /* ApexAgentIntelligenceTests */ = {
 			isa = PBXNativeTarget;
@@ -1681,6 +1750,8 @@
 				2DFCDCE30F5EDBC8DDF0AD14 /* Logging */,
 				62F1547BA2BA468E21BF2DB9 /* Containerization */,
 				A629328B7AD054EBF7873124 /* ContainerizationOCI */,
+				5B249060B9FE7884390C10CE /* ContainerizationArchive */,
+				6F4959F553229D815752D260 /* ContainerizationOS */,
 			);
 			productName = ApexAgentCore;
 			productReference = BF959C9824A399A7C6398153 /* ApexAgentCore.framework */;
@@ -1712,6 +1783,7 @@
 			buildConfigurationList = FDB3045CBD049B4B3F46B5A8 /* Build configuration list for PBXNativeTarget "MCPKit" */;
 			buildPhases = (
 				3EB752C0E34740792397A8AB /* Sources */,
+				6312CCB5F787307991B6F386 /* Resources */,
 				4EA01C9BEF786D8ABDC14318 /* Frameworks */,
 			);
 			buildRules = (
@@ -1844,6 +1916,25 @@
 			productReference = CA2E94027EFCA228615D6E42 /* ApexAgentUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		D48EC83BD34945ED3DBA9E71 /* apexflow */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6A9EF2BFA4FECC6AF99F00EC /* Build configuration list for PBXNativeTarget "apexflow" */;
+			buildPhases = (
+				A1501CFA7762492773C20AED /* Sources */,
+				E9B5D4AFEA661A66BB9EA89F /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5197C89EC559BB0C8934DCF6 /* PBXTargetDependency */,
+			);
+			name = apexflow;
+			packageProductDependencies = (
+			);
+			productName = apexflow;
+			productReference = 74C1A776599B366D1F1D378E /* apexflow */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -1851,7 +1942,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2720;
+				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					D25CDE11C75690193CF44814 = {
 						TestTargetID = 7400E4C22122E116AC217727;
@@ -1884,6 +1975,8 @@
 				7400E4C22122E116AC217727 /* ApexAgent */,
 				87E10F15DEB270B43244F465 /* ApexAgentIntents */,
 				6419E72010128DADB58FAA8F /* sandboxctl */,
+				D48EC83BD34945ED3DBA9E71 /* apexflow */,
+				2C1DA680D47478F5589B7501 /* benchmark-repro */,
 				0FE45CD6604AF6C5292FD0E9 /* ApexAgentTests */,
 				504A0D56914CD197196A441B /* ApexAgentIntelligenceTests */,
 				5561F9DCCB9020F75A84ACCB /* ApexAgentContainerTests */,
@@ -1893,6 +1986,14 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		6312CCB5F787307991B6F386 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				622FA1AE19BD5DB47FCBCF0C /* README.md in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C7A2AB85B06B9DB8D28F56F5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1959,6 +2060,7 @@
 				271541B5EDEC835BF5076747 /* BotSheets.swift in Sources */,
 				D1382B40C2BFDBC7089D7FA0 /* BotSidebarViews.swift in Sources */,
 				36544B4F6634FA4CB971AE57 /* BrowserAutomationTool.swift in Sources */,
+				778AA275FDFC4247DCD1C626 /* BuiltinSlashCommandEngine.swift in Sources */,
 				FFC68BB0142F9CA67C85B7C0 /* CalendarTool.swift in Sources */,
 				07FC50CCC4CB154494DBBCE5 /* CaptureWindowImageTool.swift in Sources */,
 				23FAFF6C267E5C9EE5923F91 /* ChatView.swift in Sources */,
@@ -2027,11 +2129,8 @@
 				129C09CC682BF64BA5009248 /* GitOperationsTool.swift in Sources */,
 				149C2290CA2B070577AE892D /* GlobalCommandPaletteHUD.swift in Sources */,
 				FC4A88A9A121E76D08A3BCEF /* GroupChat.swift in Sources */,
+				F5E35DAFCD16F22E8E44B4E8 /* IntentToolSelector.swift in Sources */,
 				750EE9D2CFB7EF0209C23B74 /* InteractiveAgentIntents.swift in Sources */,
-				A8C2504AE944634736A2E19F /* IntentToolSelector.swift in Sources */,
-				D1D2504AE944634736A2E101 /* SpaceModels.swift in Sources */,
-				D1D2504AE944634736A2E102 /* SpaceManager.swift in Sources */,
-				D1D2504AE944634736A2E103 /* SpacesViews.swift in Sources */,
 				AC595BA868B47EA33BA6335F /* KeychainManager.swift in Sources */,
 				B6B0F9530D34906BEB85A4B6 /* LaunchAgent.swift in Sources */,
 				599E1581EF9E8C5307E0E3BA /* LocalMLXLanguageModel.swift in Sources */,
@@ -2093,6 +2192,9 @@
 				45C5BC37EA11F858E1F12C9B /* SkillCatalog.swift in Sources */,
 				335271F96C231C6E46E09F75 /* SkillManager.swift in Sources */,
 				B8B97E857F6B52A23350E186 /* SkillsSection.swift in Sources */,
+				A51024D94F74D6C271680186 /* SpaceManager.swift in Sources */,
+				410C948C8EEF39378FE972C7 /* SpaceModels.swift in Sources */,
+				3387BBDE4A9B25A9ED7CAAE4 /* SpacesViews.swift in Sources */,
 				AEC7693D71D8213D96C70149 /* SpeculativeToolExecutor.swift in Sources */,
 				98D0CA9D47D32DC2AD95EEDD /* SpotlightIndexer.swift in Sources */,
 				1FB2CC43D0977E973E7CF013 /* SpotlightSearchTool.swift in Sources */,
@@ -2180,6 +2282,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A1501CFA7762492773C20AED /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				74CF3242C869E5FB36976EC0 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A478EDC35FC4E331231A746D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -2203,6 +2313,14 @@
 			files = (
 				2A2C4F5E9A972F75CCF8842D /* FMIntentSupport.swift in Sources */,
 				0D4D72AEEAB362E33AE2B5A8 /* SummarizeTextIntent.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ABC0CA7A48EBA8E4E34A27D5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8E1CE53C3F6C1700201E4D3E /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2261,8 +2379,7 @@
 				C9CFA611F3E517C48486B675 /* FullDuplexVoiceTests.swift in Sources */,
 				F326C05BBA0F63B54D395CE4 /* GatewayModelsTests.swift in Sources */,
 				85332EE5B1F6F3D834015723 /* GrokBotFeatureTests.swift in Sources */,
-				B9C2504AE944634736A2E1A0 /* IntentToolSelectorTests.swift in Sources */,
-				D1D2504AE944634736A2E104 /* SpaceManagerTests.swift in Sources */,
+				2D83D18ECF411807188495D2 /* IntentToolSelectorTests.swift in Sources */,
 				B5B36C25A1E9FBA54D7A9917 /* LiveBotCommunicationTests.swift in Sources */,
 				EF2C2609C244D385558579B0 /* LiveMCPSupport.swift in Sources */,
 				A9249DBFEA92A09DF690FB74 /* LogicGapFillTests.swift in Sources */,
@@ -2295,6 +2412,7 @@
 				12BFCF23A966D482E85B95E1 /* SecurityGovernanceTests.swift in Sources */,
 				A131EDDC5255E880CBC741BB /* SecuritySandboxErrorTests.swift in Sources */,
 				549F3BA9085BF5E876BC3972 /* SecurityTests.swift in Sources */,
+				AB7EAA722A8D32D66D83EB24 /* SpaceManagerTests.swift in Sources */,
 				848F50877814F00E3806AACD /* StateGraphTests.swift in Sources */,
 				C1B4D5263D0532F2FA39F6B7 /* SwiftDataPersistenceTests.swift in Sources */,
 				B408DCA5911B60F0A31A15FF /* SwiftDataStressVerificationTests.swift in Sources */,
@@ -2356,6 +2474,11 @@
 			isa = PBXTargetDependency;
 			target = C37B666F31167FFF8C868DE1 /* SharedLogging */;
 			targetProxy = A44E294310215EB4227190E4 /* PBXContainerItemProxy */;
+		};
+		5197C89EC559BB0C8934DCF6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 61AFB82B28D8753880168205 /* ApexAgentCore */;
+			targetProxy = 0D292A9EA4FC56B38CB23433 /* PBXContainerItemProxy */;
 		};
 		63EC292393DAD6FD2F3A3D90 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -2436,19 +2559,16 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedModels;
 				PRODUCT_NAME = SharedModels;
 				SDKROOT = macosx;
@@ -2458,25 +2578,38 @@
 			};
 			name = Debug;
 		};
+		042428425CF4C519F764ABA6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.apexflow;
+				PRODUCT_NAME = apexflow;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
 		1F5D17916ADA99014963BA7F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.MCPKit;
 				PRODUCT_NAME = MCPKit;
 				SDKROOT = macosx;
@@ -2492,13 +2625,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = ApexAgent/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgent;
 				PRODUCT_MODULE_NAME = ApexAgent;
@@ -2513,19 +2642,16 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedKit;
 				PRODUCT_NAME = SharedKit;
 				SDKROOT = macosx;
@@ -2540,7 +2666,6 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -2573,7 +2698,6 @@
 				CODE_SIGNING_ALLOWED = YES;
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -2590,22 +2714,10 @@
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
-				OTHER_LDFLAGS = (
-					"-weak_framework",
-					FoundationModels,
-					"-weak_framework",
-					_FoundationModels_AppKit,
-					"-weak_framework",
-					_FoundationModels_SwiftUI,
-					"-weak_framework",
-					_Vision_FoundationModels,
-					"-weak_framework",
-					_CoreSpotlight_FoundationModels,
-				);
-				OTHER_SWIFT_FLAGS = "$(inherited) -enable-experimental-feature Lifetimes";
+				OTHER_LDFLAGS = "-weak_framework FoundationModels -weak_framework _FoundationModels_AppKit -weak_framework _FoundationModels_SwiftUI -weak_framework _Vision_FoundationModels -weak_framework _CoreSpotlight_FoundationModels";
+				OTHER_SWIFT_FLAGS = "$(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
@@ -2619,19 +2731,16 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedLogging;
 				PRODUCT_NAME = SharedLogging;
 				SDKROOT = macosx;
@@ -2648,15 +2757,27 @@
 				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.sandboxctl;
 				PRODUCT_NAME = sandboxctl;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		5CBAFBC8F3FC3858527D5110 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.apexflow;
+				PRODUCT_NAME = apexflow;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -2668,12 +2789,8 @@
 				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.sandboxctl;
 				PRODUCT_NAME = sandboxctl;
@@ -2686,13 +2803,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(BUILD_DIR)/Products/Debug",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(BUILD_DIR)/Products/Debug";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentTests;
 				PRODUCT_NAME = ApexAgentTests;
 				SDKROOT = macosx;
@@ -2705,19 +2818,16 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedLogging;
 				PRODUCT_NAME = SharedLogging;
 				SDKROOT = macosx;
@@ -2727,18 +2837,30 @@
 			};
 			name = Release;
 		};
+		81807E96EB2BD7A4D37D33D9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.apexagent.benchmark-repro";
+				PRODUCT_NAME = "benchmark-repro";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
 		8347D7E8789BE9B58D116EBA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(BUILD_DIR)/Products/Debug",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(BUILD_DIR)/Products/Debug";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentContainerTests;
 				PRODUCT_NAME = ApexAgentContainerTests;
 				SDKROOT = macosx;
@@ -2750,7 +2872,6 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -2770,19 +2891,16 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedModels;
 				PRODUCT_NAME = SharedModels;
 				SDKROOT = macosx;
@@ -2798,19 +2916,16 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.MCPKit;
 				PRODUCT_NAME = MCPKit;
 				SDKROOT = macosx;
@@ -2825,7 +2940,6 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
@@ -2858,7 +2972,6 @@
 				CODE_SIGNING_ALLOWED = YES;
 				CODE_SIGN_IDENTITY = "-";
 				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -2882,26 +2995,30 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = (
-					"-weak_framework",
-					FoundationModels,
-					"-weak_framework",
-					_FoundationModels_AppKit,
-					"-weak_framework",
-					_FoundationModels_SwiftUI,
-					"-weak_framework",
-					_Vision_FoundationModels,
-					"-weak_framework",
-					_CoreSpotlight_FoundationModels,
-				);
-				OTHER_SWIFT_FLAGS = "$(inherited) -enable-experimental-feature Lifetimes";
+				OTHER_LDFLAGS = "-weak_framework FoundationModels -weak_framework _FoundationModels_AppKit -weak_framework _FoundationModels_SwiftUI -weak_framework _Vision_FoundationModels -weak_framework _CoreSpotlight_FoundationModels";
+				OTHER_SWIFT_FLAGS = "$(inherited)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.4;
+			};
+			name = Debug;
+		};
+		A552648170DA7B0BB30FD74C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.apexagent.benchmark-repro";
+				PRODUCT_NAME = "benchmark-repro";
+				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
@@ -2910,13 +3027,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(BUILD_DIR)/Products/Debug",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(BUILD_DIR)/Products/Debug";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentContainerTests;
 				PRODUCT_NAME = ApexAgentContainerTests;
 				SDKROOT = macosx;
@@ -2928,13 +3041,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(BUILD_DIR)/Products/Debug",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(BUILD_DIR)/Products/Debug";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentIntelligenceTests;
 				PRODUCT_NAME = ApexAgentIntelligenceTests;
 				SDKROOT = macosx;
@@ -2947,23 +3056,17 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
-				OTHER_LDFLAGS = (
-					"-framework",
-					AppIntents,
-				);
+				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentIntents;
 				PRODUCT_NAME = ApexAgentIntents;
 				SDKROOT = macosx;
@@ -2979,23 +3082,17 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
-				OTHER_LDFLAGS = (
-					"-framework",
-					AppIntents,
-				);
+				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentIntents;
 				PRODUCT_NAME = ApexAgentIntents;
 				SDKROOT = macosx;
@@ -3011,19 +3108,16 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedKit;
 				PRODUCT_NAME = SharedKit;
 				SDKROOT = macosx;
@@ -3038,13 +3132,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(BUILD_DIR)/Products/Debug",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(BUILD_DIR)/Products/Debug";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentTests;
 				PRODUCT_NAME = ApexAgentTests;
 				SDKROOT = macosx;
@@ -3057,13 +3147,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = ApexAgent/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgent;
 				PRODUCT_MODULE_NAME = ApexAgent;
@@ -3078,12 +3164,10 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ApexAgent/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -3091,7 +3175,6 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentCore;
 				PRODUCT_NAME = ApexAgentCore;
 				SDKROOT = macosx;
@@ -3107,12 +3190,10 @@
 				CODE_SIGN_IDENTITY = "";
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEAD_CODE_STRIPPING = YES;
 				DEFINES_MODULE = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_MODULE_VERIFIER = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ApexAgent/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
@@ -3120,7 +3201,6 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MODULE_VERIFIER_SUPPORTED_LANGUAGE_STANDARDS = "gnu11 gnu++14";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentCore;
 				PRODUCT_NAME = ApexAgentCore;
 				SDKROOT = macosx;
@@ -3135,13 +3215,9 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(BUILD_DIR)/Products/Debug",
-				);
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(BUILD_DIR)/Products/Debug";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentIntelligenceTests;
 				PRODUCT_NAME = ApexAgentIntelligenceTests;
 				SDKROOT = macosx;
@@ -3153,7 +3229,6 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEAD_CODE_STRIPPING = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -3188,6 +3263,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		1A8FD5FE29818E30AAC4EA0C /* Build configuration list for PBXNativeTarget "benchmark-repro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A552648170DA7B0BB30FD74C /* Debug */,
+				81807E96EB2BD7A4D37D33D9 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		2D290444589F5F1DC24F4826 /* Build configuration list for PBXNativeTarget "ApexAgentCore" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -3202,6 +3286,15 @@
 			buildConfigurations = (
 				03042C77C7CA881CB5FB2898 /* Debug */,
 				8D9393AD08374B21DDDC95E4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6A9EF2BFA4FECC6AF99F00EC /* Build configuration list for PBXNativeTarget "apexflow" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				042428425CF4C519F764ABA6 /* Debug */,
+				5CBAFBC8F3FC3858527D5110 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
@@ -3314,10 +3407,20 @@
 			package = 59809C23920A99AA03E92B38 /* XCRemoteSwiftPackageReference "swift-log" */;
 			productName = Logging;
 		};
+		5B249060B9FE7884390C10CE /* ContainerizationArchive */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 121559BD91AD56CCE9B773AB /* XCRemoteSwiftPackageReference "containerization" */;
+			productName = ContainerizationArchive;
+		};
 		62F1547BA2BA468E21BF2DB9 /* Containerization */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 121559BD91AD56CCE9B773AB /* XCRemoteSwiftPackageReference "containerization" */;
 			productName = Containerization;
+		};
+		6F4959F553229D815752D260 /* ContainerizationOS */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 121559BD91AD56CCE9B773AB /* XCRemoteSwiftPackageReference "containerization" */;
+			productName = ContainerizationOS;
 		};
 		A629328B7AD054EBF7873124 /* ContainerizationOCI */ = {
 			isa = XCSwiftPackageProductDependency;

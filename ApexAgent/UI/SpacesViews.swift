@@ -1003,6 +1003,13 @@ private struct SpaceInspectorDrawer: View {
                             )
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                spaceManager.deletePage(page, from: space)
+                            } label: {
+                                Label("Delete Page", systemImage: "trash")
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 12)
@@ -1012,15 +1019,29 @@ private struct SpaceInspectorDrawer: View {
 
             if let page = spaceManager.activePage {
                 VStack(alignment: .leading, spacing: 8) {
-                    TextField(
-                        "Page Title",
-                        text: Binding(
-                            get: { page.title },
-                            set: { spaceManager.updatePage(page, title: $0, editorName: spaceManager.activeHumanSender?.displayName ?? "User") }
+                    HStack {
+                        TextField(
+                            "Page Title",
+                            text: Binding(
+                                get: { page.title },
+                                set: { spaceManager.updatePage(page, title: $0, editorName: spaceManager.activeHumanSender?.displayName ?? "User") }
+                            )
                         )
-                    )
-                    .font(.system(size: 14, weight: .bold))
-                    .textFieldStyle(.plain)
+                        .font(.system(size: 14, weight: .bold))
+                        .textFieldStyle(.plain)
+
+                        Spacer()
+
+                        Button {
+                            spaceManager.deletePage(page, from: space)
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Delete this page")
+                    }
 
                     Text("Last edited by \(page.lastEditedByName) • \(page.updatedAt.formatted(date: .omitted, time: .shortened))")
                         .font(.system(size: 10))

@@ -48,7 +48,7 @@ public enum PlaybookExecutionError: Error, LocalizedError, Equatable {
 /// - Comprehensive execution reporting with per-stage timings and bot responses.
 @Observable
 @MainActor
-final class PlaybookRunner {
+final class PlaybookRunner: Identifiable {
 
     // MARK: - Approval Resolution
 
@@ -61,6 +61,7 @@ final class PlaybookRunner {
 
     // MARK: - Properties
 
+    let id: UUID = UUID()
     let playbook: CollaborationPlaybook
     let participantMap: [PlaybookRoleRequirement: BotProfile]
     /// Optional live-session source. When nil, turns run in clearly-marked
@@ -420,7 +421,6 @@ final class PlaybookRunner {
                             )
                         }
                     }
-
 
                     for try await result in group {
                         tasksResults.append(result)

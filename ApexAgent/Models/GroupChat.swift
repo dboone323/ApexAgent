@@ -13,6 +13,14 @@ enum DefaultGroupToolAllowlist {
     ]
 }
 
+// MARK: - Group Tool Permission
+
+enum GroupToolPermission: Equatable {
+    case allowed
+    case needsApproval
+    case denied(reason: String)
+}
+
 @Observable
 @MainActor
 final class GroupChatSession {
@@ -25,7 +33,7 @@ final class GroupChatSession {
     // MARK: - Conversation State (shared across all participants)
     var messages: [ChatMessage] = []
     var isGenerating: Bool = false
-    var activeGeneratorId: UUID?  // which participant is currently talking
+    var activeGeneratorId: UUID?  // touch which participant is currently talking
     var pendingConfirmation: ConfirmationRequest?
     var pendingAttachments: [NSImage] = []
 
@@ -57,6 +65,55 @@ final class GroupChatSession {
         self.participants = participants
         self.hostBot = hostBot
         self.generationOrder = participants.map { $0.id }
+    }
+
+    // MARK: - Tool Permission & Execution
+
+    func groupToolPermission(tool: String) -> GroupToolPermission {
+        guard toolCallsEnabled else {
+            return .denied(reason: "Group tool calls are currently disabled.")
+        }
+        guard allowedGroupTools.contains(tool) else {
+            return .denied(reason: "Tool '\(tool)' is not an allowed group tool.")
+        }
+        if Self.riskyGroupTools.contains(tool) {
+            return .needsApproval
+        }
+        return .allowed
+    }
+
+    func executeGroupTool(tool: String, arguments: String) async throws -> String {
+        let permission = groupToolPermission(tool: tool)
+        switch permission {
+        case .denied(let reason):
+            return "DENIED: \(reason)"
+        case .needsApproval:
+            guard let orch = orchestrator else {
+                return "DECLINED: Orchestrator unavailable to request human approval."
+            }
+            let approved = await orch.requestConfirmation(toolName: tool, arguments: arguments, riskDescription: "Group chat tool action")
+            if !approved {
+                return "DECLINED: User declined execution of \(tool)."
+            }
+            do {
+                let out = try await orch.executeToolByName(name: tool, jsonArguments: arguments)
+                toolExecutionLog.append("\(tool): \(out)")
+                return out
+            } catch {
+                return "ERROR: \(error.localizedDescription)"
+            }
+        case .allowed:
+            guard let orch = orchestrator else {
+                return "ERROR: Orchestrator unavailable for group tool execution."
+            }
+            do {
+                let out = try await orch.executeToolByName(name: tool, jsonArguments: arguments)
+                toolExecutionLog.append("\(tool): \(out)")
+                return out
+            } catch {
+                return "ERROR: \(error.localizedDescription)"
+            }
+        }
     }
 
     // MARK: - Session Management (Isolated from 1:1 sessions)
@@ -333,5 +390,60 @@ final class GroupChatSession {
         - If another bot asked you a question or mentioned you (@\(botName)), answer them directly.
         - If you need input from a teammate, tag them using @BotName (e.g. @CodeArchitect, @Researcher).
         """
+    }
+}
+
+// MARK: - GroupChatManager
+
+@Observable
+@MainActor
+final class GroupChatManager {
+    var botManager: BotManager?
+    var allGroups: [GroupChatSession] = []
+    var activeGroupId: UUID?
+
+    var runningGroupsCount: Int {
+        allGroups.filter { $0.isGenerating }.count
+    }
+
+    var activeGroup: GroupChatSession? {
+        guard let id = activeGroupId else { return nil }
+        return allGroups.first { $0.id == id }
+    }
+
+    func startGroup(name: String, participantIds: [UUID], hostBotId: UUID? = nil) -> GroupChatSession {
+        let participants = participantIds.compactMap { id in
+            botManager?.allBots.first { $0.id == id }
+        }
+        let hostBot = hostBotId.flatMap { hid in botManager?.allBots.first { $0.id == hid } }
+        let session = GroupChatSession(name: name, participants: participants, hostBot: hostBot)
+        session.orchestrator = botManager?.orchestrator
+        session.computer = botManager?.computer
+        session.botManager = botManager
+        allGroups.append(session)
+        activeGroupId = session.id
+        return session
+    }
+
+    func selectGroup(id: UUID) {
+        activeGroupId = id
+    }
+
+    func closeGroup(id: UUID) {
+        if let idx = allGroups.firstIndex(where: { $0.id == id }) {
+            allGroups[idx].stop()
+            allGroups.remove(at: idx)
+        }
+        if activeGroupId == id {
+            activeGroupId = allGroups.first?.id
+        }
+    }
+
+    func cancelAllGroups() {
+        for group in allGroups {
+            group.stop()
+        }
+        allGroups.removeAll()
+        activeGroupId = nil
     }
 }

@@ -23,7 +23,7 @@ public enum AutoTieringStrategy: String, CaseIterable, Identifiable, Codable, Se
 }
 
 // MARK: - Model Provider
-public enum ModelProvider: String, CaseIterable, Identifiable, Codable, Sendable {
+public enum ModelProvider: String, CaseIterable, Identifiable, Codable, Sendable, Hashable, Equatable {
     case autoPicker = "autoPicker"
     case appleOnDevice = "appleOnDevice"
     case applePCC = "applePCC"
@@ -66,6 +66,7 @@ public enum ModelProvider: String, CaseIterable, Identifiable, Codable, Sendable
 // MARK: - Model Target
 public enum ModelTarget: Sendable {
     case explicit(ModelProvider)
+    case automatic
     case auto(String)
 }
 
@@ -124,7 +125,7 @@ public struct ModelRegistry: Sendable {
     public static let mlxModelKey = "apex.mlxModel"
 
     // Workload-specific default Ollama models
-    public static let defaultFastOllamaModel = "llama3.2:3b"
+    public static let defaultFastOllamaModel = "gemma4:12b"
     public static let defaultCodingOllamaModel = "qwen2.5-coder:7b"
     public static let defaultResearchOllamaModel = "gemma4:12b"
     public static let defaultAutomationOllamaModel = "qwen2.5-coder:7b"
@@ -155,6 +156,29 @@ public struct ModelRegistry: Sendable {
     /// Sets the currently active global provider.
     public static func setActiveProvider(_ provider: ModelProvider) {
         UserDefaults.standard.set(provider.rawValue, forKey: providerKey)
+    }
+
+    /// Returns the effective provider for a specific bot (using bot override or global).
+    static func effectiveProvider(for bot: BotProfile) -> ModelProvider {
+        bot.modelProvider ?? activeProvider()
+    }
+
+    /// Returns the language model configured for a specific bot.
+    static func model(for bot: BotProfile) -> any LanguageModel {
+        let provider = effectiveProvider(for: bot)
+        return model(for: .explicit(provider))
+    }
+
+    /// Estimates token count for prompt, history, instructions, and tools.
+    static func estimateTokenCount(
+        prompt: String = "",
+        history: [ChatMessage] = [],
+        instructions: String = "",
+        tools: [String] = []
+    ) -> Int {
+        let textTokens = (prompt.count + instructions.count + history.reduce(0) { $0 + $1.content.count }) / 4
+        let toolTokens = tools.count * 180
+        return textTokens + toolTokens
     }
 
     /// Returns the currently active privacy tier.
@@ -195,7 +219,7 @@ public struct ModelRegistry: Sendable {
 
     /// Returns the configured Gemini model name.
     public static func geminiModel() -> String {
-        UserDefaults.standard.string(forKey: geminiModelKey) ?? "gemini-2.5-flash"
+        UserDefaults.standard.string(forKey: geminiModelKey) ?? "gemini-3.5-flash"
     }
 
     /// Sets the Gemini model name.
@@ -224,9 +248,6 @@ public struct ModelRegistry: Sendable {
     }
 
     /// Dynamically selects an appropriate workload-tiered Ollama model based on bot profile or role title.
-    /// Fast lightweight models (`llama3.2:3b`) for general chat / assistant;
-    /// Deep coder models (`qwen2.5-coder:7b`) for code architects & engineering;
-    /// Deep research models (`gemma4:12b` or `qwen2.5:14b`) for researcher & data synthesis.
     static func ollamaModel(
         for bot: BotProfile? = nil,
         role: String? = nil,
@@ -259,6 +280,17 @@ public struct ModelRegistry: Sendable {
         return defaultFastOllamaModel
     }
 
+    /// Returns true if the prompt suggests a math or analytical reasoning problem.
+    public static func isTaskMathOrAnalytical(prompt: String) -> Bool {
+        let lower = prompt.lowercased()
+        let mathTerms = [
+            "calculate", "plus", "minus", "multiply", "divide", "square root",
+            "derivative", "integral", "matrix", "equation", "solve", "math",
+            "add", "subtract", "sum", "product"
+        ]
+        return mathTerms.contains { lower.contains($0) }
+    }
+
     /// Resolves the optimal provider for a task.
     public static func resolveProviderForTask(
         preferred: ModelProvider = .autoPicker,
@@ -268,10 +300,34 @@ public struct ModelRegistry: Sendable {
         hasAttachments: Bool = false,
         isPCCAvailable: Bool = true
     ) -> (provider: ModelProvider, reason: String?) {
-        let estimatedTokens = (prompt.count + instructions.count) / 4
+        resolveProviderForTask(
+            preferred: preferred,
+            prompt: prompt,
+            history: [],
+            instructions: instructions,
+            tools: tools,
+            hasAttachments: hasAttachments,
+            isPCCAvailable: isPCCAvailable
+        )
+    }
+
+    static func resolveProviderForTask(
+        preferred: ModelProvider = .autoPicker,
+        prompt: String = "",
+        history: [ChatMessage] = [],
+        instructions: String = "",
+        tools: [String] = [],
+        hasAttachments: Bool = false,
+        isPCCAvailable: Bool = true
+    ) -> (provider: ModelProvider, reason: String?) {
+        let estimatedTokens = estimateTokenCount(prompt: prompt, history: history, instructions: instructions, tools: tools)
 
         if preferred != .autoPicker && preferred != .appleOnDevice {
             return (preferred, nil)
+        }
+
+        if isTaskMathOrAnalytical(prompt: prompt) {
+            return (.localOllama, "Analytical / mathematical task routed to high-reasoning engine.")
         }
 
         if estimatedTokens <= 3200 && !hasAttachments {
@@ -286,18 +342,23 @@ public struct ModelRegistry: Sendable {
             return (.cloudGemini, "Attachments require multimodal vision processing; tiering to Cloud Gemini.")
         }
 
-        return (.localOllama, "Context tokens (\(estimatedTokens)) exceed 3.2k limit; auto-tiering to Local Ollama.")
+        return (.localOllama, "Context tokens (\(estimatedTokens)) exceed safe limit (3.2k); Auto-tiering to Local Ollama.")
     }
 
     /// Creates and returns the FoundationModels `LanguageModel` for the given target.
-    public static func model(for target: ModelTarget) -> any LanguageModel {
+    public static func model(for target: ModelTarget, apiKey: String? = nil) -> any LanguageModel {
         switch target {
         case .explicit(let provider):
             switch provider {
-            case .appleOnDevice, .applePCC, .autoPicker, .fmCLI:
+            case .appleOnDevice, .autoPicker:
                 return SystemLanguageModel.default
+            case .applePCC:
+                return PrivateCloudComputeLanguageModel()
+            case .fmCLI:
+                return FMCLILanguageModel(backend: .system)
             case .cloudGemini:
-                return CloudGeminiLanguageModel(apiKey: geminiAPIKey())
+                let key = (apiKey?.isEmpty == false) ? apiKey! : geminiAPIKey()
+                return CloudGeminiLanguageModel(apiKey: key)
             case .localOllama:
                 let url = URL(string: ollamaHost()) ?? URL(string: "http://localhost:11434")!
                 return LocalOllamaLanguageModel(hostURL: url)
@@ -306,9 +367,15 @@ public struct ModelRegistry: Sendable {
                 let url = URL(string: urlStr) ?? URL(string: "http://localhost:8080")!
                 return LocalMLXLanguageModel(hostURL: url)
             }
+        case .automatic:
+            let provider = activeProvider()
+            if provider == .autoPicker {
+                return SystemLanguageModel.default
+            }
+            return model(for: .explicit(provider), apiKey: apiKey)
         case .auto(let prompt):
             let (provider, _) = resolveProviderForTask(preferred: .autoPicker, prompt: prompt)
-            return model(for: .explicit(provider))
+            return model(for: .explicit(provider), apiKey: apiKey)
         }
     }
 

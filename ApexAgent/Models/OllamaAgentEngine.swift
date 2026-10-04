@@ -9,10 +9,83 @@ import AppKit
 // 7B/12B coding & research models for deep dive bots).
 
 @MainActor
-final class OllamaAgentEngine {
+final class OllamaAgentEngine: AgentEngine {
     static let shared = OllamaAgentEngine()
 
-    private init() {}
+    weak var orchestrator: AgentOrchestrator?
+
+    init(orchestrator: AgentOrchestrator? = nil) {
+        self.orchestrator = orchestrator
+    }
+
+    /// Builds a user message dictionary compatible with Ollama multimodal chat completions.
+    static func buildUserMessage(prompt: String, attachments: [NSImage] = []) -> [String: Any] {
+        var msg: [String: Any] = [
+            "role": "user",
+            "content": prompt
+        ]
+        let base64Images = attachments.compactMap { img -> String? in
+            guard let tiff = img.tiffRepresentation,
+                  let rep = NSBitmapImageRep(data: tiff),
+                  let png = rep.representation(using: .png, properties: [:]) else { return nil }
+            return png.base64EncodedString()
+        }
+        if !base64Images.isEmpty {
+            msg["images"] = base64Images
+        }
+        return msg
+    }
+
+    /// Extracts JSON-structured fallback tool calls from model output when running with small or quantised models.
+    static func extractFallbackToolCalls(from text: String, availableToolNames: Set<String>) -> [[String: Any]] {
+        var results: [[String: Any]] = []
+        let pattern = #"\{[\s\r\n]*"name"[\s\r\n]*:[\s\r\n]*"([^"]+)"[\s\r\n]*,[\s\r\n]*"arguments"[\s\r\n]*:[\s\r\n]*(\{.*?\})[\s\r\n]*\}"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.dotMatchesLineSeparators]) else {
+            return results
+        }
+        let nsString = text as NSString
+        let matches = regex.matches(in: text, options: [], range: NSRange(location: 0, length: nsString.length))
+        for match in matches {
+            guard match.numberOfRanges >= 3 else { continue }
+            let name = nsString.substring(with: match.range(at: 1))
+            let argsStr = nsString.substring(with: match.range(at: 2))
+            if availableToolNames.contains(name) {
+                let args = (try? JSONSerialization.jsonObject(with: Data(argsStr.utf8))) as? [String: Any] ?? [:]
+                results.append([
+                    "function": [
+                        "name": name,
+                        "arguments": args
+                    ]
+                ])
+            }
+        }
+        return results
+    }
+
+    /// AgentEngine protocol conformance
+    func streamResponse(
+        prompt: String,
+        attachments: [NSImage] = [],
+        history: [ChatMessage] = [],
+        instructions: String = "",
+        toolCallingMode: AgentToolCallingMode = .auto,
+        onUpdate: @MainActor @escaping (String) -> Void
+    ) async throws {
+        guard let orch = orchestrator else { return }
+        _ = try await executeTurn(
+            prompt: prompt,
+            bot: nil,
+            instructions: instructions,
+            allowedTools: nil,
+            toolCallingMode: toolCallingMode,
+            orchestrator: orch,
+            onUpdate: { str in
+                Task { @MainActor in
+                    onUpdate(str)
+                }
+            }
+        )
+    }
 
     /// Executes an agent turn with tool calling loops against Ollama.
     func executeTurn(
@@ -119,6 +192,12 @@ final class OllamaAgentEngine {
                 }
             }
 
+            // Fallback tool call extraction if native tool_calls were not parsed
+            if toolCalls.isEmpty && !filteredTools.isEmpty {
+                let availableNames = Set(filteredTools.compactMap { ($0["function"] as? [String: Any])?["name"] as? String })
+                toolCalls = Self.extractFallbackToolCalls(from: currentTurnText, availableToolNames: availableNames)
+            }
+
             // If no tool calls were emitted, we are done
             if toolCalls.isEmpty {
                 break
@@ -191,10 +270,10 @@ struct OllamaStreamingEngine: AgentEngine {
 
     func streamResponse(
         prompt: String,
-        attachments: [NSImage],
-        history: [ChatMessage],
-        instructions: String,
-        toolCallingMode: AgentToolCallingMode,
+        attachments: [NSImage] = [],
+        history: [ChatMessage] = [],
+        instructions: String = "",
+        toolCallingMode: AgentToolCallingMode = .auto,
         onUpdate: @MainActor @escaping (String) -> Void
     ) async throws {
         _ = try await OllamaAgentEngine.shared.executeTurn(

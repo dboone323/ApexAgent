@@ -21,7 +21,23 @@ final class BotManager {
     // MARK: - Transient State
     private(set) var sessions: [UUID: BotSession] = [:]
     var activeBotId: UUID?
-    var activePlaybookRunner: PlaybookRunner?
+    
+    // MARK: - Playbook Execution State
+    var playbookHistory: [PlaybookExecutionReport] = []
+    var activePlaybookRunners: [PlaybookRunner] = []
+
+    var activePlaybookRunner: PlaybookRunner? {
+        get { activePlaybookRunners.last }
+        set {
+            if let runner = newValue {
+                if !activePlaybookRunners.contains(where: { $0.id == runner.id }) {
+                    activePlaybookRunners.append(runner)
+                }
+            } else {
+                activePlaybookRunners.removeAll()
+            }
+        }
+    }
 
     public var activeBot: BotProfile? {
         guard let id = activeBotId else { return nil }
@@ -49,15 +65,71 @@ final class BotManager {
         touchBot(bot)
     }
 
+    func sendMessageTo(_ bot: BotProfile, text: String) {
+        let session = session(for: bot)
+        session.sendMessage(text)
+    }
+
+    // MARK: - Playbook Execution & Approval Resolution
+
+    func executeCollaborationPlaybook(
+        preset: CollaborationPlaybookPreset,
+        context: String = "",
+        onApprovalRequired: ((PlaybookApprovalCard) async throws -> Void)? = nil,
+        onDelegationEvent: ((PlaybookDelegationEvent) -> Void)? = nil
+    ) async throws -> PlaybookExecutionReport {
+        try await executeCollaborationPlaybook(
+            playbook: preset.playbook,
+            context: context,
+            onApprovalRequired: onApprovalRequired,
+            onDelegationEvent: onDelegationEvent
+        )
+    }
+
+    func executeCollaborationPlaybook(
+        playbook: CollaborationPlaybook,
+        context: String = "",
+        onApprovalRequired: ((PlaybookApprovalCard) async throws -> Void)? = nil,
+        onDelegationEvent: ((PlaybookDelegationEvent) -> Void)? = nil
+    ) async throws -> PlaybookExecutionReport {
+        let runner = PlaybookRunner(
+            playbook: playbook,
+            availableBots: allBots,
+            botManager: self
+        )
+        activePlaybookRunners.append(runner)
+        defer {
+            activePlaybookRunners.removeAll { $0.id == runner.id }
+        }
+
+        let report = try await runner.execute(
+            contextInput: context,
+            onApprovalRequired: onApprovalRequired,
+            onDelegationEvent: onDelegationEvent
+        )
+        playbookHistory.append(report)
+        return report
+    }
+
     @discardableResult
-    func resolvePlaybookApproval(approved: Bool, notes: String? = nil) -> Bool {
-        guard let runner = activePlaybookRunner else { return false }
-        if approved {
-            runner.approvePendingStage(notes: notes)
+    func resolvePlaybookApproval(cardId: UUID? = nil, approved: Bool, notes: String? = nil) -> Bool {
+        let runner: PlaybookRunner?
+        if let cardId = cardId {
+            runner = activePlaybookRunners.first(where: { $0.pendingApprovalCard?.id == cardId })
         } else {
-            runner.rejectPendingStage(reason: notes ?? "Rejected by user")
+            runner = activePlaybookRunner
+        }
+        guard let targetRunner = runner else { return false }
+        if approved {
+            targetRunner.approvePendingStage(notes: notes)
+        } else {
+            targetRunner.rejectPendingStage(reason: notes ?? "Rejected by user")
         }
         return true
+    }
+
+    func rejectActivePlaybookStage(reason: String = "Rejected by user") {
+        activePlaybookRunner?.rejectPendingStage(reason: reason)
     }
 
     // MARK: - Peer-to-Peer Approval State (WS4)
@@ -216,6 +288,22 @@ final class BotManager {
         saveBot(bot)
     }
 
+    func updateBotMemory(_ bot: BotProfile, newMemory: String) {
+        bot.memory = newMemory
+        saveBot(bot)
+    }
+
+    func updateBotMemory(botId: UUID, notes: String) {
+        guard let bot = bot(byId: botId) else { return }
+        bot.memory = notes
+        saveBot(bot)
+    }
+
+    func hideBot(_ bot: BotProfile) {
+        bot.isPinned = false
+        saveBot(bot)
+    }
+
     func editBot(
         _ bot: BotProfile,
         name: String? = nil,
@@ -261,6 +349,10 @@ final class BotManager {
     func togglePin(_ bot: BotProfile) {
         bot.isPinned.toggle()
         saveBot(bot)
+    }
+
+    func pinBot(_ bot: BotProfile) {
+        togglePin(bot)
     }
 
     /// Touches a Bot's `lastActiveAt` to sort it higher in the list.
@@ -375,12 +467,30 @@ final class BotManager {
         allBots
     }
 
+    var activeBots: [BotProfile] {
+        visibleBots
+    }
+
+    var botsNeedingAttention: [BotProfile] {
+        allBots.filter { bot in
+            if let s = sessions[bot.id], s.needsAttention || s.unreadActivity {
+                return true
+            }
+            return false
+        }
+    }
+
     func bot(byId id: UUID) -> BotProfile? {
         bots.first { $0.id == id }
     }
 
     func botByName(_ name: String) -> BotProfile? {
-        bots.first { $0.name.lowercased() == name.lowercased() }
+        bots.first { $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame }
+            ?? bots.first { $0.name.localizedCaseInsensitiveContains(name) }
+    }
+
+    func bot(named name: String) -> BotProfile? {
+        botByName(name)
     }
 
     // MARK: - Team Playbook Import / Export

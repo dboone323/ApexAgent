@@ -777,6 +777,14 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
     }
 
+        func clearMessages() {
+        startNewConversation()
+    }
+
+    func replaceMessages(_ newMessages: [ChatMessage]) {
+        messages = newMessages
+    }
+
     func resetActiveTurnToolCallCount() {
         activeTurnToolCallCount = 0
         activeTurnDelegationsByAgent.removeAll()

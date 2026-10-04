@@ -398,7 +398,7 @@ struct ChatInputBar: View {
                 // Text input
                 ZStack(alignment: .bottomLeading) {
                     if inputText.isEmpty {
-                        Text(displayIsGenerating ? "Queue next prompt..." : "Message Apex...")
+                        Text(displayIsGenerating ? "Queue next prompt..." : "Message Apex (type / for commands)...")
                             .foregroundStyle(.quaternary)
                             .font(.system(size: 14))
                             .padding(.horizontal, 4)
@@ -568,6 +568,21 @@ struct ChatInputBar: View {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || !orchestrator.pendingAttachments.isEmpty else { return }
         inputText = ""
+
+        if BuiltinSlashCommandEngine.isSlashCommand(text) {
+            Task { @MainActor in
+                if let result = await BuiltinSlashCommandEngine.shared.execute(
+                    input: text,
+                    orchestrator: orchestrator,
+                    botManager: orchestrator.botManager
+                ) {
+                    if !result.triggeredAgentExecution {
+                        orchestrator.appendMessage(ChatMessage(role: .assistant, content: result.outputMarkdown))
+                    }
+                }
+            }
+            return
+        }
         
         if gatewayClient.isConnected {
             let pngs = orchestrator.pendingAttachments.compactMap { img -> Data? in
@@ -616,7 +631,7 @@ struct ChatInputBar: View {
         // 2. File URLs
         if let urls = pb.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] {
             var imageAttached = false
-            for url in urls {
+            for url in practical_urls(urls) {
                 if let image = NSImage(contentsOf: url) {
                     orchestrator.pendingAttachments.append(image)
                     imageAttached = true
@@ -630,22 +645,17 @@ struct ChatInputBar: View {
         return .ignored
     }
 
+    private func practical_urls(_ urls: [URL]) -> [URL] {
+        return urls
+    }
+
     private func toggleRecording() {
         if voiceController.isRecording {
             voiceController.stopRecording()
         } else {
-            Task {
-                let granted = await voiceController.requestPermissions()
-                if granted {
-                    do {
-                        try voiceController.startRecording { transcription in
-                            inputText = transcription
-                        }
-                    } catch {
-                        print("Failed to start voice recording: \(error)")
-                    }
-                } else {
-                    print("Speech/Microphone permissions denied.")
+            try? voiceController.startRecording { transcribed in
+                if !transcribed.isEmpty {
+                    self.inputText = transcribed
                 }
             }
         }

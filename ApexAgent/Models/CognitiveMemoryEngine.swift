@@ -357,7 +357,7 @@ public final class CognitiveMemoryEngine {
         } else {
             effectiveKeepRecent = keepRecent
         }
-
+        
         guard messages.count > effectiveKeepRecent + 1 || (totalChars > 20000 && messages.count > 1) else {
             return (messages, 0)
         }
@@ -596,6 +596,28 @@ public final class CognitiveMemoryEngine {
         
         scored.sort { $0.similarity > $1.similarity }
         return Array(scored.prefix(topK))
+    }
+
+    /// High-level query matching semantic facts, procedural tool recipes, and episodic memories.
+    public func retrieveRelevantContext(query: String, botId: UUID? = nil) -> String {
+        var sections: [String] = []
+        let facts = searchFacts(keyword: query)
+        if !facts.isEmpty {
+            let factsList = facts.prefix(5).map { "- \($0.subject) \($0.predicate) \($0.object)" }.joined(separator: "\n")
+            sections.append("### Relevant Semantic Knowledge\n\(factsList)")
+        }
+        let recipes = lookupRecipes(forGoal: query)
+        if !recipes.isEmpty {
+            let recipesList = recipes.prefix(3).map { "- Goal: \($0.goalDescription) (Tools: \($0.toolSequence.joined(separator: " -> ")))" }.joined(separator: "\n")
+            sections.append("### Procedural Recipes\n\(recipesList)")
+        }
+        if let botId = botId {
+            let summary = buildContextSummary(forBotId: botId, maxLength: 500)
+            if !summary.isEmpty {
+                sections.append("### Bot Context Summary\n\(summary)")
+            }
+        }
+        return sections.isEmpty ? "No indexed cognitive memory found matching '\(query)'." : sections.joined(separator: "\n\n")
     }
     
     // MARK: - Helper
