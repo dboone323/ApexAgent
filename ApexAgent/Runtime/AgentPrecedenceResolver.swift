@@ -60,9 +60,19 @@ struct AgentPrecedenceResolver: Sendable {
                 }
             }
 
+            // The caller's `globalInstructions` carries turn-scoped context —
+            // Space collaboration rules, the `[TURN PRIORITY]` mention marker,
+            // group-chat framing. Discarding it previously left the agent with
+            // only its persona and no directive to actually do the work, which
+            // is what produced the generic "I'll delegate that" reply.
+            var composed = instructions
+            if !globalInstructions.isEmpty && !composed.contains(globalInstructions) {
+                composed = composed.isEmpty ? globalInstructions : composed + "\n\n" + globalInstructions
+            }
+
             return ResolvedAgentContext(
                 name: bot.name,
-                effectiveInstructions: instructions.isEmpty ? globalInstructions : instructions,
+                effectiveInstructions: composed,
                 effectiveProvider: bot.modelProvider ?? globalProvider,
                 effectiveOllamaModel: bot.ollamaModelOverride,
                 effectiveAllowedTools: tools,

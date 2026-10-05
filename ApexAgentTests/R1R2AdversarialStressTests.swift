@@ -369,8 +369,7 @@ final class R1R2AdversarialStressTests {
 
     @Test func testR1NonExecutableScriptFilePermissionsAndRecovery() async throws {
         let fileManager = FileManager.default
-        let homeDir = fileManager.homeDirectoryForCurrentUser
-        let skillsDir = homeDir.appendingPathComponent(".apex/skills")
+        let skillsDir = ApexAgentStoragePaths.skills
         try? fileManager.createDirectory(at: skillsDir, withIntermediateDirectories: true, attributes: nil)
 
         let skillName = "adversarial_perm_skill_\(UUID().uuidString.prefix(6))"

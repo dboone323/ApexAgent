@@ -63,6 +63,7 @@ final class ToolDispatchEngine {
             AnyExecutableTool(DailyBriefingTool(orchestrator: orchestrator)),
             AnyExecutableTool(AskBotTool(orchestrator: orchestrator)),
             AnyExecutableTool(ConfirmCompletionTool(orchestrator: orchestrator)),
+            AnyExecutableTool(VerifyExecutionTool(orchestrator: orchestrator)),
             AnyExecutableTool(SaveReviewSessionTool(orchestrator: orchestrator)),
             AnyExecutableTool(ListReviewSessionsTool(orchestrator: orchestrator)),
             AnyExecutableTool(WeatherTool(orchestrator: orchestrator)),
@@ -112,6 +113,28 @@ final class ToolDispatchEngine {
             }
         }
 
+        // MCP Scoping enforcement: If a Bot defines allowed MCP servers, check dynamic MCP tools
+        if let bot = bot, !bot.allowedMCPServers.isEmpty {
+            if let entry = DynamicToolbox.shared.dynamicTools[name], let serverId = entry.mcpServerId {
+                let matchingServer = MCPManager.shared.servers.first(where: { $0.id == serverId })
+                let serverName = matchingServer?.name ?? ""
+                let serverIdStr = serverId.uuidString
+                let isAllowed = bot.allowedMCPServers.contains { allowed in
+                    allowed.caseInsensitiveCompare(serverName) == .orderedSame ||
+                    allowed.caseInsensitiveCompare(serverIdStr) == .orderedSame
+                }
+                if !isAllowed {
+                    let displayName = serverName.isEmpty ? serverIdStr : serverName
+                    let err = NSError(
+                        domain: "AgentSecurity",
+                        code: 403,
+                        userInfo: [NSLocalizedDescriptionKey: "ERROR: Tool '\(name)' from MCP server '\(displayName)' is not permitted for bot '\(bot.name)' under least-privilege MCP scoping policy. Allowed MCP servers: \(bot.allowedMCPServers.joined(separator: ", "))"]
+                    )
+                    throw err
+                }
+            }
+        }
+
         guard AgentSecurity.isAllowed(name) else {
             throw NSError(
                 domain: "AgentSecurity",
@@ -120,14 +143,18 @@ final class ToolDispatchEngine {
             )
         }
 
-        guard let tool = allTools.first(where: { $0.name == name }) else {
-            throw NSError(
-                domain: "AgentSecurity",
-                code: 404,
-                userInfo: [NSLocalizedDescriptionKey: "Unknown tool: \(name)"]
-            )
+        if let tool = allTools.first(where: { $0.name == name }) {
+            return try await tool.execute(jsonArguments: jsonArguments)
         }
 
-        return try await tool.execute(jsonArguments: jsonArguments)
+        if DynamicToolbox.shared.dynamicTools[name] != nil {
+            return try await DynamicToolbox.shared.executeTool(name: name, jsonArguments: jsonArguments)
+        }
+
+        throw NSError(
+            domain: "AgentSecurity",
+            code: 404,
+            userInfo: [NSLocalizedDescriptionKey: "Unknown tool: \(name)"]
+        )
     }
 }

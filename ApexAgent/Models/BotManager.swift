@@ -142,6 +142,7 @@ final class BotManager {
         self.modelContext = modelContext
         self.orchestrator = orchestrator
         self.computer = computer
+        orchestrator?.botManager = self
         loadBotsFromDisk()
     }
 
@@ -187,7 +188,7 @@ final class BotManager {
     /// raises a pending approval and flags the sender's session for attention;
     /// the caller must not deliver until it resolves to allow.
     func peerDeliveryDecision(from: BotProfile, to: BotProfile, message: String) -> PeerDeliveryDecision {
-        _ = peerApprovals.expireStale()
+        expireStalePeerApprovals()
         let outcome = peerApprovals.requestApproval(
             fromBotId: from.id.uuidString,
             toBotId: to.id.uuidString,
@@ -204,8 +205,8 @@ final class BotManager {
         }
     }
 
-    /// Settle a peer-approval card. With `remember`, a grant is written so the
-    /// same (action, target) pair passes silently next time.
+    /// Settle a peer-approval card. With `remember`, a grant is scoped to this
+    /// sender, action, and target.
     @discardableResult
     func resolvePeerRequest(requestId: String, allow: Bool, remember: Bool = false) -> Bool {
         let request = peerApprovals.pendingRequest(id: requestId)
@@ -217,8 +218,53 @@ final class BotManager {
         if let request, let uuid = UUID(uuidString: request.fromBotId),
            let senderSession = sessions[uuid] {
             senderSession.needsAttention = false
+            guard allowed else {
+                senderSession.appendMessage(ChatMessage(
+                    role: .assistant,
+                    content: "Peer contact with \(bot(byId: UUID(uuidString: request.toBotId) ?? UUID())?.name ?? "a teammate") was denied."
+                ))
+                return false
+            }
+
+            guard let targetId = UUID(uuidString: request.toBotId),
+                  let target = bot(byId: targetId) else {
+                senderSession.appendMessage(ChatMessage(
+                    role: .assistant,
+                    content: "Peer request was approved, but the target bot no longer exists."
+                ))
+                return true
+            }
+            let inbound = SecretRedactor.redact(text: request.message)
+            Task { @MainActor [weak self, weak senderSession] in
+                guard let self, let senderSession else { return }
+                let response = await self.session(for: target).sendMessageAsync(inbound)
+                    ?? "The teammate returned no response."
+                let safeResponse = SecretRedactor.redact(text: response)
+                senderSession.appendMessage(ChatMessage(
+                    role: .assistant,
+                    content: "Reply from \(target.name):\n\(safeResponse)"
+                ))
+            }
         }
         return allowed
+    }
+
+    func expireStalePeerApprovals() {
+        for expired in peerApprovals.expireStale() {
+            guard let senderId = UUID(uuidString: expired.fromBotId),
+                  let senderSession = sessions[senderId] else { continue }
+            senderSession.needsAttention = false
+            let targetName = UUID(uuidString: expired.toBotId)
+                .flatMap { bot(byId: $0) }?.name ?? "a teammate"
+            senderSession.appendMessage(ChatMessage(
+                role: .assistant,
+                content: "Peer request to \(targetName) timed out and was denied."
+            ))
+        }
+    }
+
+    var pendingPeerApprovals: [PendingPeerApproval] {
+        peerApprovals.pendingRequests
     }
 
     // MARK: - Bot CRUD
@@ -256,6 +302,8 @@ final class BotManager {
         copy.isChiefOfStaff = bot.isChiefOfStaff
         copy.modelProviderRaw = bot.modelProviderRaw
         copy.ollamaModelOverride = bot.ollamaModelOverride
+        copy.allowedToolNames = bot.allowedToolNames
+        copy.allowedMCPServers = bot.allowedMCPServers
         saveBot(copy)
         let session = makeSession(for: copy)
         sessions[copy.id] = session

@@ -23,8 +23,8 @@ final class CognitiveMemoryTests: XCTestCase {
 
     override func tearDown() async throws {
         // Clean up test bot memory directory
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let botDir = home.appendingPathComponent(".apex/memory/\(testBotId.uuidString)")
+        let botDir = ApexAgentStoragePaths.directory("memory")
+            .appendingPathComponent(testBotId.uuidString, isDirectory: true)
         try? FileManager.default.removeItem(at: botDir)
         try await super.tearDown()
     }
@@ -85,8 +85,9 @@ final class CognitiveMemoryTests: XCTestCase {
         engine.recordEpisode(entry)
 
         // Verify the file was actually written
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let episodesFile = home.appendingPathComponent(".apex/memory/\(testBotId.uuidString)/episodes.json")
+        let episodesFile = ApexAgentStoragePaths.directory("memory")
+            .appendingPathComponent(testBotId.uuidString, isDirectory: true)
+            .appendingPathComponent("episodes.json")
         XCTAssertTrue(FileManager.default.fileExists(atPath: episodesFile.path),
                       "episodes.json must exist on disk after recording")
 
@@ -379,7 +380,7 @@ final class CognitiveMemoryTests: XCTestCase {
     }
 
     func testMCPManagerAutoSeedsXcodeServers() {
-        let manager = MCPManager.shared
+        let manager = MCPManager(persistsConfigs: false)
         manager.loadConfigs()
         if FileManager.default.fileExists(atPath: "/usr/bin/xcrun") {
             XCTAssertTrue(

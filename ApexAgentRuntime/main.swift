@@ -29,11 +29,22 @@ if let spaceIdx = args.firstIndex(of: "--space-cli") {
     exit(0)
 }
 
-if let cliIndex = args.firstIndex(where: { $0 == "--cli" || $0 == "--prompt" || $0 == "-p" }), cliIndex + 1 < args.count {
-    let prompt = args[cliIndex + 1]
-    await ApexAgentCore.AppDelegate.runCLIMode(prompt: prompt)
+if let cliIndex = args.firstIndex(where: { $0 == "--cli" || $0 == "--prompt" || $0 == "-p" }) {
+    let cliArguments = args.dropFirst(cliIndex + 1)
+    let allowTools = cliArguments.contains("--allow-tools") && !cliArguments.contains("--no-tools")
+    let prompt = cliArguments
+        .filter { $0 != "--allow-tools" && $0 != "--no-tools" }
+        .joined(separator: " ")
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !prompt.isEmpty else {
+        fputs("Usage: ApexAgent --cli [--allow-tools|--no-tools] <prompt>\n", stderr)
+        exit(64)
+    }
+    if !allowTools {
+        setenv("APEX_DISABLE_DYNAMIC_TOOLS", "1", 1)
+    }
+    await ApexAgentCore.AppDelegate.runCLIMode(prompt: prompt, allowTools: allowTools)
     exit(0)
 }
 
 ApexAgentApp.main()
-

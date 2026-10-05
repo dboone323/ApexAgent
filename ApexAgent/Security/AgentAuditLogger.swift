@@ -59,8 +59,7 @@ public actor AgentAuditLogger {
         if let custom = customFileURL {
             self.logFileURL = custom
         } else {
-            let home = FileManager.default.homeDirectoryForCurrentUser
-            let logsDir = home.appendingPathComponent(".apex/logs")
+            let logsDir = ApexAgentStoragePaths.auditLogs
             try? FileManager.default.createDirectory(at: logsDir, withIntermediateDirectories: true)
             self.logFileURL = logsDir.appendingPathComponent("audit.jsonl")
         }

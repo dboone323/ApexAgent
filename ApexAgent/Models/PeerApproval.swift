@@ -15,8 +15,8 @@ enum PeerAction: String, Codable, Sendable {
 }
 
 /// Stable persisted grant for one peer action and one target bot.
-func peerAllowKey(action: PeerAction, targetBotId: String) -> String {
-    "\(action.rawValue):\(targetBotId)"
+func peerAllowKey(action: PeerAction, senderBotId: String, targetBotId: String) -> String {
+    "\(action.rawValue):\(senderBotId):\(targetBotId)"
 }
 
 struct PendingPeerApproval: Identifiable, Equatable, Sendable {
@@ -51,22 +51,22 @@ final class PeerApprovalCoordinator: @unchecked Sendable {
 
     // MARK: Grants ("Always allow")
 
-    func hasGrant(action: PeerAction, targetBotId: String) -> Bool {
+    func hasGrant(action: PeerAction, senderBotId: String, targetBotId: String) -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        return grants.contains(peerAllowKey(action: action, targetBotId: targetBotId))
+        return grants.contains(peerAllowKey(action: action, senderBotId: senderBotId, targetBotId: targetBotId))
     }
 
-    func addGrant(action: PeerAction, targetBotId: String) {
+    func addGrant(action: PeerAction, senderBotId: String, targetBotId: String) {
         lock.lock()
         defer { lock.unlock() }
-        grants.insert(peerAllowKey(action: action, targetBotId: targetBotId))
+        grants.insert(peerAllowKey(action: action, senderBotId: senderBotId, targetBotId: targetBotId))
     }
 
-    func revokeGrant(action: PeerAction, targetBotId: String) {
+    func revokeGrant(action: PeerAction, senderBotId: String, targetBotId: String) {
         lock.lock()
         defer { lock.unlock() }
-        grants.remove(peerAllowKey(action: action, targetBotId: targetBotId))
+        grants.remove(peerAllowKey(action: action, senderBotId: senderBotId, targetBotId: targetBotId))
     }
 
     func grantKeys() -> [String] {
@@ -78,7 +78,7 @@ final class PeerApprovalCoordinator: @unchecked Sendable {
     // MARK: Request lifecycle
 
     /// Ask whether `from` may `action` `to`. If an always-allow grant already
-    /// covers the (action, target) pair this returns immediately; otherwise a
+    /// covers the (action, sender, target) tuple this returns immediately; otherwise a
     /// pending card is raised.
     func requestApproval(
         fromBotId: String,
@@ -87,7 +87,7 @@ final class PeerApprovalCoordinator: @unchecked Sendable {
         message: String,
         now: Date = Date()
     ) -> PeerRequestOutcome {
-        if hasGrant(action: action, targetBotId: toBotId) {
+        if hasGrant(action: action, senderBotId: fromBotId, targetBotId: toBotId) {
             return .allowedByExistingGrant
         }
         lock.lock()
@@ -110,7 +110,11 @@ final class PeerApprovalCoordinator: @unchecked Sendable {
         defer { lock.unlock() }
         guard let request = pending.removeValue(forKey: requestId) else { return .unknownRequest }
         if allow && rememberGrant {
-            grants.insert(peerAllowKey(action: request.action, targetBotId: request.toBotId))
+            grants.insert(peerAllowKey(
+                action: request.action,
+                senderBotId: request.fromBotId,
+                targetBotId: request.toBotId
+            ))
         }
         return .resolved(allowed: allow)
     }
@@ -131,6 +135,12 @@ final class PeerApprovalCoordinator: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         return pending.count
+    }
+
+    var pendingRequests: [PendingPeerApproval] {
+        lock.lock()
+        defer { lock.unlock() }
+        return pending.values.sorted { $0.createdAt < $1.createdAt }
     }
 
     func pendingRequest(id: String) -> PendingPeerApproval? {

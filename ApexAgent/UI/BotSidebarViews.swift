@@ -347,6 +347,7 @@ struct BotSidebarItem: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("botSidebarItem_\(bot.name)")
         .onHover { isHovered = $0 }
         .contextMenu {
             Button(bot.isPinned ? "Unpin Bot" : "Pin Bot") {

@@ -29,7 +29,7 @@ struct MCPResilienceTests {
     }
 
     @Test func testManagerResetClientCircuitForwardsToClient() async {
-        let manager = MCPManager.shared
+        let manager = MCPManager(persistsConfigs: false)
         let orchestrator = AgentOrchestrator()
         manager.orchestrator = orchestrator
 

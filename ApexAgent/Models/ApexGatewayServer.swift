@@ -15,11 +15,17 @@ public final class ApexGatewayServer {
     /// Keychain account for the pre-shared gateway token (C2).
     nonisolated static let gatewayTokenKeychainKey = "apex.gatewayToken"
     
+    private let authenticationToken: String
     private var lastTerminalMessageId: UUID?
     
-    public init(port: UInt16 = 1337, orchestrator: AgentOrchestrator) {
+    public convenience init(port: UInt16 = 1337, orchestrator: AgentOrchestrator) {
+        self.init(port: port, orchestrator: orchestrator, authenticationToken: Self.gatewayToken())
+    }
+
+    init(port: UInt16, orchestrator: AgentOrchestrator, authenticationToken: String) {
         self.port = port
         self.orchestrator = orchestrator
+        self.authenticationToken = authenticationToken
         
         // Wire the orchestrator state change callback
         orchestrator.onStateChanged = { [weak self] in
@@ -222,7 +228,7 @@ public final class ApexGatewayServer {
     private func handleClientAction(_ action: GatewayAction, connectionId: UUID) async {
         // C2: no client action is honored until the pre-shared token is presented.
         if case .authenticate(let token) = action {
-            if !token.isEmpty, token == Self.gatewayToken() {
+            if !token.isEmpty, token == authenticationToken {
                 authenticatedConnections.insert(connectionId)
                 print("📡 [ApexGatewayServer] Client \(connectionId) authenticated.")
                 // Send initial state only to the newly authenticated client, not all.

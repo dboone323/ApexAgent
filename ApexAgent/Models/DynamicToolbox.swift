@@ -1,5 +1,40 @@
 import Foundation
 
+enum ApexAgentStoragePaths {
+    private static var root: URL {
+        if KeychainManager.isTestProcess {
+            return FileManager.default.temporaryDirectory
+                .appendingPathComponent("ApexAgent-TestData-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
+                .appendingPathComponent(".apex", isDirectory: true)
+        }
+        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex", isDirectory: true)
+    }
+
+    static var apex: URL { root }
+
+    static func directory(_ name: String) -> URL {
+        root.appendingPathComponent(name, isDirectory: true)
+    }
+
+    static var auditLogs: URL { directory("logs") }
+    static var collaborationLogs: URL {
+        KeychainManager.isTestProcess
+            ? auditLogs
+            : FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Logs/ApexAgent", isDirectory: true)
+    }
+
+    static var tools: URL { directory("tools") }
+    static var skills: URL { directory("skills") }
+    static var scriptDirectories: [URL] { [tools, skills] }
+
+    static func skillScriptReference(for name: String) -> String {
+        KeychainManager.isTestProcess
+            ? skills.appendingPathComponent("\(name).sh").path
+            : "~/.apex/skills/\(name).sh"
+    }
+}
+
 @MainActor
 class DynamicToolbox {
     static let shared = DynamicToolbox()
@@ -22,11 +57,16 @@ class DynamicToolbox {
 
     func loadTools() {
         dynamicTools.removeAll()
+        loadMCPToolsTask?.cancel()
+        loadMCPToolsTask = nil
+        if ProcessInfo.processInfo.environment["APEX_DISABLE_DYNAMIC_TOOLS"] == "1" {
+            print("Dynamic tool loading is disabled for this process.")
+            return
+        }
 
         let fileManager = FileManager.default
-        let homeDir = fileManager.homeDirectoryForCurrentUser
-        let toolsDir = homeDir.appendingPathComponent(".apex/tools")
-        let skillsDir = homeDir.appendingPathComponent(".apex/skills")
+        let toolsDir = ApexAgentStoragePaths.tools
+        let skillsDir = ApexAgentStoragePaths.skills
 
         // Ensure directories exist
         for dir in [toolsDir, skillsDir] {
@@ -44,7 +84,6 @@ class DynamicToolbox {
         // 3. Load MCP tools asynchronously (skipped in test mode and in CLI mode when
         // the prompt does not require external MCP servers, preventing duplicate server
         // startup and 96-schema token bloat on standard CLI invocations)
-        loadMCPToolsTask?.cancel()
         let isTesting = getenv("APEX_TEST_MODE") != nil
             || ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest")
             || NSClassFromString("XCTestCase") != nil
@@ -160,8 +199,7 @@ class DynamicToolbox {
         stopWatcher()
 
         let fileManager = FileManager.default
-        let homeDir = fileManager.homeDirectoryForCurrentUser
-        let toolsDir = homeDir.appendingPathComponent(".apex/tools")
+        let toolsDir = ApexAgentStoragePaths.tools
 
         if !fileManager.fileExists(atPath: toolsDir.path) {
             try? fileManager.createDirectory(at: toolsDir, withIntermediateDirectories: true, attributes: nil)
@@ -178,7 +216,7 @@ class DynamicToolbox {
 
         source.setEventHandler { [weak self] in
             guard let self = self else { return }
-            print("Directory watcher triggered for ~/.apex/tools - reloading dynamic tools.")
+            print("Dynamic tool directory changed; reloading dynamic tools.")
             self.loadTools()
         }
 
@@ -259,7 +297,7 @@ class DynamicToolbox {
         }
 
         // H3: Route through the hardened executeDynamicScript executor which:
-        // 1. Validates scriptPath lives under ~/.apex/tools or ~/.apex/skills
+        // 1. Validates scriptPath lives under the configured dynamic tool directories
         // 2. Resolves symlinks to prevent escapes
         // 3. Executes directly (no shell -c interpolation → no injection)
         // 4. Enforces a 60-second kill deadline
@@ -383,6 +421,27 @@ class DynamicToolbox {
             return value is [String: Any]
         default:
             return true
+        }
+    }
+
+    /// Returns dynamic tool names permitted for the given bot profile under least-privilege MCP scoping.
+    /// If bot.allowedMCPServers is empty, all dynamic tools are permitted.
+    func allowedDynamicToolNames(for bot: BotProfile) -> [String] {
+        if bot.allowedMCPServers.isEmpty {
+            return Array(dynamicTools.keys)
+        }
+        return dynamicTools.compactMap { (name, entry) in
+            guard let serverId = entry.mcpServerId else {
+                return name
+            }
+            let server = MCPManager.shared.servers.first(where: { $0.id == serverId })
+            let serverName = server?.name ?? ""
+            let serverIdStr = serverId.uuidString
+            let isAllowed = bot.allowedMCPServers.contains { allowed in
+                allowed.caseInsensitiveCompare(serverName) == .orderedSame ||
+                allowed.caseInsensitiveCompare(serverIdStr) == .orderedSame
+            }
+            return isAllowed ? name : nil
         }
     }
 

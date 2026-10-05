@@ -260,8 +260,7 @@ class PTYSession: @unchecked Sendable {
         
         if isRestricted {
             let fm = FileManager.default
-            let homeDir = fm.homeDirectoryForCurrentUser
-            let sandboxDir = homeDir.appendingPathComponent(".apex/sandbox")
+            let sandboxDir = ApexAgentStoragePaths.directory("sandbox")
             try? fm.createDirectory(at: sandboxDir, withIntermediateDirectories: true)
             let zshrc = sandboxDir.appendingPathComponent(".zshrc")
             if !fm.fileExists(atPath: zshrc.path) {

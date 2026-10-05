@@ -48,6 +48,7 @@ public enum ModelProvider: String, CaseIterable, Identifiable, Codable, Sendable
 
     public static func parse(_ string: String) -> ModelProvider? {
         let lower = string.lowercased()
+        if lower.contains("applefoundation") || lower.contains("foundationmodels") { return .appleOnDevice }
         if lower.contains("auto") { return .autoPicker }
         if lower.contains("ondevice") || lower.contains("on-device") || lower.contains("system") || (lower.contains("local") && !lower.contains("ollama") && !lower.contains("mlx")) { return .appleOnDevice }
         if lower.contains("pcc") || lower.contains("privatecloud") { return .applePCC }
@@ -124,6 +125,56 @@ public struct ModelRegistry: Sendable {
     public static let mlxHostKey = "apex.mlxHostURL"
     public static let mlxModelKey = "apex.mlxModel"
 
+    private static let migrateLegacyGeminiCredentials: Void = {
+        guard !KeychainManager.isTestProcess else { return }
+        let defaults = UserDefaults.standard
+        let legacyDefaultsKeys = [geminiAPIKeyKey, "apex.geminiKey", "geminiAPIKey"]
+        let legacyFile = ApexAgentStoragePaths.apex.appendingPathComponent("gemini_key")
+
+        if let key = KeychainManager.get(key: "geminiAPIKey"), !key.isEmpty {
+            for key in legacyDefaultsKeys { defaults.removeObject(forKey: key) }
+            removeLegacyGeminiFile(legacyFile)
+            return
+        }
+
+        if let oldKey = KeychainManager.get(key: "apex.geminiKey"), !oldKey.isEmpty {
+            guard KeychainManager.save(key: "geminiAPIKey", value: oldKey) else {
+                print("Gemini API key migration from Keychain failed; legacy entry was retained.")
+                return
+            }
+            _ = KeychainManager.delete(key: "apex.geminiKey")
+            for key in legacyDefaultsKeys { defaults.removeObject(forKey: key) }
+            removeLegacyGeminiFile(legacyFile)
+            return
+        }
+
+        if let legacyKey = legacyDefaultsKeys
+            .compactMap({ defaults.string(forKey: $0) })
+            .first(where: { !$0.isEmpty }) {
+            guard KeychainManager.save(key: "geminiAPIKey", value: legacyKey) else {
+                print("Gemini API key migration from UserDefaults failed; legacy entry was retained.")
+                return
+            }
+            for key in legacyDefaultsKeys { defaults.removeObject(forKey: key) }
+            removeLegacyGeminiFile(legacyFile)
+            return
+        }
+
+        guard KeychainManager.migrateLegacyFile(at: legacyFile, toKey: "geminiAPIKey") else {
+            print("Gemini API key migration from ~/.apex/gemini_key failed; legacy file was retained.")
+            return
+        }
+    }()
+
+    private static func removeLegacyGeminiFile(_ url: URL) {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        do {
+            try FileManager.default.removeItem(at: url)
+        } catch {
+            print("Could not remove legacy Gemini key file: \(error.localizedDescription)")
+        }
+    }
+
     // Workload-specific default Ollama models
     public static let defaultFastOllamaModel = "gemma4:12b"
     public static let defaultCodingOllamaModel = "qwen2.5-coder:7b"
@@ -195,25 +246,34 @@ public struct ModelRegistry: Sendable {
         UserDefaults.standard.set(tier.rawValue, forKey: privacyTierKey)
     }
 
-    /// Retrieve the Gemini API key from Keychain, falling back to UserDefaults or environment variable.
+    /// Retrieve the Gemini API key from Keychain, migrating legacy storage once.
     public static func geminiAPIKey() -> String {
+        _ = migrateLegacyGeminiCredentials
         if let key = KeychainManager.get(key: "geminiAPIKey"), !key.isEmpty {
-            return key
-        }
-        if let key = UserDefaults.standard.string(forKey: geminiAPIKeyKey), !key.isEmpty {
             return key
         }
         return ProcessInfo.processInfo.environment["GEMINI_API_KEY"] ?? ""
     }
 
     /// Sets the Gemini API key.
-    public static func setGeminiAPIKey(_ key: String) {
-        KeychainManager.save(key: "geminiAPIKey", value: key)
-        UserDefaults.standard.set(key, forKey: geminiAPIKeyKey)
+    @discardableResult
+    public static func setGeminiAPIKey(_ key: String) -> Bool {
+        _ = migrateLegacyGeminiCredentials
+        let succeeded = KeychainManager.save(key: "geminiAPIKey", value: key)
+        guard succeeded else {
+            print("Gemini API key was not saved to Keychain.")
+            return false
+        }
+        let defaults = UserDefaults.standard
+        defaults.removeObject(forKey: geminiAPIKeyKey)
+        defaults.removeObject(forKey: "apex.geminiKey")
+        defaults.removeObject(forKey: "geminiAPIKey")
+        return true
     }
 
     /// Sets the Gemini API key (alias for setGeminiAPIKey).
-    public static func saveGeminiAPIKey(_ key: String) {
+    @discardableResult
+    public static func saveGeminiAPIKey(_ key: String) -> Bool {
         setGeminiAPIKey(key)
     }
 

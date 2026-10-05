@@ -28,6 +28,66 @@ final class RoutineManager: Observable {
     /// All persisted routines, refreshed from disk on demand.
     var routines: [Routine] = []
 
+    // MARK: - Durable Automation Receipts
+
+    var recentRuns: [RoutineRun] = []
+    private static let maxRunsRetained = 200
+    private static var runsFileURL: URL {
+        ApexAgentStoragePaths.directory("routine_runs").appendingPathComponent("runs.json")
+    }
+
+    init() {
+        loadRuns()
+    }
+
+    func loadRuns() {
+        let file = Self.runsFileURL
+        guard FileManager.default.fileExists(atPath: file.path) else { return }
+        do {
+            let data = try Data(contentsOf: file)
+            let decoded = try JSONDecoder().decode([RoutineRun].self, from: data)
+            recentRuns = decoded
+        } catch {
+            print("⚠️ [RoutineManager] Failed to load routine runs: \(error)")
+        }
+    }
+
+    func saveRuns() {
+        let file = Self.runsFileURL
+        let dir = file.deletingLastPathComponent()
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        do {
+            let data = try JSONEncoder().encode(recentRuns)
+            try data.write(to: file, options: [.atomic])
+        } catch {
+            print("⚠️ [RoutineManager] Failed to save routine runs: \(error)")
+        }
+    }
+
+    func recordRun(_ run: RoutineRun) {
+        if let idx = recentRuns.firstIndex(where: { $0.id == run.id }) {
+            recentRuns[idx] = run
+        } else {
+            recentRuns.insert(run, at: 0)
+            if recentRuns.count > Self.maxRunsRetained {
+                recentRuns.removeLast(recentRuns.count - Self.maxRunsRetained)
+            }
+        }
+        saveRuns()
+    }
+
+    func clearRuns() {
+        recentRuns.removeAll()
+        saveRuns()
+    }
+
+    func runReceipts(for routineId: UUID? = nil) -> [RoutineRun] {
+        if let routineId {
+            return recentRuns.filter { $0.routineId == routineId }
+        }
+        return recentRuns
+    }
+
     // MARK: - Timer scheduler for time-interval and cron routines
 
     /// The backing timer used by `startScheduledRoutines` / `stopScheduledRoutines`.
@@ -84,6 +144,18 @@ final class RoutineManager: Observable {
     func execute(_ routine: Routine) async -> String? {
         guard let botManager = botManager else {
             print("⚠️ [RoutineManager] No BotManager — cannot execute routine '\(routine.name)'")
+            let failedRun = RoutineRun(
+                routineId: routine.stableUUID,
+                routineName: routine.name,
+                prompt: routine.descriptionText,
+                trigger: routine.trigger,
+                status: .failed,
+                startedAt: Date(),
+                finishedAt: Date(),
+                output: nil,
+                error: "BotManager unavailable"
+            )
+            recordRun(failedRun)
             return nil
         }
 
@@ -105,10 +177,47 @@ final class RoutineManager: Observable {
             prompt = routine.descriptionText
         }
 
-        guard !prompt.isEmpty else { return nil }
+        guard !prompt.isEmpty else {
+            let failedRun = RoutineRun(
+                routineId: routine.stableUUID,
+                routineName: routine.name,
+                prompt: "",
+                botId: targetBot.id,
+                trigger: routine.trigger,
+                status: .failed,
+                startedAt: Date(),
+                finishedAt: Date(),
+                output: nil,
+                error: "Routine prompt is empty"
+            )
+            recordRun(failedRun)
+            return nil
+        }
+
+        var run = RoutineRun(
+            routineId: routine.stableUUID,
+            routineName: routine.name,
+            prompt: prompt,
+            botId: targetBot.id,
+            trigger: routine.trigger,
+            status: .running,
+            startedAt: Date()
+        )
+        recordRun(run)
 
         let session = botManager.session(for: targetBot)
         let response = await session.sendMessageAsync(prompt)
+
+        run.finishedAt = Date()
+        if let response = response {
+            run.status = .completed
+            run.output = response
+        } else {
+            run.status = .failed
+            run.error = "Bot execution returned no response or timed out."
+        }
+        recordRun(run)
+
         return response
     }
 

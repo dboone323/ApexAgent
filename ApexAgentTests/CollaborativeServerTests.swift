@@ -133,8 +133,7 @@ struct CollaborativeServerTests {
     }
 
     private func readLastLogLine() throws -> String {
-        let logsDir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Logs/ApexAgent")
+        let logsDir = ApexAgentStoragePaths.collaborationLogs
         let logFileURL = logsDir.appendingPathComponent("collab-access.log")
         guard FileManager.default.fileExists(atPath: logFileURL.path) else { return "" }
         let content = try String(contentsOf: logFileURL, encoding: .utf8)

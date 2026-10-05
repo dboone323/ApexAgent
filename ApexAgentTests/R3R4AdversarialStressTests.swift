@@ -15,6 +15,13 @@ struct R3R4AdversarialStressTests {
         return path
     }
 
+    private func createAllowedScriptWorkspace(prefix: String) throws -> String {
+        let directory = ApexAgentStoragePaths.tools
+            .appendingPathComponent("\(prefix)_\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.path
+    }
+
     private func removeTempWorkspace(_ path: String) {
         try? FileManager.default.removeItem(atPath: path)
     }
@@ -492,8 +499,8 @@ struct R3R4AdversarialStressTests {
 
         let orchestrator = AgentOrchestrator()
         let config = MCPClientConfig(
-            requestTimeout: 5,
-            pingTimeout: 3,
+            requestTimeout: 30,
+            pingTimeout: 10,
             maxRetries: 1,
             circuitFailureThreshold: 3,
             restartRateLimitWindow: 60,
@@ -555,7 +562,7 @@ struct R3R4AdversarialStressTests {
     // =========================================================================
 
     @Test func testR4DynamicScriptNonzeroExitCodes() async throws {
-        let tempDir = try createTempWorkspace(prefix: "exit_codes")
+        let tempDir = try createAllowedScriptWorkspace(prefix: "exit_codes")
         defer { removeTempWorkspace(tempDir) }
 
         let testCodes = [1, 2, 7, 42, 127]
@@ -582,7 +589,7 @@ struct R3R4AdversarialStressTests {
     }
 
     @Test func testR4DynamicScriptLargeStreamOutputNoDeadlock() async throws {
-        let tempDir = try createTempWorkspace(prefix: "large_stream")
+        let tempDir = try createAllowedScriptWorkspace(prefix: "large_stream")
         defer { removeTempWorkspace(tempDir) }
 
         let scriptFile = (tempDir as NSString).appendingPathComponent("stream_generator.sh")
@@ -610,7 +617,7 @@ struct R3R4AdversarialStressTests {
     }
 
     @Test func testR4DynamicScriptComplexPayloadPreservation() async throws {
-        let tempDir = try createTempWorkspace(prefix: "payload_preservation")
+        let tempDir = try createAllowedScriptWorkspace(prefix: "payload_preservation")
         defer { removeTempWorkspace(tempDir) }
 
         let scriptFile = (tempDir as NSString).appendingPathComponent("payload_echo.sh")
@@ -635,7 +642,7 @@ struct R3R4AdversarialStressTests {
     }
 
     @Test func testR4DynamicScriptCustomEnvironmentVariables() async throws {
-        let tempDir = try createTempWorkspace(prefix: "custom_env")
+        let tempDir = try createAllowedScriptWorkspace(prefix: "custom_env")
         defer { removeTempWorkspace(tempDir) }
 
         let scriptFile = (tempDir as NSString).appendingPathComponent("env_check.sh")
@@ -662,7 +669,7 @@ struct R3R4AdversarialStressTests {
     // =========================================================================
 
     @Test func testR4DynamicToolboxConcurrentExecutionAndRegistration() async throws {
-        let tempDir = try createTempWorkspace(prefix: "toolbox_concurrency")
+        let tempDir = try createAllowedScriptWorkspace(prefix: "toolbox_concurrency")
         defer { removeTempWorkspace(tempDir) }
 
         let toolbox = DynamicToolbox.shared

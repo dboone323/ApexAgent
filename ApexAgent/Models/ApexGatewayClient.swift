@@ -25,8 +25,11 @@ final class ApexGatewayClient {
     /// attempts instead of logging "Connection refused" every 30s forever.
     private var refusedAttempts = 0
     private let maxRefusedAttempts = 3
+    private let gatewayTokenOverride: String?
     
-    init() {}
+    init(gatewayToken: String? = nil) {
+        self.gatewayTokenOverride = gatewayToken
+    }
     
     /// Quickly checks if a gateway server is listening before opening a full NWConnection,
     /// avoiding noisy Network.framework ECONNREFUSED logs when running standalone.
@@ -93,7 +96,9 @@ final class ApexGatewayClient {
 
         // C2: present the pre-shared gateway token immediately — the server
         // honors no action from an unauthenticated connection.
-        if let token = KeychainManager.get(key: ApexGatewayServer.gatewayTokenKeychainKey), !token.isEmpty {
+        if let token = gatewayTokenOverride
+            ?? KeychainManager.get(key: ApexGatewayServer.gatewayTokenKeychainKey),
+           !token.isEmpty {
             sendAction(.authenticate(token: token))
         }
         

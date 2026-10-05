@@ -55,6 +55,7 @@ struct SettingsView: View {
     @State private var braveAPIKey: String = ""
     @State private var tavilyAPIKey: String = ""
     @State private var geminiAPIKey: String = ""
+    @State private var geminiSaveStatus = ""
     @State private var geminiModel: String = "gemini-3.5-flash"
     @State private var autoTieringStrategy: AutoTieringStrategy = .balanced
     @State private var ollamaHostURL: String = "http://localhost:11434"
@@ -150,6 +151,7 @@ struct SettingsView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
+                        .accessibilityIdentifier("settingsDoneButton")
                 }
             }
             .onAppear {
@@ -280,13 +282,23 @@ struct SettingsView: View {
                     geminiSaveTask = Task {
                         try? await Task.sleep(for: .seconds(0.5))
                         guard !Task.isCancelled else { return }
-                        ModelRegistry.saveGeminiAPIKey(geminiAPIKey)
+                        geminiSaveStatus = ModelRegistry.saveGeminiAPIKey(geminiAPIKey)
+                            ? "Gemini API key saved to Keychain."
+                            : "Gemini API key could not be saved to Keychain."
                     }
                 }
                 .onSubmit {
                     geminiSaveTask?.cancel()
-                    ModelRegistry.saveGeminiAPIKey(geminiAPIKey)
+                    geminiSaveStatus = ModelRegistry.saveGeminiAPIKey(geminiAPIKey)
+                        ? "Gemini API key saved to Keychain."
+                        : "Gemini API key could not be saved to Keychain."
                 }
+            if !geminiSaveStatus.isEmpty {
+                Text(geminiSaveStatus)
+                    .font(.caption)
+                    .foregroundStyle(geminiSaveStatus.contains("could not") ? .red : .secondary)
+                    .accessibilityIdentifier("geminiKeySaveStatus")
+            }
 
             TextField("Gemini Model Name", text: $geminiModel)
                 .font(AppTheme.Font.mono(13))
@@ -300,7 +312,7 @@ struct SettingsView: View {
                 Image(systemName: "info.circle")
                     .font(.system(size: 11))
                     .foregroundStyle(AppTheme.Palette.textTertiary)
-                Text("API Keys are saved securely in Keychain and persistent configuration.")
+                Text("API keys are stored in the macOS Keychain.")
                     .font(AppTheme.Font.caption(11))
                     .foregroundStyle(AppTheme.Palette.textSecondary)
             }
@@ -905,8 +917,7 @@ struct CollaborativeServerSettingsSection: View {
 
     private func openAccessAuditLog() {
         let fm = FileManager.default
-        let homeDir = fm.homeDirectoryForCurrentUser
-        let logFileURL = homeDir.appendingPathComponent("Library/Logs/ApexAgent/collab-access.log")
+        let logFileURL = ApexAgentStoragePaths.collaborationLogs.appendingPathComponent("collab-access.log")
         if fm.fileExists(atPath: logFileURL.path) {
             NSWorkspace.shared.open(logFileURL)
         }
@@ -1135,8 +1146,7 @@ struct CognitiveMemorySettingsSection: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button("Open Folder") {
-                    let home = FileManager.default.homeDirectoryForCurrentUser
-                    let url = home.appendingPathComponent(".apex/memory", isDirectory: true)
+                    let url = ApexAgentStoragePaths.directory("memory")
                     if !FileManager.default.fileExists(atPath: url.path) {
                         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
                     }

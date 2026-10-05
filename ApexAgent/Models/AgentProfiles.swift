@@ -281,6 +281,9 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
             if allowedTools.contains("confirm_completion") {
                 ConfirmCompletionTool(orchestrator: orchestrator)
             }
+            if allowedTools.contains("verify_execution") {
+                VerifyExecutionTool(orchestrator: orchestrator)
+            }
             if allowedTools.contains("save_review_session") {
                 SaveReviewSessionTool(orchestrator: orchestrator)
             }

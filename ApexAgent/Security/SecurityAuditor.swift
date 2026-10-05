@@ -146,10 +146,8 @@ final class SecurityAuditor {
             || standardized == "/private/tmp" || standardized.hasPrefix("/private/tmp/")
         let isInTemp = standardized == resolvedTemp || standardized.hasPrefix(resolvedTemp + "/") || isSystemTmp
 
-        let skillsDir = (homeDir as NSString).appendingPathComponent(".apex/skills")
-        let resolvedSkills = URL(fileURLWithPath: skillsDir).resolvingSymlinksInPath().path
-        let dotApexDir = (homeDir as NSString).appendingPathComponent(".apex")
-        let resolvedDotApex = URL(fileURLWithPath: dotApexDir).resolvingSymlinksInPath().path
+        let resolvedSkills = ApexAgentStoragePaths.skills.resolvingSymlinksInPath().path
+        let resolvedDotApex = ApexAgentStoragePaths.apex.resolvingSymlinksInPath().path
         let apexDir = (homeDir as NSString).appendingPathComponent("apex")
         let resolvedApex = URL(fileURLWithPath: apexDir).resolvingSymlinksInPath().path
         let userTmpDir = (homeDir as NSString).appendingPathComponent("tmp")

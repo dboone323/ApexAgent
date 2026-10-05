@@ -144,8 +144,7 @@ final class ReflectionManager {
 
             // Save JSON to ~/.apex/skills/
             let fileManager = FileManager.default
-            let homeDir = fileManager.homeDirectoryForCurrentUser
-            let skillsDir = homeDir.appendingPathComponent(".apex/skills")
+            let skillsDir = ApexAgentStoragePaths.skills
             try? fileManager.createDirectory(at: skillsDir, withIntermediateDirectories: true)
 
             let sanitizedName = skillName.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)

@@ -148,12 +148,57 @@ public struct ProviderCandidate: Sendable {
     }
 }
 
+/// Tools that hand work to *another* agent. When a bot is explicitly
+/// @mentioned by a human it owns the turn, so these are withheld — otherwise
+/// the model delegates the task back instead of doing it (see
+/// `AgentRequestRouter.resolveEffectiveAllowedTools`).
+public enum AgentRuntimeCoordination {
+    public static let delegationTools: Set<String> = [
+        "delegate_task", "convene_meeting", "dispatch_swarm", "ask_bot"
+    ]
+}
+
+/// Shared contract for reporting state-changing agent actions.
+public enum AgentExecutionVerification {
+    public static let directive = """
+    === EXECUTION VERIFICATION ===
+    A command proposal, code snippet, user approval, or successful process exit is not proof that the requested outcome occurred. For action requests, use an available tool to perform the work; after a successful state-changing action, use a separate read-only check of the exact requested end state before claiming completion. Do not rerun a mutating action just to verify it. A read-only check does not need another verification pass. If no suitable action or verification tool is available, or the check does not confirm the outcome, say clearly that the work was not completed or remains unverified. Never invent tool names, APIs, or results.
+    """
+
+    public static func applyingDirective(to instructions: String) -> String {
+        guard !instructions.contains(directive) else { return instructions }
+        let trimmed = instructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return directive }
+        return trimmed + "\n\n" + directive
+    }
+
+    public static func applyingToolResultGuidance(toolName: String, result: String) -> String {
+        guard toolName == "run_shell_command", !result.hasPrefix("ERROR:") else { return result }
+        return result + """
+
+
+        [POST-EXECUTION CHECK REQUIRED: If this command performed the requested state change or action, inspect the exact resulting state with a separate read-only tool before reporting success. Do not treat approval, command output, or exit status alone as proof.]
+        """
+    }
+}
+
 /// Canonical request model dispatched to the AgentRequestRouter.
 public struct AgentRequest: Sendable {
     public let id: UUID
     public let conversationId: UUID
     public let senderIdentity: AgentIdentity
+    /// The full text handed to the model. May be a synthesized transcript
+    /// scaffold (Spaces, group chat) rather than the raw user utterance.
     public let prompt: String
+    /// The raw user utterance used for *intent gating only* — tool on/off
+    /// selection. Defaults to `prompt`. Callers that build a transcript must
+    /// set this to the originating message so the scaffold's own vocabulary
+    /// ("delegate", "meeting", teammate names) cannot fake tool intent.
+    public let intentText: String
+    /// True when a human explicitly @mentioned this agent's handle, making it
+    /// directly responsible for the turn. Suppresses delegation tools and
+    /// injects a direct-address directive.
+    public let isDirectMention: Bool
     public let attachments: [NSImage]
     public let toolCallingMode: AgentToolCallingMode
     public let contextBudget: Int?
@@ -164,6 +209,8 @@ public struct AgentRequest: Sendable {
         conversationId: UUID = UUID(),
         senderIdentity: AgentIdentity = .orchestrator,
         prompt: String,
+        intentText: String? = nil,
+        isDirectMention: Bool = false,
         attachments: [NSImage] = [],
         toolCallingMode: AgentToolCallingMode = .auto,
         contextBudget: Int? = nil,
@@ -173,11 +220,24 @@ public struct AgentRequest: Sendable {
         self.conversationId = conversationId
         self.senderIdentity = senderIdentity
         self.prompt = prompt
+        self.intentText = intentText ?? prompt
+        self.isDirectMention = isDirectMention
         self.attachments = attachments
         self.toolCallingMode = toolCallingMode
         self.contextBudget = contextBudget
         self.metadata = metadata
     }
+
+    /// Appended to system instructions when `isDirectMention` is set so the
+    /// agent executes rather than routing the task to a teammate.
+    public static let directAddressDirective = """
+    === DIRECT ADDRESS ===
+    A human explicitly @mentioned you, so this turn is yours. Answer it yourself \
+    using your own tools and reasoning. Do NOT hand the task back to the user, and do NOT \
+    delegate, defer, or tag another agent — delegation tools are withheld for this turn. \
+    If the request needs no action, simply answer. Otherwise, do the work and report \
+    the concrete result.
+    """
 }
 
 /// Classification of runtime errors to determine fallback eligibility and retry strategy.

@@ -9,7 +9,7 @@ import SwiftData
 /// delete actions.
 struct SkillsSection: View {
     /// The skill manager that bridges the SwiftData store and the toolbox.
-    @Environment(SkillManager.self) private var managerskills: SkillManager
+    @Environment(\.skillManager) private var managerskills
 
     /// View-model mirror of the currently-persisted skills (refreshed by the
     /// manager on every run).

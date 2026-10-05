@@ -22,6 +22,18 @@ private final class FallbackStorage: Sendable {
 struct KeychainManager {
     static let serviceName = "com.apexagent.ApexAgent"
 
+    static var isTestProcess: Bool {
+        getenv("APEX_TEST_MODE") != nil
+            || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("test")
+            || NSClassFromString("XCTestCase") != nil
+    }
+
+    static var activeServiceName: String {
+        guard isTestProcess else { return serviceName }
+        return "\(serviceName).test.\(ProcessInfo.processInfo.processIdentifier)"
+    }
+
     /// One-time migration of legacy plaintext "secure.*" UserDefaults values
     /// (C1): moves each into the Keychain and deletes the plaintext copy.
     /// Runs lazily on first save/get/delete.
@@ -40,7 +52,28 @@ struct KeychainManager {
     }()
 
     private static func runLegacyMigration() {
+        guard !isTestProcess else { return }
         _ = migrateLegacySecureDefaults
+    }
+
+    @discardableResult
+    static func migrateLegacyFile(at url: URL, toKey key: String) -> Bool {
+        guard FileManager.default.fileExists(atPath: url.path) else { return true }
+
+        do {
+            let value = try String(contentsOf: url, encoding: .utf8)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !value.isEmpty else {
+                try FileManager.default.removeItem(at: url)
+                return true
+            }
+            guard save(key: key, value: value) else { return false }
+            try FileManager.default.removeItem(at: url)
+            return true
+        } catch {
+            print("Keychain migration failed for legacy file \(url.lastPathComponent): \(error.localizedDescription)")
+            return false
+        }
     }
 
     /// Writes a value to the Keychain (delete-then-add, with a legacy
@@ -51,7 +84,7 @@ struct KeychainManager {
 
         var deleteQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: serviceName,
+            kSecAttrService as String: activeServiceName,
             kSecAttrAccount as String: key
         ]
         SecItemDelete(deleteQuery as CFDictionary)
@@ -60,7 +93,7 @@ struct KeychainManager {
 
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: serviceName,
+            kSecAttrService as String: activeServiceName,
             kSecAttrAccount as String: key,
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
@@ -74,56 +107,10 @@ struct KeychainManager {
         return legacyStatus == errSecSuccess
     }
     
-    /// Securely deletes a file at the given URL by overwriting it with random data
-    /// before removing it. This prevents file recovery tools from recovering
-    /// sensitive plaintext credentials (e.g., legacy Gemini API keys stored in
-    /// `~/.apex/gemini_key`).
-    ///
-    /// Uses a single-pass random overwrite followed by `removeItem`, which is
-    /// sufficient for SSDs (where multi-pass overwrite is unreliable due to
-    /// wear-leveling and TRIM). For HDDs, consider increasing `passes`.
-    ///
-    /// - Parameters:
-    ///   - url: The file URL to securely delete.
-    ///   - passes: Number of overwrite passes (default: 1, suitable for SSDs).
-    /// - Returns: `true` if the file was securely deleted, `false` otherwise.
-    static func secureDeleteFile(at url: URL, passes: Int = 1) -> Bool {
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            return true // Nothing to delete
-        }
-        
-        do {
-            let fileSize = try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int ?? 0
-            guard fileSize > 0 else {
-                // Empty file — just remove it
-                try FileManager.default.removeItem(at: url)
-                return true
-            }
-            
-            // Overwrite with cryptographically secure random data
-            let randomData = Data((0..<fileSize).map { _ in UInt8.random(in: 0...255) })
-            try randomData.write(to: url, options: .atomic)
-            
-            // Additional passes if requested (mainly for HDD compatibility)
-            for _ in 1..<passes {
-                try randomData.write(to: url, options: .atomic)
-            }
-            
-            // Now remove the overwritten file
-            try FileManager.default.removeItem(at: url)
-            return true
-        } catch {
-            // If overwrite fails (e.g., permission issue), attempt plain removal
-            // as a best-effort fallback — the file may still be recoverable,
-            // but at least it's gone from the filesystem.
-            try? FileManager.default.removeItem(at: url)
-            return false
-        }
-    }
-    
     @discardableResult
     static func save(key: String, value: String) -> Bool {
         runLegacyMigration()
+        guard !value.isEmpty else { return delete(key: key) }
         let success = addToKeychain(key: key, value: value)
 
         // In-memory fallback keeps the value available for this session when
@@ -143,7 +130,7 @@ struct KeychainManager {
 
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: serviceName,
+            kSecAttrService as String: activeServiceName,
             kSecAttrAccount as String: key,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
@@ -170,7 +157,7 @@ struct KeychainManager {
         runLegacyMigration()
         var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: serviceName,
+            kSecAttrService as String: activeServiceName,
             kSecAttrAccount as String: key
         ]
         var status = SecItemDelete(query as CFDictionary)

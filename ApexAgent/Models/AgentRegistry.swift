@@ -175,7 +175,7 @@ public actor AgentRegistry {
     
     public func loadAgentsFromDisk(directory: URL? = nil) {
         let fm = FileManager.default
-        let agentsDir = directory ?? fm.homeDirectoryForCurrentUser.appendingPathComponent(".apex/agents")
+        let agentsDir = directory ?? ApexAgentStoragePaths.directory("agents")
         
         // Attempt to create the directory if it does not exist
         try? fm.createDirectory(at: agentsDir, withIntermediateDirectories: true)

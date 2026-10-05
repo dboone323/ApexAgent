@@ -107,7 +107,11 @@ struct FilePatchTool: Tool {
         ) {
             FileRollback.snapshot(path: expandedPath)
             try newFullContent.write(to: url, atomically: true, encoding: .utf8)
-            return "✅ Successfully patched \(expandedPath). Replaced \(occurrences) occurrence(s)."
+            guard FileManager.default.fileExists(atPath: expandedPath) else {
+                return "ERROR: Verification failed — patched file missing at \(expandedPath)"
+            }
+            let verified = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+            return "✅ Successfully patched \(expandedPath). Replaced \(occurrences) occurrence(s). [Verified: \(verified.count) chars on disk]"
         }
     }
 }

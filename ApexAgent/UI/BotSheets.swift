@@ -14,6 +14,10 @@ struct CreateBotSheet: View {
     @State private var avatarName = "person.fill"
     @State private var selectedModelProvider: ModelProvider?
     @State private var ollamaModelBinding = ""
+    @State private var restrictTools = false
+    @State private var selectedToolNames: Set<String> = []
+    @State private var restrictMCPServers = false
+    @State private var selectedMCPServers: Set<String> = []
 
     private let avatarOptions: [String] = [
         "person.fill", "robot", "brain.head.profile", "gear",
@@ -102,6 +106,13 @@ struct CreateBotSheet: View {
                         .foregroundStyle(.secondary)
                 }
 
+                BotCapabilityEditorSection(
+                    restrictTools: $restrictTools,
+                    selectedToolNames: $selectedToolNames,
+                    restrictMCPServers: $restrictMCPServers,
+                    selectedMCPServers: $selectedMCPServers
+                )
+
                 Section {
                     Button("Create Bot") {
                         createBot()
@@ -134,6 +145,17 @@ struct CreateBotSheet: View {
         bot.modelProvider = selectedModelProvider
         let trimmedOllama = ollamaModelBinding.trimmingCharacters(in: .whitespacesAndNewlines)
         bot.ollamaModelOverride = trimmedOllama.isEmpty ? nil : trimmedOllama
+        if restrictTools {
+            bot.allowedToolNames = Array(selectedToolNames).sorted()
+        } else {
+            bot.allowedToolNames = []
+        }
+        if restrictMCPServers {
+            bot.allowedMCPServers = Array(selectedMCPServers).sorted()
+        } else {
+            bot.allowedMCPServers = []
+        }
+        bm.saveBot(bot)
         bm.openConversation(with: bot)
         dismiss()
     }
@@ -173,6 +195,10 @@ struct EditBotSheet: View {
     @State private var showingMemoryEditor = false
     @State private var selectedModelProvider: ModelProvider?
     @State private var ollamaModelBinding: String
+    @State private var restrictTools: Bool
+    @State private var selectedToolNames: Set<String>
+    @State private var restrictMCPServers: Bool
+    @State private var selectedMCPServers: Set<String>
 
     private let avatarOptions: [String] = [
         "person.fill", "robot", "brain.head.profile", "gear",
@@ -192,6 +218,10 @@ struct EditBotSheet: View {
         _memory = State(initialValue: bot.memory)
         _selectedModelProvider = State(initialValue: bot.modelProvider)
         _ollamaModelBinding = State(initialValue: bot.ollamaModelOverride ?? "")
+        _restrictTools = State(initialValue: !bot.allowedToolNames.isEmpty)
+        _selectedToolNames = State(initialValue: Set(bot.allowedToolNames))
+        _restrictMCPServers = State(initialValue: !bot.allowedMCPServers.isEmpty)
+        _selectedMCPServers = State(initialValue: Set(bot.allowedMCPServers))
     }
 
     var body: some View {
@@ -273,6 +303,13 @@ struct EditBotSheet: View {
                         .foregroundStyle(.secondary)
                 }
 
+                BotCapabilityEditorSection(
+                    restrictTools: $restrictTools,
+                    selectedToolNames: $selectedToolNames,
+                    restrictMCPServers: $restrictMCPServers,
+                    selectedMCPServers: $selectedMCPServers
+                )
+
                 Section {
                     Button("Save Changes") {
                         saveChanges()
@@ -308,6 +345,17 @@ struct EditBotSheet: View {
         bot.modelProvider = selectedModelProvider
         let trimmedOllama = ollamaModelBinding.trimmingCharacters(in: .whitespacesAndNewlines)
         bot.ollamaModelOverride = trimmedOllama.isEmpty ? nil : trimmedOllama
+        if restrictTools {
+            bot.allowedToolNames = Array(selectedToolNames).sorted()
+        } else {
+            bot.allowedToolNames = []
+        }
+        if restrictMCPServers {
+            bot.allowedMCPServers = Array(selectedMCPServers).sorted()
+        } else {
+            bot.allowedMCPServers = []
+        }
+        bm.saveBot(bot)
         dismiss()
     }
 }
@@ -367,3 +415,200 @@ struct MemoryEditorSheet: View {
         }
     }
 }
+// MARK: - Bot Capability & Tool Categories
+
+struct ToolCategory: Identifiable {
+    let id: String
+    let name: String
+    let icon: String
+    let description: String
+    let toolNames: [String]
+}
+
+enum BotCapabilityPresets {
+    static let categories: [ToolCategory] = [
+        ToolCategory(
+            id: "fs_code",
+            name: "Filesystem & Code",
+            icon: "folder.badge.gearshape",
+            description: "Read, write, patch files, list directories, and run git commands",
+            toolNames: ["read_file", "write_file", "patch_file", "list_directory", "file_search", "git_operation", "verify_execution"]
+        ),
+        ToolCategory(
+            id: "system_shell",
+            name: "Terminal & Automation",
+            icon: "terminal",
+            description: "Execute shell commands, AppleScript, check system info, send notifications",
+            toolNames: ["run_shell_command", "apple_script", "system_info", "send_notification"]
+        ),
+        ToolCategory(
+            id: "web_search",
+            name: "Web & Research",
+            icon: "globe",
+            description: "Search web, fetch web content, and inspect web pages",
+            toolNames: ["web_search", "fetch_web_content", "control_browser"]
+        ),
+        ToolCategory(
+            id: "memory_plan",
+            name: "Memory & Planning",
+            icon: "brain.head.profile",
+            description: "Query and store durable bot memories, manage task execution plans",
+            toolNames: ["search_memory", "store_memory", "update_plan"]
+        ),
+        ToolCategory(
+            id: "collaboration",
+            name: "Multi-Agent Collaboration",
+            icon: "person.2",
+            description: "Delegate tasks to other bots, ask teammates, convene meetings, dispatch swarms",
+            toolNames: ["ask_bot", "delegate_task", "convene_meeting", "dispatch_swarm"]
+        )
+    ]
+
+    static let readOnlyTools: Set<String> = [
+        "read_file", "list_directory", "file_search", "web_search", "fetch_web_content", "search_memory"
+    ]
+
+    static let developerTools: Set<String> = [
+        "read_file", "write_file", "patch_file", "list_directory", "file_search", "git_operation", "run_shell_command", "system_info"
+    ]
+}
+
+// MARK: - Bot Capability Editor Section
+
+struct BotCapabilityEditorSection: View {
+    @Binding var restrictTools: Bool
+    @Binding var selectedToolNames: Set<String>
+    @Binding var restrictMCPServers: Bool
+    @Binding var selectedMCPServers: Set<String>
+
+    var body: some View {
+        Section("Tool Permissions & Capabilities") {
+            Toggle("Restrict Bot Tool Access", isOn: $restrictTools)
+                .help("When disabled, the bot has access to all standard tools. When enabled, only selected capabilities are permitted.")
+
+            if restrictTools {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Text("Presets:")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.secondary)
+
+                        Button("Read-Only") {
+                            selectedToolNames = BotCapabilityPresets.readOnlyTools
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        Button("Developer") {
+                            selectedToolNames = BotCapabilityPresets.developerTools
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        Button("Select All") {
+                            selectedToolNames = Set(BotCapabilityPresets.categories.flatMap { $0.toolNames })
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        Button("Clear") {
+                            selectedToolNames.removeAll()
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+
+                    ForEach(BotCapabilityPresets.categories) { category in
+                        let categoryAllSelected = category.toolNames.allSatisfy { selectedToolNames.contains($0) }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack {
+                                Image(systemName: category.icon)
+                                    .frame(width: 16)
+                                    .foregroundStyle(AppTheme.Palette.accent)
+                                Text(category.name)
+                                    .font(.system(size: 12, weight: .medium))
+                                Spacer()
+                                Button(categoryAllSelected ? "Deselect" : "Select") {
+                                    if categoryAllSelected {
+                                        for tool in category.toolNames { selectedToolNames.remove(tool) }
+                                    } else {
+                                        for tool in category.toolNames { selectedToolNames.insert(tool) }
+                                    }
+                                }
+                                .buttonStyle(.borderless)
+                                .font(.system(size: 11))
+                            }
+
+                            Text(category.description)
+                                .font(.system(size: 10))
+                                .foregroundStyle(.tertiary)
+
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140))], alignment: .leading, spacing: 4) {
+                                ForEach(category.toolNames, id: \.self) { tool in
+                                    Toggle(isOn: Binding(
+                                        get: { selectedToolNames.contains(tool) },
+                                        set: { isSelected in
+                                            if isSelected {
+                                                selectedToolNames.insert(tool)
+                                            } else {
+                                                selectedToolNames.remove(tool)
+                                            }
+                                        }
+                                    )) {
+                                        Text(tool)
+                                            .font(.system(size: 11, design: .monospaced))
+                                    }
+                                    .toggleStyle(.checkbox)
+                                }
+                            }
+                            .padding(.leading, 8)
+                            .padding(.top, 2)
+                        }
+                        .padding(.vertical, 4)
+                        Divider()
+                    }
+                }
+            }
+        }
+
+        let mcpServers = MCPManager.shared.servers
+        if !mcpServers.isEmpty {
+            Section("MCP Server Scoping") {
+                Toggle("Restrict MCP Servers", isOn: $restrictMCPServers)
+                    .help("When disabled, the bot can call tools from all configured MCP servers. When enabled, only checked servers are allowed.")
+
+                if restrictMCPServers {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Permit tools from only these MCP servers:")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+
+                        ForEach(mcpServers, id: \.id) { server in
+                            Toggle(isOn: Binding(
+                                get: { selectedMCPServers.contains(server.name) || selectedMCPServers.contains(server.id.uuidString) },
+                                set: { isSelected in
+                                    if isSelected {
+                                        selectedMCPServers.insert(server.name)
+                                    } else {
+                                        selectedMCPServers.remove(server.name)
+                                        selectedMCPServers.remove(server.id.uuidString)
+                                    }
+                                }
+                            )) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "server.rack")
+                                        .foregroundStyle(AppTheme.Palette.accent)
+                                    Text(server.name)
+                                        .font(.system(size: 12))
+                                }
+                            }
+                            .toggleStyle(.checkbox)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

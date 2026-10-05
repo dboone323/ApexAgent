@@ -132,8 +132,8 @@ struct E2EFeatureMatrixTests {
         // under ~/.apex/tools or ~/.apex/skills, so the fixture lives in a
         // unique nested directory beneath the skills root (the old
         // NSTemporaryDirectory path is correctly rejected as an escape).
-        let tempSkillsDir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".apex/skills/e2e_\(UUID().uuidString)")
+        let tempSkillsDir = ApexAgentStoragePaths.skills
+            .appendingPathComponent("e2e_\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tempSkillsDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempSkillsDir) }
 

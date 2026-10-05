@@ -5,6 +5,19 @@ import AppKit
 // MARK: - BotMessageSender: sendMessage logic for BotSession
 
 extension BotSession {
+    /// True when a raw `@handle` from a message refers to this bot, tolerating
+    /// case, hyphens, underscores, and spaces ("Code Architect" / "@code-architect").
+    static func handleMatches(handle: String, bot: BotProfile) -> Bool {
+        let cleaned = handle.lowercased()
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: "_", with: "")
+            .replacingOccurrences(of: " ", with: "")
+        if cleaned == SpaceParticipant.normalizeHandle(bot.name).replacingOccurrences(of: "-", with: "") {
+            return true
+        }
+        return cleaned == bot.name.lowercased().replacingOccurrences(of: " ", with: "")
+    }
+
     /// Sends a message to this Bot, creating a LanguageModelSession if needed,
     /// running the generation, and handling tool calls.
     func sendMessage(_ text: String, attachments: [NSImage] = []) {
@@ -69,10 +82,15 @@ extension BotSession {
             self.activeAssistantMessageId = assistantId
 
             // 4. Launch generation via canonical AgentRequestRouter
+            let mentionedHandles = SpaceManager.extractMentions(from: trimmedText)
+            let targetsSelf = mentionedHandles.contains { Self.handleMatches(handle: $0, bot: self.bot) }
+                || mentionedHandles.contains { SpaceManager.broadcastHandles.contains($0) }
+
             let request = AgentRequest(
                 id: UUID(),
                 senderIdentity: .bot(id: self.bot.id, name: self.bot.name),
                 prompt: trimmedText,
+                isDirectMention: targetsSelf,
                 attachments: attachmentsToSend,
                 toolCallingMode: self.toolCallingMode
             )
@@ -83,7 +101,10 @@ extension BotSession {
                 bot: self.bot,
                 session: self.session,
                 history: self.messages,
-                instructions: self.systemInstructions,
+                instructions: AgentRequestRouter.applyingDirectAddressPolicy(
+                    base: self.systemInstructions,
+                    isDirectMention: targetsSelf
+                ),
                 orchestrator: orch,
                 onUpdate: { [weak self] partialContent in
                     Task { @MainActor [weak self] in
@@ -175,6 +196,9 @@ extension BotSession {
                 id: UUID(),
                 senderIdentity: .bot(id: targetBot.id, name: targetBot.name),
                 prompt: triggerPrompt,
+                // This bot was explicitly named by another bot — it owns the
+                // task and must answer it, not bounce it to a third agent.
+                isDirectMention: true,
                 toolCallingMode: self.toolCallingMode
             )
 
@@ -183,7 +207,10 @@ extension BotSession {
                 bot: targetBot,
                 session: self.session,
                 history: self.messages,
-                instructions: instructions,
+                instructions: AgentRequestRouter.applyingDirectAddressPolicy(
+                    base: instructions,
+                    isDirectMention: true
+                ),
                 orchestrator: orch,
                 onUpdate: { [weak self] partialContent in
                     Task { @MainActor [weak self] in

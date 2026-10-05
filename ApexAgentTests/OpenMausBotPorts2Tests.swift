@@ -334,8 +334,8 @@ struct SkillCatalogTests {
 struct PeerApprovalTests {
 
     @Test func allowKeyFormat() {
-        #expect(peerAllowKey(action: .askBot, targetBotId: "bot-7") == "ask_bot:bot-7")
-        #expect(peerAllowKey(action: .delegateBot, targetBotId: "bot-7") == "delegate_bot:bot-7")
+        #expect(peerAllowKey(action: .askBot, senderBotId: "bot-2", targetBotId: "bot-7") == "ask_bot:bot-2:bot-7")
+        #expect(peerAllowKey(action: .delegateBot, senderBotId: "bot-2", targetBotId: "bot-7") == "delegate_bot:bot-2:bot-7")
     }
 
     @Test func requestWithoutGrantRaisesCardThenResolves() {
@@ -354,7 +354,7 @@ struct PeerApprovalTests {
 
     @Test func existingGrantAllowsImmediately() {
         let coordinator = PeerApprovalCoordinator()
-        coordinator.addGrant(action: .delegateBot, targetBotId: "writer")
+        coordinator.addGrant(action: .delegateBot, senderBotId: "chief", targetBotId: "writer")
         let outcome = coordinator.requestApproval(
             fromBotId: "chief", toBotId: "writer", action: .delegateBot, message: "draft it")
         #expect(outcome == .allowedByExistingGrant)
@@ -369,7 +369,7 @@ struct PeerApprovalTests {
             return
         }
         _ = coordinator.resolve(requestId: id, allow: true, rememberGrant: true)
-        #expect(coordinator.hasGrant(action: .askBot, targetBotId: "b"))
+        #expect(coordinator.hasGrant(action: .askBot, senderBotId: "a", targetBotId: "b"))
 
         let next = coordinator.requestApproval(fromBotId: "a", toBotId: "b", action: .askBot, message: "again")
         #expect(next == .allowedByExistingGrant)
@@ -377,6 +377,8 @@ struct PeerApprovalTests {
         // A different target still needs its own approval.
         let other = coordinator.requestApproval(fromBotId: "a", toBotId: "c", action: .askBot, message: "hi c")
         #expect(other != .allowedByExistingGrant)
+        let otherSender = coordinator.requestApproval(fromBotId: "c", toBotId: "b", action: .askBot, message: "hi b")
+        #expect(otherSender != .allowedByExistingGrant)
     }
 
     @Test func staleCardsAutoDeny() {

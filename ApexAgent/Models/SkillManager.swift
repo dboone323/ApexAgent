@@ -16,8 +16,7 @@ final class SkillManager: Observable {
     func syncFromDisk() {
         guard let context = modelContext else { return }
         let fileManager = FileManager.default
-        let homeDir = fileManager.homeDirectoryForCurrentUser
-        let skillsDir = homeDir.appendingPathComponent(".apex/skills")
+        let skillsDir = ApexAgentStoragePaths.skills
 
         guard let files = try? fileManager.contentsOfDirectory(at: skillsDir, includingPropertiesForKeys: nil) else { return }
         let jsonFiles = files.filter { $0.pathExtension == "json" }
@@ -100,8 +99,7 @@ final class SkillManager: Observable {
 
     func delete(_ skill: Skill) {
         let fileManager = FileManager.default
-        let homeDir = fileManager.homeDirectoryForCurrentUser
-        let skillsDir = homeDir.appendingPathComponent(".apex/skills")
+        let skillsDir = ApexAgentStoragePaths.skills
 
         try? fileManager.removeItem(at: skillsDir.appendingPathComponent(skill.name + ".sh"))
         try? fileManager.removeItem(at: skillsDir.appendingPathComponent(skill.name + ".json"))

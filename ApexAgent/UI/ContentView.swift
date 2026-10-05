@@ -55,7 +55,7 @@ struct ContentView: View {
                         BotChatView(session: session)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .frame(minHeight: 200)
-                    } else if spaceManager.activeSpace != nil && orchestrator.currentConversation == nil {
+                    } else if spaceManager.activeSpaceId != nil && orchestrator.currentConversation == nil {
                         SpaceWorkspaceView(spaceManager: spaceManager)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .frame(minHeight: 200)

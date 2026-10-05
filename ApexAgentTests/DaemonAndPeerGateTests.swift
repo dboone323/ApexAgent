@@ -96,7 +96,11 @@ struct PeerDeliveryGateTests {
         #expect(allowed == false)
         #expect(senderSession.needsAttention == false)
         #expect(manager.botsNeedingAttention.isEmpty)
-        #expect(!manager.peerApprovals.hasGrant(action: .askBot, targetBotId: writer.id.uuidString))
+        #expect(!manager.peerApprovals.hasGrant(
+            action: .askBot,
+            senderBotId: chief.id.uuidString,
+            targetBotId: writer.id.uuidString
+        ))
     }
 
     @Test func allowWithRememberGrantsSilentDeliveryNextTime() {
@@ -117,5 +121,10 @@ struct PeerDeliveryGateTests {
         _ = manager.session(for: stranger)
         let third = manager.peerDeliveryDecision(from: chief, to: stranger, message: "hello?")
         if case .deliver = third { Issue.record("different target must not inherit the grant") }
+
+        let otherSender = manager.createBot(name: "Other Sender", title: "", descriptionText: "")
+        _ = manager.session(for: otherSender)
+        let fourth = manager.peerDeliveryDecision(from: otherSender, to: writer, message: "hello?")
+        if case .deliver = fourth { Issue.record("different sender must not inherit the grant") }
     }
 }

@@ -124,6 +124,22 @@ struct BotManagerDuplicateModelTests {
         #expect(copy.modelProvider == nil)
         #expect(copy.ollamaModelOverride == nil)
     }
+
+    @Test func duplicateBotCopiesToolAndMCPAllowlists() {
+        let (manager, _) = makeManager()
+        let original = manager.createBot(
+            name: "SecuritySpecialist",
+            title: "Auditor",
+            descriptionText: "Audits security posture"
+        )
+        original.allowedToolNames = ["read_file", "search_memory", "system_info"]
+        original.allowedMCPServers = ["Docs MCP", "GitHub Enterprise"]
+
+        let copy = manager.duplicateBot(original)
+        #expect(copy.name == "SecuritySpecialist copy")
+        #expect(copy.allowedToolNames == ["read_file", "search_memory", "system_info"])
+        #expect(copy.allowedMCPServers == ["Docs MCP", "GitHub Enterprise"])
+    }
 }
 
 // MARK: - P0-2: Group Chat Engine Routing
@@ -387,3 +403,371 @@ struct BotManagerPlaybookTests {
         #expect(roundTripped?.title == "Tester")
     }
 }
+
+// MARK: - Workstream 3: Bot Capability Controls Tests
+
+@Suite("BotCapabilityControlTests")
+struct BotCapabilityControlTests {
+
+    @Test func presetsContainExpectedTools() {
+        // Read-only preset should include safe retrieval and inspection tools
+        #expect(BotCapabilityPresets.readOnlyTools.contains("read_file"))
+        #expect(BotCapabilityPresets.readOnlyTools.contains("list_directory"))
+        #expect(BotCapabilityPresets.readOnlyTools.contains("file_search"))
+        #expect(BotCapabilityPresets.readOnlyTools.contains("web_search"))
+        #expect(BotCapabilityPresets.readOnlyTools.contains("fetch_web_content"))
+        #expect(BotCapabilityPresets.readOnlyTools.contains("search_memory"))
+        #expect(!BotCapabilityPresets.readOnlyTools.contains("run_shell_command"))
+        #expect(!BotCapabilityPresets.readOnlyTools.contains("write_file"))
+
+        // Developer preset should include mutating filesystem, git, and shell tools
+        #expect(BotCapabilityPresets.developerTools.contains("read_file"))
+        #expect(BotCapabilityPresets.developerTools.contains("write_file"))
+        #expect(BotCapabilityPresets.developerTools.contains("patch_file"))
+        #expect(BotCapabilityPresets.developerTools.contains("git_operation"))
+        #expect(BotCapabilityPresets.developerTools.contains("run_shell_command"))
+    }
+
+    @Test func categoryToolCoverage() {
+        let categories = BotCapabilityPresets.categories
+        #expect(categories.count >= 5)
+
+        let categoryIDs = Set(categories.map { $0.id })
+        #expect(categoryIDs.contains("fs_code"))
+        #expect(categoryIDs.contains("system_shell"))
+        #expect(categoryIDs.contains("web_search"))
+        #expect(categoryIDs.contains("memory_plan"))
+        #expect(categoryIDs.contains("collaboration"))
+
+        let allTools = categories.flatMap { $0.toolNames }
+        #expect(allTools.contains("read_file"))
+        #expect(allTools.contains("run_shell_command"))
+        #expect(allTools.contains("web_search"))
+        #expect(allTools.contains("search_memory"))
+        #expect(allTools.contains("ask_bot"))
+    }
+
+    @MainActor
+    @Test func botCapabilityAllowlistConfiguration() {
+        let bot = BotProfile(name: "AuditBot", title: "Security")
+        #expect(bot.allowedToolNames.isEmpty) // Unrestricted by default
+        #expect(bot.allowedMCPServers.isEmpty)
+
+        bot.allowedToolNames = Array(BotCapabilityPresets.readOnlyTools)
+        bot.allowedMCPServers = ["SecurityServer"]
+
+        #expect(bot.allowedToolNames.contains("read_file"))
+        #expect(!bot.allowedToolNames.contains("run_shell_command"))
+        #expect(bot.allowedMCPServers == ["SecurityServer"])
+    }
+}
+
+// MARK: - Workstream 4: Durable Automation Receipts Tests
+
+@MainActor
+@Suite("DurableAutomationReceiptTests")
+struct DurableAutomationReceiptTests {
+
+    @Test func routineStableUUIDDeterministic() {
+        let routine1 = Routine(name: "Nightly Audit", descriptionText: "audit codebase")
+        let routine2 = Routine(name: "Nightly Audit", descriptionText: "different prompt")
+        let routine3 = Routine(name: "Morning Brief", descriptionText: "morning summary")
+
+        #expect(routine1.stableUUID == routine2.stableUUID)
+        #expect(routine1.stableUUID != routine3.stableUUID)
+    }
+
+    @Test func routineRunDurationFormatting() {
+        let now = Date()
+        var run = RoutineRun(
+            routineId: UUID(),
+            routineName: "Test Run",
+            prompt: "do work",
+            status: .running,
+            startedAt: now
+        )
+        #expect(run.formattedDuration == "Running...")
+
+        // Subsecond duration
+        run.finishedAt = now.addingTimeInterval(0.35)
+        #expect(run.formattedDuration == "350 ms")
+
+        // Multi-second duration
+        run.finishedAt = now.addingTimeInterval(12.4)
+        #expect(run.formattedDuration == "12.4 s")
+
+        // Multi-minute duration
+        run.finishedAt = now.addingTimeInterval(135.0)
+        #expect(run.formattedDuration == "2m 15s")
+    }
+
+    @Test func routineManagerRecordsAndFiltersReceipts() {
+        let manager = RoutineManager.shared
+        manager.clearRuns()
+        #expect(manager.recentRuns.isEmpty)
+
+        let routineId1 = UUID()
+        let routineId2 = UUID()
+
+        let run1 = RoutineRun(
+            routineId: routineId1,
+            routineName: "Build Check",
+            prompt: "check build",
+            status: .completed,
+            startedAt: Date().addingTimeInterval(-10),
+            finishedAt: Date(),
+            output: "Build clean: 0 warnings"
+        )
+        let run2 = RoutineRun(
+            routineId: routineId2,
+            routineName: "Lint Code",
+            prompt: "lint code",
+            status: .failed,
+            startedAt: Date().addingTimeInterval(-5),
+            finishedAt: Date(),
+            output: nil,
+            error: "2 lint violations found"
+        )
+
+        manager.recordRun(run1)
+        manager.recordRun(run2)
+
+        #expect(manager.recentRuns.count == 2)
+        #expect(manager.runReceipts(for: routineId1).count == 1)
+        #expect(manager.runReceipts(for: routineId1).first?.routineName == "Build Check")
+        #expect(manager.runReceipts(for: routineId2).count == 1)
+        #expect(manager.runReceipts(for: routineId2).first?.error == "2 lint violations found")
+
+        // Updating an existing run replaces in place
+        var updatedRun2 = run2
+        updatedRun2.status = .completed
+        updatedRun2.output = "Violations fixed"
+        updatedRun2.error = nil
+        manager.recordRun(updatedRun2)
+
+        #expect(manager.recentRuns.count == 2)
+        #expect(manager.runReceipts(for: routineId2).first?.status == .completed)
+        #expect(manager.runReceipts(for: routineId2).first?.output == "Violations fixed")
+
+        // Cleanup
+        manager.clearRuns()
+        #expect(manager.recentRuns.isEmpty)
+    }
+}
+// MARK: - Workstream 5: Integrated Per-Bot Cognitive Memory Tests
+
+@MainActor
+@Suite("CognitiveMemoryParityTests")
+struct CognitiveMemoryParityTests {
+
+    @Test func testPerBotSemanticFactScoping() {
+        let engine = CognitiveMemoryEngine.shared
+        let botAId = UUID()
+        let botBId = UUID()
+
+        engine.storeBotFact(
+            botId: botAId,
+            subject: "Architecture",
+            predicate: "uses",
+            object: "SwiftData and SwiftUI",
+            confidence: 0.95,
+            source: "unit_test"
+        )
+        engine.storeBotFact(
+            botId: botBId,
+            subject: "Deployment",
+            predicate: "targets",
+            object: "macOS 27",
+            confidence: 0.90,
+            source: "unit_test"
+        )
+
+        let botAFacts = engine.searchFacts(keyword: "Architecture", botId: botAId)
+        #expect(botAFacts.contains(where: { $0.subject == "Architecture" && $0.object == "SwiftData and SwiftUI" }))
+
+        let botBFactsForArchitecture = engine.searchFacts(keyword: "Architecture", botId: botBId)
+        #expect(botBFactsForArchitecture.isEmpty)
+
+        let botBFacts = engine.searchFacts(keyword: "Deployment", botId: botBId)
+        #expect(botBFacts.contains(where: { $0.subject == "Deployment" && $0.object == "macOS 27" }))
+    }
+
+    @Test func testBotSessionSystemInstructionsInjectsCognitiveMemory() {
+        let engine = CognitiveMemoryEngine.shared
+        let orchestrator = AgentOrchestrator()
+        let bot = BotProfile(
+            name: "MemoryTester",
+            title: "Memory Testing Specialist",
+            descriptionText: "Tests memory injection",
+            avatarName: "brain.head.profile",
+            memory: "Local baseline notes"
+        )
+
+        engine.storeBotFact(
+            botId: bot.id,
+            subject: "SecurityPolicy",
+            predicate: "mandates",
+            object: "Strict sandboxing",
+            confidence: 1.0,
+            source: "test"
+        )
+
+        let session = BotSession(bot: bot, orchestrator: orchestrator)
+        let instructions = session.systemInstructions
+
+        #expect(instructions.contains("MemoryTester"))
+        #expect(instructions.contains("Local baseline notes"))
+        #expect(instructions.contains("--- Remembered Knowledge Graph ---"))
+        #expect(instructions.contains("SecurityPolicy mandates Strict sandboxing"))
+    }
+}
+
+// MARK: - Workstream 6: Canonical Direct Mentions Tests
+
+@MainActor
+@Suite("CanonicalDirectMentionTests")
+struct CanonicalDirectMentionTests {
+
+    @Test func testGroupChatUserMessageWithMentionAddsParticipantAndPrioritizesTurn() {
+        let orchestrator = AgentOrchestrator()
+        let bm = BotManager(orchestrator: orchestrator, computer: Computer())
+        let hostBot = bm.createBot(name: "HostBot", title: "Host", descriptionText: "Host bot")
+        let taggedBot = bm.createBot(name: "Piper", title: "Reviewer", descriptionText: "Code reviewer")
+        let thirdBot = bm.createBot(name: "Archie", title: "Architect", descriptionText: "Architect bot")
+
+        let session = GroupChatSession(
+            name: "Parity Group",
+            participants: [hostBot, thirdBot],
+            hostBot: hostBot
+        )
+        session.botManager = bm
+
+        #expect(session.participants.count == 2)
+        #expect(!session.participants.contains(where: { $0.id == taggedBot.id }))
+
+        // User posts a message mentioning @Piper
+        session.sendUserMessage("Hey @Piper, please review the latest patch!")
+
+        // Tagged bot is dynamically added to participants
+        #expect(session.participants.contains(where: { $0.id == taggedBot.id }))
+        #expect(session.participants.count == 3)
+
+        // System message announced the join
+        #expect(session.messages.contains(where: { $0.content.contains("Piper was tagged by user and joined") }))
+
+        // Tagged bot is placed in generation queue
+        #expect(session.generationOrder.contains(taggedBot.id))
+    }
+
+    @Test func testDirectAddressedParticipantPrioritizesTargetBot() {
+        let botA = BotProfile(name: "Alpha", title: "Alpha", descriptionText: "Alpha bot", avatarName: "a")
+        let botB = BotProfile(name: "Beta", title: "Beta", descriptionText: "Beta bot", avatarName: "b")
+
+        let session = GroupChatSession(
+            name: "Direct Mention Test",
+            participants: [botA, botB],
+            hostBot: botA
+        )
+
+        session.sendUserMessageToParticipant("Please handle the database migration", addressedTo: botB)
+
+        #expect(session.messages.last?.content == "[Beta] Please handle the database migration")
+        #expect(session.generationOrder.first == botB.id)
+    }
+}
+
+// MARK: - Workstream 7: End-to-End Execution Verification Tests
+
+@MainActor
+@Suite("EndToEndExecutionVerificationTests")
+struct EndToEndExecutionVerificationTests {
+
+    @Test func testVerifyExecutionFileExistsAndContains() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
+        let testFile = tempDir.appendingPathComponent("verify_test_\(UUID().uuidString).txt")
+        let testContent = "APEX_AGENT_VERIFICATION_PAYLOAD_12345"
+
+        try testContent.write(to: testFile, atomically: true, encoding: .utf8)
+        defer { try? FileManager.default.removeItem(at: testFile) }
+
+        let orchestrator = AgentOrchestrator()
+        let tool = VerifyExecutionTool(orchestrator: orchestrator)
+
+        // 1. file_exists check
+        let existsResult = try await tool.call(arguments: VerifyExecutionTool.Arguments(
+            verificationType: "file_exists",
+            targetPath: testFile.path,
+            expectedPattern: nil,
+            command: nil
+        ))
+        #expect(existsResult.hasPrefix("VERIFIED: File exists on disk"))
+
+        // 2. file_contains check
+        let containsResult = try await tool.call(arguments: VerifyExecutionTool.Arguments(
+            verificationType: "file_contains",
+            targetPath: testFile.path,
+            expectedPattern: "VERIFICATION_PAYLOAD_12345",
+            command: nil
+        ))
+        #expect(containsResult.hasPrefix("VERIFIED: File"))
+
+        // 3. file_not_contains check
+        let notContainsResult = try await tool.call(arguments: VerifyExecutionTool.Arguments(
+            verificationType: "file_not_contains",
+            targetPath: testFile.path,
+            expectedPattern: "FORBIDDEN_STRING_99999",
+            command: nil
+        ))
+        #expect(notContainsResult.hasPrefix("VERIFIED: File"))
+
+        // 4. file_contains failure on missing pattern
+        let failResult = try await tool.call(arguments: VerifyExecutionTool.Arguments(
+            verificationType: "file_contains",
+            targetPath: testFile.path,
+            expectedPattern: "NON_EXISTENT_PATTERN",
+            command: nil
+        ))
+        #expect(failResult.hasPrefix("VERIFICATION_FAILED:"))
+    }
+
+    @Test func testVerifyExecutionCommandSucceeds() async throws {
+        let orchestrator = AgentOrchestrator()
+        let tool = VerifyExecutionTool(orchestrator: orchestrator)
+
+        let successResult = try await tool.call(arguments: VerifyExecutionTool.Arguments(
+            verificationType: "command_succeeds",
+            targetPath: nil,
+            expectedPattern: "verified_output",
+            command: "echo 'verified_output'"
+        ))
+        #expect(successResult.hasPrefix("VERIFIED: Command succeeded"))
+
+        let failResult = try await tool.call(arguments: VerifyExecutionTool.Arguments(
+            verificationType: "command_succeeds",
+            targetPath: nil,
+            expectedPattern: nil,
+            command: "exit 1"
+        ))
+        #expect(failResult.hasPrefix("VERIFICATION_FAILED:"))
+    }
+
+    @Test func testFileWriteToolVerifiedPostCondition() async throws {
+        let tempDir = FileManager.default.temporaryDirectory
+        let testFile = tempDir.appendingPathComponent("write_verify_\(UUID().uuidString).txt")
+        defer { try? FileManager.default.removeItem(at: testFile) }
+
+        let orchestrator = AgentOrchestrator()
+        let writeTool = FileWriteTool(orchestrator: orchestrator)
+
+        let result = try await writeTool.call(arguments: FileWriteTool.Arguments(
+            path: testFile.path,
+            content: "Verified disk write test content",
+            append: false
+        ))
+
+        #expect(result.contains("✅ Written"))
+        #expect(result.contains("[Verified:"))
+        #expect(FileManager.default.fileExists(atPath: testFile.path))
+    }
+}
+

@@ -206,7 +206,7 @@ struct MCPServerDashboardTests {
     // MARK: - 4. Dynamic Script Editor Execution
 
     @Test func testDynamicScriptEditorTestRunSuccess() async throws {
-        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("mcp_test_\(UUID().uuidString)")
+        let tempDir = ApexAgentStoragePaths.tools.appendingPathComponent("mcp_test_\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
@@ -234,7 +234,7 @@ struct MCPServerDashboardTests {
     }
 
     @Test func testDynamicScriptEditorTestRunErrorCapture() async throws {
-        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("mcp_test_err_\(UUID().uuidString)")
+        let tempDir = ApexAgentStoragePaths.tools.appendingPathComponent("mcp_test_err_\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
@@ -258,7 +258,7 @@ struct MCPServerDashboardTests {
 
     @MainActor
     @Test func testDynamicToolboxToolRegistrationAndExecution() async throws {
-        let tempDir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("toolbox_test_\(UUID().uuidString)")
+        let tempDir = ApexAgentStoragePaths.tools.appendingPathComponent("toolbox_test_\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
@@ -324,7 +324,7 @@ struct MCPServerDashboardTests {
             command: live.command,
             arguments: live.arguments
         )
-        let manager = MCPManager.shared
+        let manager = MCPManager(persistsConfigs: false)
         manager.addServer(config)
         defer { manager.removeServer(id: config.id) }
 

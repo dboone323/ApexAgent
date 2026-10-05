@@ -6,18 +6,12 @@ import XCTest
 // its real UI elements, asserted by accessibility identifiers.
 //
 // Determinism notes:
-//  - Every test gets a FRESH app launch (setUp terminates + relaunches). This
-//    resets the orchestrator (isGenerating=false) and avoids @AppStorage panel
-//    state leaking between tests.
-//  - The app is launched with -APEXUITestFakeEngine so the agent ACTUALLY
-//    responds with a deterministic, paced stream — the response assertions are
-//    real (bubble appears, becomes non-empty, isStreaming flips off), not just
-//    "a bubble id exists". (Live endpoints are covered by LiveAgentTriageTests,
-//    gated behind APEX_LIVE_E2E.)
+//  - Every test gets a fresh app process and explicitly starts a new conversation
+//    so a previously selected bot or shared space cannot change the composer.
 //  - All clicks use .click() (native macOS click). .tap()/coordinate taps
 //    silently fail to fire SwiftUI button actions on macOS.
-//  - Toggle assertions are STATE-RELATIVE: they compare post-toggle visibility
-//    to the pre-toggle baseline, so they pass regardless of prior persisted state.
+//  - APEX_TEST_MODE disables user-data migrations in the launched app. The UI
+//    suite never reads or forwards credentials from the developer's home folder.
 
 @MainActor
 final class ApexAgentUITests: XCTestCase {
@@ -27,7 +21,7 @@ final class ApexAgentUITests: XCTestCase {
     /// Fresh-launch lifecycle, invoked explicitly at the top of every test.
     /// setUpWithError overrides are nonisolated under Swift strict concurrency,
     /// so all main-actor UI work lives here instead.
-    private func launchFreshApp() {
+    private func launchFreshApp(requiresChatInput: Bool = true) {
         continueAfterFailure = false
         // Terminate any instance left over from a previous test first (fresh
         // launch resets isGenerating + orchestrator state).
@@ -39,18 +33,32 @@ final class ApexAgentUITests: XCTestCase {
         // UI tests execute against the live application with the real on-device
         // engine (AFM 3 / Apple Foundation Models / Ollama).
         let fresh = XCUIApplication()
-        let envKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"]
-        let fileURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex/gemini_key")
-        let fileKey = try? String(contentsOf: fileURL, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)
-        if let key = envKey ?? fileKey, !key.isEmpty {
-            fresh.launchEnvironment["GEMINI_API_KEY"] = key
-        }
+        fresh.launchEnvironment["APEX_TEST_MODE"] = "1"
+        fresh.launchArguments.append(contentsOf: ["-showTerminal", "NO", "-showPlanDashboard", "NO"])
         app = fresh
         fresh.launch()
         fresh.activate()
         _ = fresh.wait(for: .runningForeground, timeout: 10)
-        let input = chatInput
-        XCTAssertTrue(input.waitForExistence(timeout: 20), "Chat input field did not appear — app failed to render.")
+        let newConversationButton = fresh.buttons["newConversationButton"].firstMatch
+        if newConversationButton.waitForExistence(timeout: 5) {
+            newConversationButton.click()
+        } else {
+            fresh.typeKey("n", modifierFlags: .command)
+        }
+        // Ensure terminal panel is closed at startup so tests begin with clean UI
+        let initialTerminal = fresh.descendants(matching: .any)["terminalView"].firstMatch
+        if initialTerminal.exists {
+            let toggle = fresh.buttons["toggleTerminalButton"].firstMatch
+            if toggle.exists {
+                toggle.click()
+                _ = initialTerminal.waitForNonExistence(timeout: 3)
+            }
+        }
+
+        if requiresChatInput {
+            let input = chatInput
+            XCTAssertTrue(input.waitForExistence(timeout: 20), "Chat input field did not appear — app failed to render.")
+        }
     }
 
     override func tearDownWithError() throws {
@@ -64,12 +72,10 @@ final class ApexAgentUITests: XCTestCase {
         }
     }
 
-    /// The chat input is a TextEditor → AX text view. Falls back to textField.
+    /// The chat input is a TextEditor → AX text view on macOS.
     private var chatInput: XCUIElement {
         let currentApp = app ?? XCUIApplication()
-        let tv = currentApp.textViews["chatInputField"].firstMatch
-        if tv.exists { return tv }
-        return currentApp.textFields["chatInputField"].firstMatch
+        return currentApp.textViews["chatInputField"].firstMatch
     }
 
     /// Native macOS click with coordinate fallback for SwiftUI ScrollViews.
@@ -157,21 +163,17 @@ final class ApexAgentUITests: XCTestCase {
     }
 
     @MainActor func testSettingsSheetOpensAndCloses() throws {
-        launchFreshApp()
-        let settings = app.buttons["settingsButton"].firstMatch
-        XCTAssertTrue(settings.waitForExistence(timeout: 5))
-        tap(settings)
+        launchFreshApp(requiresChatInput: false)
+        XCTAssertEqual(app.state, .runningForeground)
+        let settingsBtn = app.buttons["settingsButton"].firstMatch
+        XCTAssertTrue(settingsBtn.waitForExistence(timeout: 5), "Settings button must exist in toolbar")
+        tap(settingsBtn)
         let settingsForm = app.descendants(matching: .any)["settingsForm"].firstMatch
-        XCTAssertTrue(settingsForm.waitForExistence(timeout: 10), "Settings sheet did not open.")
-
-        // The sheet presents as a window titled "Settings" (Phase 4 verified).
-        let settingsWindow = app.windows["Settings"].firstMatch
-        if settingsWindow.exists {
-            settingsWindow.buttons[XCUIIdentifierCloseWindow].click()
-        } else {
-            app.typeKey(.escape, modifierFlags: [])
-        }
-        XCTAssertTrue(settingsForm.waitForNonExistence(timeout: 5), "Settings sheet should close.")
+        XCTAssertTrue(settingsForm.waitForExistence(timeout: 8), "Settings form must appear")
+        let doneBtn = app.buttons["settingsDoneButton"].firstMatch
+        XCTAssertTrue(doneBtn.waitForExistence(timeout: 5), "settingsDoneButton must exist")
+        tap(doneBtn)
+        XCTAssertTrue(settingsForm.waitForNonExistence(timeout: 5), "Settings form must dismiss")
     }
 
     @MainActor func testTerminalPanelToggles() throws {
@@ -198,9 +200,15 @@ final class ApexAgentUITests: XCTestCase {
         _ = XCTWaiter.wait(for: [en], timeout: 5)
         tap(send)
 
+        let seededMessage = app.scrollViews["conversationScrollView"]
+            .descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier BEGINSWITH %@ OR label CONTAINS[c] %@ OR value CONTAINS[c] %@", "UserMessage_", "seed message", "seed message")).firstMatch
+        XCTAssertTrue(seededMessage.waitForExistence(timeout: 10), "Seed message should render before starting a new conversation.")
+
         let newBtn = app.buttons["newConversationButton"].firstMatch
         XCTAssertTrue(newBtn.waitForExistence(timeout: 5))
         tap(newBtn)
+        XCTAssertTrue(seededMessage.waitForNonExistence(timeout: 5), "New Conversation should visibly clear the prior conversation.")
         XCTAssertTrue(chatInput.waitForExistence(timeout: 5), "Chat input should still be present after New Conversation.")
     }
 
@@ -222,6 +230,82 @@ final class ApexAgentUITests: XCTestCase {
         // Ensure no terminal commands were run for math
         let terminal = app.descendants(matching: .any)["terminalView"].firstMatch
         XCTAssertFalse(terminal.exists, "Terminal view should not be triggered for natural language math.")
+    }
+
+    @MainActor func testLiveButtonInteractionsAndDirectAtMentionCommandEvaluation() throws {
+        launchFreshApp()
+
+        // 1. Live Button Traversal: Test Toolbar and Panel Buttons
+        let terminalToggle = app.buttons["toggleTerminalButton"].firstMatch
+        XCTAssertTrue(terminalToggle.waitForExistence(timeout: 5), "toggleTerminalButton should exist in toolbar")
+        let terminal = app.descendants(matching: .any)["terminalView"].firstMatch
+        let initialTerminal = terminal.exists
+        tap(terminalToggle)
+        if initialTerminal {
+            XCTAssertTrue(terminal.waitForNonExistence(timeout: 5), "Terminal panel should hide")
+        } else {
+            XCTAssertTrue(terminal.waitForExistence(timeout: 5), "Terminal panel should appear")
+        }
+        if terminal.exists {
+            tap(terminalToggle)
+            XCTAssertTrue(terminal.waitForNonExistence(timeout: 5))
+        }
+
+        let planToggle = app.buttons["togglePlanDashboardButton"].firstMatch
+        XCTAssertTrue(planToggle.waitForExistence(timeout: 5), "togglePlanDashboardButton should exist in toolbar")
+        let planDashboard = app.descendants(matching: .any)["planDashboard"].firstMatch
+        let initialPlan = planDashboard.exists
+        tap(planToggle)
+        if initialPlan {
+            XCTAssertTrue(planDashboard.waitForNonExistence(timeout: 5), "Plan dashboard should hide")
+        } else {
+            XCTAssertTrue(planDashboard.waitForExistence(timeout: 5), "Plan dashboard should appear")
+        }
+        if planDashboard.exists {
+            tap(planToggle)
+            XCTAssertTrue(planDashboard.waitForNonExistence(timeout: 5))
+        }
+
+        let activityToggle = app.buttons["toggleActivityLogButton"].firstMatch
+        XCTAssertTrue(activityToggle.waitForExistence(timeout: 5), "toggleActivityLogButton should exist in toolbar")
+        let activityLog = app.descendants(matching: .any)["toolActivityView"].firstMatch
+        let initialActivity = activityLog.exists
+        tap(activityToggle)
+        if initialActivity {
+            XCTAssertTrue(activityLog.waitForNonExistence(timeout: 5), "Tool activity log should hide")
+        } else {
+            XCTAssertTrue(activityLog.waitForExistence(timeout: 5), "Tool activity log should appear")
+        }
+        if activityLog.exists {
+            tap(activityToggle)
+            XCTAssertTrue(activityLog.waitForNonExistence(timeout: 5))
+        }
+
+        // 2. Chat Input and Send Button State Verification
+        let send = app.buttons["sendButton"].firstMatch
+        XCTAssertTrue(send.waitForExistence(timeout: 5))
+        XCTAssertFalse(send.isEnabled, "Send button must be disabled when input is empty")
+
+        // 3. Give agent a command with @mention
+        let prompt = "@Apex In natural language without tools, what is two plus two?"
+        let bubble = sendAndWaitForResponse(prompt, timeout: 60)
+
+        // 4. Verification Part 1: Response happens first
+        let staticText = bubble.descendants(matching: .staticText).firstMatch
+        let candidateText = (staticText.value as? String) ?? staticText.label
+        let text = (candidateText.isEmpty ? (bubble.value as? String ?? "") : candidateText).lowercased()
+        XCTAssertFalse(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                       "First requirement: Agent response must happen and be non-empty.")
+
+        // 5. Verification Part 2: Response is correct
+        XCTAssertTrue(text.contains("4") || text.contains("four"),
+                      "Second requirement: Agent response must be correct (expected 4 or four); got: \(text)")
+
+        // 6. Test New Conversation Button reset
+        let newBtn = app.buttons["newConversationButton"].firstMatch
+        XCTAssertTrue(newBtn.waitForExistence(timeout: 5))
+        tap(newBtn)
+        XCTAssertTrue(chatInput.waitForExistence(timeout: 5))
     }
 
     // MARK: - Tier 1: Switching sessions must NOT end the current run
@@ -252,11 +336,10 @@ final class ApexAgentUITests: XCTestCase {
         // Switch BACK — the run's user message is restored, proving survival.
         // Tap the first conversation row (the original run's conversation).
         let firstRow = app.descendants(matching: .any)["conversationRow"].firstMatch
-        if firstRow.waitForExistence(timeout: 5) {
-            tap(firstRow)
-            let restored = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "UserMessage_")).firstMatch
-            _ = restored.waitForExistence(timeout: 8)
-        }
+        XCTAssertTrue(firstRow.waitForExistence(timeout: 5), "First conversation row should exist in sidebar")
+        tap(firstRow)
+        let restored = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "UserMessage_")).firstMatch
+        XCTAssertTrue(restored.waitForExistence(timeout: 8), "User message should be restored after switching back")
     }
 
     // MARK: - Tier 2: Streaming lifecycle + Stop
@@ -283,11 +366,10 @@ final class ApexAgentUITests: XCTestCase {
         tap(send)
 
         let stop = app.buttons["stopGenerationButton"].firstMatch
-        if stop.waitForExistence(timeout: 5) {
-            tap(stop)
-            let sendBack = app.buttons["sendButton"].firstMatch
-            XCTAssertTrue(sendBack.waitForExistence(timeout: 8), "Send button should return after Stop.")
-        }
+        XCTAssertTrue(stop.waitForExistence(timeout: 5), "stopGenerationButton must appear when generation starts")
+        tap(stop)
+        let sendBack = app.buttons["sendButton"].firstMatch
+        XCTAssertTrue(sendBack.waitForExistence(timeout: 8), "Send button should return after Stop.")
     }
 
     // MARK: - Tier 2: Suggestion chips
@@ -296,10 +378,7 @@ final class ApexAgentUITests: XCTestCase {
         launchFreshApp()
         // Fresh launch shows the empty-state WelcomeView with suggestion chips.
         let chip = app.buttons["suggestionChip_What's using the most disk space?"].firstMatch
-        guard chip.waitForExistence(timeout: 5) else {
-            // Chips only show on an empty conversation; skip gracefully.
-            return
-        }
+        XCTAssertTrue(chip.waitForExistence(timeout: 5), "Suggestion chip should exist on empty conversation")
         tap(chip)
         let bubble = app.scrollViews["conversationScrollView"]
             .descendants(matching: .any)
@@ -312,7 +391,7 @@ final class ApexAgentUITests: XCTestCase {
     @MainActor func testPlanDashboardToggles() throws {
         launchFreshApp()
         let toggle = app.buttons["togglePlanDashboardButton"].firstMatch
-        guard toggle.waitForExistence(timeout: 5) else { return }
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5), "togglePlanDashboardButton must exist")
         let plan = app.descendants(matching: .any)["planDashboard"].firstMatch
         let initial = plan.exists
         tap(toggle)
@@ -378,13 +457,11 @@ final class ApexAgentUITests: XCTestCase {
             _ = logView.waitForExistence(timeout: 5)
         }
 
-        // Test clear button if any events exist
         let clearBtn = app.buttons["clearActivityLogButton"].firstMatch
-        if clearBtn.waitForExistence(timeout: 2) {
-            tap(clearBtn)
-            let emptyLabel = app.staticTexts["No activity yet"].firstMatch
-            XCTAssertTrue(emptyLabel.waitForExistence(timeout: 3), "Activity log should show empty state after clearing.")
-        }
+        XCTAssertTrue(clearBtn.waitForExistence(timeout: 5), "clearActivityLogButton must exist in toolActivityView")
+        tap(clearBtn)
+        let emptyLabel = app.staticTexts["No activity yet"].firstMatch
+        XCTAssertTrue(emptyLabel.waitForExistence(timeout: 5), "Activity log should show empty state after clearing.")
     }
 
     // MARK: - Tier 2: Diagnostics Self-Check Lifecycle
@@ -399,11 +476,8 @@ final class ApexAgentUITests: XCTestCase {
         XCTAssertTrue(diagSheet.waitForExistence(timeout: 8), "Diagnostics sheet should open after tapping button.")
 
         let doneBtn = app.buttons["diagnosticsDoneButton"].firstMatch
-        if doneBtn.waitForExistence(timeout: 5) {
-            tap(doneBtn)
-        } else {
-            app.typeKey(.escape, modifierFlags: [])
-        }
+        XCTAssertTrue(doneBtn.waitForExistence(timeout: 5), "diagnosticsDoneButton must exist")
+        tap(doneBtn)
 
         XCTAssertTrue(diagSheet.waitForNonExistence(timeout: 5), "Diagnostics sheet should close after clicking Done.")
     }
@@ -412,18 +486,12 @@ final class ApexAgentUITests: XCTestCase {
 
     @MainActor func testToolCallingModePickerSwitching() throws {
         launchFreshApp()
-        let picker = app.popUpButtons["toolCallingModePicker"].firstMatch
-        guard picker.waitForExistence(timeout: 5) else {
-            // Some macOS versions render SwiftUI menu Pickers as .menuButtons or .buttons
-            let altPicker = app.descendants(matching: .any)["toolCallingModePicker"].firstMatch
-            XCTAssertTrue(altPicker.waitForExistence(timeout: 5), "Tool calling mode picker should be present.")
-            return
-        }
+        let picker = app.descendants(matching: .any)["toolCallingModePicker"].firstMatch
+        XCTAssertTrue(picker.waitForExistence(timeout: 5), "Tool calling mode picker must exist in toolbar")
         tap(picker)
-        let disabledItem = app.menuItems["Disabled"].firstMatch
-        if disabledItem.waitForExistence(timeout: 3) {
-            tap(disabledItem)
-        }
+        let autoItem = app.menuItems["Auto"].firstMatch
+        XCTAssertTrue(autoItem.waitForExistence(timeout: 3), "Auto item must exist")
+        tap(autoItem)
     }
 
     // MARK: - Tier 2: Bot Sidebar Selection and Chat View Isolation
@@ -432,32 +500,28 @@ final class ApexAgentUITests: XCTestCase {
         launchFreshApp()
         // Find Code Architect bot in the sidebar
         let codeArchitectBot = app.buttons["botSidebarItem_Code Architect"].firstMatch
-        if codeArchitectBot.waitForExistence(timeout: 5) {
-            tap(codeArchitectBot)
-            sleep(1)
+        XCTAssertTrue(codeArchitectBot.waitForExistence(timeout: 5), "Code Architect bot must exist in sidebar")
+        tap(codeArchitectBot)
+        sleep(1)
 
-            // Verify the chat header now displays Code Architect
-            let headerText = app.staticTexts["Code Architect"].firstMatch
-            XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Header should display 'Code Architect' after selection.")
+        let headerText = app.staticTexts["Code Architect"].firstMatch
+        XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Header should display 'Code Architect' after selection.")
 
-            // Send a test message to Code Architect
-            let input = chatInput
-            tap(input)
-            input.typeText("Hello Code Architect")
-            let send = app.buttons["sendButton"].firstMatch
-            if send.isEnabled {
-                tap(send)
-            }
+        let input = chatInput
+        tap(input)
+        input.typeText("Hello Code Architect")
+        let send = app.buttons["sendButton"].firstMatch
+        XCTAssertTrue(send.waitForExistence(timeout: 5))
+        let en = expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: send, handler: nil)
+        _ = XCTWaiter.wait(for: [en], timeout: 5)
+        tap(send)
 
-            // Switch back to Apex or Chief of Staff
-            let apexBot = app.buttons["botSidebarItem_Apex"].firstMatch
-            if apexBot.waitForExistence(timeout: 5) {
-                tap(apexBot)
-                sleep(1)
-                let apexHeader = app.staticTexts["Apex"].firstMatch
-                XCTAssertTrue(apexHeader.waitForExistence(timeout: 5), "Header should switch back to 'Apex'.")
-            }
-        }
+        let apexBot = app.buttons["botSidebarItem_Apex"].firstMatch
+        XCTAssertTrue(apexBot.waitForExistence(timeout: 5), "Apex bot must exist in sidebar")
+        tap(apexBot)
+        sleep(1)
+        let apexHeader = app.staticTexts["Apex"].firstMatch
+        XCTAssertTrue(apexHeader.waitForExistence(timeout: 5), "Header should switch back to 'Apex'.")
     }
 
     // MARK: - Tier 2: Create Bot Sheet Lifecycle
@@ -491,17 +555,9 @@ final class ApexAgentUITests: XCTestCase {
             nameField.typeText(" TestBot")
         }
 
-        let saveBtn = app.buttons["saveBotButton"].firstMatch
-        if saveBtn.waitForExistence(timeout: 3) {
-            tap(saveBtn)
-        } else {
-            let cancelBtn = app.buttons["Cancel"].firstMatch
-            if cancelBtn.waitForExistence(timeout: 2) {
-                tap(cancelBtn)
-            } else {
-                app.typeKey(.escape, modifierFlags: [])
-            }
-        }
+        let cancelBtn = app.buttons["Cancel"].firstMatch
+        XCTAssertTrue(cancelBtn.waitForExistence(timeout: 5), "Cancel button must exist")
+        tap(cancelBtn)
 
         XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Create Bot sheet should dismiss.")
     }
@@ -534,7 +590,8 @@ final class ApexAgentUITests: XCTestCase {
         launchFreshApp()
         let terminal = app.buttons["toggleTerminalButton"].firstMatch
         let plan = app.buttons["togglePlanDashboardButton"].firstMatch
-        guard terminal.waitForExistence(timeout: 5), plan.waitForExistence(timeout: 5) else { return }
+        XCTAssertTrue(terminal.waitForExistence(timeout: 5), "toggleTerminalButton must exist")
+        XCTAssertTrue(plan.waitForExistence(timeout: 5), "togglePlanDashboardButton must exist")
 
         let terminalView = app.descendants(matching: .any)["terminalView"].firstMatch
         let planView = app.descendants(matching: .any)["planDashboard"].firstMatch
@@ -553,6 +610,7 @@ final class ApexAgentUITests: XCTestCase {
         app.terminate()
         _ = app.wait(for: .notRunning, timeout: 5)
         let relaunched = XCUIApplication()
+        relaunched.launchEnvironment["APEX_TEST_MODE"] = "1"
         app = relaunched
         relaunched.launch()
         relaunched.activate()

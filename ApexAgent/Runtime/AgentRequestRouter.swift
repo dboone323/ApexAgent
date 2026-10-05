@@ -58,46 +58,34 @@ public final class AgentRequestRouter {
             globalProvider: ModelRegistry.activeProvider()
         )
 
-        let effectiveInstructions = resolvedContext.effectiveInstructions
+        let verifiedInstructions = AgentExecutionVerification.applyingDirective(
+            to: resolvedContext.effectiveInstructions
+        )
+        let effectiveInstructions = Self.applyingDirectAddressPolicy(
+            base: verifiedInstructions,
+            isDirectMention: request.isDirectMention
+        )
         let effectiveProvider = resolvedContext.effectiveProvider
+        // Intent gating MUST run against the originating user utterance, not the
+        // model-facing prompt. Spaces/group chat pass a synthesized transcript
+        // scaffold whose boilerplate ("delegate", "meeting", teammate @handles)
+        // would otherwise read as tool intent on every single turn and inject the
+        // coordination pack regardless of what the human actually asked.
         let effectiveToolCallingMode: AgentToolCallingMode = if request.toolCallingMode == .auto {
             IntentToolSelector.shouldEnableTools(
-                for: request.prompt,
+                for: request.intentText,
                 hasAttachments: !request.attachments.isEmpty
             ) ? .auto : .disabled
         } else {
             request.toolCallingMode
         }
 
-        let effectiveAllowedTools: [String]? = {
-            switch resolvedContext.source {
-            case .archetype, .botProfileOverride:
-                let base = resolvedContext.effectiveAllowedTools.filter {
-                    $0 != "delegate_task" && $0 != "convene_meeting" && $0 != "dispatch_swarm"
-                }
-                if !base.isEmpty {
-                    return base
-                } else if effectiveToolCallingMode == .disabled {
-                    return []
-                } else {
-                    return IntentToolSelector.selectRelevantToolNames(
-                        for: request.prompt,
-                        allSchemas: getParsedSchemas()
-                    )
-                }
-            case .globalDefault:
-                if !resolvedContext.effectiveAllowedTools.isEmpty {
-                    return resolvedContext.effectiveAllowedTools
-                } else if effectiveToolCallingMode == .disabled {
-                    return []
-                } else {
-                    return IntentToolSelector.selectRelevantToolNames(
-                        for: request.prompt,
-                        allSchemas: getParsedSchemas()
-                    )
-                }
-            }
-        }()
+        let effectiveAllowedTools: [String]? = Self.resolveEffectiveAllowedTools(
+            resolvedContext: resolvedContext,
+            toolCallingMode: effectiveToolCallingMode,
+            intentText: request.intentText,
+            isDirectMention: request.isDirectMention
+        )
 
         // 3. Build candidate chain
         let candidates = ModelRegistry.buildCandidateChain(
@@ -141,5 +129,64 @@ public final class AgentRequestRouter {
         SessionLifecycleManager.shared.unregister(sessionId: request.conversationId)
 
         return terminalState
+    }
+
+    // MARK: - Direct-Address Policy (extracted for unit testing)
+
+    /// Appends the direct-address directive when a human explicitly @mentioned
+    /// the agent. Idempotent so repeated routing cannot stack the directive.
+    static func applyingDirectAddressPolicy(base: String, isDirectMention: Bool) -> String {
+        guard isDirectMention else { return base }
+        if base.contains(AgentRequest.directAddressDirective) { return base }
+        let trimmed = base.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return AgentRequest.directAddressDirective }
+        return trimmed + "\n\n" + AgentRequest.directAddressDirective
+    }
+
+    /// Resolves the final tool allowlist for a turn.
+    ///
+    /// Two invariants this function owns:
+    /// 1. Gating/selection is computed from `intentText` (the human utterance),
+    ///    never the model-facing transcript scaffold.
+    /// 2. On a direct @mention, every delegation tool is withheld regardless of
+    ///    how it entered the list — otherwise the agent responds with
+    ///    "I'll have <teammate> handle that" instead of doing the work.
+    static func resolveEffectiveAllowedTools(
+        resolvedContext: ResolvedAgentContext,
+        toolCallingMode: AgentToolCallingMode,
+        intentText: String,
+        isDirectMention: Bool
+    ) -> [String]? {
+        var base: [String]
+
+        switch resolvedContext.source {
+        case .archetype, .botProfileOverride:
+            let configured = resolvedContext.effectiveAllowedTools.filter {
+                !AgentRuntimeCoordination.delegationTools.contains($0)
+            }
+            if configured.isEmpty {
+                guard toolCallingMode != .disabled else { return [] }
+                base = IntentToolSelector.selectRelevantToolNames(
+                    for: intentText,
+                    allSchemas: getParsedSchemas()
+                )
+            } else {
+                base = configured
+            }
+
+        case .globalDefault:
+            guard !resolvedContext.effectiveAllowedTools.isEmpty else {
+                guard toolCallingMode != .disabled else { return [] }
+                base = IntentToolSelector.selectRelevantToolNames(
+                    for: intentText,
+                    allSchemas: getParsedSchemas()
+                )
+                break
+            }
+            base = resolvedContext.effectiveAllowedTools
+        }
+
+        guard isDirectMention else { return base }
+        return base.filter { !AgentRuntimeCoordination.delegationTools.contains($0) }
     }
 }

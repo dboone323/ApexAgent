@@ -18,6 +18,12 @@ struct BotChatView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
                 .background(Color(nsColor: .windowBackgroundColor).opacity(0.8))
+
+            ForEach(botManager.pendingPeerApprovals.filter { $0.fromBotId == session.bot.id.uuidString }) { request in
+                PeerApprovalCard(request: request, botManager: botManager)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+            }
             
             Divider()
             
@@ -60,10 +66,64 @@ struct BotChatView: View {
             BotChatInputBar(session: session, inputText: $inputText, isInputFocused: $isInputFocused)
         }
         .background(Color(nsColor: .controlBackgroundColor))
+        .task {
+            do {
+                while true {
+                    try await Task.sleep(for: .seconds(60))
+                    botManager.expireStalePeerApprovals()
+                }
+            } catch is CancellationError {
+                // The view leaving the hierarchy cancels the expiry poll.
+            } catch {
+                print("Peer approval expiry poll stopped: \(error.localizedDescription)")
+            }
+        }
         .onAppear {
             isInputFocused = true
             session.checkAvailability()
         }
+    }
+}
+
+private struct PeerApprovalCard: View {
+    let request: PendingPeerApproval
+    let botManager: BotManager
+
+    private var targetName: String {
+        guard let id = UUID(uuidString: request.toBotId) else { return "teammate" }
+        return botManager.bot(byId: id)?.name ?? "teammate"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Allow \(targetName) to receive this request?")
+                .font(.headline)
+            Text(request.message)
+                .font(.callout)
+                .textSelection(.enabled)
+            Text("Approving runs this request once. The current agent turn has already stopped; its reply will appear here.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            HStack {
+                Button("Deny") {
+                    _ = botManager.resolvePeerRequest(requestId: request.id, allow: false)
+                }
+                .accessibilityIdentifier("peerApprovalDeny-\(request.id)")
+                Spacer()
+                Button("Always Allow") {
+                    _ = botManager.resolvePeerRequest(requestId: request.id, allow: true, remember: true)
+                }
+                .accessibilityIdentifier("peerApprovalAlwaysAllow-\(request.id)")
+                Button("Allow Once") {
+                    _ = botManager.resolvePeerRequest(requestId: request.id, allow: true)
+                }
+                .accessibilityIdentifier("peerApprovalAllowOnce-\(request.id)")
+                .buttonStyle(.borderedProminent)
+            }
+        }
+        .padding(12)
+        .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
+        .accessibilityIdentifier("peerApprovalCard-\(request.id)")
     }
 }
 
@@ -316,6 +376,9 @@ struct BotMessageRow: View {
                         .padding(.vertical, 8)
                         .background(bubbleBackground)
                         .cornerRadius(12)
+                        .accessibilityIdentifier(isUser ? "BotUserMessage_\(message.id)" : "BotAgentResponse_\(message.id)")
+                        .accessibilityLabel(message.content)
+                        .accessibilityValue(message.content)
                 }
             }
             
@@ -504,6 +567,7 @@ struct BotChatInputBar: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 13))
                     .focused($isInputFocused)
+                    .accessibilityIdentifier("botChatInputField")
                     .lineLimit(1...5)
                     .onSubmit {
                         send()
@@ -556,6 +620,7 @@ struct BotChatInputBar: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(!hasInputContent)
+                    .accessibilityIdentifier("botSendButton")
                     .keyboardShortcut(.return, modifiers: [])
                 }
             }

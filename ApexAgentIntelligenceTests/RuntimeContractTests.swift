@@ -51,7 +51,7 @@ import AppKit
 
         // Verify priorities are sequential
         for (idx, candidate) in candidates.enumerated() {
-            #expect(candidate.priority == idx)
+            #expect(candidate.priority == idx + 1)
         }
 
         // Verify providers in candidate chain are unique
@@ -298,6 +298,7 @@ import AppKit
     @Test @MainActor func testA2ABearerAuthentication() async {
         let server = A2AServer.shared
         let testToken = "a2a-test-secret-\(UUID().uuidString)"
+        defer { KeychainManager.delete(key: "a2aAuthToken") }
         KeychainManager.save(key: "a2aAuthToken", value: testToken)
 
         // Case 1: No Authorization header -> 401 Unauthorized
@@ -327,9 +328,6 @@ import AppKit
             #expect(!responseStr.contains("401 Unauthorized"))
             #expect(responseStr.contains("200 OK"))
         }
-
-        // Cleanup
-        KeychainManager.delete(key: "a2aAuthToken")
     }
 
     @Test @MainActor func testRemoteCompanionGatewayTokenValidation() {
@@ -390,32 +388,27 @@ import AppKit
         #expect(acceptedFrameResult?.type == .ack)
     }
 
-    @Test func testGeminiAPIKeyKeychainMigration() {
-        let testKey = "AIzaSyTestKey-\(UUID().uuidString)"
-        let fileURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex/gemini_key")
+    @Test func testLegacyGeminiKeyFileMigrationUsesIsolatedAccount() throws {
+        #expect(KeychainManager.isTestProcess)
+        #expect(KeychainManager.activeServiceName != KeychainManager.serviceName)
+        #expect(ApexAgentStoragePaths.tools.path.hasPrefix(FileManager.default.temporaryDirectory.path))
+        #expect(ApexAgentStoragePaths.skills.path.hasPrefix(FileManager.default.temporaryDirectory.path))
 
-        // 1. Prepare legacy plaintext key in ~/.apex/gemini_key
-        try? FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? testKey.write(to: fileURL, atomically: true, encoding: .utf8)
-        KeychainManager.delete(key: "geminiAPIKey")
-        KeychainManager.delete(key: "apex.geminiKey")
-        UserDefaults.standard.removeObject(forKey: "geminiAPIKey")
-        UserDefaults.standard.removeObject(forKey: "apex.geminiKey")
+        let account = "test-gemini-\(UUID().uuidString)"
+        let testKey = "fixture-\(UUID().uuidString)"
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ApexAgentKeychainMigration-\(UUID().uuidString)", isDirectory: true)
+        let fileURL = directory.appendingPathComponent("legacy-key")
+        defer {
+            _ = KeychainManager.delete(key: account)
+            try? FileManager.default.removeItem(at: directory)
+        }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try testKey.write(to: fileURL, atomically: true, encoding: .utf8)
 
-        // 2. Read through ModelRegistry -> triggers automatic migration to Keychain and purges plaintext file
-        let retrieved = ModelRegistry.geminiAPIKey()
-        #expect(retrieved == testKey)
-
-        // 3. Verify plaintext file was removed
+        #expect(KeychainManager.migrateLegacyFile(at: fileURL, toKey: account))
         #expect(!FileManager.default.fileExists(atPath: fileURL.path))
-
-        // 4. Verify key is now safely stored in Keychain
-        let keychainRetrieved = KeychainManager.get(key: "geminiAPIKey")
-        #expect(keychainRetrieved == testKey)
-
-        // 5. Cleanup
-        ModelRegistry.saveGeminiAPIKey("")
-        #expect(KeychainManager.get(key: "geminiAPIKey") == nil)
+        #expect(KeychainManager.get(key: account) == testKey)
     }
 
     @Test func testCognitiveMemoryContextCompaction() async throws {

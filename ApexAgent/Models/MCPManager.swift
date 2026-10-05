@@ -24,6 +24,7 @@ final class MCPManager: OrchestratorProvider {
     private var eventLogger: ToolEventLogger?
     
     private var _orchestrator: AgentOrchestrator?
+    private let persistsConfigs: Bool
     var orchestrator: AgentOrchestrator {
         get {
             if let o = _orchestrator { return o }
@@ -36,8 +37,11 @@ final class MCPManager: OrchestratorProvider {
         }
     }
     
-    private init() {
-        loadConfigs()
+    init(persistsConfigs: Bool = true) {
+        self.persistsConfigs = persistsConfigs
+        if persistsConfigs {
+            loadConfigs()
+        }
     }
     
     func setEventLogger(_ logger: ToolEventLogger) {
@@ -132,6 +136,7 @@ final class MCPManager: OrchestratorProvider {
     }
     
     func saveConfigs() {
+        guard persistsConfigs else { return }
         if let data = try? JSONEncoder().encode(servers) {
             UserDefaults.standard.set(data, forKey: "apex.mcpServers")
         }

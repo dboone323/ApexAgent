@@ -18,6 +18,10 @@ public struct ApexAgentApp: App {
     @State private var skillManager = SkillManager.shared
     @State private var routineManager = RoutineManager.shared
 
+    private var isTestMode: Bool {
+        ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1"
+    }
+
     public init() {
         self.computer = Computer()
         let bm = BotManager(orchestrator: orchestrator, computer: computer)
@@ -46,7 +50,7 @@ public struct ApexAgentApp: App {
                 .environment(botManager)
                 .environment(spaceManager)
                 .environment(computer)
-                .environment(skillManager)
+                .environment(\.skillManager, skillManager)
                 .environment(routineManager)
                 .frame(minWidth: 960, minHeight: 640)
                 .onAppear {
@@ -55,15 +59,11 @@ public struct ApexAgentApp: App {
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
-        .modelContainer(for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self])
+        .modelContainer(
+            for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self],
+            inMemory: isTestMode
+        )
         .commands {
-            CommandGroup(replacing: .appSettings) {
-                Button("Settings…") {
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                }
-                .keyboardShortcut(",", modifiers: .command)
-            }
-
             CommandGroup(replacing: .newItem) {
                 Button("New Conversation") {
                     botManager.activeBotId = nil
@@ -93,9 +93,12 @@ public struct ApexAgentApp: App {
                 .environment(botManager)
                 .environment(spaceManager)
                 .environment(computer)
-                .environment(skillManager)
+                .environment(\.skillManager, skillManager)
                 .environment(routineManager)
-                .modelContainer(for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self])
+                .modelContainer(
+                    for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self],
+                    inMemory: isTestMode
+                )
         }
     }
 }
@@ -216,7 +219,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
 
 extension AppDelegate {
     @MainActor
-    public static func runCLIMode(prompt: String) async {
+    public static func runCLIMode(prompt: String, allowTools: Bool = false) async {
         setbuf(stdout, nil)
         setbuf(stderr, nil)
         print("=== RUNNING CLI TEST ===")
@@ -226,9 +229,18 @@ extension AppDelegate {
         let computer = Computer()
         let botManager = BotManager(orchestrator: orchestrator, computer: computer)
         orchestrator.botManager = botManager
+        orchestrator.toolCallingMode = allowTools ? .auto : .disabled
 
         do {
-            let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self)
+            let schema = Schema([
+                Conversation.self, Message.self, AgentMemory.self, AppPermissions.self,
+                ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self,
+                ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self,
+                SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self
+            ])
+            let isTestMode = ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1"
+            let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: isTestMode)
+            let container = try ModelContainer(for: schema, configurations: [configuration])
             let mainContext = ModelContext(container)
             orchestrator.modelContext = mainContext
             botManager.modelContext = mainContext
@@ -240,14 +252,6 @@ extension AppDelegate {
             print("⚠️ Failed to initialize SwiftData model context: \(error)")
         }
 
-        orchestrator.autoApproveToolCalls = true
-        if let perms = orchestrator.permissions {
-            perms.desktopFolderAllowed = true
-            perms.documentsFolderAllowed = true
-            perms.downloadsFolderAllowed = true
-            perms.musicFolderAllowed = true
-            try? orchestrator.modelContext?.save()
-        }
         try? await Task.sleep(for: .seconds(1))
 
         await orchestrator.sendMessageAndWait(prompt)

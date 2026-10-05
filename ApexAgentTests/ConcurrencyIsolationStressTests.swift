@@ -12,8 +12,7 @@ import Network
 struct TraceBusConcurrencyStressTests {
 
     @Test func testHighConcurrencyPublisherContentionAndRingBufferCap() async throws {
-        let traceBus = TraceBus.shared
-        traceBus.clear()
+        let traceBus = TraceBus(maxEvents: 400)
 
         let taskCount = 50
         let eventsPerTask = 100
@@ -261,14 +260,18 @@ struct BotManagerConcurrencyStressTests {
         // Deny TargetB
         let allowedB = manager.resolvePeerRequest(requestId: reqIdB, allow: false, remember: false)
         #expect(allowedB == false)
-        #expect(!manager.peerApprovals.hasGrant(action: .askBot, targetBotId: targetB.id.uuidString))
+        #expect(!manager.peerApprovals.hasGrant(
+            action: .askBot,
+            senderBotId: initiator.id.uuidString,
+            targetBotId: targetB.id.uuidString
+        ))
     }
 }
 
 // MARK: - 4. ApexGatewayServer Lifecycle & Continuation Resumption Tests
 
 @MainActor
-@Suite("ApexGatewayServerLifecycleStressTests")
+@Suite("ApexGatewayServerLifecycleStressTests", .serialized)
 struct ApexGatewayServerLifecycleStressTests {
 
     @Test func testServerStartStopAndPendingConfirmationCleanup() throws {

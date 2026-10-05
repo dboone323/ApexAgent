@@ -951,14 +951,25 @@ public final class SpaceManager {
         case .disabled: .disabled
         }
 
+        let isDirectMention = Self.isDirectlyMentioned(in: channel, by: bot, threadParentId: threadParentId)
+
         let request = AgentRequest(
             conversationId: channel.id,
             senderIdentity: .bot(id: bot.id, name: bot.name),
             prompt: promptContext,
+            // Gate tools on the human's actual message, not the transcript
+            // scaffold — the scaffold always contains delegation vocabulary.
+            intentText: Self.originatingHumanMessage(in: channel, threadParentId: threadParentId)
+                ?? promptContext,
+            isDirectMention: isDirectMention,
             toolCallingMode: toolMode
         )
 
-        let instructions = bot.systemInstructions + "\n\n" + buildSpaceSystemInstructions(for: bot, in: space, channel: channel)
+        var instructions = bot.systemInstructions + "\n\n" + buildSpaceSystemInstructions(for: bot, in: space, channel: channel)
+        instructions = AgentRequestRouter.applyingDirectAddressPolicy(
+            base: instructions,
+            isDirectMention: isDirectMention
+        )
 
         let terminalState = await AgentRequestRouter.shared.route(
             request,
@@ -999,6 +1010,63 @@ public final class SpaceManager {
         return placeholder
     }
 
+    /// Broadcast handles that address every agent in the Space.
+    public static let broadcastHandles: Set<String> = [
+        "all", "agents", "bots", "channel", "everyone", "team"
+    ]
+
+    /// The messages that form this turn's context, in display order.
+    private static func relevantMessages(
+        in channel: SpaceChannel,
+        threadParentId: UUID?
+    ) -> [SpaceMessage] {
+        if let parentId = threadParentId,
+           let parent = channel.messages.first(where: { $0.id == parentId }) {
+            return ([parent] + channel.threadReplies(for: parentId)).suffix(20).map { $0 }
+        }
+        return Array(channel.rootMessages.suffix(20))
+    }
+
+    /// The most recent human message in this turn's context — the utterance that
+    /// actually drove the turn. Used for tool-intent gating so transcript
+    /// boilerplate cannot fabricate tool intent.
+    static func originatingHumanMessage(in channel: SpaceChannel, threadParentId: UUID?) -> String? {
+        relevantMessages(in: channel, threadParentId: threadParentId)
+            .last(where: { $0.senderKind == .human && !$0.isStreaming })?
+            .content
+    }
+
+    /// True when a human explicitly @mentioned this bot (or broadcast to
+    /// everyone) in the message that triggered this turn. Broadcast counts: the
+    /// human is still directly addressing the agents.
+    static func isDirectlyMentioned(
+        in channel: SpaceChannel,
+        by bot: BotProfile,
+        threadParentId: UUID?
+    ) -> Bool {
+        let messages = relevantMessages(in: channel, threadParentId: threadParentId)
+        guard let trigger = messages.last(where: { $0.senderKind == .human && !$0.isStreaming }) else {
+            return false
+        }
+        let mentions = trigger.mentionedHandles.isEmpty
+            ? extractMentions(from: trigger.content)
+            : trigger.mentionedHandles
+        guard !mentions.isEmpty else { return false }
+
+        let botHandle = SpaceParticipant.normalizeHandle(bot.name)
+            .replacingOccurrences(of: "-", with: "")
+        let botName = bot.name.lowercased().replacingOccurrences(of: " ", with: "")
+
+        return mentions.contains { raw in
+            let handle = raw.lowercased()
+                .replacingOccurrences(of: "-", with: "")
+                .replacingOccurrences(of: "_", with: "")
+            return handle == botHandle
+                || handle == botName
+                || broadcastHandles.contains(handle)
+        }
+    }
+
     func buildSpaceSystemInstructions(for bot: BotProfile, in space: SpaceModel, channel: SpaceChannel) -> String {
         let humans = space.humanParticipants.map { "\($0.displayName) (@\($0.handle))" }.joined(separator: ", ")
         let agents = space.agentParticipants.map { "\($0.displayName) (@\($0.handle) — \($0.roleTitle))" }.joined(separator: ", ")
@@ -1017,7 +1085,8 @@ public final class SpaceManager {
         Collaboration Rules for \(bot.name):
         1. You are in a shared multiplayer Space ('\(space.name)') with both humans and specialist AI agents.
         2. Address the specific human or agent who spoke last, and stay concise and actionable.
-        3. You can tag other teammates using @handle if a follow-up from another specialist or human is needed.
+        3. Do the requested work yourself with your own tools. Do NOT reply with a plan to delegate, and do NOT hand the task back to the human. Delegation tools are withheld from you when you are directly @mentioned.
+        4. Only tag another teammate with @handle when a genuinely different specialty is required — and then still deliver your own part of the answer.
         """
     }
 
@@ -1027,14 +1096,7 @@ public final class SpaceManager {
         channel: SpaceChannel,
         threadParentId: UUID?
     ) -> String {
-        let relevantMessages: [SpaceMessage]
-        if let parentId = threadParentId {
-            let parent = channel.messages.first(where: { $0.id == parentId })
-            let replies = channel.threadReplies(for: parentId)
-            relevantMessages = ([parent].compactMap { $0 } + replies).suffix(20)
-        } else {
-            relevantMessages = Array(channel.rootMessages.suffix(20))
-        }
+        let relevantMessages = Self.relevantMessages(in: channel, threadParentId: threadParentId)
 
         var transcript = buildSpaceSystemInstructions(for: bot, in: space, channel: channel) + "\n\n"
         transcript += "Recent conversation in #\(channel.name):\n\n"

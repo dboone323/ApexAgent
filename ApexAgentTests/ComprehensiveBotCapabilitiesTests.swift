@@ -259,9 +259,11 @@ final class ComprehensiveBotCapabilitiesTests: XCTestCase {
         // Fetch conversations from context
         let descriptor = FetchDescriptor<Conversation>()
         let conversations = try modelContext.fetch(descriptor)
-        let botConv = conversations.first { $0.botProfileId == bot.id }
-        XCTAssertNotNil(botConv, "Conversation must be persisted with botProfileId")
-        XCTAssertEqual(botConv?.messages.count, 2)
+        guard let botConv = conversations.first(where: { $0.botProfileId == bot.id }) else {
+            XCTFail("Conversation must be persisted with botProfileId")
+            return
+        }
+        XCTAssertEqual(botConv.messages.count, 2)
 
         // Simulate app relaunch by recreating session and calling loadConversationFromDisk
         let freshSession = BotSession(bot: bot, orchestrator: orchestrator, computer: computer)
@@ -269,8 +271,8 @@ final class ComprehensiveBotCapabilitiesTests: XCTestCase {
         freshSession.loadConversationFromDisk()
 
         XCTAssertEqual(freshSession.messages.count, 2)
-        XCTAssertEqual(freshSession.messages[0].content, "Hello Persistent Bot!")
-        XCTAssertEqual(freshSession.messages[1].content, "Hello! I am ready to help.")
+        XCTAssertEqual(freshSession.messages.first?.content, "Hello Persistent Bot!")
+        XCTAssertEqual(freshSession.messages.dropFirst().first?.content, "Hello! I am ready to help.")
     }
 
     // MARK: - P2: Parallel Fan-Out / Fan-In Swarm Dispatch

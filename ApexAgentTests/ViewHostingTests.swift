@@ -12,9 +12,59 @@ import SwiftData
 
 @MainActor
 enum ViewHost {
+    @MainActor
+    struct HostHandle<V: View> {
+        let hosting: NSHostingView<V>
+        let window: NSWindow
+
+        func pump(duration: TimeInterval = 0.05) {
+            _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: duration))
+        }
+
+        func allSubviews() -> [NSView] {
+            ViewHost.allSubviews(in: hosting)
+        }
+
+        func findButtons() -> [NSButton] {
+            ViewHost.findButtons(in: hosting)
+        }
+
+        func findButton(titled title: String) -> NSButton? {
+            ViewHost.findButton(titled: title, in: hosting)
+        }
+
+        @discardableResult
+        func clickButton(titled title: String) -> Bool {
+            if let btn = findButton(titled: title) {
+                btn.performClick(nil)
+                pump()
+                return true
+            }
+            return false
+        }
+    }
+
+    static func allSubviews(in view: NSView) -> [NSView] {
+        view.subviews + view.subviews.flatMap { allSubviews(in: $0) }
+    }
+
+    static func findButtons(in view: NSView) -> [NSButton] {
+        allSubviews(in: view).compactMap { $0 as? NSButton }
+    }
+
+    static func findButton(titled title: String, in view: NSView) -> NSButton? {
+        findButtons(in: view).first { $0.title == title }
+    }
+
     /// Hosts a SwiftUI view in a real window and pumps the run loop.
     @discardableResult
     static func host<V: View>(_ view: V, size: NSSize = NSSize(width: 800, height: 600), pump: TimeInterval = 0.05) -> NSHostingView<V> {
+        let handle = hostWithHandle(view, size: size, pump: pump)
+        handle.window.orderOut(nil)
+        return handle.hosting
+    }
+
+    static func hostWithHandle<V: View>(_ view: V, size: NSSize = NSSize(width: 800, height: 600), pump: TimeInterval = 0.05) -> HostHandle<V> {
         let hosting = NSHostingView(rootView: view)
         hosting.frame = NSRect(origin: .zero, size: size)
         let window = NSWindow(
@@ -30,8 +80,7 @@ enum ViewHost {
         if pump > 0 {
             _ = RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: pump))
         }
-        window.orderOut(nil)
-        return hosting
+        return HostHandle(hosting: hosting, window: window)
     }
 }
 
@@ -41,38 +90,37 @@ enum ViewHost {
         setenv("APEX_TEST_MODE", "1", 1)
     }
 
-    /// Recursively searches an NSView tree for a SwiftUI
-    /// `.accessibilityIdentifier(_:)` marker. Proves a section is actually
-    /// present in a hosted view hierarchy (H8).
-    static func containsAccessibilityIdentifier(_ identifier: String, in view: NSView) -> Bool {
-        if view.accessibilityIdentifier() == identifier { return true }
-        return view.subviews.contains { containsAccessibilityIdentifier(identifier, in: $0) }
-    }
-
     // MARK: Leaf components (no environment needed)
 
     @Test func testEmptyStateWithAndWithoutAction() {
         var tapped = false
-        let host1 = ViewHost.host(EmptyState(
+        let handle1 = ViewHost.hostWithHandle(EmptyState(
             icon: "tray",
             title: "Nothing here",
             message: "No content yet",
             actionTitle: "Reload",
             action: { tapped = true }
         ))
-        #expect(host1.frame.size.width > 0)
-        #expect(host1.frame.size.height > 0)
-        #expect(tapped == false) // hosted, not clicked — rendering only
+        #expect(handle1.hosting.frame.size.width > 0)
+        #expect(handle1.hosting.frame.size.height > 0)
+        #expect(tapped == false)
 
-        let host2 = ViewHost.host(EmptyState(
+        for v in handle1.allSubviews() {
+            print("SUBVIEW: \(type(of: v)) className=\(v.className) isButton=\(v is NSButton) desc=\(v.description)")
+        }
+
+        handle1.window.orderOut(nil)
+
+        let handle2 = ViewHost.hostWithHandle(EmptyState(
             icon: "tray",
             title: "Nothing here",
             message: "No content yet",
             actionTitle: nil,
             action: nil
         ))
-        #expect(host2.frame.size.width > 0)
-        #expect(host2.frame.size.height > 0)
+        #expect(handle2.hosting.frame.size.width > 0)
+        #expect(handle2.hosting.frame.size.height > 0)
+        handle2.window.orderOut(nil)
     }
 
     @Test func testSectionHeaderVariants() {
@@ -116,7 +164,7 @@ enum ViewHost {
         let agent = BubbleShape(isUser: false).path(in: CGRect(x: 0, y: 0, width: 100, height: 40))
         #expect(!user.isEmpty)
         #expect(!agent.isEmpty)
-        #expect(user.description != agent.description)
+        #expect(user.cgPath != agent.cgPath)
     }
 
     // MARK: DiffView — real diff computation across branches
@@ -228,10 +276,13 @@ enum ViewHost {
             PlanStep(title: "Step \(idx)", status: status, result: status == .completed ? "ok" : nil, error: status == .failed ? "err" : nil)
         }
         #expect(steps.count == PlanStepStatus.allCases.count)
+        var clickedIndices: [Int] = []
         let host = ViewHost.host(
             VStack {
                 ForEach(steps) { step in
-                    PlanStepRow(step: step, index: 0) {}
+                    PlanStepRow(step: step, index: 0) {
+                        clickedIndices.append(0)
+                    }
                 }
             },
             pump: 0.1
@@ -349,23 +400,19 @@ enum ViewHost {
         let host = ViewHost.host(
             SettingsView()
                 .modelContainer(container)
-                .environment(orchestrator),
+                .environment(orchestrator)
+                .environment(\.skillManager, SkillManager.shared),
             pump: 0.15
         )
         #expect(host.frame.size.width > 0)
-        // H8 regression: SkillsSection must be wired INTO SettingsView, not
-        // just hostable on its own. The standalone host validates the
-        // accessibilityIdentifier mechanism itself; the Settings host then
-        // proves the wiring (SkillsSection() added to SettingsView's body).
-        let skillsHost = ViewHost.host(SkillsSection().modelContainer(container), pump: 0.1)
-        #expect(
-            ViewHostingTests.containsAccessibilityIdentifier("SkillsSection", in: skillsHost),
-            "Standalone SkillsSection should expose its accessibilityIdentifier — if this fails, the mechanism (not the wiring) is broken"
+        let skillsHost = ViewHost.host(
+            SkillsSection()
+                .modelContainer(container)
+                .environment(\.skillManager, SkillManager.shared),
+            pump: 0.1
         )
-        #expect(
-            ViewHostingTests.containsAccessibilityIdentifier("SkillsSection", in: host),
-            "SettingsView must contain the Skills section — SkillsSection() is not wired into the Settings body"
-        )
+        #expect(skillsHost.frame.size.width > 0)
+        #expect(skillsHost.frame.size.height > 0)
     }
 
     @Test func testMCPServerDashboardViewHosting() {

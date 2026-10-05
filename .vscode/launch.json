@@ -39,6 +39,46 @@
             "target": "sandboxctl",
             "configuration": "release",
             "preLaunchTask": "swift: Build Release sandboxctl"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ApexAgent}",
+            "name": "Debug apexflow",
+            "target": "apexflow",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug apexflow"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ApexAgent}",
+            "name": "Release apexflow",
+            "target": "apexflow",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release apexflow"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ApexAgent}",
+            "name": "Debug benchmark-repro",
+            "target": "benchmark-repro",
+            "configuration": "debug",
+            "preLaunchTask": "swift: Build Debug benchmark-repro"
+        },
+        {
+            "type": "swift",
+            "request": "launch",
+            "args": [],
+            "cwd": "${workspaceFolder:ApexAgent}",
+            "name": "Release benchmark-repro",
+            "target": "benchmark-repro",
+            "configuration": "release",
+            "preLaunchTask": "swift: Build Release benchmark-repro"
         }
     ]
 }

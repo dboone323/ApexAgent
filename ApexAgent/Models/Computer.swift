@@ -18,8 +18,7 @@ final class Computer {
     /// The shared workspace directory where Bots can persist project files.
     /// Resembles Grok Bot's `/workspace` on the cloud VM.
     static var sharedWorkspaceURL: URL {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let ws = home.appendingPathComponent(".apex/computer-workspace")
+        let ws = ApexAgentStoragePaths.directory("computer-workspace")
         try? FileManager.default.createDirectory(at: ws, withIntermediateDirectories: true)
         return ws
     }

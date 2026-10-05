@@ -138,6 +138,7 @@ actor MCPClient {
     private var stdinPipe: Pipe?
     private var stdoutPipe: Pipe?
     private var stderrPipe: Pipe?
+    private let testSandboxDirectory: URL
     /// True when the MCP server was placed in its own process group (via setpgid)
     /// at launch. Enables stop() to kill the whole process tree — the server plus
     /// any child workers (e.g. node) — instead of orphaning them with SIGTERM
@@ -238,6 +239,8 @@ actor MCPClient {
         self.logger = logger
         self.orchestrator = orchestrator
         self.config = config
+        self.testSandboxDirectory = ApexAgentStoragePaths.directory("sandbox")
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
     }
     
     func start() async throws {
@@ -282,8 +285,9 @@ actor MCPClient {
         
         if isRestricted {
             let fm = FileManager.default
-            let homeDir = fm.homeDirectoryForCurrentUser
-            let sandboxDir = homeDir.appendingPathComponent(".apex/sandbox")
+            let sandboxDir = KeychainManager.isTestProcess
+                ? testSandboxDirectory
+                : ApexAgentStoragePaths.directory("sandbox")
             try? fm.createDirectory(at: sandboxDir, withIntermediateDirectories: true)
             env["HOME"] = sandboxDir.path
         }
@@ -823,10 +827,8 @@ public func executeDynamicScript(
 ) async throws -> DynamicScriptResult {
     // H3: validate the script path — must exist, be a regular file, and live
     // under an allowed directory, with symlinks fully resolved.
-    let allowedRoots = [
-        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex/tools"),
-        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".apex/skills"),
-    ].map { $0.resolvingSymlinksInPath().standardizedFileURL.path }
+    let allowedRoots = ApexAgentStoragePaths.scriptDirectories
+        .map { $0.resolvingSymlinksInPath().standardizedFileURL.path }
 
     let resolvedURL = URL(fileURLWithPath: (scriptPath as NSString).expandingTildeInPath)
         .resolvingSymlinksInPath()
@@ -840,7 +842,7 @@ public func executeDynamicScript(
         resolvedURL.path == root || resolvedURL.path.hasPrefix(root + "/")
     }
     guard insideAllowedRoot else {
-        throw DynamicScriptError.invalidPath("outside allowed tool directories (~/.apex/tools, ~/.apex/skills): \(scriptPath)")
+        throw DynamicScriptError.invalidPath("outside allowed dynamic tool directories: \(scriptPath)")
     }
 
     let process = Process()

@@ -135,6 +135,7 @@ public struct IntentToolSelector: Sendable {
         // Action / tool-intent indicators
         let actionKeywords: [String] = [
             "call ", "invoke ", "execute ", "use the ", "use tool", "tool",
+            "change bot", "rename bot", "update bot", "modify bot",
             "delegate_task", "convene_meeting", "dispatch_swarm", "ask_bot",
             "delegate", "meeting", "swarm", "codex", "nexus", "auditor", "chronos", "oracle", "pilot", "aura",
             "file", "folder", "directory", "path", "workspace", "codebase", "repo", "repository",

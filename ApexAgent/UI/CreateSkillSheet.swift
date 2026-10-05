@@ -5,7 +5,6 @@ import SwiftData
 
 public struct CreateSkillSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(SkillManager.self) private var skillManager: SkillManager?
     @Environment(\.modelContext) private var modelContext
 
     public var skillName: String
@@ -165,8 +164,7 @@ public struct CreateSkillSheet: View {
         }
 
         let fileManager = FileManager.default
-        let homeDir = fileManager.homeDirectoryForCurrentUser
-        let skillsDir = homeDir.appendingPathComponent(".apex/skills")
+        let skillsDir = ApexAgentStoragePaths.skills
 
         do {
             try fileManager.createDirectory(at: skillsDir, withIntermediateDirectories: true, attributes: nil)
@@ -188,7 +186,7 @@ public struct CreateSkillSheet: View {
             let manifest: [String: Any] = [
                 "name": name,
                 "description": desc,
-                "script_path": "~/.apex/skills/\(name).sh",
+                "script_path": ApexAgentStoragePaths.skillScriptReference(for: name),
                 "parameters": parsedSchema
             ]
             let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: .prettyPrinted)
@@ -198,7 +196,7 @@ public struct CreateSkillSheet: View {
             let skill = Skill(
                 name: name,
                 descriptionText: desc,
-                scriptPath: "~/.apex/skills/\(name).sh",
+                scriptPath: ApexAgentStoragePaths.skillScriptReference(for: name),
                 parameterSchemaJSON: schema,
                 category: "custom",
                 enabled: true

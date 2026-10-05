@@ -118,8 +118,8 @@ public final class SpaceModel {
         self.name = name
         self.iconName = iconName
         self.summary = summary
-        let baseDir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".apex/spaces/\(id.uuidString)")
+        let baseDir = ApexAgentStoragePaths.directory("spaces")
+            .appendingPathComponent(id.uuidString, isDirectory: true)
         self.workspacePath = workspacePath ?? baseDir.appendingPathComponent("workspace").path
         self.memoryNamespace = "spaces/\(id.uuidString)"
         self.defaultOrchestrationModeRaw = defaultOrchestrationMode.rawValue

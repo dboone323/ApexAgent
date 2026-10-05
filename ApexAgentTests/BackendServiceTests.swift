@@ -4,7 +4,7 @@ import SwiftData
 @testable import ApexAgentCore
 import SharedModels
 
-@Suite("BackendServiceTests") class BackendServiceTests {
+@Suite("BackendServiceTests", .serialized) class BackendServiceTests {
     @MainActor
     @Test func testAgentOrchestratorDatabaseAndCompaction() async throws {
         let orchestrator = AgentOrchestrator()
@@ -98,19 +98,23 @@ import SharedModels
     
     @MainActor
     @Test func testRealDaemonCommunication() async throws {
-        
+        let gatewayToken = UUID().uuidString
         let orchestrator = AgentOrchestrator()
         let schema = Schema([Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self])
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: schema, configurations: config)
         orchestrator.modelContext = ModelContext(container)
         
-        let testPort: UInt16 = 28888
-        let server = ApexGatewayServer(port: testPort, orchestrator: orchestrator)
+        let testPort = UInt16.random(in: 30_000...60_000)
+        let server = ApexGatewayServer(
+            port: testPort,
+            orchestrator: orchestrator,
+            authenticationToken: gatewayToken
+        )
         try server.start()
         defer { server.stop() }
         
-        let client = ApexGatewayClient()
+        let client = ApexGatewayClient(gatewayToken: gatewayToken)
         client.disconnect()
         client.connect(host: "127.0.0.1", port: testPort)
         defer { client.disconnect() }

@@ -221,13 +221,28 @@ struct FileWriteTool: Tool {
                     fileHandle.write(data)
                 }
                 fileHandle.closeFile()
-                return "✅ Appended \(arguments.content.count) characters to \(expandedPath)"
+
+                // End-to-end execution verification: verify on disk
+                guard FileManager.default.fileExists(atPath: expandedPath) else {
+                    return "ERROR: Verification failed — file not found on disk after append at \(expandedPath)"
+                }
+                let verifiedSize = (try? FileManager.default.attributesOfItem(atPath: expandedPath)[.size] as? Int64) ?? 0
+                return "✅ Appended \(arguments.content.count) characters to \(expandedPath) [Verified: \(verifiedSize) bytes on disk]"
             } else {
                 // WS5.7: snapshot the previous contents before overwriting so
                 // the write can be rolled back.
                 FileRollback.snapshot(path: expandedPath)
                 try arguments.content.write(to: url, atomically: true, encoding: .utf8)
-                return "✅ Written \(arguments.content.count) characters to \(expandedPath)"
+
+                // End-to-end execution verification: verify existence and readback integrity
+                guard FileManager.default.fileExists(atPath: expandedPath) else {
+                    return "ERROR: Verification failed — file not found on disk after write at \(expandedPath)"
+                }
+                let verifiedContent = try String(contentsOf: url, encoding: .utf8)
+                guard verifiedContent.count == arguments.content.count else {
+                    return "ERROR: Verification failed — character count mismatch (expected \(arguments.content.count), verified \(verifiedContent.count)) at \(expandedPath)"
+                }
+                return "✅ Written \(arguments.content.count) characters to \(expandedPath) [Verified: \(arguments.content.count) chars on disk]"
             }
         }
     }

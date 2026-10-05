@@ -33,8 +33,7 @@ struct CreateSkillTool: Tool {
             riskDescription: "Creates and loads a new executable shell script skill '\(arguments.skillName)' which can run arbitrary commands on the system."
         ) {
             let fileManager = FileManager.default
-            let homeDir = fileManager.homeDirectoryForCurrentUser
-            let skillsDir = homeDir.appendingPathComponent(".apex/skills")
+            let skillsDir = ApexAgentStoragePaths.skills
 
             // 1. Ensure skills directory exists
             try? fileManager.createDirectory(at: skillsDir, withIntermediateDirectories: true, attributes: nil)
@@ -64,7 +63,7 @@ struct CreateSkillTool: Tool {
             let manifest: [String: Any] = [
                 "name": sanitizedName,
                 "description": arguments.skillDescription,
-                "script_path": "~/.apex/skills/\(sanitizedName).sh",
+                "script_path": ApexAgentStoragePaths.skillScriptReference(for: sanitizedName),
                 "parameters": parsedSchema
             ]
 

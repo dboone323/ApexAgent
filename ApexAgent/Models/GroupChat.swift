@@ -320,6 +320,46 @@ final class GroupChatSession {
             attachments: attachments
         )
         messages.append(userMsg)
+
+        // Canonical direct @mention routing in GroupChat
+        if let bm = botManager {
+            let mentions = SpaceManager.extractMentions(from: trimmed)
+            if !mentions.isEmpty {
+                let matchedBots = SpaceManager.matchBots(for: mentions, in: nil, botManager: bm)
+                for mentionedBot in matchedBots {
+                    // 1. Join if not already a participant
+                    if !participants.contains(where: { $0.id == mentionedBot.id }) {
+                        participants.append(mentionedBot)
+                        let joinNotice = ChatMessage(
+                            role: .system,
+                            content: "[\(mentionedBot.name) was tagged by user and joined the group chat]",
+                            timestamp: Date(),
+                            attachments: []
+                        )
+                        messages.append(joinNotice)
+                    }
+
+                    // 2. Prioritize this bot to respond next
+                    let nextIndex = min(currentTurnIndex + 1, generationOrder.count)
+                    if let existingFutureIdx = generationOrder.dropFirst(currentTurnIndex + 1).firstIndex(of: mentionedBot.id) {
+                        generationOrder.remove(at: existingFutureIdx)
+                    }
+                    generationOrder.insert(mentionedBot.id, at: nextIndex)
+                }
+
+                // If idle and bots were tagged, start generation targeting the tagged bot immediately
+                if !isGenerating && !matchedBots.isEmpty {
+                    if let firstTagged = matchedBots.first {
+                        if let existingIdx = generationOrder.firstIndex(of: firstTagged.id) {
+                            generationOrder.remove(at: existingIdx)
+                        }
+                        generationOrder.insert(firstTagged.id, at: currentTurnIndex)
+                    }
+                    isGenerating = true
+                    beginNextTurn()
+                }
+            }
+        }
     }
 
     func sendUserMessageToParticipant(_ text: String, addressedTo bot: BotProfile) {
@@ -332,6 +372,23 @@ final class GroupChatSession {
             attachments: []
         )
         messages.append(userMsg)
+
+        if !participants.contains(where: { $0.id == bot.id }) {
+            participants.append(bot)
+            generationOrder.append(bot.id)
+        }
+
+        if let existingIdx = generationOrder.firstIndex(of: bot.id) {
+            generationOrder.remove(at: existingIdx)
+        }
+        let targetIndex = isGenerating ? min(currentTurnIndex + 1, generationOrder.count) : currentTurnIndex
+        generationOrder.insert(bot.id, at: targetIndex)
+
+        if !isGenerating {
+            currentTurnIndex = targetIndex
+            isGenerating = true
+            beginNextTurn()
+        }
     }
 
     // MARK: - Context building

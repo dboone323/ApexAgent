@@ -562,9 +562,8 @@ public struct DynamicScriptEditorView: View {
 
     private func loadScriptFiles() {
         let fm = FileManager.default
-        let home = fm.homeDirectoryForCurrentUser
-        let skillsDir = home.appendingPathComponent(".apex/skills")
-        let toolsDir = home.appendingPathComponent(".apex/tools")
+        let skillsDir = ApexAgentStoragePaths.skills
+        let toolsDir = ApexAgentStoragePaths.tools
 
         var found: [ScriptEntry] = []
         for dir in [skillsDir, toolsDir] {
@@ -614,7 +613,7 @@ public struct DynamicScriptEditorView: View {
         guard !name.isEmpty else { return }
 
         let fm = FileManager.default
-        let dir = fm.homeDirectoryForCurrentUser.appendingPathComponent(".apex/skills")
+        let dir = ApexAgentStoragePaths.skills
         try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
 
         let scriptURL = dir.appendingPathComponent("\(name).sh")

@@ -12,6 +12,7 @@ final class SettingsAndMCPDashboardUITests: XCTestCase {
             _ = app.wait(for: .notRunning, timeout: 5)
         }
         let fresh = XCUIApplication()
+        fresh.launchEnvironment["APEX_TEST_MODE"] = "1"
         app = fresh
         fresh.launch()
         fresh.activate()
@@ -39,33 +40,46 @@ final class SettingsAndMCPDashboardUITests: XCTestCase {
 
         try UITestActivity.step("2. Dismiss Diagnostics Sheet") { _ in
             let doneBtn = app.buttons["diagnosticsDoneButton"].firstMatch
-            if doneBtn.waitForExistence(timeout: 5) {
-                doneBtn.click()
-            } else {
-                app.typeKey(.escape, modifierFlags: [])
-            }
+            XCTAssertTrue(doneBtn.waitForExistence(timeout: 5), "diagnosticsDoneButton must exist on Diagnostics sheet")
+            doneBtn.click()
             let diagSheet = app.sheets.firstMatch
             XCTAssertTrue(diagSheet.waitForNonExistence(timeout: 5), "Diagnostics sheet should dismiss")
         }
     }
 
-    func testToolCallingModePicker() throws {
+    func testToolCallingModePickerTraversal() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Inspect Tool Calling Mode Picker") { _ in
-            let picker = app.popUpButtons["toolCallingModePicker"].firstMatch
-            if picker.waitForExistence(timeout: 5) {
-                picker.click()
-                let autoItem = app.menuItems["Auto"].firstMatch
-                if autoItem.waitForExistence(timeout: 2) {
-                    autoItem.click()
-                } else {
-                    app.typeKey(.escape, modifierFlags: [])
-                }
-            } else {
-                let altPicker = app.descendants(matching: .any)["toolCallingModePicker"].firstMatch
-                XCTAssertTrue(altPicker.waitForExistence(timeout: 5), "Tool calling mode picker must exist")
-            }
+        try UITestActivity.step("1. Inspect and cycle Tool Calling Mode Picker options") { _ in
+            let picker = app.descendants(matching: .any)["toolCallingModePicker"].firstMatch
+            XCTAssertTrue(picker.waitForExistence(timeout: 5), "Tool calling mode picker must exist in toolbar")
+
+            // Switch to Chat Only
+            picker.click()
+            let chatOnlyItem = app.menuItems["Chat Only"].firstMatch
+            XCTAssertTrue(chatOnlyItem.waitForExistence(timeout: 3), "Chat Only menu item must exist")
+            chatOnlyItem.click()
+
+            // Switch back to Auto
+            picker.click()
+            let autoItem = app.menuItems["Auto"].firstMatch
+            XCTAssertTrue(autoItem.waitForExistence(timeout: 3), "Auto menu item must exist")
+            autoItem.click()
+        }
+    }
+
+    func testSidebarToggleToolbarButton() throws {
+        launchFreshApp()
+
+        try UITestActivity.step("1. Toggle sidebar visibility via toolbar button") { _ in
+            let sidebarBtn = app.buttons["toggleSidebarButton"].firstMatch
+            XCTAssertTrue(sidebarBtn.waitForExistence(timeout: 5), "toggleSidebarButton must exist in toolbar")
+            sidebarBtn.click()
+
+            // Toggle back
+            sidebarBtn.click()
+            let apexBot = app.buttons["botSidebarItem_Apex"].firstMatch
+            XCTAssertTrue(apexBot.waitForExistence(timeout: 5), "Apex bot item must be visible in sidebar")
         }
     }
 }

@@ -60,4 +60,22 @@ struct RoutineRun: Identifiable, Codable, Equatable, Sendable {
         self.output = output
         self.error = error
     }
+
+    var duration: TimeInterval? {
+        guard let finishedAt else { return nil }
+        return finishedAt.timeIntervalSince(startedAt)
+    }
+
+    var formattedDuration: String {
+        guard let duration else { return "Running..." }
+        if duration < 1.0 {
+            return String(format: "%.0f ms", duration * 1000)
+        } else if duration < 60.0 {
+            return String(format: "%.1f s", duration)
+        } else {
+            let mins = Int(duration) / 60
+            let secs = Int(duration) % 60
+            return "\(mins)m \(secs)s"
+        }
+    }
 }

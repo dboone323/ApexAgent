@@ -920,7 +920,7 @@ struct PlaybookCollaborationTests {
             onApprovalRequired: { card in
                 await MainActor.run {
                     let chatView = BotChatView(session: session)
-                    ViewHost.host(chatView, pump: 0.05)
+                    ViewHost.host(chatView.environment(manager).environment(orchestrator), pump: 0.05)
                     #expect(manager.activePlaybookRunner?.pendingApprovalCard?.id == card.id)
                     let resolved = manager.resolvePlaybookApproval(approved: true, notes: "Approved via BotChatView banner")
                     #expect(resolved == true)
@@ -930,5 +930,30 @@ struct PlaybookCollaborationTests {
         #expect(report.isSuccessful == true)
         #expect(report.approvalCards.first?.status == .approved)
         #expect(report.approvalCards.first?.resolutionNotes == "Approved via BotChatView banner")
+    }
+
+    @Test("Peer approval is visible and denial settles the request")
+    @MainActor
+    func testPeerApprovalVisibilityAndDenial() {
+        let orchestrator = AgentOrchestrator()
+        let manager = BotManager(orchestrator: orchestrator, computer: Computer())
+        let sender = manager.createBot(name: "Approval Sender", title: "Coordinator", descriptionText: "Requests work")
+        let target = manager.createBot(name: "Approval Target", title: "Specialist", descriptionText: "Handles work")
+        let senderSession = manager.session(for: sender)
+
+        guard case .blockedPendingCard(let requestId) = manager.peerDeliveryDecision(
+            from: sender,
+            to: target,
+            message: "Review this change"
+        ) else {
+            Issue.record("An ungranted peer request must create a pending card")
+            return
+        }
+        #expect(manager.pendingPeerApprovals.map(\.id) == [requestId])
+        #expect(senderSession.needsAttention)
+        #expect(!manager.resolvePeerRequest(requestId: requestId, allow: false))
+        #expect(manager.pendingPeerApprovals.isEmpty)
+        #expect(!senderSession.needsAttention)
+        #expect(senderSession.messages.last?.content.contains("was denied") == true)
     }
 }

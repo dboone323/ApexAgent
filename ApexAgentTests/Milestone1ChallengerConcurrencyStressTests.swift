@@ -275,14 +275,15 @@ final class Milestone1ChallengerConcurrencyStressTests {
     }
 
     @MainActor
-    @Test func testGatewayServerRapidRestartCycles() throws {
+    @Test func testGatewayServerRapidRestartCycles() async throws {
         let orchestrator = AgentOrchestrator()
-        let port: UInt16 = 29991
+        let port = UInt16.random(in: 30_000...60_000)
 
         for _ in 0..<5 {
             let server = ApexGatewayServer(port: port, orchestrator: orchestrator)
             try server.start()
             server.stop()
+            try await Task.sleep(for: .milliseconds(100))
         }
     }
 

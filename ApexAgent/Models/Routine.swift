@@ -57,6 +57,19 @@ final class Routine {
         }
         return trigger.rawValue
     }
+
+    var stableUUID: UUID {
+        if let data = name.data(using: .utf8) {
+            var hash = [UInt8](repeating: 0, count: 16)
+            data.withUnsafeBytes { buffer in
+                for (i, byte) in buffer.enumerated() {
+                    hash[i % 16] ^= byte
+                }
+            }
+            return UUID(uuid: (hash[0], hash[1], hash[2], hash[3], hash[4], hash[5], hash[6], hash[7], hash[8], hash[9], hash[10], hash[11], hash[12], hash[13], hash[14], hash[15]))
+        }
+        return UUID()
+    }
 }
 
 // MARK: - RoutineTrigger: when a Routine fires

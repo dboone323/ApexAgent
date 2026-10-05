@@ -4,7 +4,7 @@ import SwiftData
 @testable import ApexAgentCore
 
 @MainActor
-@Suite("ApexGatewayClientTests") final class ApexGatewayClientTests {
+@Suite("ApexGatewayClientTests", .serialized) final class ApexGatewayClientTests {
 
     @Test func testClientInitialStateAndMethods() {
         let client = ApexGatewayClient()

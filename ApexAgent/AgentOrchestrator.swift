@@ -1037,6 +1037,8 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             || lowerText.contains("without running tools")
             || lowerText.contains("without using tools")
             || lowerText.contains("no tools")
+            || lowerText.contains("don't call tools")
+            || lowerText.contains("do not call tools")
             || lowerText.contains("don't use tools")
             || lowerText.contains("do not use tools")
             || lowerText.contains("without running any tools")
@@ -1069,17 +1071,31 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             // Replaces the former ModelRegistry.resolveEngine + engine.streamResponse
             // path which had no runtime fallback (gap #2) and no terminal-state
             // normalization (gap #11).
+            let mentionedHandles = SpaceManager.extractMentions(from: text)
+            var targetBot: BotProfile? = nil
+            var isDirectMention = false
+            if let bm = self.botManager, !mentionedHandles.isEmpty {
+                for b in bm.allBots {
+                    if mentionedHandles.contains(where: { BotSession.handleMatches(handle: $0, bot: b) }) {
+                        targetBot = b
+                        isDirectMention = true
+                        break
+                    }
+                }
+            }
+
             let request = AgentRequest(
                 conversationId: self.currentConversation?.id ?? UUID(),
-                senderIdentity: .orchestrator,
+                senderIdentity: targetBot != nil ? .bot(id: targetBot!.id, name: targetBot!.name) : .orchestrator,
                 prompt: text,
+                isDirectMention: isDirectMention,
                 attachments: userMsg.attachments,
                 toolCallingMode: effectiveToolCallingMode
             )
 
             let terminalState = await AgentRequestRouter.shared.route(
                 request,
-                bot: nil,
+                bot: targetBot,
                 history: historyMessages,
                 instructions: finalInstructions,
                 orchestrator: self,

@@ -379,8 +379,7 @@ class CollaborativeServer: NSObject, ObservableObject {
 
     func logAccess(clientIP: String, endpoint: String, isAuthorized: Bool, decision: String) {
         let fm = FileManager.default
-        let homeDir = fm.homeDirectoryForCurrentUser
-        let logsDir = homeDir.appendingPathComponent("Library/Logs/ApexAgent")
+        let logsDir = ApexAgentStoragePaths.collaborationLogs
         try? fm.createDirectory(at: logsDir, withIntermediateDirectories: true)
 
         let logFileURL = logsDir.appendingPathComponent("collab-access.log")
@@ -685,8 +684,7 @@ class CollaborativeServer: NSObject, ObservableObject {
 
     func getDashboardHTMLSnapshot() -> String {
         let fm = FileManager.default
-        let homeDir = fm.homeDirectoryForCurrentUser
-        let logsDir = homeDir.appendingPathComponent("Library/Logs/ApexAgent")
+        let logsDir = ApexAgentStoragePaths.collaborationLogs
         try? fm.createDirectory(at: logsDir, withIntermediateDirectories: true)
 
         let logFileURL = logsDir.appendingPathComponent("collab-access.log")

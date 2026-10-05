@@ -7,7 +7,7 @@ import os
 @testable import ApexAgentCore
 
 @MainActor
-@Suite("ApexGatewayServerTests") final class ApexGatewayServerTests {
+@Suite("ApexGatewayServerTests", .serialized) final class ApexGatewayServerTests {
     
     @Test func testServerLifecycle() async throws {
         let orchestrator = AgentOrchestrator()
@@ -16,7 +16,7 @@ import os
         let container = try ModelContainer(for: schema, configurations: config)
         orchestrator.modelContext = ModelContext(container)
         
-        let server = ApexGatewayServer(port: 27777, orchestrator: orchestrator)
+        let server = ApexGatewayServer(port: UInt16.random(in: 30_000...60_000), orchestrator: orchestrator)
         _ = server // non-optional value type
         
         // Start the server
@@ -43,11 +43,16 @@ import os
     }
 
     @Test func testRealLoopbackTCPClientConnectionAndStateBroadcast() async throws {
+        let gatewayToken = UUID().uuidString
         let orchestrator = AgentOrchestrator()
         orchestrator.appendMessage(ChatMessage(role: .user, content: "Gateway connectivity test"))
 
-        let port: UInt16 = 28999
-        let server = ApexGatewayServer(port: port, orchestrator: orchestrator)
+        let port = UInt16.random(in: 30_000...60_000)
+        let server = ApexGatewayServer(
+            port: port,
+            orchestrator: orchestrator,
+            authenticationToken: gatewayToken
+        )
         try server.start()
         defer { server.stop() }
 
@@ -95,6 +100,21 @@ import os
                 }
             }
             connection.start(queue: .global())
+        }
+
+        let authData = try JSONEncoder().encode(
+            GatewayAction.authenticate(token: gatewayToken)
+        )
+        var authLength = UInt32(authData.count).bigEndian
+        let authPacket = Data(bytes: &authLength, count: 4) + authData
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            connection.send(content: authPacket, completion: .contentProcessed { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            })
         }
 
         // Receive broadcasted state frame (4 bytes length + JSON payload)

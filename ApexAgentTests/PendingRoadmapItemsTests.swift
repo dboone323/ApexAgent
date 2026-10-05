@@ -111,7 +111,7 @@ final class PendingRoadmapItemsTests: XCTestCase {
             command: "/bin/echo",
             arguments: ["hello"]
         )
-        let manager = MCPManager.shared
+        let manager = MCPManager(persistsConfigs: false)
         manager.addServer(dummyConfig)
         defer { manager.removeServer(id: dummyConfig.id) }
 

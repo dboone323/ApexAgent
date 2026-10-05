@@ -100,8 +100,8 @@ struct SandboxTests {
         let testBotId = UUID()
         let engine = CognitiveMemoryEngine.shared
         defer {
-            let home = FileManager.default.homeDirectoryForCurrentUser
-            let botDir = home.appendingPathComponent(".apex/memory/\(testBotId.uuidString)")
+            let botDir = ApexAgentStoragePaths.directory("memory")
+                .appendingPathComponent(testBotId.uuidString, isDirectory: true)
             try? FileManager.default.removeItem(at: botDir)
         }
 
@@ -129,8 +129,8 @@ struct SandboxTests {
         let testBotId = UUID()
         let engine = CognitiveMemoryEngine.shared
         defer {
-            let home = FileManager.default.homeDirectoryForCurrentUser
-            let botDir = home.appendingPathComponent(".apex/memory/\(testBotId.uuidString)")
+            let botDir = ApexAgentStoragePaths.directory("memory")
+                .appendingPathComponent(testBotId.uuidString, isDirectory: true)
             try? FileManager.default.removeItem(at: botDir)
         }
 
@@ -177,8 +177,8 @@ struct SandboxTests {
         let testBotId = UUID()
         let engine = CognitiveMemoryEngine.shared
         defer {
-            let home = FileManager.default.homeDirectoryForCurrentUser
-            let botDir = home.appendingPathComponent(".apex/memory/\(testBotId.uuidString)")
+            let botDir = ApexAgentStoragePaths.directory("memory")
+                .appendingPathComponent(testBotId.uuidString, isDirectory: true)
             try? FileManager.default.removeItem(at: botDir)
         }
 
@@ -217,8 +217,8 @@ struct SandboxTests {
         let testBotId = UUID()
         let engine = CognitiveMemoryEngine.shared
         defer {
-            let home = FileManager.default.homeDirectoryForCurrentUser
-            let botDir = home.appendingPathComponent(".apex/memory/\(testBotId.uuidString)")
+            let botDir = ApexAgentStoragePaths.directory("memory")
+                .appendingPathComponent(testBotId.uuidString, isDirectory: true)
             try? FileManager.default.removeItem(at: botDir)
         }
 

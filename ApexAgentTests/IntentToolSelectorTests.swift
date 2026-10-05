@@ -20,6 +20,9 @@ struct IntentToolSelectorTests {
         #expect(IntentToolSelector.shouldEnableTools(for: "Call the get_system_info tool and report the CPU model.") == true)
         #expect(IntentToolSelector.shouldEnableTools(for: "Read Package.swift and list the products.") == true)
         #expect(IntentToolSelector.shouldEnableTools(
+            for: "@apex change bot names containing TestBot to friendly role-based names"
+        ) == true)
+        #expect(IntentToolSelector.shouldEnableTools(
             for: "Call delegate_task with agentType 'developer' and taskDescription 'Answer in one sentence without calling any tools: What is your primary responsibility?'"
         ) == true)
         #expect(IntentToolSelector.shouldEnableTools(
@@ -114,5 +117,32 @@ struct IntentToolSelectorTests {
         #expect(ModelProvider.parse("ollamaLocal") == .localOllama)
         #expect(ModelProvider.parse("cloudGemini") == .cloudGemini)
     }
-}
 
+    @Test("Successful shell results require a separate check before reporting completion")
+    func testShellResultsRequireVerification() {
+        let result = AgentExecutionVerification.applyingToolResultGuidance(
+            toolName: "run_shell_command",
+            result: "Command completed."
+        )
+        #expect(result.contains("POST-EXECUTION CHECK REQUIRED"))
+        #expect(result.contains("separate read-only tool"))
+
+        #expect(AgentExecutionVerification.applyingToolResultGuidance(
+            toolName: "run_shell_command",
+            result: "ERROR: command failed"
+        ) == "ERROR: command failed")
+        #expect(AgentExecutionVerification.applyingToolResultGuidance(
+            toolName: "read_file",
+            result: "file contents"
+        ) == "file contents")
+    }
+
+    @Test("Verification policy is included in routed agent instructions")
+    func testVerificationDirectiveIsIdempotent() {
+        let once = AgentExecutionVerification.applyingDirective(to: "Bot persona")
+        let twice = AgentExecutionVerification.applyingDirective(to: once)
+        #expect(once.contains("EXECUTION VERIFICATION"))
+        #expect(once.contains("Never invent tool names"))
+        #expect(twice == once)
+    }
+}

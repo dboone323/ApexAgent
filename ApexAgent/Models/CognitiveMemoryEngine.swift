@@ -44,8 +44,8 @@ public final class CognitiveMemoryEngine {
     }
     
     private func getMemoryDirectory(forBotId botId: UUID) -> URL {
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser
-        let apexDir = homeDir.appendingPathComponent(".apex/memory/\(botId.uuidString)", isDirectory: true)
+        let apexDir = ApexAgentStoragePaths.directory("memory")
+            .appendingPathComponent(botId.uuidString, isDirectory: true)
         if !FileManager.default.fileExists(atPath: apexDir.path) {
             try? FileManager.default.createDirectory(at: apexDir, withIntermediateDirectories: true)
         }
@@ -132,8 +132,7 @@ public final class CognitiveMemoryEngine {
     }
     
     public func retractFact(id: UUID) {
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser
-        let memoryDir = homeDir.appendingPathComponent(".apex/memory")
+        let memoryDir = ApexAgentStoragePaths.directory("memory")
         guard let enumerator = FileManager.default.enumerator(at: memoryDir, includingPropertiesForKeys: nil) else { return }
         
         for case let url as URL in enumerator {
@@ -148,10 +147,18 @@ public final class CognitiveMemoryEngine {
         }
     }
     
-    public func queryFacts(subject: String?, predicate: String?, object: String?) -> [SemanticFact] {
+    public func queryFacts(subject: String?, predicate: String?, object: String?, botId: UUID? = nil) -> [SemanticFact] {
+        if let botId {
+            let facts = allFacts(forBotId: botId)
+            return facts.filter { fact in
+                let subjectMatches = subject == nil || fact.subject == subject
+                let predicateMatches = predicate == nil || fact.predicate == predicate
+                let objectMatches = object == nil || fact.object == object
+                return subjectMatches && predicateMatches && objectMatches
+            }
+        }
         var results: [SemanticFact] = []
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser
-        let memoryDir = homeDir.appendingPathComponent(".apex/memory")
+        let memoryDir = ApexAgentStoragePaths.directory("memory")
         guard let enumerator = FileManager.default.enumerator(at: memoryDir, includingPropertiesForKeys: nil) else { return [] }
         
         for case let url as URL in enumerator {
@@ -171,18 +178,27 @@ public final class CognitiveMemoryEngine {
         return results
     }
     
-    public func searchFacts(keyword: String) -> [SemanticFact] {
-        var results: [SemanticFact] = []
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser
-        let memoryDir = homeDir.appendingPathComponent(".apex/memory")
-        guard let enumerator = FileManager.default.enumerator(at: memoryDir, includingPropertiesForKeys: nil) else { return [] }
+    public func searchFacts(keyword: String, botId: UUID? = nil) -> [SemanticFact] {
         let lowerKeyword = keyword.lowercased()
+        if let botId {
+            let facts = allFacts(forBotId: botId)
+            if lowerKeyword.isEmpty { return facts }
+            return facts.filter { fact in
+                fact.subject.lowercased().contains(lowerKeyword) ||
+                fact.predicate.lowercased().contains(lowerKeyword) ||
+                fact.object.lowercased().contains(lowerKeyword)
+            }
+        }
+        var results: [SemanticFact] = []
+        let memoryDir = ApexAgentStoragePaths.directory("memory")
+        guard let enumerator = FileManager.default.enumerator(at: memoryDir, includingPropertiesForKeys: nil) else { return [] }
         
         for case let url as URL in enumerator {
             if url.lastPathComponent == "semantic.json" {
                 let facts: [SemanticFact] = (try? loadJSON(from: url)) ?? []
                 for fact in facts {
-                    if fact.subject.lowercased().contains(lowerKeyword) ||
+                    if lowerKeyword.isEmpty ||
+                        fact.subject.lowercased().contains(lowerKeyword) ||
                         fact.predicate.lowercased().contains(lowerKeyword) ||
                         fact.object.lowercased().contains(lowerKeyword) {
                         results.append(fact)
@@ -191,6 +207,31 @@ public final class CognitiveMemoryEngine {
             }
         }
         return results
+    }
+
+    public func storeBotFact(
+        botId: UUID,
+        subject: String,
+        predicate: String,
+        object: String,
+        confidence: Double = 1.0,
+        source: String = "bot_experience"
+    ) {
+        let fact = SemanticFact(
+            botId: botId,
+            subject: subject,
+            predicate: predicate,
+            object: object,
+            confidence: confidence,
+            source: source
+        )
+        assertFact(fact)
+    }
+
+    public func botMemories(for botId: UUID, limit: Int = 10) -> (episodes: [EpisodicEntry], facts: [SemanticFact]) {
+        let eps = recentEpisodes(forBotId: botId, limit: limit)
+        let facts = Array(allFacts(forBotId: botId).prefix(limit))
+        return (eps, facts)
     }
     
     // MARK: - Procedural Memory (tool recipes and error recovery)
@@ -242,8 +283,7 @@ public final class CognitiveMemoryEngine {
     
     public func lookupRecipes(forGoal goal: String) -> [ProceduralRecipe] {
         var results: [ProceduralRecipe] = []
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser
-        let memoryDir = homeDir.appendingPathComponent(".apex/memory")
+        let memoryDir = ApexAgentStoragePaths.directory("memory")
         guard let enumerator = FileManager.default.enumerator(at: memoryDir, includingPropertiesForKeys: nil) else { return [] }
         let lowerGoal = goal.lowercased()
         
@@ -263,8 +303,7 @@ public final class CognitiveMemoryEngine {
     }
     
     public func updateRecipeStats(id: UUID, succeeded: Bool) {
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser
-        let memoryDir = homeDir.appendingPathComponent(".apex/memory")
+        let memoryDir = ApexAgentStoragePaths.directory("memory")
         guard let enumerator = FileManager.default.enumerator(at: memoryDir, includingPropertiesForKeys: nil) else { return }
         
         for case let url as URL in enumerator {
@@ -601,7 +640,7 @@ public final class CognitiveMemoryEngine {
     /// High-level query matching semantic facts, procedural tool recipes, and episodic memories.
     public func retrieveRelevantContext(query: String, botId: UUID? = nil) -> String {
         var sections: [String] = []
-        let facts = searchFacts(keyword: query)
+        let facts = searchFacts(keyword: query, botId: botId)
         if !facts.isEmpty {
             let factsList = facts.prefix(5).map { "- \($0.subject) \($0.predicate) \($0.object)" }.joined(separator: "\n")
             sections.append("### Relevant Semantic Knowledge\n\(factsList)")

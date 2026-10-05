@@ -65,8 +65,16 @@ struct RoadmapHardeningTests {
         #expect(blockedResult.contains("Peer approval required") || blockedResult.contains("pending approval card"))
 
         // 2. Add grant -> allowed and delivered
-        botManager.peerApprovals.addGrant(action: .askBot, targetBotId: researcher.id.uuidString)
-        #expect(botManager.peerApprovals.hasGrant(action: .askBot, targetBotId: researcher.id.uuidString))
+        botManager.peerApprovals.addGrant(
+            action: .askBot,
+            senderBotId: chief.id.uuidString,
+            targetBotId: researcher.id.uuidString
+        )
+        #expect(botManager.peerApprovals.hasGrant(
+            action: .askBot,
+            senderBotId: chief.id.uuidString,
+            targetBotId: researcher.id.uuidString
+        ))
 
         let decision = botManager.peerDeliveryDecision(from: chief, to: researcher, message: "Hello researcher")
         #expect(decision == .deliver)

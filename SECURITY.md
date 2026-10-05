@@ -1,76 +1,65 @@
-# Security: Gemini API Key Migration & Secure Deletion
+# Credential Storage and CLI Safety
 
-## Overview
+## Credential storage
 
-ApexAgent stores the Gemini API key in the macOS Keychain (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`). Prior versions stored it in plaintext locations. When a user upgrades to the Keychain-backed version, legacy plaintext keys are migrated and the originals are securely deleted.
+Provider secrets are stored as generic-password items in the macOS Keychain using
+`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`. `KeychainManager.save` returns
+the Keychain write result and does not mirror values to `UserDefaults`. If Keychain
+access fails, a value saved during the current process may remain available in
+memory only; it is not persisted as a fallback.
 
-## Legacy Storage Locations
+Gemini's current Keychain account is `geminiAPIKey`. On first production lookup,
+`ModelRegistry` attempts to migrate legacy values in this order:
 
-| Location | Key | Risk |
-|---|---|---|
-| `~/.apex/gemini_key` | Plaintext file | High — readable by any process with file access |
-| `UserDefaults` | `apex.geminiKey` / `geminiAPIKey` | Medium — stored in plist, no encryption |
+1. The old Keychain account `apex.geminiKey`.
+2. The legacy `UserDefaults` keys `apex.model.geminiAPIKey`, `apex.geminiKey`,
+   and `geminiAPIKey`.
+3. The legacy file `~/.apex/gemini_key`.
 
-## Migration Flow
+The destination is written before legacy values are removed. If the Keychain write
+fails, the source is retained and a diagnostic is emitted. When a current Gemini
+Keychain item already exists, duplicate legacy preferences and the legacy file are
+removed without replacing the current item. Empty values delete the Keychain item.
+The `GEMINI_API_KEY` environment variable remains an explicit runtime override.
 
-### On `geminiAPIKey()` lookup
+Legacy file removal uses ordinary filesystem deletion. **It is not forensic secure
+erasure**: APFS copy-on-write, snapshots, backups, and SSD wear-leveling prevent
+software from guaranteeing physical removal of prior file contents. Users who
+previously stored credentials in plaintext should rotate those credentials.
 
-1. Check Keychain for `geminiAPIKey` → return if found
-2. Check Keychain for `apex.geminiKey` → return if found
-3. Check `GEMINI_API_KEY` env var → return if set (no migration, env takes priority)
-4. Check `~/.apex/gemini_key` file → if found, treat as legacy key
-5. Check `UserDefaults` for `apex.geminiKey` / `geminiAPIKey` → if found, treat as legacy key
-6. If a legacy key was found:
-   - **File source**: securely delete the file (overwrites with random data, then removes) before using the key
-   - **UserDefaults source**: purge the entries
-   - Save the key to Keychain under both `geminiAPIKey` and `apex.geminiKey`
-7. Return the key
+Legacy `secure.*` `UserDefaults` entries used by `KeychainManager` are migrated
+lazily into the Keychain and removed only after a successful Keychain write.
+Test processes use a PID-scoped Keychain service and a PID-scoped temporary
+`.apex` data root for skills, memory, audit records, sandbox files, and related
+state. Restricted MCP test clients also receive distinct temporary home
+directories, preventing concurrent `npx` server launches from sharing mutable
+package-install state. Automatic legacy migrations are disabled in test
+processes, preventing tests from reading or modifying a developer's real
+credential and app-data stores.
 
-### On `saveGeminiAPIKey(_:)`
+## CLI tool policy
 
-- Saves to Keychain under both key names
-- Purges UserDefaults entries
-- Securely deletes any existing `~/.apex/gemini_key` file
+`ApexAgent --cli <prompt>` runs without tools by default. Dynamic scripts are
+disabled in that mode. Use `--allow-tools` only when tool execution is intentional;
+`--no-tools` explicitly overrides it. CLI tool execution does not grant broad
+filesystem access or automatically approve confirmations.
 
-### One-time cleanup (`performLegacyKeyCleanupIfNeeded`)
+Example:
 
-Called on first access to `geminiAPIKey()`. If a legacy file exists but no migration was triggered (e.g., the user upgraded without configuring Gemini yet), the file is securely deleted anyway. Guarded by `UserDefaults` flag `apex.legacyKeyCleanupDone` so it runs exactly once.
+```bash
+ApexAgent.app/Contents/MacOS/ApexAgent --cli "Summarize this text: ..."
+ApexAgent.app/Contents/MacOS/ApexAgent --cli --allow-tools "List files in ~/Documents"
+```
 
-## Secure Deletion Implementation
+An empty CLI prompt is a usage error and exits with status 64 rather than opening
+the graphical application.
 
-`KeychainManager.secureDeleteFile(at:passes:)`
+## Relevant implementation and tests
 
-- Reads the file size
-- Generates cryptographically secure random data of the same size
-- Writes it over the file (single pass by default — sufficient for SSDs)
-- Optionally repeats for additional passes (for HDD compatibility)
-- Removes the file via `FileManager.default.removeItem(at:)`
-
-**Why single-pass:** SSDs use wear-leveling and TRIM, making multi-pass overwriting unreliable (the physical blocks being overwritten may differ from the logical blocks the filesystem sees). A single-pass random overwrite followed by removal is the recommended approach for SSDs. On HDDs, callers can increase `passes`.
-
-**Fallback:** If the overwrite fails (e.g., permissions), `removeItem` is attempted as a best-effort cleanup. The caller can check the `Bool` return value if forensic certainty matters.
-
-## Code Location
-
-- `Models/KeychainManager.swift` — `secureDeleteFile(at:passes:)` helper
-- `Models/ModelRegistry.swift`:
-  - `geminiAPIKey()` — migration on lookup (lines ~110-167)
-  - `saveGeminiAPIKey(_:)` — cleanup on save (lines ~169-195)
-  - `performLegacyKeyCleanupIfNeeded()` — one-time orphan cleanup (lines ~169-183)
-
-## Threat Model
-
-| Threat | Mitigation |
-|---|---|
-| Forensic recovery of plaintext file after upgrade | Secure overwrite + remove |
-| Legacy file sitting dormant after upgrade (no Gemini configured) | One-time cleanup on first `geminiAPIKey()` call |
-| Race condition during migration | `geminiKeyMutex` serializes read-migrate-write in `geminiAPIKey()` and delete in `saveGeminiAPIKey()` |
-| Key left in UserDefaults after migration | Explicitly purged in both paths |
-
-## 2026-09-24 — Keychain Plaintext-Mirror Issue (Audit C1)
-
-The 2026-09-24 project audit (AUDIT_2026-09-24.md, finding C1) found that `KeychainManager.save(key:value:)` was writing every secret to the Keychain **and then unconditionally mirroring it into plaintext `UserDefaults`** (keys `secure.<key>`), while `get(key:)` preferred the in-memory fallback, then the **plaintext** UserDefaults value, and only then the Keychain — and `save` reported Keychain success even when the Keychain write failed. This silently undermined the Keychain narrative above: every "keychained" secret (Gemini/Tavily/Brave keys, tokens) sat in cleartext in `~/Library/Preferences/…`.
-
-**Remediation (fix session, 2026-09-24):** the `UserDefaults` mirror was removed from `KeychainManager`; `save` now reports the real Keychain result; any pre-existing `secure.*` plaintext values found in `UserDefaults` are migrated into the Keychain and the plaintext entries deleted.
-
-**Verification pending:** the code fix is part of the concurrent 2026-09-24 fix session (see KeychainManager.swift after it lands). Do not treat C1 as closed until a green `swift build` + `swift test` confirms the new behavior.
+- `ApexAgent/Models/KeychainManager.swift` — Keychain operations, in-memory-only
+  fallback, legacy `secure.*` migration, and isolated legacy-file migration helper.
+- `ApexAgent/Models/ModelRegistry.swift` — Gemini legacy migration and retrieval.
+- `ApexAgent/Models/DynamicToolbox.swift` — central production/test storage paths;
+  tests load and execute real script fixtures only from temporary directories.
+- `ApexAgentIntelligenceTests/RuntimeContractTests.swift` — migration and A2A
+  tests use isolated storage and do not access the user's credential account.

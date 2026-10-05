@@ -105,6 +105,10 @@ extension Tool {
             // phrasing before the result re-enters the transcript so a tool
             // cannot hijack the agent loop.
             result = sanitizeForPromptInjection(result)
+            result = AgentExecutionVerification.applyingToolResultGuidance(
+                toolName: toolName,
+                result: result
+            )
 
             if result.hasPrefix("ERROR:") {
                 await orchestrator.orchestrator.logToolEnd(name: toolName, result: result, status: .failed(result))

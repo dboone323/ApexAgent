@@ -32,7 +32,6 @@ import AppKit
     deinit {
         Task { @MainActor in
             DynamicToolbox.shared.stopWatcher()
-            await MCPManager.shared.stopAll()
         }
     }
     
@@ -157,8 +156,9 @@ import AppKit
     }
 
     @Test func testKeychainStorage() {
-        let testKey = "test_api_key_name"
+        let testKey = "test_api_key_\(UUID().uuidString)"
         let testVal = "sk-test12345abcdef"
+        defer { _ = KeychainManager.delete(key: testKey) }
         
         // 1. Save key
         let saved = KeychainManager.save(key: testKey, value: testVal)
@@ -265,8 +265,7 @@ import AppKit
     @MainActor
     @Test func testDynamicToolLoading() async throws {
         let fileManager = FileManager.default
-        let homeDir = fileManager.homeDirectoryForCurrentUser
-        let toolsDir = homeDir.appendingPathComponent(".apex/tools")
+        let toolsDir = ApexAgentStoragePaths.tools
         
         // Ensure tools directory exists
         try? fileManager.createDirectory(at: toolsDir, withIntermediateDirectories: true, attributes: nil)
@@ -570,8 +569,7 @@ import AppKit
         #expect(result.contains("SUCCESS") || result.contains("permission") || result.contains("Failed to write"))
         
         // Cleanup file
-        let homeDir = FileManager.default.homeDirectoryForCurrentUser
-        let skillsDir = homeDir.appendingPathComponent(".apex/skills")
+        let skillsDir = ApexAgentStoragePaths.skills
         let jsonPath = skillsDir.appendingPathComponent("test_temp_skill.json")
         let scriptPath = skillsDir.appendingPathComponent("test_temp_skill.sh")
         try? FileManager.default.removeItem(at: jsonPath)

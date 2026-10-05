@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import FoundationModels
+import os
 
 // MARK: - Provider Fallback Executor
 //
@@ -11,6 +12,7 @@ import FoundationModels
 @MainActor
 public final class ProviderFallbackExecutor {
     public static let shared = ProviderFallbackExecutor()
+    private static let logger = Logger(subsystem: "com.apexagent.ApexAgent", category: "ProviderFallback")
 
     public init() {}
 
@@ -52,6 +54,7 @@ public final class ProviderFallbackExecutor {
             previousProvider = candidate.provider
 
             var accumulatedText = ""
+            let attemptStartedAt = ContinuousClock.now
 
             let engine = ModelRegistry.engine(
                 for: candidate.provider,
@@ -79,21 +82,35 @@ public final class ProviderFallbackExecutor {
 
                 let trimmed = accumulatedText.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty && !trimmed.hasPrefix("⚠️ The on-device model returned no output") {
+                    Self.logger.info(
+                        "Provider attempt succeeded: \(candidate.provider.displayName, privacy: .public) in \(self.elapsedMilliseconds(since: attemptStartedAt), format: .fixed(precision: 1)) ms"
+                    )
                     let finalState = RuntimeTerminalState.completed(output: trimmed)
                     onEvent?(.completed(requestId: requestId, state: finalState))
                     return finalState
                 } else {
                     let emptyErr = "\(candidate.provider.displayName) produced an empty response."
                     attemptedErrors.append(emptyErr)
+                    Self.logger.warning(
+                        "Provider attempt returned empty output: \(candidate.provider.displayName, privacy: .public) after \(self.elapsedMilliseconds(since: attemptStartedAt), format: .fixed(precision: 1)) ms"
+                    )
                 }
             } catch {
                 let errorMsg = "\(candidate.provider.displayName) error: \(error.localizedDescription)"
                 attemptedErrors.append(errorMsg)
+                Self.logger.warning(
+                    "Provider attempt failed: \(candidate.provider.displayName, privacy: .public) after \(self.elapsedMilliseconds(since: attemptStartedAt), format: .fixed(precision: 1)) ms"
+                )
             }
         }
 
         let terminal = RuntimeTerminalState.fallbackExhausted(errors: attemptedErrors)
         onEvent?(.completed(requestId: requestId, state: terminal))
         return terminal
+    }
+
+    private func elapsedMilliseconds(since start: ContinuousClock.Instant) -> Double {
+        let duration = start.duration(to: .now).components
+        return (Double(duration.seconds) + Double(duration.attoseconds) / 1e18) * 1_000
     }
 }

@@ -84,7 +84,20 @@ final class BotSession {
     /// so every bot knows which teammates exist and can be delegated to via
     /// `delegate_task`.
     var systemInstructions: String {
-        let baseInstructions = bot.systemInstructions
+        var baseInstructions = bot.systemInstructions
+
+        // Inject long-term cognitive memory context for this bot
+        let cognitiveSummary = CognitiveMemoryEngine.shared.buildContextSummary(forBotId: bot.id, maxLength: 800)
+        if !cognitiveSummary.isEmpty {
+            baseInstructions += "\n\n--- Long-Term Cognitive Memory ---\n" + cognitiveSummary
+        }
+
+        let facts = CognitiveMemoryEngine.shared.searchFacts(keyword: "", botId: bot.id)
+        if !facts.isEmpty {
+            let factsList = facts.prefix(10).map { "- \($0.subject) \($0.predicate) \($0.object)" }.joined(separator: "\n")
+            baseInstructions += "\n\n--- Remembered Knowledge Graph ---\n" + factsList
+        }
+
         guard bot.isChiefOfStaff, let botManager else { return baseInstructions }
         let profiles = botManager.allBots.map { ($0, botManager.isGenerating(botId: $0.id)) }
         let rosterPrompt = ChiefOfStaff.systemPrompt(
@@ -178,8 +191,18 @@ final class BotSession {
         }
         // MCP Scoping check
         if !bot.allowedMCPServers.isEmpty {
-            if let entry = DynamicToolbox.shared.dynamicTools[name], entry.mcpServerId != nil {
-                return "ERROR: Tool '\(name)' is not permitted for bot '\(bot.name)' under least-privilege MCP scoping policy."
+            if let entry = DynamicToolbox.shared.dynamicTools[name], let serverId = entry.mcpServerId {
+                let matchingServer = MCPManager.shared.servers.first(where: { $0.id == serverId })
+                let serverName = matchingServer?.name ?? ""
+                let serverIdStr = serverId.uuidString
+                let isAllowed = bot.allowedMCPServers.contains { allowed in
+                    allowed.caseInsensitiveCompare(serverName) == .orderedSame ||
+                    allowed.caseInsensitiveCompare(serverIdStr) == .orderedSame
+                }
+                if !isAllowed {
+                    let displayName = serverName.isEmpty ? serverIdStr : serverName
+                    return "ERROR: Tool '\(name)' from MCP server '\(displayName)' is not permitted for bot '\(bot.name)' under least-privilege MCP scoping policy. Allowed MCP servers: \(bot.allowedMCPServers.joined(separator: ", "))"
+                }
             }
         }
 

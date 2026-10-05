@@ -24,7 +24,7 @@ import Observation
     
     private init() {
         let fileManager = FileManager.default
-        let auditDir = fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".apex")
+        let auditDir = ApexAgentStoragePaths.apex
         if !fileManager.fileExists(atPath: auditDir.path) {
             try? fileManager.createDirectory(at: auditDir, withIntermediateDirectories: true)
         }

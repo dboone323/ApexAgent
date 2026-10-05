@@ -28,6 +28,7 @@ Or build/test from the command line:
 # Xcodebuild (entitlement-preserving ad-hoc signing "-" embeds ApexAgent.entitlements):
 xcodebuild build -project ApexAgent.xcodeproj -scheme ApexAgent -destination "platform=macOS"
 xcodebuild test -project ApexAgent.xcodeproj -scheme ApexAgent -testPlan ApexAgent-UnitTests -destination "platform=macOS"
+xcodebuild test -project ApexAgent.xcodeproj -scheme ApexAgent -testPlan ApexAgent-UITests -destination "platform=macOS"
 
 # Or Swift Package Manager (with code coverage and zero skipped tests):
 xcrun swift build
@@ -35,6 +36,17 @@ xcrun swift test --parallel --enable-code-coverage
 ```
 
 > **Note:** The Foundation Models framework does NOT work in the iOS/macOS Simulator. Run on a real device.
+
+### Command-line prompts
+
+The app's one-shot CLI runs with tools disabled by default. To enable tool calls,
+pass `--allow-tools` explicitly; `--no-tools` always disables them. Empty prompts
+are rejected with exit status 64 instead of launching the GUI.
+
+```bash
+ApexAgent.app/Contents/MacOS/ApexAgent --cli "Explain this Swift error"
+ApexAgent.app/Contents/MacOS/ApexAgent --cli --allow-tools "Search the workspace"
+```
 
 ---
 

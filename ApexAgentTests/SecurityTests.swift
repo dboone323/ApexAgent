@@ -34,6 +34,31 @@ struct SecurityTests {
         #expect(!ToolPolicy.shared.disabledToolNames().contains("delete_file"))
     }
 
+    @MainActor
+    @Test func testGlobalDenylistBlocksCentralDispatch() async {
+        let policy = ToolPolicy.shared
+        let previous = policy.disabledToolNames()
+        policy.setToolEnabled("read_file", enabled: false)
+        defer {
+            policy.setToolEnabled("read_file", enabled: true)
+            for name in previous {
+                policy.setToolEnabled(name, enabled: false)
+            }
+        }
+
+        let orchestrator = AgentOrchestrator()
+        do {
+            _ = try await orchestrator.executeToolByName(
+                name: "read_file",
+                jsonArguments: "{}"
+            )
+            Issue.record("A globally denied tool must not execute")
+        } catch {
+            #expect((error as NSError).domain == "AgentSecurity")
+            #expect((error as NSError).code == 403)
+        }
+    }
+
     // MARK: - WS5.7 File write rollback
 
     @Test func testFileRollbackRestoresOverwrittenFile() throws {

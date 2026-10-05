@@ -91,6 +91,17 @@ struct StoreMemoryTool: Tool {
                         context.insert(newMemory)
                     }
                     try context.save()
+
+                    // Mirror to CognitiveMemoryEngine so semantic graph stays synchronized
+                    let targetBotId = orchestrator.orchestrator.botManager?.allBots.first?.id ?? UUID()
+                    CognitiveMemoryEngine.shared.storeBotFact(
+                        botId: targetBotId,
+                        subject: keyToFind,
+                        predicate: "is",
+                        object: arguments.value,
+                        source: cat
+                    )
+
                     return "✅ Successfully saved memory for key: '\(keyToFind)' in category: '\(cat)'"
                 } catch {
                     return "ERROR: Failed to save to database: \(error.localizedDescription)"
@@ -159,13 +170,24 @@ struct SearchMemoryTool: Tool {
                         filtered = Array(filtered.prefix(20))
                     }
                     
-                    if filtered.isEmpty {
-                        return "No memory records found."
+                    var output = ""
+                    if !filtered.isEmpty {
+                        output += "🧠 Found \(filtered.count) memory records:\n"
+                        for memory in filtered {
+                            output += "\n--- \(memory.key) [Category: \(memory.category)] (\(memory.timestamp.formatted())) ---\n\(memory.val)\n"
+                        }
                     }
-                    
-                    var output = "🧠 Found \(filtered.count) memory records:\n"
-                    for memory in filtered {
-                        output += "\n--- \(memory.key) [Category: \(memory.category)] (\(memory.timestamp.formatted())) ---\n\(memory.val)\n"
+
+                    if let query = arguments.query?.trimTime(), !query.isEmpty {
+                        let cognitiveContext = CognitiveMemoryEngine.shared.retrieveRelevantContext(query: query)
+                        if !cognitiveContext.hasPrefix("No indexed cognitive memory") {
+                            if !output.isEmpty { output += "\n\n" }
+                            output += cognitiveContext
+                        }
+                    }
+
+                    if output.isEmpty {
+                        return "No memory records found."
                     }
                     return output
                 } catch {

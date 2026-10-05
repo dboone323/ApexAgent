@@ -310,8 +310,7 @@ final class CreationSheetsTests {
 
     @Test func testSkillFileWritingAndChmodExecution() throws {
         let fileManager = FileManager.default
-        let homeDir = fileManager.homeDirectoryForCurrentUser
-        let skillsDir = homeDir.appendingPathComponent(".apex/skills")
+        let skillsDir = ApexAgentStoragePaths.skills
         try? fileManager.createDirectory(at: skillsDir, withIntermediateDirectories: true, attributes: nil)
 
         let skillName = "test_script_runner_\(UUID().uuidString.prefix(6))"
@@ -341,7 +340,7 @@ final class CreationSheetsTests {
         let manifest: [String: Any] = [
             "name": skillName,
             "description": "Test skill description",
-            "script_path": "~/.apex/skills/\(skillName).sh",
+            "script_path": ApexAgentStoragePaths.skillScriptReference(for: skillName),
             "parameters": [
                 "type": "object",
                 "properties": [
@@ -375,7 +374,7 @@ final class CreationSheetsTests {
         let skill = Skill(
             name: uniqueSkillName,
             descriptionText: "Custom tool description",
-            scriptPath: "~/.apex/skills/\(uniqueSkillName).sh",
+            scriptPath: ApexAgentStoragePaths.skillScriptReference(for: uniqueSkillName),
             parameterSchemaJSON: "{\"type\":\"object\"}",
             category: "custom",
             enabled: true
@@ -488,5 +487,518 @@ final class CreationSheetsTests {
             .environment(skillManager)
 
         ViewHost.host(view, size: NSSize(width: 600, height: 700), pump: 0.15)
+    }
+
+    // MARK: - 4. Deep Button Hierarchy, Sub-Button, and Action Enforcement Tests
+
+    @Test func testEmptyStateActionButtonHierarchy() {
+        var actionFired = false
+        let populated = EmptyState(
+            icon: "tray",
+            title: "Empty",
+            message: "No items",
+            actionTitle: "Create Item",
+            action: { actionFired = true }
+        )
+        #expect(populated.actionTitle == "Create Item")
+        #expect(populated.action != nil)
+        #expect(actionFired == false)
+
+        populated.action?()
+        #expect(actionFired == true)
+
+        let inert = EmptyState(
+            icon: "tray",
+            title: "Empty",
+            message: "No items",
+            actionTitle: nil,
+            action: nil
+        )
+        #expect(inert.actionTitle == nil)
+        #expect(inert.action == nil)
+    }
+
+    @Test func testPlanDashboardClearAndDetailTraversal() {
+        let orchestrator = AgentOrchestrator()
+        #expect(orchestrator.activePlan.isEmpty == true)
+
+        // Populate steps: Level 1
+        let step1 = PlanStep(title: "Step 1: Discover", status: .completed, result: "Found 3 targets")
+        let step2 = PlanStep(title: "Step 2: Execute", status: .running)
+        let step3 = PlanStep(title: "Step 3: Verify", status: .failed, error: "Network timeout")
+        orchestrator.updatePlan(steps: [step1, step2, step3])
+        #expect(orchestrator.activePlan.count == 3)
+
+        // Sub-Button: Step row selection navigates to PlanStepDetailView
+        var selectedStep: PlanStep? = step1
+        #expect(selectedStep?.id == step1.id)
+        #expect(selectedStep?.result == "Found 3 targets")
+        #expect(selectedStep?.error == nil)
+
+        // Sub-Button: Navigate to failed step
+        selectedStep = step3
+        #expect(selectedStep?.id == step3.id)
+        #expect(selectedStep?.error == "Network timeout")
+
+        // Sub-Button: Dismiss detail sheet ("Close" toolbar button)
+        selectedStep = nil
+        #expect(selectedStep == nil)
+
+        // Parent Action: "Clear" button in header
+        orchestrator.clearPlan()
+        #expect(orchestrator.activePlan.isEmpty == true)
+        #expect(orchestrator.activePlan.count == 0)
+    }
+
+    @Test func testTerminalToolbarAndPlayPauseHierarchy() async {
+        let orchestrator = AgentOrchestrator()
+        let convo = Conversation(title: "Terminal Convo")
+        orchestrator.currentConversation = convo
+        orchestrator.activeTerminalOutput = "Initial command output\nDone."
+        orchestrator.terminalOutputs[convo.id] = orchestrator.activeTerminalOutput
+
+        var copyInvoked = false
+        var clearInvoked = false
+        var resetInvoked = false
+        var isPaused = false
+
+        // Sub-Button: PlayPauseButton toggle
+        #expect(isPaused == false)
+        isPaused.toggle() // Simulates clicking PlayPauseButton when playing
+        #expect(isPaused == true)
+        isPaused.toggle() // Simulates clicking PlayPauseButton when paused
+        #expect(isPaused == false)
+
+        // Action: Copy button
+        let copyAction = {
+            copyInvoked = true
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(orchestrator.activeTerminalOutput, forType: .string)
+        }
+        copyAction()
+        #expect(copyInvoked == true)
+        #expect(NSPasteboard.general.string(forType: .string) == "Initial command output\nDone.")
+
+        // Action: Clear button
+        let clearAction = {
+            clearInvoked = true
+            orchestrator.terminalOutputs[convo.id] = ""
+            orchestrator.activeTerminalOutput = ""
+        }
+        clearAction()
+        #expect(clearInvoked == true)
+        #expect(orchestrator.activeTerminalOutput == "")
+        #expect(orchestrator.terminalOutputs[convo.id] == "")
+
+        // Action: Reset Shell button
+        let resetAction = {
+            resetInvoked = true
+            await orchestrator.resetPTYSession(for: convo.id)
+        }
+        await resetAction()
+        #expect(resetInvoked == true)
+    }
+
+    @Test func testConfirmationOverlayApproveAndDenyHierarchy() async {
+        let orchestrator = AgentOrchestrator()
+        #expect(orchestrator.pendingConfirmation == nil)
+
+        // Scenario A: Deny flow
+        let taskA = Task {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+                orchestrator.pendingConfirmation = ConfirmationRequest(
+                    toolName: "delete_file",
+                    arguments: #"{"path":"/important/file"}"#,
+                    riskDescription: "Permanently delete file",
+                    oldContent: "critical content",
+                    newContent: "",
+                    filePath: "/important/file",
+                    continuation: continuation
+                )
+            }
+        }
+
+        for _ in 0..<10 {
+            if orchestrator.pendingConfirmation != nil { break }
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+        #expect(orchestrator.pendingConfirmation != nil)
+        #expect(orchestrator.pendingConfirmation?.toolName == "delete_file")
+
+        // Sub-Button: Deny Action
+        orchestrator.resolveConfirmation(approved: false)
+        let receivedDecisionA = await taskA.value
+        #expect(receivedDecisionA == false)
+        #expect(orchestrator.pendingConfirmation == nil)
+
+        // Scenario B: Approve flow
+        let taskB = Task {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+                orchestrator.pendingConfirmation = ConfirmationRequest(
+                    toolName: "create_branch",
+                    arguments: #"{"branch":"feat/ui"}"#,
+                    riskDescription: "Create a new git branch",
+                    continuation: continuation
+                )
+            }
+        }
+
+        for _ in 0..<10 {
+            if orchestrator.pendingConfirmation != nil { break }
+            try? await Task.sleep(nanoseconds: 10_000_000)
+        }
+        #expect(orchestrator.pendingConfirmation != nil)
+        #expect(orchestrator.pendingConfirmation?.toolName == "create_branch")
+
+        // Sub-Button: Approve Action
+        orchestrator.resolveConfirmation(approved: true)
+        let receivedDecisionB = await taskB.value
+        #expect(receivedDecisionB == true)
+        #expect(orchestrator.pendingConfirmation == nil)
+    }
+
+    @Test func testBotManagementDeepHierarchy() throws {
+        let container = try makeTestContainer()
+        let bm = BotManager()
+        bm.modelContext = container.mainContext
+        bm.orchestrator = AgentOrchestrator()
+
+        let initialCount = bm.bots.count
+
+        // Level 1: "New Bot" button -> CreateBotSheet validation & creation
+        let emptyName = ""
+        let isSaveDisabledWhenEmpty = emptyName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        #expect(isSaveDisabledWhenEmpty == true, "Save button must be disabled when bot name is empty")
+
+        let whitespaceName = "    "
+        let isSaveDisabledWhenWhitespace = whitespaceName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        #expect(isSaveDisabledWhenWhitespace == true, "Save button must be disabled when bot name is whitespace")
+
+        // Sub-Button: Avatar icon selection
+        var selectedAvatar = "person.fill"
+        selectedAvatar = "gear"
+        #expect(selectedAvatar == "gear")
+
+        // Sub-Button: Create Bot Action when valid
+        let validName = "Security Auditor"
+        let validTitle = "Application Security Bot"
+        let validDesc = "Scans code for secrets and CVEs"
+        let newBot = bm.createBot(
+            name: validName,
+            title: validTitle,
+            descriptionText: validDesc,
+            avatarName: selectedAvatar
+        )
+        newBot.modelProvider = .localOllama
+        newBot.ollamaModelOverride = "llama3:latest"
+        bm.openConversation(with: newBot)
+
+        #expect(bm.bots.count == initialCount + 1)
+        #expect(bm.activeBotId == newBot.id)
+        #expect(newBot.name == "Security Auditor")
+        #expect(newBot.avatarName == "gear")
+        #expect(newBot.modelProvider == .localOllama)
+        #expect(newBot.ollamaModelOverride == "llama3:latest")
+
+        // Level 2: Edit Bot button -> EditBotSheet
+        let updatedTitle = "Lead AppSec Architect"
+
+        // Level 3 (Deeper sub-button): "Durable Memory" button -> opens MemoryEditorSheet
+        var botMemoryBinding = newBot.memory
+        #expect(botMemoryBinding.isEmpty == true)
+
+        // Level 4 (Deeper sub-button): In MemoryEditorSheet, type memory and click "Save & Close"
+        let draftMemory = "Always check for hardcoded API keys before approving PRs."
+        botMemoryBinding = draftMemory
+
+        // Commit EditBotSheet: "Save Changes" button
+        bm.editBot(
+            newBot,
+            title: updatedTitle,
+            memory: botMemoryBinding
+        )
+
+        #expect(newBot.title == "Lead AppSec Architect")
+        #expect(newBot.memory == "Always check for hardcoded API keys before approving PRs.")
+
+        // Level 1: Pin / Unpin Sub-Button
+        #expect(newBot.isPinned == false)
+        bm.togglePin(newBot)
+        #expect(newBot.isPinned == true)
+        bm.togglePin(newBot)
+        #expect(newBot.isPinned == false)
+
+        // Level 1: Delete Bot Sub-Button -> Confirmation Dialog -> "Delete" destructive action
+        bm.deleteBot(newBot)
+        #expect(bm.bots.contains(where: { $0.id == newBot.id }) == false)
+        #expect(bm.bots.count == initialCount)
+    }
+
+    @Test func testSkillManagementDeepHierarchy() throws {
+        let container = try makeTestContainer()
+        let skillManager = SkillManager.shared
+        skillManager.modelContext = container.mainContext
+
+        // Level 1: Add Custom Skill -> CreateSkillSheet validation
+        let invalidCharSheet = CreateSkillSheet(
+            skillName: "invalid name with spaces!",
+            skillDescription: "Valid description",
+            parameterSchemaJSON: #"{"type": "object"}"#,
+            scriptContent: "echo hi"
+        )
+        #expect(invalidCharSheet.isNameValid == false)
+        #expect(invalidCharSheet.canSave == false)
+
+        let bareSchemaSheet = CreateSkillSheet(
+            skillName: "test_skill",
+            skillDescription: "Valid description",
+            parameterSchemaJSON: "{}",
+            scriptContent: "echo hi"
+        )
+        #expect(bareSchemaSheet.isSchemaValid == false, "Bare {} schema must be invalid (H9)")
+        #expect(bareSchemaSheet.canSave == false)
+
+        let validSheet = CreateSkillSheet(
+            skillName: "test_skill_valid",
+            skillDescription: "Runs test verification",
+            parameterSchemaJSON: #"{"type": "object", "properties": {"target": {"type": "string"}}}"#,
+            scriptContent: "#!/bin/zsh\necho verified"
+        )
+        #expect(validSheet.isNameValid == true)
+        #expect(validSheet.isSchemaValid == true)
+        #expect(validSheet.canSave == true)
+
+        // Sub-Button: Desktop Workflow Recording toggle
+        let recorder = DemoRecorder.shared
+        #expect(recorder.isRecording == false)
+        recorder.startRecording()
+        #expect(recorder.isRecording == true)
+        recorder.stopRecording()
+        #expect(recorder.isRecording == false)
+
+        // Sub-Action: Persist skill and test Toggle + Delete flow
+        let registeredSkill = Skill(
+            name: "test_skill_valid",
+            descriptionText: "Runs test verification",
+            scriptPath: "/tmp/test_skill_valid.sh",
+            parameterSchemaJSON: #"{"type": "object"}"#
+        )
+        container.mainContext.insert(registeredSkill)
+        try container.mainContext.save()
+
+        // Sub-Button: Toggle enabled state
+        #expect(registeredSkill.enabled == true)
+        skillManager.disable(registeredSkill)
+        #expect(registeredSkill.enabled == false)
+        skillManager.enable(registeredSkill)
+        #expect(registeredSkill.enabled == true)
+
+        // Sub-Button: Delete Skill confirmation dialog -> "Delete Skill" destructive button
+        skillManager.delete(registeredSkill)
+    }
+
+    @Test func testRoutineManagementDeepHierarchy() async throws {
+        let container = try makeTestContainer()
+        let routineManager = RoutineManager.shared
+        routineManager.modelContext = container.mainContext
+
+        // Level 1: Add Routine -> CreateRoutineSheet validation
+        let emptySheet = CreateRoutineSheet(routineName: "", prompt: "", selectedTrigger: .manual)
+        #expect(emptySheet.canSave == false, "Empty name and prompt must not be savable")
+
+        // Sub-Button: TimeInterval trigger condition
+        let zeroMinSheet = CreateRoutineSheet(
+            routineName: "Backup",
+            prompt: "Perform daily backup",
+            selectedTrigger: .timeInterval,
+            scheduledMinutes: 0
+        )
+        #expect(zeroMinSheet.canSave == false, "Time interval with 0 minutes must not be savable")
+
+        let validMinSheet = CreateRoutineSheet(
+            routineName: "Backup",
+            prompt: "Perform daily backup",
+            selectedTrigger: .timeInterval,
+            scheduledMinutes: 30
+        )
+        #expect(validMinSheet.canSave == true)
+
+        // Sub-Button: Cron trigger condition
+        let invalidCronSheet = CreateRoutineSheet(
+            routineName: "Nightly Audit",
+            prompt: "Audit codebase",
+            selectedTrigger: .cron,
+            cronExpression: "invalid-cron"
+        )
+        #expect(invalidCronSheet.isCronValid == false)
+        #expect(invalidCronSheet.canSave == false)
+
+        let validCronSheet = CreateRoutineSheet(
+            routineName: "Nightly Audit",
+            prompt: "Audit codebase",
+            selectedTrigger: .cron,
+            cronExpression: "0 2 * * *"
+        )
+        #expect(validCronSheet.isCronValid == true)
+        #expect(validCronSheet.canSave == true)
+
+        // Sub-Action: Register Routine and test Toggle, Run Now & Delete
+        let routine = Routine(
+            name: "Nightly Audit",
+            descriptionText: "Audit codebase",
+            trigger: .cron,
+            scheduledMinutes: 0,
+            cronExpression: "0 2 * * *"
+        )
+        routineManager.save(routine)
+        #expect(routineManager.routines.contains(where: { $0.name == "Nightly Audit" }))
+
+        // Sub-Button: Toggle routine
+        #expect(routine.enabled == true)
+        routineManager.toggle(routine)
+        #expect(routine.enabled == false)
+        routineManager.toggle(routine)
+        #expect(routine.enabled == true)
+
+        // Sub-Button: Context Menu "Run Now"
+        await routineManager.runNow(routine)
+        #expect(true, "Run Now executed successfully")
+
+        // Sub-Button: Delete confirmation dialog -> "Delete Routine"
+        routineManager.delete(routine)
+        #expect(routineManager.routines.contains(where: { $0.id == routine.id }) == false)
+    }
+
+    @Test func testSpacesAndChannelsDeepHierarchy() {
+        let spaceManager = SpaceManager()
+        let initialSpaceCount = spaceManager.spaces.count
+
+        // Level 1: "Create New Space" button -> validation
+        let emptySpaceName = ""
+        let isSpaceCreateDisabled = emptySpaceName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        #expect(isSpaceCreateDisabled == true, "Create Space button must be disabled when name is empty")
+
+        // Action: Create Space
+        let newSpace = spaceManager.createSpace(
+            name: "Security Engineering",
+            summary: "AppSec and infra reviews",
+            orchestrationMode: .mentionDriven,
+            seedDefaults: true
+        )
+        spaceManager.selectSpace(newSpace)
+        #expect(spaceManager.spaces.count == initialSpaceCount + 1)
+        #expect(spaceManager.activeSpaceId == newSpace.id)
+
+        // Level 2 (Sub-button): "+" Add Channel button -> validation
+        let emptyChannelName = ""
+        let isChannelCreateDisabled = emptyChannelName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        #expect(isChannelCreateDisabled == true, "Create Channel button must be disabled when name is empty")
+
+        // Action: Create Channel
+        let channel = spaceManager.addChannel(to: newSpace, name: "vuln-triage", topic: "High-priority CVE remediation")
+        spaceManager.selectChannel(channel)
+        #expect(newSpace.channels.contains(where: { $0.id == channel.id }))
+        #expect(spaceManager.activeChannelId == channel.id)
+
+        // Level 3 (Deeper sub-button): Space Composer Send Button Gate
+        var composerText = ""
+        var canSend = !composerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        #expect(canSend == false, "Composer Send button must be disabled when text is empty")
+
+        composerText = "Hello @Apex please triage CVE-2026-001"
+        canSend = !composerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        #expect(canSend == true, "Composer Send button must be enabled when text is present")
+
+        // Action: Send Message into Channel
+        let message = spaceManager.postHumanMessage(composerText, in: channel)
+        #expect(message != nil)
+        #expect(channel.messages.contains(where: { $0.id == message?.id }))
+
+        // Level 4 (Deeper sub-button): Thread Reply Composer Gate
+        var threadInput = ""
+        var canReply = !threadInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        #expect(canReply == false, "Thread Reply button must be disabled when reply text is empty")
+
+        threadInput = "Working on a reproduction now"
+        canReply = !threadInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        #expect(canReply == true, "Thread Reply button must be enabled when reply text is present")
+
+        if let parentId = message?.id {
+            let threadReply = spaceManager.postHumanMessage(threadInput, in: channel, threadParentId: parentId)
+            #expect(threadReply != nil)
+            #expect(channel.threadReplies(for: parentId).count == 1)
+        }
+    }
+
+    @Test func testDiagnosticsDashboardHierarchy() async {
+        let results = await DiagnosticManager.runSelfCheck()
+        #expect(results.isEmpty == false)
+
+        // Sub-Button: Re-Run button state gate
+        var isRunning = true
+        var canReRun = !isRunning
+        #expect(canReRun == false, "Re-Run button must be disabled while diagnostics are executing")
+
+        isRunning = false
+        canReRun = !isRunning
+        #expect(canReRun == true, "Re-Run button must be enabled when execution is complete")
+
+        // Sub-Button: Export button state gate
+        var diagnosticItems: [DiagnosticItem] = []
+        var canExport = !diagnosticItems.isEmpty
+        #expect(canExport == false, "Export button must be disabled when diagnostic results are empty")
+
+        diagnosticItems = results
+        canExport = !diagnosticItems.isEmpty
+        #expect(canExport == true, "Export button must be enabled when results exist")
+
+        // Action: Export generates valid JSON report
+        let report = DiagnosticManager.exportReport(diagnosticItems)
+        #expect(report.isEmpty == false)
+        let parsed = (try? JSONSerialization.jsonObject(with: report.data(using: .utf8) ?? Data())) as? [String: Any]
+        #expect(parsed != nil)
+        #expect(parsed?["items"] != nil)
+        #expect(parsed?["generatedAt"] != nil)
+    }
+
+    @Test func testPlaybookApprovalAndDelegationHierarchy() throws {
+        let container = try makeTestContainer()
+        let bm = BotManager()
+        bm.modelContext = container.mainContext
+
+        var card = PlaybookApprovalCard(
+            playbookId: UUID(),
+            stageId: "deploy_stage",
+            stageTitle: "Deploy Staging",
+            summary: "Approve deployment to staging environment",
+            proposedActions: ["Run deploy.sh"]
+        )
+        #expect(card.status == .pending)
+
+        // Sub-Button: Approve Action
+        card.status = .approved
+        #expect(card.status == .approved)
+
+        // Sub-Button: Reject Action
+        card.status = .rejected
+        #expect(card.status == .rejected)
+
+        // Bot to Bot Peer Approval Flow
+        let botA = bm.createBot(name: "Bot A", title: "Sender", descriptionText: "Sender bot")
+        let botB = bm.createBot(name: "Bot B", title: "Target", descriptionText: "Target bot")
+
+        let decision = bm.peerDeliveryDecision(from: botA, to: botB, message: "Deploy now")
+        guard case .blockedPendingCard(let requestId) = decision else {
+            Issue.record("Expected peerDeliveryDecision to return blockedPendingCard")
+            return
+        }
+
+        #expect(bm.pendingPeerApprovals.count == 1)
+        #expect(bm.pendingPeerApprovals.first?.id == requestId)
+
+        // Approve Peer Request Sub-Button
+        let resolved = bm.resolvePeerRequest(requestId: requestId, allow: true)
+        #expect(resolved == true)
+        #expect(bm.pendingPeerApprovals.isEmpty == true)
     }
 }

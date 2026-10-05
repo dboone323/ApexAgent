@@ -62,8 +62,7 @@ struct DiagnosticManager {
         ))
 
         let fm = FileManager.default
-        let homeDir = fm.homeDirectoryForCurrentUser
-        let toolsDir = homeDir.appendingPathComponent(".apex/tools")
+        let toolsDir = ApexAgentStoragePaths.tools
         let hasToolsDir = fm.fileExists(atPath: toolsDir.path)
 
         items.append(DiagnosticItem(

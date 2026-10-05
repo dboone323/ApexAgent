@@ -11,7 +11,7 @@ struct ShellTool: Tool {
     }
 
     let name = "run_shell_command"
-    let description = "Runs a zsh shell command. Returns stdout, stderr, and exit code. Use for terminal tasks, testing, or building. For exploring files or project directories, prefer targeted tools like directory_tree, list_directory, or find_by_name rather than unbounded recursive commands like `ls -R`."
+    let description = "Runs a zsh shell command. Returns stdout, stderr, and exit code. Use for terminal tasks, testing, or building. After a command that changes state or performs an action, verify the requested end state with a separate read-only tool before reporting success; approval and exit status alone are not proof. For exploring files or project directories, prefer targeted tools like directory_tree, list_directory, or find_by_name rather than unbounded recursive commands like `ls -R`."
 
     @Generable
     struct Arguments: Decodable {

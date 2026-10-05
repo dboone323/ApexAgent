@@ -118,4 +118,67 @@ final class BotSecurityRBACPermissionTests: XCTestCase {
             XCTAssertTrue(resB.contains("ERROR: Tool 'read_file' is not permitted for bot 'BotB'"))
         }
     }
+
+    func testBotMCPScopingEnforcementAllowsAuthorizedAndDeniesUnauthorized() async throws {
+        let orchestrator = AgentOrchestrator()
+        let computer = Computer()
+        let botManager = BotManager(orchestrator: orchestrator, computer: computer)
+
+        let allowedServerId = UUID()
+        let deniedServerId = UUID()
+
+        let allowedConfig = MCPServerConfig(
+            id: allowedServerId,
+            name: "AuthorizedDocsServer",
+            command: "echo",
+            arguments: []
+        )
+        let deniedConfig = MCPServerConfig(
+            id: deniedServerId,
+            name: "ForbiddenDBServer",
+            command: "echo",
+            arguments: []
+        )
+        MCPManager.shared.servers = [allowedConfig, deniedConfig]
+
+        let bot = botManager.createBot(
+            name: "DocsSpecialist",
+            title: "Docs Reader",
+            descriptionText: "Reads documentation from AuthorizedDocsServer"
+        )
+        bot.allowedMCPServers = ["AuthorizedDocsServer"]
+        let session = botManager.session(for: bot)
+
+        let allowedEntry = DynamicToolbox.DynamicToolEntry(
+            name: "read_doc_page",
+            description: "Read doc page",
+            scriptPath: nil,
+            schema: [:],
+            mcpServerId: allowedServerId
+        )
+        let deniedEntry = DynamicToolbox.DynamicToolEntry(
+            name: "drop_tables",
+            description: "Drop DB tables",
+            scriptPath: nil,
+            schema: [:],
+            mcpServerId: deniedServerId
+        )
+
+        DynamicToolbox.shared.registerToolForTesting(name: "read_doc_page", entry: allowedEntry)
+        DynamicToolbox.shared.registerToolForTesting(name: "drop_tables", entry: deniedEntry)
+        defer {
+            DynamicToolbox.shared.removeToolForTesting(name: "read_doc_page")
+            DynamicToolbox.shared.removeToolForTesting(name: "drop_tables")
+        }
+
+        // 1. Prohibited MCP tool should be blocked with explicit scoping error
+        let deniedResult = try await session.executeTool(name: "drop_tables", arguments: "{}")
+        XCTAssertTrue(deniedResult.contains("is not permitted for bot 'DocsSpecialist' under least-privilege MCP scoping policy"))
+        XCTAssertTrue(deniedResult.contains("ForbiddenDBServer"))
+
+        // 2. Permitted MCP tool should pass MCP scoping check in DynamicToolbox
+        let permittedDynamic = DynamicToolbox.shared.allowedDynamicToolNames(for: bot)
+        XCTAssertTrue(permittedDynamic.contains("read_doc_page"))
+        XCTAssertFalse(permittedDynamic.contains("drop_tables"))
+    }
 }

@@ -25,6 +25,7 @@ struct MessageBubble: View {
                 // Bubble
                 BubbleContent(message: message)
                     .accessibilityIdentifier(accessibilityIdentifierForBubble)
+                    .accessibilityLabel(message.content)
                     .accessibilityValue(message.content)
 
                 // Timestamp
@@ -275,7 +276,14 @@ struct BubbleShape: Shape {
 
     func path(in rect: CGRect) -> Path {
         let radius: CGFloat = 16
-        return Path(roundedRect: rect, cornerRadius: radius)
+        let tailRadius: CGFloat = 4
+        let corners = RectangleCornerRadii(
+            topLeading: radius,
+            bottomLeading: radius,
+            bottomTrailing: isUser ? tailRadius : radius,
+            topTrailing: isUser ? radius : tailRadius
+        )
+        return UnevenRoundedRectangle(cornerRadii: corners, style: .continuous).path(in: rect)
     }
 }
 
