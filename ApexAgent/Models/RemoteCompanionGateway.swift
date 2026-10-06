@@ -410,4 +410,23 @@ public final class ApexCompanionMobileClient: ObservableObject {
         self.liveActivityState = nil
         self.chatMessages.removeAll()
     }
+
+
+}
+
+extension RemoteCompanionGateway {
+    // MARK: - Markdown Diagnostics
+
+    public func formatGatewayDiagnosticsMarkdown() -> String {
+        var md = "### 📱 Remote Companion Gateway Telemetry\n\n"
+        md += "| Metric / Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Host ID | `\(hostId)` | Host node identifier |\n"
+        md += "| Bonjour Advertising | \(isAdvertising ? "🟢 Active" : "⚪️ Inactive") | mDNS service broadcasting |\n"
+        md += "| Paired Devices | `\(pairedDevices.count)` | Authenticated companion remotes |\n"
+        md += "| Active Tokens | `\(activeSessionTokens.count)` | Live session bearer tokens |\n"
+        md += "| Pending Relays | `\(pendingApprovalRelays.count)` | Unresolved remote approval cards |\n"
+        md += "| Sensor Uploads Ingested | `\(receivedSensorUploads.count)` | Photos and sensor telemetries received |\n"
+        return md
+    }
 }

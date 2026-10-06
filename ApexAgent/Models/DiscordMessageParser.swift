@@ -176,3 +176,29 @@ extension DiscordParsedMessage: Equatable {
         lhs.senderId == rhs.senderId
     }
 }
+
+
+extension DiscordMessageParser {
+    // MARK: - Markdown Formatting
+
+    static func formatParsedMessageMarkdown(_ parsed: DiscordParsedMessage) -> String {
+        var md = "### 💬 Parsed Discord Message Payload\n\n"
+        md += "| Field | Value |\n"
+        md += "|---|---|\n"
+        let safeSender = parsed.senderName.replacingOccurrences(of: "|", with: "\\|")
+        md += "| Sender | `\(safeSender)` (`\(parsed.senderId)`) |\n"
+        let classification: String
+        switch parsed.messageType {
+        case .agentDirected: classification = "🎯 Agent Directed"
+        case .agentStatus: classification = "📢 Agent Status"
+        case .humanMessage: classification = "👤 Human Chatter"
+        }
+        md += "| Classification | \(classification) |\n"
+        let mentions = parsed.mentionedAgents.isEmpty ? "None" : parsed.mentionedAgents.joined(separator: ", ").replacingOccurrences(of: "|", with: "\\|")
+        md += "| Mentioned Agents | `\(mentions)` |\n"
+        let safeContent = parsed.rawContent.replacingOccurrences(of: "|", with: "\\|").replacingOccurrences(of: "\n", with: " ")
+        let preview = safeContent.count > 100 ? String(safeContent.prefix(97)) + "..." : safeContent
+        md += "| Raw Content | `\(preview)` |\n"
+        return md
+    }
+}

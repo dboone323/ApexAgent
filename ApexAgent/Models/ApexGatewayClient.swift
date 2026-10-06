@@ -288,4 +288,20 @@ final class ApexGatewayClient {
             break
         }
     }
+
+    // MARK: - Markdown Telemetry
+
+    public func formatClientStatusMarkdown() -> String {
+        var md = "### 📡 Apex Gateway Client Telemetry\n\n"
+        md += "| Metric / Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Connection Status | \(isConnected ? "🟢 Connected" : "⚪️ Disconnected") | Socket reachability status |\n"
+        md += "| Generating | \(isGenerating ? "⚡️ Generating" : "💤 Idle") | Active completion streaming |\n"
+        md += "| Refused Attempts | `\(refusedAttempts)` / `\(maxRefusedAttempts)` | Connection backoff counter |\n"
+        md += "| Mirrored Messages | `\(messages.count)` | Synced transcript messages |\n"
+        let confirmStr = pendingConfirmation != nil ? "🟡 Pending (\(pendingConfirmation!.toolName))" : "None"
+        md += "| Pending Confirmation | \(confirmStr) | Remote confirmation request |\n"
+        return md
+    }
+
 }

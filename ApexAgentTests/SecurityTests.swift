@@ -1075,4 +1075,146 @@ struct SecurityTests {
         #expect(table.contains("⛔️ Denied"))
     }
 
+
+    // MARK: - Batch 8 Self-Hardening Tests
+
+    @Test func testPeerApprovalMarkdownExports() {
+        let coordinator = PeerApprovalCoordinator()
+        let emptyPending = coordinator.exportPendingApprovalsMarkdown()
+        #expect(emptyPending.contains("No pending inter-bot peer approval requests."))
+
+        _ = coordinator.requestApproval(
+            fromBotId: "bot-architect",
+            toBotId: "bot-automator",
+            action: .delegateBot,
+            message: "Execute test suite against patched branch."
+        )
+
+        let pendingMd = coordinator.exportPendingApprovalsMarkdown()
+        #expect(pendingMd.contains("### 🤝 Pending Inter-Bot Peer Approvals (1 requests)"))
+        #expect(pendingMd.contains("| Request ID | Sender Bot | Target Bot | Action | Message Preview |"))
+        #expect(pendingMd.contains("bot-architect"))
+        #expect(pendingMd.contains("bot-automator"))
+
+        coordinator.addGrant(action: .askBot, senderBotId: "bot-cos", targetBotId: "bot-researcher")
+        let grantsMd = coordinator.exportGrantsMarkdown()
+        #expect(grantsMd.contains("### 🛡️ Persistent Inter-Bot Peer Grants (1 grants)"))
+        #expect(grantsMd.contains("| Grant Key | Action | Sender Bot | Target Bot |"))
+        #expect(grantsMd.contains("ask_bot"))
+    }
+
+    @Test @MainActor func testRemoteCompanionGatewayDiagnosticsMarkdown() {
+        let gateway = RemoteCompanionGateway.shared
+        let md = gateway.formatGatewayDiagnosticsMarkdown()
+        #expect(md.contains("### 📱 Remote Companion Gateway Telemetry"))
+        #expect(md.contains("| Metric / Parameter | Value | Description |"))
+        #expect(md.contains("Host ID"))
+        #expect(md.contains("Bonjour Advertising"))
+    }
+
+    @Test func testCollaborationPlaybookPresetsCatalogMarkdown() {
+        let catalogMd = CollaborationPlaybook.formatPlaybooksCatalogMarkdown()
+        #expect(catalogMd.contains("### 📋 Multi-Agent Collaboration Playbooks"))
+        #expect(catalogMd.contains("| Playbook Name | Version | Stages | Required Roles | Mode |"))
+        #expect(catalogMd.contains("Full PR Review Loop"))
+        #expect(catalogMd.contains("Issue-to-Patch Pipeline"))
+        #expect(catalogMd.contains("Weekly Standup & Retrospective"))
+    }
+
+    @Test @MainActor func testApexGatewayServerStatusMarkdown() {
+        let orchestrator = AgentOrchestrator()
+        let server = ApexGatewayServer(port: 19999, orchestrator: orchestrator, authenticationToken: "test-auth-token")
+        let md = server.formatServerStatusMarkdown()
+        #expect(md.contains("### 📡 Apex Gateway Server Status"))
+        #expect(md.contains("| Parameter | Value | Description |"))
+        #expect(md.contains("19999"))
+        #expect(md.contains("8 MB"))
+    }
+
+    @Test @MainActor func testApexGatewayClientStatusMarkdown() {
+        let client = ApexGatewayClient(gatewayToken: "test-token")
+        let md = client.formatClientStatusMarkdown()
+        #expect(md.contains("### 📡 Apex Gateway Client Telemetry"))
+        #expect(md.contains("| Metric / Parameter | Value | Description |"))
+        #expect(md.contains("Connection Status"))
+        #expect(md.contains("Mirrored Messages"))
+    }
+
+    @Test func testDiscordMessageParserMarkdown() {
+        let parsed = DiscordParsedMessage(
+            mentionedAgents: ["ApexAgent", "Clawd"],
+            messageType: .agentDirected,
+            rawContent: "@ApexAgent please review the new PR diff",
+            senderName: "octocat",
+            senderId: "987654321"
+        )
+        let md = DiscordMessageParser.formatParsedMessageMarkdown(parsed)
+        #expect(md.contains("### 💬 Parsed Discord Message Payload"))
+        #expect(md.contains("| Field | Value |"))
+        #expect(md.contains("octocat"))
+        #expect(md.contains("🎯 Agent Directed"))
+        #expect(md.contains("ApexAgent, Clawd"))
+    }
+
+    @Test func testContainerManagerHostDiagnosticsMarkdown() {
+        let diag = ContainerHostDiagnostics(
+            isAppleSilicon: true,
+            isVirtualizationSupported: true,
+            macOSVersionString: "27.2.0",
+            availableDiskSpaceBytes: 120_000_000_000,
+            vmnetAvailable: true,
+            statusMessage: "Host system meets all virtualization requirements."
+        )
+        let md = ContainerHostDiagnostics.formatHostDiagnosticsMarkdown(diag)
+        #expect(md.contains("### 📦 Apple Containerization & Virtualization Diagnostics"))
+        #expect(md.contains("| Capability | Status | Description |"))
+        #expect(md.contains("✅ Supported"))
+        #expect(md.contains("27.2.0"))
+    }
+
+    @Test func testChiefOfStaffTeamMarkdown() {
+        let bots = [
+            ChiefTeamMember(id: "cos-1", name: "Chief of Staff", title: "Coordinator", descriptionText: "Lead", busy: false, hidden: false, section: "Executive"),
+            ChiefTeamMember(id: "arch-1", name: "Code Architect", title: "Senior Dev", descriptionText: "Review", busy: true, hidden: false, section: "Executive")
+        ]
+        let md = ChiefOfStaff.formatChiefTeamMarkdown(chiefId: "cos-1", bots: bots)
+        #expect(md.contains("### 👑 Chief of Staff Specialist Team Directive (2 bots)"))
+        #expect(md.contains("| Bot ID | Name | Role Title | Status | Section |"))
+        #expect(md.contains("👑 Chief of Staff"))
+        #expect(md.contains("⚡️ Busy"))
+    }
+
+    @Test func testPlaybookRunnerReportMarkdown() {
+        let stageRes = PlaybookStageResult(
+            stageId: "stage-1",
+            stageName: "Intake",
+            dispatchMode: .sequential,
+            botResults: [PlaybookBotResult(botId: UUID(), botName: "Chief of Staff", roleId: "coordinator", output: "Ready", duration: 1.2)],
+            combinedOutput: "Ready",
+            duration: 1.2,
+            status: .success
+        )
+        let report = PlaybookExecutionReport(
+            id: UUID(),
+            playbookId: UUID(),
+            playbookName: "Security Audit",
+            presetKind: nil,
+            contextInput: "Audit targets",
+            stageResults: [stageRes],
+            delegationEvents: [],
+            approvalCards: [],
+            finalOutput: "Audit completed successfully.",
+            totalDuration: 2.4,
+            startedAt: Date(),
+            completedAt: Date(),
+            isSuccessful: true,
+            executionMode: .simulated
+        )
+        let md = PlaybookRunner.formatExecutionReportMarkdown(report)
+        #expect(md.contains("### 📜 Multi-Agent Collaboration Report: Security Audit"))
+        #expect(md.contains("| Status | 🟢 Success | Playbook outcome |"))
+        #expect(md.contains("Intake"))
+        #expect(md.contains("Chief of Staff"))
+    }
+
 }
