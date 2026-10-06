@@ -13,11 +13,11 @@ struct GitOperationsTool: Tool {
     }
 
     let name = "git_operation"
-    let description = "Performs structured Git repository operations (status, diff, log, branch, checkout, commit, add, stash) within an allowed workspace repository."
+    let description = "Performs structured Git repository operations (status, diff, log, branch, checkout, commit, add, unstage, show, stash) within an allowed workspace repository."
 
     @Generable
     struct Arguments: Decodable {
-        @Guide(description: "The git action to execute: 'status', 'diff', 'log', 'branch', 'checkout', 'commit', 'add', 'stash'")
+        @Guide(description: "The git action to execute: 'status', 'diff', 'log', 'branch', 'checkout', 'commit', 'add', 'unstage', 'show', 'stash'")
         var action: String
 
         @Guide(description: "Absolute or tilde-expanded path to the repository directory. Defaults to current workspace if omitted.")
@@ -52,7 +52,7 @@ struct GitOperationsTool: Tool {
             return "ERROR: Access to repository directory is disabled in settings: \(repoDir)"
         }
 
-        let isMutating = ["commit", "checkout", "add", "stash"].contains(arguments.action.lowercased())
+        let isMutating = ["commit", "checkout", "add", "unstage", "restore", "stash"].contains(arguments.action.lowercased())
         let riskDesc = isMutating
             ? "Executing Git mutating operation '\(arguments.action)' in \(repoDir)"
             : "Executing Git read operation '\(arguments.action)' in \(repoDir)"
@@ -64,7 +64,48 @@ struct GitOperationsTool: Tool {
         ) {
             switch arguments.action.lowercased() {
             case "status":
-                return try runGit(repoDir: repoDir, args: ["status", "--short", "--branch"])
+                let rawStatus = try runGit(repoDir: repoDir, args: ["status", "--short", "--branch"])
+                let lines = rawStatus.components(separatedBy: .newlines).filter { !$0.isEmpty }
+                guard !lines.isEmpty else { return "Clean: working tree clean." }
+
+                var branchHeader = "### Git Status\n\n"
+                var tableRows: [(staged: String, path: String)] = []
+
+                for line in lines {
+                    if line.hasPrefix("##") {
+                        branchHeader += "**Branch**: `\(line.replacingOccurrences(of: "## ", with: ""))`\n\n"
+                        continue
+                    }
+                    guard line.count >= 3 else { continue }
+                    let statusPrefix = String(line.prefix(2))
+                    let filePath = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                    tableRows.append((staged: statusPrefix, path: filePath))
+                }
+
+                if tableRows.isEmpty {
+                    return branchHeader + "Working tree clean."
+                }
+
+                var md = branchHeader
+                md += "| Status | File Path |\n"
+                md += "|---|---|\n"
+                for row in tableRows {
+                    md += "| `\(row.staged)` | `\(row.path)` |\n"
+                }
+                return md
+
+            case "unstage", "restore":
+                guard let paths = arguments.paths, !paths.isEmpty else {
+                    return "ERROR: 'paths' argument is required for 'unstage'."
+                }
+                var args = ["restore", "--staged"]
+                args.append(contentsOf: paths)
+                _ = try runGit(repoDir: repoDir, args: args)
+                return "✅ Successfully unstaged \(paths.count) path(s)."
+
+            case "show":
+                let targetRef = arguments.message ?? "HEAD"
+                return try runGit(repoDir: repoDir, args: ["show", "--stat", targetRef])
 
             case "diff":
                 var args = ["diff"]

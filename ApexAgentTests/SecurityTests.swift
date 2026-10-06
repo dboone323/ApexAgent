@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import SwiftData
 import AppKit
+import SharedKit
 @testable import ApexAgentCore
 @Suite("SecurityTests", .serialized)
 struct SecurityTests {
@@ -372,5 +373,154 @@ struct SecurityTests {
         streamer.recordTestFrame(dummyImage)
         #expect(streamer.getLatestFrame() != nil)
         #expect(streamer.isIdle == false)
+    }
+
+    // MARK: - Batch 3 Self-Hardening Tests
+
+    @Test @MainActor func testSecurityAuditorBlocksShellHistoryAndNetrc() {
+        let auditor = SecurityAuditor.shared
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let ws = (home as NSString).appendingPathComponent("Developer/ApexAgent")
+
+        // .bash_history
+        #expect(throws: SecuritySandboxError.self) {
+            try auditor.verifyPathAllowed((home as NSString).appendingPathComponent(".bash_history"), workspacePath: ws, permissions: nil)
+        }
+
+        // .zsh_history
+        #expect(throws: SecuritySandboxError.self) {
+            try auditor.verifyPathAllowed((home as NSString).appendingPathComponent(".zsh_history"), workspacePath: ws, permissions: nil)
+        }
+
+        // .netrc
+        #expect(throws: SecuritySandboxError.self) {
+            try auditor.verifyPathAllowed((home as NSString).appendingPathComponent(".netrc"), workspacePath: ws, permissions: nil)
+        }
+    }
+
+    @Test @MainActor func testProjectAuditorMarkdownFormatting() {
+        let auditor = ProjectAuditor.shared
+        let sampleReport = ProjectAuditReport(
+            name: "ApexAppSample",
+            path: "/Users/dev/ApexAppSample.xcodeproj",
+            swiftVersion: "6.0",
+            strictConcurrency: "complete",
+            deploymentTarget: "macOS 27.0",
+            fileCount: 42,
+            todoCount: 3,
+            brokenReferences: ["MissingFile.swift"],
+            warnings: ["Target Swift version is 6.0"]
+        )
+
+        let markdown = auditor.formatReportsAsMarkdown([sampleReport])
+        #expect(markdown.contains("## 📊 Xcode Workspace Audit Report"))
+        #expect(markdown.contains("| Project | Target | Swift | Concurrency | Files | TODOs | Broken Refs | Warnings |"))
+        #expect(markdown.contains("| **ApexAppSample** | `macOS 27.0` | `6.0` | `complete` | 42 | 3 | 1 | 1 |"))
+        #expect(markdown.contains("MissingFile.swift"))
+    }
+
+    @Test @MainActor func testSkillManagerManifestValidation() throws {
+        let manager = SkillManager.shared
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        // 1. Valid manifest
+        let validScriptURL = tempDir.appendingPathComponent("sample_tool.sh")
+        try "#!/bin/bash\necho ok".write(to: validScriptURL, atomically: true, encoding: .utf8)
+        let validJSONURL = tempDir.appendingPathComponent("sample_tool.json")
+        let validJSON = """
+        {
+            "description": "A sample testing skill",
+            "script_path": "\(validScriptURL.path)",
+            "parameters": {
+                "properties": {
+                    "input": { "type": "string" }
+                }
+            }
+        }
+        """
+        try validJSON.write(to: validJSONURL, atomically: true, encoding: .utf8)
+
+        let validResult = manager.validateSkillManifest(at: validJSONURL)
+        switch validResult {
+        case .success(let info):
+            #expect(info.name == "sample_tool")
+            #expect(info.parameterCount == 1)
+        case .failure(let error):
+            Issue.record("Expected valid manifest, got error: \(error)")
+        }
+
+        // 2. Missing description manifest
+        let badJSONURL = tempDir.appendingPathComponent("bad_tool.json")
+        let badJSON = """
+        {
+            "script_path": "\(validScriptURL.path)"
+        }
+        """
+        try badJSON.write(to: badJSONURL, atomically: true, encoding: .utf8)
+
+        let badResult = manager.validateSkillManifest(at: badJSONURL)
+        switch badResult {
+        case .success:
+            Issue.record("Expected failure for missing description")
+        case .failure(let error):
+            #expect(error == .missingDescription("bad_tool"))
+        }
+    }
+
+    @Test func testContextCompactorBudgetBreakdown() async {
+        let compactor = ContextCompactor.shared
+        let messages: [(role: String, content: String)] = [
+            (role: "user", content: "Hello world, what is the current weather?"),
+            (role: "assistant", content: "The weather in San Francisco is 65 degrees and sunny.")
+        ]
+        let systemPrompt = "You are ApexAgent, a high performance AI assistant."
+
+        let breakdown = await compactor.inspectBudget(messages: messages, pinnedSystemPrompt: systemPrompt, maxBudget: 4000)
+        #expect(breakdown.totalEstimatedTokens > 0)
+        #expect(breakdown.budgetLimit == 4000)
+        #expect(!breakdown.isExceeded)
+
+        let table = breakdown.formatAsMarkdownTable()
+        #expect(table.contains("### Context Window Budget Breakdown"))
+        #expect(table.contains("| Component | Approximate Tokens | Percentage of Total |"))
+        #expect(table.contains("| System Prompt |"))
+        #expect(table.contains("| User Turns |"))
+        #expect(table.contains("| Assistant Turns |"))
+    }
+
+    @Test @MainActor func testExportReviewSessionMarkdownTool() async throws {
+        let schema = Schema([ReviewSession.self, CodeIssueModel.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+
+        let orchestrator = AgentOrchestrator()
+        orchestrator.modelContext = context
+
+        let saveTool = SaveReviewSessionTool(orchestrator: orchestrator)
+        let issuesJSON = """
+        [
+            {"line": 24, "message": "Potential memory leak in callback", "severity": "warning"},
+            {"line": 56, "message": "Unchecked array index bounds", "severity": "error"}
+        ]
+        """
+        _ = try await saveTool.call(arguments: .init(
+            fileName: "DatabaseManager.swift",
+            summary: "Memory and safety analysis",
+            suggestions: ["Use weak self in closures", "Guard array indices"],
+            issuesJSON: issuesJSON
+        ))
+
+        let exportTool = ExportReviewSessionTool(orchestrator: orchestrator)
+        let exportOutput = try await exportTool.call(arguments: .init(fileName: "DatabaseManager.swift"))
+
+        #expect(exportOutput.contains("# Code Review Report: `DatabaseManager.swift`"))
+        #expect(exportOutput.contains("| Line | Severity | Message |"))
+        #expect(exportOutput.contains("⚠️ Warning"))
+        #expect(exportOutput.contains("🛑 Error"))
+        #expect(exportOutput.contains("Potential memory leak in callback"))
+        #expect(exportOutput.contains("Use weak self in closures"))
     }
 }

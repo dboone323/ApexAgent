@@ -290,6 +290,9 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
             if allowedTools.contains("list_review_sessions") {
                 ListReviewSessionsTool(orchestrator: orchestrator)
             }
+            if allowedTools.contains("export_review_session") {
+                ExportReviewSessionTool(orchestrator: orchestrator)
+            }
             if allowedTools.contains("run_shell_command") {
                 ShellTool(orchestrator: orchestrator)
             }

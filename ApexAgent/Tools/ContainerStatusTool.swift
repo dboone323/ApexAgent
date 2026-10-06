@@ -44,11 +44,14 @@ struct ContainerStatusTool: Tool {
                 let memory = await manager.containerMemoryMB
                 let image = await manager.appleContainerImage
                 return """
-                Sandbox Configuration:
-                - State: \(stateDesc)
-                - Allocated CPUs: \(cpus)
-                - Allocated Memory: \(memory) MB
-                - Container Image: \(image)
+                ### Apple Container Sandbox Configuration
+
+                | Property | Value |
+                |---|---|
+                | State | `\(stateDesc)` |
+                | Allocated CPUs | `\(cpus)` |
+                | Allocated Memory | `\(memory) MB` |
+                | Container Image | `\(image)` |
                 """
             default:
                 return "ERROR: Unknown action '\(action)'. Valid actions are 'status', 'start', 'stop'."

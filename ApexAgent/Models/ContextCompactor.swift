@@ -1,3 +1,37 @@
+
+public struct ContextBudgetBreakdown: Sendable, Equatable {
+    public let systemPromptTokens: Int
+    public let userTokens: Int
+    public let assistantTokens: Int
+    public let totalEstimatedTokens: Int
+    public let budgetLimit: Int
+
+    public var utilizationPercentage: Double {
+        guard budgetLimit > 0 else { return 0.0 }
+        return (Double(totalEstimatedTokens) / Double(budgetLimit)) * 100.0
+    }
+
+    public var isExceeded: Bool {
+        totalEstimatedTokens > budgetLimit
+    }
+
+    public func formatAsMarkdownTable() -> String {
+        let sysPct = totalEstimatedTokens > 0 ? String(format: "%.1f%%", Double(systemPromptTokens) / Double(totalEstimatedTokens) * 100) : "0%"
+        let userPct = totalEstimatedTokens > 0 ? String(format: "%.1f%%", Double(userTokens) / Double(totalEstimatedTokens) * 100) : "0%"
+        let asstPct = totalEstimatedTokens > 0 ? String(format: "%.1f%%", Double(assistantTokens) / Double(totalEstimatedTokens) * 100) : "0%"
+
+        return """
+        ### Context Window Budget Breakdown
+
+        | Component | Approximate Tokens | Percentage of Total |
+        |---|---|---|
+        | System Prompt | `\(systemPromptTokens)` | \(sysPct) |
+        | User Turns | `\(userTokens)` | \(userPct) |
+        | Assistant Turns | `\(assistantTokens)` | \(asstPct) |
+        | **Total Estimated** | **`\(totalEstimatedTokens)`** / `\(budgetLimit)` | **\(String(format: "%.1f%%", utilizationPercentage))** |
+        """
+    }
+}
 import Foundation
 
 public struct CompactionInput: Sendable {
@@ -71,5 +105,32 @@ public actor ContextCompactor {
     public func shouldCompact(messages: [(role: String, content: String)], threshold: Int) -> Bool {
         let totalTokens = messages.reduce(0) { $0 + approximateTokenCount($1.content) }
         return totalTokens > threshold
+    }
+
+    // Detailed context budget breakdown
+    public func inspectBudget(
+        messages: [(role: String, content: String)],
+        pinnedSystemPrompt: String,
+        maxBudget: Int
+    ) -> ContextBudgetBreakdown {
+        let sysTokens = approximateTokenCount(pinnedSystemPrompt)
+        var uTokens = 0
+        var aTokens = 0
+        for m in messages {
+            let count = approximateTokenCount(m.content)
+            if m.role == "user" {
+                uTokens += count
+            } else if m.role == "assistant" {
+                aTokens += count
+            }
+        }
+        let total = sysTokens + uTokens + aTokens
+        return ContextBudgetBreakdown(
+            systemPromptTokens: sysTokens,
+            userTokens: uTokens,
+            assistantTokens: aTokens,
+            totalEstimatedTokens: total,
+            budgetLimit: maxBudget
+        )
     }
 }

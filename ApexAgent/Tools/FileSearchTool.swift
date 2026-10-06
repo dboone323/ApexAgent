@@ -23,6 +23,9 @@ struct FileSearchTool: Tool {
 
         @Guide(description: "Optional file pattern/extension filter (e.g. '*.swift').")
         var filePattern: String?
+
+        @Guide(description: "Maximum number of matches to return (defaults to 50).", .range(1...200))
+        var maxResults: Int?
     }
 
     func call(arguments: Arguments) async throws -> String {
@@ -68,11 +71,37 @@ struct FileSearchTool: Tool {
             process.waitUntilExit()
             
             let output = String(data: data, encoding: .utf8) ?? ""
-            
-            if output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
                 return "No matches found for '\(arguments.query)' in directory: \(expandedDir)"
             }
-            return output
+
+            let lines = trimmed.components(separatedBy: .newlines).filter { !$0.isEmpty }
+            let maxCount = arguments.maxResults ?? 50
+            let displayed = lines.prefix(maxCount)
+
+            var md = "### File Search Results: `\(arguments.query)` (\(lines.count) matches)\n\n"
+            md += "| File | Line | Snippet |\n"
+            md += "|---|---|---|\n"
+
+            for line in displayed {
+                let parts = line.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
+                if parts.count >= 3 {
+                    let file = String(parts[0]).replacingOccurrences(of: expandedDir + "/", with: "")
+                    let lineNum = String(parts[1])
+                    let snippet = String(parts[2]).trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "|", with: "\\|")
+                    let truncatedSnippet = snippet.count > 100 ? String(snippet.prefix(97)) + "..." : snippet
+                    md += "| `\(file)` | `\(lineNum)` | `\(truncatedSnippet)` |\n"
+                } else {
+                    md += "| - | - | `\(line.replacingOccurrences(of: "|", with: "\\|"))` |\n"
+                }
+            }
+
+            if lines.count > maxCount {
+                md += "\n*(Showing \(maxCount) of \(lines.count) matches. Increase maxResults to see more.)*\n"
+            }
+
+            return md
         }
     }
 }

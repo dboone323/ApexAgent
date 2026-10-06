@@ -68,6 +68,7 @@ final class ToolDispatchEngine {
             AnyExecutableTool(VerifyExecutionTool(orchestrator: orchestrator)),
             AnyExecutableTool(SaveReviewSessionTool(orchestrator: orchestrator)),
             AnyExecutableTool(ListReviewSessionsTool(orchestrator: orchestrator)),
+            AnyExecutableTool(ExportReviewSessionTool(orchestrator: orchestrator)),
             AnyExecutableTool(WeatherTool(orchestrator: orchestrator)),
             AnyExecutableTool(MapSearchTool(orchestrator: orchestrator)),
             AnyExecutableTool(DirectionsTool(orchestrator: orchestrator)),
