@@ -253,5 +253,26 @@ public actor KeychainAuditLogger {
     public func clear() {
         try? FileManager.default.removeItem(at: Self.logFileURL)
     }
+
+    // MARK: - Markdown Audit Export
+
+    public func formatAuditLogMarkdown(limit: Int = 30) -> String {
+        let entries = recentEntries(limit: limit)
+        guard !entries.isEmpty else {
+            return "No cryptographic Keychain audit entries recorded."
+        }
+
+        var md = "### 🔐 Cryptographic Keychain Audit Log (\(entries.count) recent)\n\n"
+        md += "| Operation | Credential Key | Caller | Status | Timestamp |\n"
+        md += "|---|---|---|---|---|\n"
+
+        for entry in entries {
+            let status = entry.success ? "🟢 OK" : "🔴 Failed"
+            let callerStr = entry.caller ?? "System"
+            let safeKey = entry.key.replacingOccurrences(of: "|", with: "\\|")
+            md += "| `\(entry.operation)` | `\(safeKey)` | `\(callerStr)` | \(status) | `\(entry.timestamp)` |\n"
+        }
+        return md
+    }
 }
 

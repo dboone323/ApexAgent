@@ -1331,4 +1331,103 @@ struct SecurityTests {
         #expect(md.contains("Governance Profile"))
     }
 
+
+    // MARK: - Batch 10 Self-Hardening Tests
+
+    @Test @MainActor func testAutomationWorkflowsCatalogMarkdown() {
+        let md = ApexWorkflows.exportWorkflowsCatalogMarkdown()
+        #expect(md.contains("### ⚙️ Autonomous Local Workflows Catalog (10 workflows)"))
+        #expect(md.contains("| ID | Workflow Name | Target Subsystems | Engine |"))
+        #expect(md.contains("CI/CD failure triage"))
+        #expect(md.contains("Multi-agent orchestration"))
+    }
+
+    @Test @MainActor func testVoiceControllerDiagnosticsMarkdown() {
+        let vc = VoiceController.shared
+        let md = vc.formatVoiceControllerDiagnosticsMarkdown()
+        #expect(md.contains("### 🎙️ Audio Engine & Voice Controller Telemetry"))
+        #expect(md.contains("| Parameter | Value | Description |"))
+        #expect(md.contains("Audio Engine Running"))
+        #expect(md.contains("TTS Provider"))
+    }
+
+    @Test @MainActor func testGroupChatSessionSummaryMarkdown() {
+        let p1 = BotProfile(name: "ReviewerBot", title: "Code Reviewer")
+        let p2 = BotProfile(name: "SecurityBot", title: "SecOps Lead")
+        let session = GroupChatSession(name: "Architecture Sync", participants: [p1, p2], hostBot: p1)
+
+        let md = session.formatGroupChatSummaryMarkdown()
+        #expect(md.contains("### 👥 Group Chat Session: Architecture Sync"))
+        #expect(md.contains("| Property | Value | Description |"))
+        #expect(md.contains("ReviewerBot"))
+        #expect(md.contains("SecurityBot"))
+    }
+
+    @Test func testKeychainAuditLogMarkdown() async {
+        let logger = KeychainAuditLogger.shared
+        await logger.clear()
+
+        let emptyMd = await logger.formatAuditLogMarkdown()
+        #expect(emptyMd.contains("No cryptographic Keychain audit entries recorded."))
+
+        await logger.record(operation: "save", key: "gemini_api_key", success: true, caller: "SettingsView")
+        let md = await logger.formatAuditLogMarkdown()
+        #expect(md.contains("### 🔐 Cryptographic Keychain Audit Log (1 recent)"))
+        #expect(md.contains("| Operation | Credential Key | Caller | Status | Timestamp |"))
+        #expect(md.contains("gemini_api_key"))
+        #expect(md.contains("SettingsView"))
+    }
+
+    @Test func testLocalMLXModelConfigurationMarkdown() {
+        let model = LocalMLXLanguageModel(hostURL: URL(string: "http://127.0.0.1:8080")!)
+        let md = model.formatMLXModelConfigurationMarkdown()
+        #expect(md.contains("### 🧠 Local MLX-LM Model Engine Telemetry"))
+        #expect(md.contains("| Parameter | Value | Description |"))
+        #expect(md.contains("http://127.0.0.1:8080"))
+    }
+
+    @Test func testLocalOllamaStatusMarkdown() {
+        let model = LocalOllamaLanguageModel(hostURL: URL(string: "http://127.0.0.1:11434")!)
+        let md = model.formatOllamaStatusMarkdown()
+        #expect(md.contains("### 🦙 Local Ollama Language Model Telemetry"))
+        #expect(md.contains("| Parameter | Value | Description |"))
+        #expect(md.contains("http://127.0.0.1:11434"))
+    }
+
+    @Test func testCloudGeminiConfigurationMarkdown() {
+        let model = CloudGeminiLanguageModel(apiKey: "AIzaSyTestKey123")
+        let md = model.formatGeminiConfigurationMarkdown()
+        #expect(md.contains("### ☁️ Cloud Gemini Language Model Telemetry"))
+        #expect(md.contains("| Parameter | Value | Description |"))
+        #expect(md.contains("Configured (Redacted)"))
+    }
+
+    @Test @MainActor func testDiscordGatewayStatusMarkdown() {
+        let client = DiscordGatewayClient()
+        client.configure(botToken: "BotSecretToken456")
+        let md = client.formatGatewayStatusMarkdown()
+        #expect(md.contains("### 💬 Discord Gateway v10 Telemetry"))
+        #expect(md.contains("| Metric / Parameter | Value | Description |"))
+        #expect(md.contains("Present (Redacted)"))
+    }
+
+    @Test @MainActor func testVisualPerceptionFindingsMarkdown() {
+        let observer = VisualPerceptionObserver.shared
+        let emptyMd = observer.formatVisualFindingsMarkdown()
+        #expect(emptyMd.contains("No visual perception observations detected."))
+
+        let finding = VisualPerceptionFinding(
+            detectedText: "Fatal error: unexpectedly found nil while unwrapping an Optional value",
+            category: .terminalPanic,
+            boundingBoxes: [VisualBoundingBox(x: 0.1, y: 0.2, width: 0.5, height: 0.1, label: "Panic", confidence: 0.99)],
+            suggestion: "Terminal crash detected"
+        )
+        observer.setLatestFindingsForTesting([finding])
+
+        let md = observer.formatVisualFindingsMarkdown()
+        #expect(md.contains("### 👁️ Visual Perception Observer Telemetry (1 detected)"))
+        #expect(md.contains("| Category | Text Preview | Bounding Boxes | Suggestion |"))
+        #expect(md.contains("terminal_panic"))
+    }
+
 }

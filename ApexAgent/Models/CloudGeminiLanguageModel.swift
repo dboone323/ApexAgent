@@ -17,6 +17,19 @@ public struct CloudGeminiLanguageModel: LanguageModel {
     public init(apiKey: String) {
         self.apiKey = apiKey
     }
+
+    // MARK: - Markdown Telemetry
+
+    public func formatGeminiConfigurationMarkdown() -> String {
+        var md = "### ☁️ Cloud Gemini Language Model Telemetry\n\n"
+        md += "| Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        let keyStatus = apiKey.isEmpty ? "⚪️ Missing (Settings / Env Fallback)" : "🟢 Configured (Redacted)"
+        md += "| API Key Status | \(keyStatus) | Google Cloud Gemini credentials |\n"
+        md += "| Capabilities | Tool Calling, Reasoning | Multi-modal FoundationModels extensions |\n"
+        md += "| Remote Provider | Google Cloud Gemini | Cloud inference provider |\n"
+        return md
+    }
 }
 
 public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicToolRouting {

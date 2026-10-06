@@ -211,4 +211,33 @@ public final class VisualPerceptionObserver: ObservableObject {
             return nil
         }
     }
+
+
+
+
+    public func setLatestFindingsForTesting(_ findings: [VisualPerceptionFinding]) {
+        self.latestFindings = findings
+    }
+
+    // MARK: - Markdown Telemetry
+
+    public func formatVisualFindingsMarkdown() -> String {
+        guard !latestFindings.isEmpty else {
+            return "No visual perception observations detected."
+        }
+
+        var md = "### 👁️ Visual Perception Observer Telemetry (\(latestFindings.count) detected)\n\n"
+        md += "| Category | Text Preview | Bounding Boxes | Suggestion |\n"
+        md += "|---|---|---|---|\n"
+
+        for f in latestFindings {
+            let safeText = f.detectedText.replacingOccurrences(of: "|", with: "\\|").replacingOccurrences(of: "\n", with: " ")
+            let preview = safeText.count > 40 ? String(safeText.prefix(37)) + "..." : safeText
+            let sugg = f.suggestion?.replacingOccurrences(of: "|", with: "\\|") ?? "None"
+            let suggPreview = sugg.count > 50 ? String(sugg.prefix(47)) + "..." : sugg
+            md += "| `\(f.category.rawValue)` | \(preview) | `\(f.boundingBoxes.count)` boxes | \(suggPreview) |\n"
+        }
+        return md
+    }
+
 }
