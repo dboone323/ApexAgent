@@ -83,3 +83,65 @@ public enum RoutineTrigger: String, Codable, CaseIterable, Sendable {
     case onMessage           = "On specific message"     // reaction to incoming chat message
     case webhook             = "Webhook"                 // triggered by an external POST
 }
+
+extension RoutineTrigger {
+    public var badge: String {
+        switch self {
+        case .manual: return "👆 Manual"
+        case .timeInterval: return "⏱️ Interval"
+        case .cron: return "📅 Cron"
+        case .onError: return "🔥 On Error"
+        case .onSuccess: return "🎉 On Success"
+        case .onMessage: return "💬 On Message"
+        case .webhook: return "🪝 Webhook"
+        }
+    }
+
+    /// Fields required for this trigger to be runnable.
+    public var requiresSchedule: Bool {
+        switch self {
+        case .timeInterval, .cron: return true
+        case .manual, .onError, .onSuccess, .onMessage, .webhook: return false
+        }
+    }
+}
+
+extension Routine {
+    /// Validates trigger configuration. Nil = runnable.
+    public func configurationError() -> String? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return "Routine name must not be empty." }
+        switch trigger {
+        case .timeInterval:
+            if scheduledMinutes <= 0 { return "Interval routines require scheduledMinutes > 0." }
+            if scheduledMinutes > 525_600 { return "Interval exceeds one year; likely misconfigured." }
+        case .cron:
+            guard let expr = cronExpression, !expr.isEmpty else {
+                return "Cron routines require a cronExpression."
+            }
+            if (try? CronSchedule(expression: expr)) == nil {
+                return "Invalid cronExpression: '\(expr)'."
+            }
+        case .onMessage:
+            if let f = messageFilter, f.count > 500 {
+                return "messageFilter exceeds 500 characters."
+            }
+        case .manual, .onError, .onSuccess, .webhook:
+            break
+        }
+        return nil
+    }
+
+    public var isRunnable: Bool { configurationError() == nil }
+
+    public func formatAsMarkdown() -> String {
+        var md = "### 🔁 Routine: `\(name)` — \(trigger.badge)\n\n"
+        md += "| Field | Value |\n"
+        md += "|---|---|\n"
+        md += "| Trigger | \(trigger.badge) |\n"
+        md += "| Schedule | \(effectiveScheduleDescription) |\n"
+        md += "| Status | \(enabled ? "🟢 Enabled" : "⚪️ Disabled") |\n"
+        md += "| Valid | \(configurationError() == nil ? "✅ Runnable" : "❌ \(configurationError() ?? "")") |\n"
+        return md
+    }
+}

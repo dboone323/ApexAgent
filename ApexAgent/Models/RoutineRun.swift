@@ -79,3 +79,47 @@ struct RoutineRun: Identifiable, Codable, Equatable, Sendable {
         }
     }
 }
+
+extension RoutineRunStatus {
+    public var badge: String {
+        switch self {
+        case .queued: return "⏳ Queued"
+        case .running: return "⚡️ Running"
+        case .completed: return "✅ Completed"
+        case .failed: return "❌ Failed"
+        case .cancelled: return "🚫 Cancelled"
+        }
+    }
+
+    public var isTerminal: Bool {
+        switch self {
+        case .completed, .failed, .cancelled: return true
+        case .queued, .running: return false
+        }
+    }
+}
+
+extension RoutineRun {
+    public func formatAsMarkdown() -> String {
+        var md = "### 🔁 Routine Run: `\(routineName)` — \(status.badge)\n\n"
+        md += "| Field | Value |\n"
+        md += "|---|---|\n"
+        md += "| Status | \(status.badge) |\n"
+        md += "| Trigger | `\(trigger.rawValue)` |\n"
+        md += "| Started | `\(startedAt)` |\n"
+        md += "| Duration | `\(formattedDuration)` |\n"
+        if let out = output, !out.isEmpty {
+            md += "| Output | \(String(out.prefix(200)).replacingOccurrences(of: "|", with: "\\|")) |\n"
+        }
+        if let err = error, !err.isEmpty {
+            md += "| Error | \(String(err.prefix(200)).replacingOccurrences(of: "|", with: "\\|")) |\n"
+        }
+        return md
+    }
+
+    /// Terminal-state guard: only terminal runs may carry finishedAt.
+    public var isConsistent: Bool {
+        if status.isTerminal { return true }
+        return finishedAt == nil
+    }
+}

@@ -2,9 +2,11 @@ import Testing
 import Foundation
 @testable import ApexAgentCore
 
-@Suite("HardeningLoopBatch13Tests")
-struct HardeningLoopBatch13Tests {
-    @Test func testRunStatusBadges() {
+// MARK: - Routine lifecycle & config validation diagnostics
+
+@Suite("RoutineTests")
+struct RoutineTests {
+    @Test func runStatusBadges() {
         #expect(RoutineRunStatus.queued.badge.contains("Queued"))
         #expect(RoutineRunStatus.completed.badge.contains("Completed"))
         #expect(RoutineRunStatus.completed.isTerminal)
@@ -12,7 +14,7 @@ struct HardeningLoopBatch13Tests {
         #expect(RoutineRunStatus.cancelled.isTerminal)
     }
 
-    @Test func testRoutineRunMarkdown() {
+    @Test func routineRunMarkdown() {
         let run = RoutineRun(routineId: UUID(), routineName: "nightly", prompt: "p", status: .completed)
         let md = run.formatAsMarkdown()
         #expect(md.contains("nightly"))
@@ -23,14 +25,14 @@ struct HardeningLoopBatch13Tests {
         #expect(!running.isConsistent)
     }
 
-    @Test func testTriggerBadges() {
+    @Test func triggerBadges() {
         #expect(RoutineTrigger.cron.badge.contains("Cron"))
         #expect(RoutineTrigger.cron.requiresSchedule)
         #expect(!RoutineTrigger.manual.requiresSchedule)
         #expect(RoutineTrigger.timeInterval.requiresSchedule)
     }
 
-    @Test func testRoutineConfigValidation() {
+    @Test func routineConfigValidation() {
         let ok = Routine(name: "n", descriptionText: "d", trigger: .manual)
         #expect(ok.configurationError() == nil)
         #expect(ok.isRunnable)
