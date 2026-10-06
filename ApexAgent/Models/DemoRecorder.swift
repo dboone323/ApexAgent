@@ -272,4 +272,32 @@ public final class DemoRecorder {
         """
         return script
     }
+
+    // MARK: - Markdown Demonstration Summary
+
+    public func formatDemoSummaryMarkdown() -> String {
+        guard !recordedActions.isEmpty else {
+            return "No recorded interaction actions in demonstration buffer."
+        }
+
+        var md = "### 📹 Teach-a-Task Recorded Demonstration (\(recordedActions.count) actions)\n\n"
+        md += "| Step | Action Type | Details | Timestamp |\n"
+        md += "|---|---|---|---|\n"
+
+        let formatter = ISO8601DateFormatter()
+        for (idx, action) in recordedActions.enumerated() {
+            let typeStr: String
+            switch action.kind {
+            case .mouseClick: typeStr = "🖱️ Click"
+            case .keyStroke: typeStr = "⌨️ Keystroke"
+            case .appSwitch: typeStr = "🔄 App Switch"
+            case .customStep: typeStr = "⚡️ Custom Step"
+            }
+            let safeDesc = action.description.replacingOccurrences(of: "|", with: "\\|")
+            let ts = formatter.string(from: action.timestamp)
+            md += "| `\(idx + 1)` | \(typeStr) | \(safeDesc) | `\(ts)` |\n"
+        }
+        return md
+    }
+
 }

@@ -961,4 +961,118 @@ struct SecurityTests {
         #expect(summaryMd.contains("Previous conversation established design goals."))
     }
 
+
+    // MARK: - Batch 7 Self-Hardening Tests
+
+    @Test @MainActor func testAgentSessionCoordinatorMarkdown() {
+        let coordinator = AgentSessionCoordinator.shared
+        let md = coordinator.exportSessionCoordinatorMarkdown()
+        #expect(md.contains("### 🎛️ Agent Session Coordinator Status"))
+        #expect(md.contains("| Parameter | Value | Description |"))
+        #expect(md.contains("Context Compaction Threshold"))
+        #expect(md.contains("Rehydration Window Size"))
+    }
+
+    @Test @MainActor func testDynamicToolboxCatalogMarkdown() {
+        let toolbox = DynamicToolbox.shared
+        let catalog = toolbox.exportToolboxCatalogMarkdown()
+        #expect(!catalog.isEmpty)
+        // If empty, returns fallback; if populated, contains table header
+        #expect(catalog.contains("Registered Tools") || catalog.contains("No dynamic tools"))
+    }
+
+    @Test @MainActor func testDemoRecorderSummaryMarkdown() {
+        let recorder = DemoRecorder()
+        recorder.recordAction(kind: .appSwitch(appName: "Xcode", bundleId: "com.apple.dt.Xcode"), description: "Switch to Xcode")
+        recorder.recordAction(kind: .mouseClick(button: "left", x: 120, y: 340, appName: "Xcode", elementRole: "AXButton", elementTitle: "Run"), description: "Click Run Button")
+        recorder.recordAction(kind: .keyStroke(characters: "b", modifiers: "Cmd", appName: "Xcode"), description: "Trigger Build (Cmd+B)")
+
+        let md = recorder.formatDemoSummaryMarkdown()
+        #expect(md.contains("### 📹 Teach-a-Task Recorded Demonstration (3 actions)"))
+        #expect(md.contains("| Step | Action Type | Details | Timestamp |"))
+        #expect(md.contains("🖱️ Click"))
+        #expect(md.contains("⌨️ Keystroke"))
+        #expect(md.contains("🔄 App Switch"))
+    }
+
+    @Test func testLaunchAgentConfigMarkdown() {
+        let config = LaunchAgentConfig(
+            label: "com.apexagent.daemon.test",
+            programPath: "/Applications/ApexAgent.app/Contents/MacOS/ApexAgent",
+            arguments: ["--daemon", "--port", "8080"],
+            runAtLoad: true,
+            keepAlive: true
+        )
+
+        let md = LaunchAgentPlist.formatConfigMarkdown(config)
+        #expect(md.contains("### 🚀 macOS launchd Agent Daemon Configuration"))
+        #expect(md.contains("| Parameter | Value | Description |"))
+        #expect(md.contains("`com.apexagent.daemon.test`"))
+        #expect(md.contains("✅ Enabled"))
+        #expect(md.contains("--daemon --port 8080"))
+    }
+
+    @Test @MainActor func testSpeculativeToolExecutorMetricsMarkdown() {
+        let executor = SpeculativeToolExecutor.shared
+        let metricsMd = executor.formatMetricsMarkdown()
+        #expect(metricsMd.contains("### ⚡️ Speculative Tool Execution Telemetry"))
+        #expect(metricsMd.contains("| Metric | Value | Description |"))
+        #expect(metricsMd.contains("Speculative Cache Hits"))
+        #expect(metricsMd.contains("Speculation Hit Rate"))
+    }
+
+    @Test func testSkillCatalogManifestsMarkdown() {
+        let manifest = SkillManifest(
+            id: "git-commit-helper",
+            name: "Git Commit Helper",
+            version: "1.0.0",
+            description: "Formats atomic commits with conventional prefixes.",
+            defaultEnabled: true,
+            triggerTerms: ["commit", "git staged", "git diff"],
+            requiredCapabilities: ["git"]
+        )
+
+        let md = SkillCatalog.exportManifestsMarkdown([manifest])
+        #expect(md.contains("### 🧩 Skills Catalog & Trigger Manifests (1 skills)"))
+        #expect(md.contains("| Skill ID | Name | Version | Triggers | Default | Required Capabilities |"))
+        #expect(md.contains("`git-commit-helper`"))
+        #expect(md.contains("**Git Commit Helper**"))
+        #expect(md.contains("✅ Enabled"))
+    }
+
+    @Test @MainActor func testBotManagerRosterMarkdown() {
+        let manager = BotManager()
+        let apex = manager.createBot(name: "Apex", title: "General Assistant", descriptionText: "Assistant", avatarName: "bolt.fill")
+        apex.modelProviderRaw = "AppleOnDevice"
+        apex.isPinned = true
+
+        let rosterMd = manager.exportBotRosterMarkdown()
+        #expect(rosterMd.contains("### 🤖 Configured Bot Team Roster"))
+        #expect(rosterMd.contains("| Bot Name | Role Title | Model Provider | Status | Pinned |"))
+        #expect(rosterMd.contains("**Apex**"))
+        #expect(rosterMd.contains("📌 Pinned"))
+    }
+
+    @Test @MainActor func testMCPManagerServersTableMarkdown() {
+        let manager = MCPManager.shared
+        let table = manager.exportMCPServersTable()
+        #expect(!table.isEmpty)
+        #expect(table.contains("Configured MCP Servers") || table.contains("No external MCP servers"))
+    }
+
+    @Test func testToolEventLoggerFormatEventsTable() {
+        let event1 = ToolEvent(toolName: "read_file", arguments: "path=/tmp/test.txt")
+        var event2 = ToolEvent(toolName: "run_shell", arguments: "command=swift test")
+        event2.status = .success
+        var event3 = ToolEvent(toolName: "write_file", arguments: "path=/etc/hosts")
+        event3.status = .denied
+
+        let table = ToolEvent.formatEventsTable([event1, event2, event3])
+        #expect(table.contains("### 🛠️ Tool Execution Event Telemetry (3 events)"))
+        #expect(table.contains("| Tool Name | Status | Timestamp | Arguments |"))
+        #expect(table.contains("🔵 Running"))
+        #expect(table.contains("🟢 Success"))
+        #expect(table.contains("⛔️ Denied"))
+    }
+
 }

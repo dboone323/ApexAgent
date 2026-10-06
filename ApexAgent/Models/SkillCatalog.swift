@@ -137,4 +137,25 @@ enum SkillCatalog {
         guard let data = try? JSONEncoder().encode(terms) else { return "[]" }
         return String(data: data, encoding: .utf8) ?? "[]"
     }
+
+    // MARK: - Markdown Manifest Table
+
+    static func exportManifestsMarkdown(_ manifests: [SkillManifest]) -> String {
+        guard !manifests.isEmpty else {
+            return "No skills currently discovered or installed."
+        }
+
+        var md = "### 🧩 Skills Catalog & Trigger Manifests (\(manifests.count) skills)\n\n"
+        md += "| Skill ID | Name | Version | Triggers | Default | Required Capabilities |\n"
+        md += "|---|---|---|---|---|---|\n"
+
+        for m in manifests {
+            let triggers = m.triggerTerms.joined(separator: ", ").replacingOccurrences(of: "|", with: "\\|")
+            let caps = m.requiredCapabilities.isEmpty ? "None" : m.requiredCapabilities.joined(separator: ", ").replacingOccurrences(of: "|", with: "\\|")
+            let defaultBadge = m.defaultEnabled ? "✅ Enabled" : "⚪️ Disabled"
+            md += "| `\(m.id)` | **\(m.name)** | `v\(m.version)` | `\(triggers)` | \(defaultBadge) | `\(caps)` |\n"
+        }
+        return md
+    }
+
 }

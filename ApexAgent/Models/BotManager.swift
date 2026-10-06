@@ -609,4 +609,28 @@ final class BotManager {
             )
         }
     }
+
+    // MARK: - Markdown Bot Roster Export
+
+    func exportBotRosterMarkdown() -> String {
+        guard !bots.isEmpty else {
+            return "No bots currently configured in team roster."
+        }
+
+        var md = "### 🤖 Configured Bot Team Roster (\(bots.count) active bots)\n\n"
+        md += "| Bot Name | Role Title | Model Provider | Status | Pinned |\n"
+        md += "|---|---|---|---|---|\n"
+
+        for bot in allBots {
+            let role = bot.isChiefOfStaff ? "👑 Chief of Staff" : bot.title
+            let provider = (bot.modelProviderRaw?.isEmpty ?? true) ? "System Default" : (bot.modelProviderRaw ?? "System Default")
+            let status = (sessions[bot.id]?.isGenerating ?? false) ? "⚡️ Generating" : "💤 Idle"
+            let pinned = bot.isPinned ? "📌 Pinned" : "⚪️ Unpinned"
+            let safeName = bot.name.replacingOccurrences(of: "|", with: "\\|")
+            let safeRole = role.replacingOccurrences(of: "|", with: "\\|")
+            md += "| **\(safeName)** | \(safeRole) | `\(provider)` | \(status) | \(pinned) |\n"
+        }
+        return md
+    }
+
 }
