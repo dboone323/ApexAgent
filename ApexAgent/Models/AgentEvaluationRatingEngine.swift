@@ -219,3 +219,12 @@ extension AgentEvaluationScorecard {
         return md
     }
 }
+
+extension DimensionScore {
+    /// Guards against inverted pass/total counts before scoring.
+    public static func validated(dimension: AgentEvaluationDimension, passedChecks: Int, totalChecks: Int, notes: String = "") -> DimensionScore {
+        let safeTotal = max(totalChecks, 0)
+        let safePassed = min(max(passedChecks, 0), safeTotal)
+        return DimensionScore(dimension: dimension, passedChecks: safePassed, totalChecks: safeTotal, notes: notes)
+    }
+}

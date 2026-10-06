@@ -56,3 +56,15 @@ final class ScorecardMarkdownTests: XCTestCase {
         XCTAssertTrue(md.contains("OS & Computer Use Automation"))
     }
 }
+
+// MARK: - Input validation hardening for dimension scores
+
+final class DimensionScoreValidationTests: XCTestCase {
+    func testDimensionScoreValidated() {
+        let s = DimensionScore.validated(dimension: .toolCalling, passedChecks: 99, totalChecks: 5, notes: "clamped")
+        XCTAssertEqual(s.passedChecks, 5)
+        XCTAssertEqual(s.totalChecks, 5)
+        let s2 = DimensionScore.validated(dimension: .toolCalling, passedChecks: -3, totalChecks: 5)
+        XCTAssertEqual(s2.passedChecks, 0)
+    }
+}

@@ -182,3 +182,21 @@ public final class A2APeerDiscovery {
     }
 
 }
+
+extension A2APeerDiscovery {
+    /// Pure duplicate filter: removes exact-duplicate endpoints from any peer
+    /// list, keeping the most recent record per endpoint. The caller owns
+    /// mutation (`discoveredPeers` is `private(set)`); use with `clearPeers()`
+    /// + re-add, or on a snapshot copy.
+    public static func deduplicatedPeers(_ peers: [DiscoveredPeer]) -> [DiscoveredPeer] {
+        var seen: Set<String> = []
+        var unique: [DiscoveredPeer] = []
+        for peer in peers.sorted(by: { $0.discoveredAt > $1.discoveredAt }) {
+            let key = "\(peer.endpoint)"
+            if seen.insert(key).inserted {
+                unique.append(peer)
+            }
+        }
+        return unique.sorted(by: { $0.discoveredAt < $1.discoveredAt })
+    }
+}

@@ -192,3 +192,18 @@ extension CronSchedule {
         return md
     }
 }
+
+extension CronSchedule {
+    /// Safe constructor returning nil instead of throwing.
+    public static func validated(expression: String) -> CronSchedule? {
+        try? CronSchedule(expression: expression)
+    }
+
+    /// Human summary for invalid input without throwing.
+    public static func validationMessage(for expression: String) -> String {
+        if (try? CronSchedule(expression: expression)) != nil {
+            return "Valid cron expression."
+        }
+        return "Invalid cron expression: '\(expression)'. Expected 5 fields (minute hour day month weekday)."
+    }
+}

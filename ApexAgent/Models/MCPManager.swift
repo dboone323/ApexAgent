@@ -262,3 +262,27 @@ final class MCPManager: OrchestratorProvider {
     }
 
 }
+
+extension MCPServerConfig {
+    /// Validates a server config before persistence/use. Returns nil when valid.
+    public func validationError() -> String? {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedName.isEmpty { return "Server name must not be empty." }
+        let trimmedCmd = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedCmd.isEmpty { return "Server command must not be empty." }
+        if transport != "stdio" && transport != "http" && transport != "sse" {
+            return "Unsupported transport '\(transport)'. Expected stdio, http, or sse."
+        }
+        if (transport == "http" || transport == "sse") {
+            guard let url = endpointURL, !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return "Transport '\(transport)' requires a non-empty endpointURL."
+            }
+            guard url.hasPrefix("http://") || url.hasPrefix("https://") else {
+                return "endpointURL must start with http:// or https://."
+            }
+        }
+        return nil
+    }
+
+    public var isValid: Bool { validationError() == nil }
+}

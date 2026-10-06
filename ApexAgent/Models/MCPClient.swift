@@ -971,3 +971,17 @@ struct AnyCodable: Codable, @unchecked Sendable {
         }
     }
 }
+
+extension MCPClientConfig {
+    /// Clamps out-of-range tunables to sane bounds. Returns clamped copy.
+    public func clamped() -> MCPClientConfig {
+        var c = self
+        c.requestTimeout = min(max(c.requestTimeout, 1), 600)
+        c.pingTimeout = min(max(c.pingTimeout, 0.5), 60)
+        c.maxRetries = min(max(c.maxRetries, 0), 20)
+        c.circuitFailureThreshold = min(max(c.circuitFailureThreshold, 1), 20)
+        c.restartRateLimitWindow = min(max(c.restartRateLimitWindow, 5), 3600)
+        c.maxRestartsInWindow = min(max(c.maxRestartsInWindow, 1), 50)
+        return c
+    }
+}

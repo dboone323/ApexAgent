@@ -154,3 +154,28 @@ struct WebhookPayloadMarkdownTests {
         #expect(md3.contains("hello"))
     }
 }
+
+// MARK: - Input validation hardening for webhook endpoints and deliveries
+
+@Suite("WebhookValidationTests")
+struct WebhookValidationTests {
+    @Test func webhookEndpointIdShape() {
+        #expect(WebhookManager.isPlausibleEndpointId("wh_abc12345"))
+        #expect(!WebhookManager.isPlausibleEndpointId("bogus"))
+        #expect(!WebhookManager.isPlausibleEndpointId("wh_"))
+        let mgr = WebhookManager()
+        #expect(!mgr.authorizeValidated(id: "bogus", secret: "x"))
+        #expect(!mgr.authorizeValidated(id: "wh_abc12345", secret: ""))
+    }
+
+    @Test func webhookDeliveryPreflight() {
+        var d = WebhookDelivery(path: "/hooks/wh_x", bodySize: 10)
+        #expect(d.preflightError() == nil)
+        d = WebhookDelivery(path: "/hooks/wh_x", bodySize: WebhookManager.maxBodyBytes + 1)
+        #expect(d.preflightError() != nil)
+        var d2 = WebhookDelivery(method: "DELETE", path: "/hooks/wh_x", bodySize: 0)
+        #expect(d2.preflightError() != nil)
+        d2 = WebhookDelivery(path: "/elsewhere", bodySize: 0)
+        #expect(d2.preflightError() != nil)
+    }
+}

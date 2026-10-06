@@ -158,3 +158,34 @@ struct MCPResilienceTests {
         }
     }
 }
+
+// MARK: - Input validation hardening for MCP configs
+
+@Suite("MCPConfigValidationTests")
+struct MCPConfigValidationTests {
+    @Test func mcpServerConfigValidation() {
+        var cfg = MCPServerConfig(name: "", command: "npx", arguments: [])
+        #expect(!cfg.isValid)
+        #expect(cfg.validationError() != nil)
+        cfg = MCPServerConfig(name: "FS", command: "npx", arguments: ["-y", "x"])
+        #expect(cfg.isValid)
+        cfg = MCPServerConfig(name: "W", command: "x", arguments: [], transport: "http", endpointURL: nil)
+        #expect(!cfg.isValid)
+        cfg = MCPServerConfig(name: "W", command: "x", arguments: [], transport: "http", endpointURL: "ftp://bad")
+        #expect(!cfg.isValid)
+        cfg = MCPServerConfig(name: "W", command: "x", arguments: [], transport: "http", endpointURL: "https://ok/hooks")
+        #expect(cfg.isValid)
+        cfg = MCPServerConfig(name: "W", command: "x", arguments: [], transport: "carrier-pigeon")
+        #expect(!cfg.isValid)
+    }
+
+    @Test func mcpClientConfigClamped() {
+        let bad = MCPClientConfig(requestTimeout: -5, pingTimeout: 5000, maxRetries: 999, circuitFailureThreshold: 0, restartRateLimitWindow: -1, maxRestartsInWindow: 999)
+        let c = bad.clamped()
+        #expect(c.requestTimeout >= 1 && c.requestTimeout <= 600)
+        #expect(c.pingTimeout >= 0.5 && c.pingTimeout <= 60)
+        #expect(c.maxRetries <= 20)
+        #expect(c.circuitFailureThreshold >= 1)
+        #expect(c.maxRestartsInWindow <= 50)
+    }
+}

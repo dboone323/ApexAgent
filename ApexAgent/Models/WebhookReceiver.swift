@@ -335,3 +335,30 @@ extension WebhookPayload {
         return md
     }
 }
+
+extension WebhookManager {
+    /// Validates an endpoint id shape before lookup (avoids lock churn on junk).
+    public static func isPlausibleEndpointId(_ id: String) -> Bool {
+        guard id.hasPrefix("wh_") else { return false }
+        let suffix = id.dropFirst(3)
+        guard suffix.count >= 8 && suffix.count <= 64 else { return false }
+        return suffix.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
+    }
+
+    /// Authorize with id-shape pre-check (same semantics, early reject).
+    public func authorizeValidated(id: String, secret: String) -> Bool {
+        guard Self.isPlausibleEndpointId(id), !secret.isEmpty else { return false }
+        return authorize(id: id, secret: secret)
+    }
+}
+
+extension WebhookDelivery {
+    /// Pre-parse sanity: method/path/body-size checks. Nil = OK.
+    public func preflightError() -> String? {
+        if method != "POST" && method != "GET" { return "Unsupported method '\(method)'." }
+        if !path.hasPrefix("/hooks/") && path != "/health" { return "Unknown path." }
+        if bodySize < 0 { return "Negative body size." }
+        if bodySize > WebhookManager.maxBodyBytes { return "Body exceeds 256 KiB cap." }
+        return nil
+    }
+}

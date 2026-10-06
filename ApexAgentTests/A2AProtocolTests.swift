@@ -317,3 +317,18 @@ final class A2AMarkdownFormatTests: XCTestCase {
         XCTAssertTrue(md.contains("Method not found"))
     }
 }
+
+// MARK: - Peer list deduplication
+
+final class A2APeerDedupTests: XCTestCase {
+    @MainActor
+    func testPeerDedup() {
+        let ep = NWEndpoint.hostPort(host: .ipv4(.loopback), port: 1338)
+        let older = A2APeerDiscovery.DiscoveredPeer(id: UUID(), name: "a", endpoint: ep, discoveredAt: Date(timeIntervalSince1970: 100))
+        let newer = A2APeerDiscovery.DiscoveredPeer(id: UUID(), name: "b", endpoint: ep, discoveredAt: Date(timeIntervalSince1970: 200))
+        let result = A2APeerDiscovery.deduplicatedPeers([older, newer])
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result.first?.name, "b")
+        XCTAssertTrue(A2APeerDiscovery.deduplicatedPeers([]).isEmpty)
+    }
+}
