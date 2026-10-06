@@ -31,3 +31,19 @@ struct TracingTests {
         #expect(events.contains { $0.operation == "test.event" && $0.source == "TracingTests" })
     }
 }
+
+// MARK: - Trace event reporting
+
+@Suite("TraceEventReportingTests")
+struct TraceEventReportingTests {
+    @Test func traceEvent() {
+        let e = TraceEvent(source: "orchestrator", operation: "tool_call", detail: "ls", durationMs: 50)
+        #expect(e.isWellFormed)
+        #expect(!e.isSlow)
+        #expect(e.formatAsMarkdown().contains("tool_call"))
+        let slow = TraceEvent(source: "s", operation: "o", durationMs: 5000)
+        #expect(slow.isSlow)
+        let bad = TraceEvent(source: "", operation: "")
+        #expect(!bad.isWellFormed)
+    }
+}

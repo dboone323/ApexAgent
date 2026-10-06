@@ -211,3 +211,23 @@ public actor BenchmarkEvaluationPipeline {
     }
 
 }
+
+extension BenchmarkTask {
+    public func validationError() -> String? {
+        if id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "Task id must not be empty." }
+        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return "Task title must not be empty." }
+        if timeoutSeconds <= 0 { return "timeoutSeconds must be positive." }
+        if timeoutSeconds > 3600 { return "timeoutSeconds exceeds 1 hour cap." }
+        return nil
+    }
+
+    public var isValid: Bool { validationError() == nil }
+}
+
+extension BenchmarkResult {
+    public func formatAsMarkdownRow() -> String {
+        let status = isPassed ? "✅ PASS" : "❌ FAIL"
+        let memMb = String(format: "%.1f MB", Double(memoryPeakBytes) / (1024 * 1024))
+        return "| `\(taskId)` | \(taskTitle) | \(status) | \(String(format: "%.2fs", duration)) | \(memMb) |"
+    }
+}

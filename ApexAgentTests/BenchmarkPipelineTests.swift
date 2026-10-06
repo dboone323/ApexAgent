@@ -207,3 +207,16 @@ final class BenchmarkPipelineTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(duration, 0)
     }
 }
+
+// MARK: - Benchmark task validation & result rows
+
+final class BenchmarkValidationTests: XCTestCase {
+    func testBenchmarkValidation() {
+        let ok = BenchmarkTask(id: "t1", title: "Title", prompt: "p", verificationCommand: "true")
+        XCTAssertTrue(ok.isValid)
+        let bad = BenchmarkTask(id: "", title: "", prompt: "p", verificationCommand: "true", timeoutSeconds: -1)
+        XCTAssertFalse(bad.isValid)
+        let res = BenchmarkResult(taskId: "t1", taskTitle: "Title", isPassed: true, duration: 1.5, memoryPeakBytes: 1_048_576)
+        XCTAssertTrue(res.formatAsMarkdownRow().contains("PASS"))
+    }
+}

@@ -171,3 +171,32 @@ public final class TurnWatchdog: @unchecked Sendable {
     }
 
 }
+
+extension WatchedTurn {
+    public func formatAsMarkdown(now: TimeInterval = Date().timeIntervalSince1970) -> String {
+        let idleSec = max(0, now - lastEventAt)
+        var md = "### ⏱️ Watched Turn `\(threadId)`\n\n"
+        md += "| Field | Value |\n"
+        md += "|---|---|\n"
+        md += "| Bot | `\(botId)` |\n"
+        md += "| Idle | `\(String(format: "%.1fs", idleSec))` |\n"
+        md += "| Waiting on Human | \(waitingOnHuman ? "🙋 Yes (exempt)" : "⚪️ No") |\n"
+        return md
+    }
+
+    /// Stall predicate mirroring TurnWatchdog semantics without a timer.
+    public func isStalled(now: TimeInterval, stallSeconds: TimeInterval) -> Bool {
+        guard !waitingOnHuman else { return false }
+        return (now - lastEventAt) >= stallSeconds
+    }
+}
+
+extension TurnWatchdog.Options {
+    /// Bounds-checks tunables before constructing a watchdog.
+    public func validationError() -> String? {
+        if stallMs <= 0 { return "stallMs must be positive." }
+        if checkMs <= 0 { return "checkMs must be positive." }
+        if checkMs > stallMs { return "checkMs should not exceed stallMs." }
+        return nil
+    }
+}
