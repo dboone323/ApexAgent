@@ -364,3 +364,47 @@ public final class A2AServer {
         )
     }
 }
+
+extension A2AAgentCard {
+    public func formatAsMarkdown() -> String {
+        var md = "### 📡 A2A Agent Card: \(name)\n\n"
+        md += "- **Description**: \(description)\n"
+        md += "- **Version**: `\(version)`\n"
+        md += "- **Endpoint**: `\(url)`\n"
+        md += "- **Capabilities**: streaming=\(capabilities.streaming ? "✅" : "⚪️"), push=\(capabilities.pushNotifications ? "✅" : "⚪️"), history=\(capabilities.stateTransitionHistory ? "✅" : "⚪️")\n"
+        md += "- **Default Modes**: in=[\(defaultInputModes.joined(separator: ", "))], out=[\(defaultOutputModes.joined(separator: ", "))]\n"
+        if skills.isEmpty {
+            md += "\nNo skills advertised.\n"
+        } else {
+            md += "\n| Skill ID | Name | Description | Tags |\n"
+            md += "|---|---|---|---|\n"
+            for s in skills {
+                let safeDesc = s.description.replacingOccurrences(of: "|", with: "\\|")
+                md += "| `\(s.id)` | **\(s.name)** | \(safeDesc) | \(s.tags.joined(separator: ", ")) |\n"
+            }
+        }
+        return md
+    }
+}
+
+extension A2AResponse {
+    public func formatAsMarkdown() -> String {
+        var md = "### 📨 A2A JSON-RPC Response: `\(id)`\n\n"
+        md += "| Field | Value |\n"
+        md += "|---|---|\n"
+        md += "| JSON-RPC | `\(jsonrpc)` |\n"
+        if let result {
+            md += "| Task ID | `\(result.id)` |\n"
+            md += "| State | `\(result.status.state)` |\n"
+            md += "| Artifacts | `\(result.artifacts.count)` |\n"
+            for (i, art) in result.artifacts.enumerated() {
+                let text = art.parts.compactMap { $0.text }.joined(separator: " / ").prefix(160)
+                md += "| Artifact \(i + 1) | \(text) |\n"
+            }
+        }
+        if let error {
+            md += "| Error | `\(error.code)` \(error.message.replacingOccurrences(of: "|", with: "\\|")) |\n"
+        }
+        return md
+    }
+}

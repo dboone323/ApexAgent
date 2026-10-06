@@ -203,3 +203,17 @@ public actor AgentRegistry {
 extension Notification.Name {
     public static let agentRegistryUpdated = Notification.Name("ApexAgent.agentRegistryUpdated")
 }
+
+extension RegisteredAgent {
+    public func formatAsMarkdown() -> String {
+        var md = "### 🤖 Registered Agent: `\(name)`\n\n"
+        let promptPreview = String(systemPrompt.prefix(160)).replacingOccurrences(of: "|", with: "\\|")
+        md += "| Property | Value |\n"
+        md += "|---|---|\n"
+        md += "| Name | `\(name)` |\n"
+        md += "| Model Preference | `\(modelPreference ?? "default")` |\n"
+        md += "| Allowed Tools | `\(allowedTools.count)` (\(allowedTools.prefix(8).joined(separator: ", "))\(allowedTools.count > 8 ? "…" : "")) |\n"
+        md += "| System Prompt | \(promptPreview) |\n"
+        return md
+    }
+}

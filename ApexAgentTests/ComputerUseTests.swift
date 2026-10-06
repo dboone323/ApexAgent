@@ -107,3 +107,14 @@ struct ComputerUseTests {
         #expect(trusted == true || trusted == false)
     }
 }
+
+// MARK: - Markdown projection for computer-use steps
+
+@Suite("ComputerUseMarkdownTests")
+struct ComputerUseMarkdownTests {
+    @Test func computerUseStepMarkdown() {
+        let step = ComputerUseStep(turn: 1, action: .click(x: 10, y: 20), observation: "ok")
+        let md = step.formatAsMarkdown()
+        #expect(md.contains("click at"))
+    }
+}

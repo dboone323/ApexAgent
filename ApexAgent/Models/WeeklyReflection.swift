@@ -26,3 +26,11 @@ extension WeeklyReflection {
         return WeeklyReflection(weekStartDate: weekStart, text: text)
     }
 }
+
+extension WeeklyReflection {
+    public func formatAsMarkdown() -> String {
+        var md = "### 📝 Weekly Reflection — \(weekStartDate)\n\n"
+        md += "\(text.prefix(500))\n"
+        return md
+    }
+}

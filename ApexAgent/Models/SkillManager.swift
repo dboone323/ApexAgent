@@ -185,3 +185,16 @@ public enum SkillValidationError: LocalizedError, Sendable, Equatable {
         }
     }
 }
+
+extension SkillManifestInfo {
+    public func formatAsMarkdown() -> String {
+        var md = "### 🛠️ Skill Manifest: `\(name)`\n\n"
+        md += "| Property | Value |\n"
+        md += "|---|---|\n"
+        md += "| Name | `\(name)` |\n"
+        md += "| Description | \(description.prefix(200)) |\n"
+        md += "| Script | `\(scriptPath)` |\n"
+        md += "| Parameters | `\(parameterCount)` |\n"
+        return md
+    }
+}

@@ -44,3 +44,15 @@ final class AgentEvaluationRatingTests: XCTestCase {
         XCTAssertTrue(scorecard.recommendations.first?.contains("Improve") ?? false)
     }
 }
+
+// MARK: - Markdown projection for the scorecard
+
+final class ScorecardMarkdownTests: XCTestCase {
+    func testScorecardMarkdown() throws {
+        let engine = AgentEvaluationRatingEngine()
+        let card = engine.quickAudit()
+        let md = card.formatAsMarkdown()
+        XCTAssertTrue(md.contains("Overall"))
+        XCTAssertTrue(md.contains("OS & Computer Use Automation"))
+    }
+}

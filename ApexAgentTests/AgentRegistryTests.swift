@@ -158,3 +158,15 @@ struct AgentRegistryTests {
     }
 
 }
+
+// MARK: - Markdown projection for registered agents
+
+@Suite("RegisteredAgentMarkdownTests")
+struct RegisteredAgentMarkdownTests {
+    @Test func registeredAgentMarkdown() {
+        let agent = RegisteredAgent(name: "developer", systemPrompt: "You build software.", allowedTools: ["read_file"], modelPreference: nil)
+        let md = agent.formatAsMarkdown()
+        #expect(md.contains("developer"))
+        #expect(md.contains("read_file"))
+    }
+}

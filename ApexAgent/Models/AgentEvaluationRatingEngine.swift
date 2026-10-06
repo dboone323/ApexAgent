@@ -201,3 +201,21 @@ public struct AgentEvaluationRatingEngine: Sendable {
     }
 
 }
+
+extension AgentEvaluationScorecard {
+    public func formatAsMarkdown() -> String {
+        var md = "### 📊 Agent Capability Scorecard — \(String(format: "%.1f", overallScore)) (\(grade.rawValue))\n\n"
+        md += "| Dimension | Score | Checks | Notes |\n"
+        md += "|---|---|---|---|\n"
+        for ds in dimensionScores {
+            let safeNotes = ds.notes.replacingOccurrences(of: "|", with: "\\|")
+            md += "| **\(ds.dimension.rawValue)** | `\(String(format: "%.1f%%", ds.score))` | `\(ds.passedChecks)/\(ds.totalChecks)` | \(safeNotes) |\n"
+        }
+        md += "| **Overall** | **`\(String(format: "%.1f", overallScore))`** | pass@1=`\(benchmarkPassAt1)` pass@5=`\(benchmarkPassAt5)` | **\(grade.rawValue)** |\n"
+        if !recommendations.isEmpty {
+            md += "\n**Recommendations**:\n"
+            for r in recommendations { md += "- \(r.replacingOccurrences(of: "|", with: "\\|"))\n" }
+        }
+        return md
+    }
+}

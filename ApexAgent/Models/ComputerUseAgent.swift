@@ -306,3 +306,15 @@ public struct ComputerUseStep: Identifiable, Sendable, Equatable {
         )
     }
 }
+
+extension ComputerUseStep {
+    public func formatAsMarkdown() -> String {
+        var md = "### 🖱️ Computer-Use Step \(turn): \(action.humanReadableSummary)\n\n"
+        md += "| Field | Value |\n"
+        md += "|---|---|\n"
+        md += "| Turn | `\(turn)` |\n"
+        md += "| Action | \(action.humanReadableSummary) |\n"
+        md += "| Observation | \(observation.prefix(200)) |\n"
+        return md
+    }
+}

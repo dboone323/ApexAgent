@@ -178,3 +178,17 @@ public struct CronSchedule: Sendable, Equatable {
         }
     }
 }
+
+extension CronSchedule {
+    public func formatScheduleSummaryMarkdown() -> String {
+        var md = "### ⏱️ Cron Schedule: `\(rawExpression)` (\(humanReadableDescription))\n\n"
+        md += "| Field | Values |\n"
+        md += "|---|---|\n"
+        md += "| Minutes | `\(minutes.sorted().prefix(12).map(String.init).joined(separator: ","))\(minutes.count > 12 ? "…" : "")` |\n"
+        md += "| Hours | `\(hours.sorted().map(String.init).joined(separator: ","))` |\n"
+        md += "| Days of Month | `\(daysOfMonth.sorted().prefix(12).map(String.init).joined(separator: ","))\(daysOfMonth.count > 12 ? "…" : "")` |\n"
+        md += "| Months | `\(months.sorted().map(String.init).joined(separator: ","))` |\n"
+        md += "| Days of Week | `\(daysOfWeek.sorted().map(String.init).joined(separator: ","))` |\n"
+        return md
+    }
+}

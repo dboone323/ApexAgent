@@ -200,3 +200,21 @@ public final class ProactiveScheduler {
         UNUserNotificationCenter.current().add(request) { _ in }
     }
 }
+
+extension ProactiveScheduler.ProactiveFinding {
+    public func formatAsMarkdown() -> String {
+        let badge: String
+        switch severity {
+        case .critical: badge = "🛑 Critical"
+        case .warning: badge = "⚠️ Warning"
+        case .info: badge = "ℹ️ Info"
+        }
+        var md = "### ⚡️ Proactive Finding: \(title)\n\n"
+        md += "| Field | Value |\n"
+        md += "|---|---|\n"
+        md += "| Severity | \(badge) |\n"
+        md += "| Target Bot | `\(targetBotName ?? "system")` |\n"
+        md += "| Detail | \(detail.prefix(300)) |\n"
+        return md
+    }
+}

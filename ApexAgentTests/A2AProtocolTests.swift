@@ -290,3 +290,30 @@ final class A2AProtocolTests: XCTestCase {
         XCTAssertEqual(decoded.result?.artifacts.first?.parts.first?.text, "4")
     }
 }
+
+// MARK: - Markdown projections for A2A models
+
+final class A2AMarkdownFormatTests: XCTestCase {
+    func testA2AAgentCardMarkdown() {
+        let card = A2AAgentCard(
+            name: "TestNode",
+            description: "Test node",
+            version: "1.0.0",
+            url: "http://localhost:1338",
+            capabilities: A2AAgentCard.A2ACapabilities(streaming: false, pushNotifications: false, stateTransitionHistory: false),
+            skills: [],
+            defaultInputModes: ["text"],
+            defaultOutputModes: ["text"]
+        )
+        let md = card.formatAsMarkdown()
+        XCTAssertTrue(md.contains("TestNode"))
+        XCTAssertTrue(md.contains("1.0.0"))
+    }
+
+    func testA2AResponseMarkdown() {
+        let res = A2AResponse(jsonrpc: "2.0", id: "1", result: nil,
+                              error: A2AResponse.A2AError(code: -32601, message: "Method not found"))
+        let md = res.formatAsMarkdown()
+        XCTAssertTrue(md.contains("Method not found"))
+    }
+}

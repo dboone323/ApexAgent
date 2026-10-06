@@ -312,3 +312,26 @@ extension WebhookManager {
         return md
     }
 }
+
+extension WebhookPayload {
+    func summaryMarkdown() -> String {
+        var md = "### 🪝 Webhook Payload\n\n"
+        switch self {
+        case .json(let dict):
+            md += "| Key | Value |\n|---|---|\n"
+            for (k, v) in dict.sorted(by: { $0.key < $1.key }) {
+                md += "| `\(k)` | \(v.prefix(120)) |\n"
+            }
+        case .form(let dict):
+            md += "| Field | Value |\n|---|---|\n"
+            for (k, v) in dict.sorted(by: { $0.key < $1.key }) {
+                md += "| `\(k)` | \(v.prefix(120)) |\n"
+            }
+        case .text(let t):
+            md += "\(t.prefix(300))\n"
+        case .empty:
+            md += "Empty payload.\n"
+        }
+        return md
+    }
+}

@@ -140,3 +140,17 @@ struct WebhookServerTests {
         #expect(server.port == explicitPort)
     }
 }
+
+// MARK: - Markdown projection for webhook payloads
+
+@Suite("WebhookPayloadMarkdownTests")
+struct WebhookPayloadMarkdownTests {
+    @Test func webhookPayloadMarkdown() {
+        let md1 = WebhookPayload.json(["a": "1"]).summaryMarkdown()
+        #expect(md1.contains("a"))
+        let md2 = WebhookPayload.empty.summaryMarkdown()
+        #expect(md2.contains("Empty"))
+        let md3 = WebhookPayload.text("hello").summaryMarkdown()
+        #expect(md3.contains("hello"))
+    }
+}
