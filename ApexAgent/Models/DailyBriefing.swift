@@ -143,3 +143,58 @@ extension DailyBriefing {
         return model
     }
 }
+
+
+extension DailyBriefing {
+    public func formatAsMarkdown() -> String {
+        var md = "# ☀️ Daily Executive Briefing\n\n"
+        md += "- **Generated At**: `\(createdAt)`\n"
+        if let mood {
+            md += "- **Daily Mood**: \(mood)\n"
+        }
+        if let alert = budgetAlertStatus {
+            md += "- **Budget Status**: \(alert)\n"
+        }
+        md += "- **Habits Completed**: `\(habitCompletionCount)`\n"
+        md += "- **Focus Power-Up**: \(activePowerUp ? "⚡️ Active" : "⚪️ Inactive")\n\n"
+
+        let tasks = recentSharedTasks
+        if !tasks.isEmpty {
+            md += "### 📋 Priority Tasks (\(tasks.count) items)\n\n"
+            md += "| Task Title | Status |\n"
+            md += "|---|---|\n"
+            for t in tasks.prefix(10) {
+                let statusBadge = (t.status.lowercased() == "completed" || t.status.lowercased() == "done") ? "✅ Completed" : "⏳ Pending"
+                let safeTitle = t.title.replacingOccurrences(of: "|", with: "\\|")
+                md += "| \(safeTitle) | \(statusBadge) |\n"
+            }
+            md += "\n"
+        }
+
+        if let previews = outlookInbox?.previews, !previews.isEmpty {
+            md += "### 📬 Outlook Inbox Highlights\n\n"
+            md += "| From | Subject | Received At |\n"
+            md += "|---|---|---|\n"
+            for p in previews.prefix(5) {
+                let safeFrom = p.from.replacingOccurrences(of: "|", with: "\\|")
+                let safeSub = p.subject.replacingOccurrences(of: "|", with: "\\|")
+                md += "| \(safeFrom) | \(safeSub) | `\(p.receivedAt)` |\n"
+            }
+            md += "\n"
+        }
+
+        if !appSyncTopics.isEmpty {
+            md += "### 🔄 System App Sync Topics\n\n"
+            md += "| Application | Active Topic | Updated At |\n"
+            md += "|---|---|---|\n"
+            for topic in appSyncTopics.prefix(5) {
+                let safeApp = topic.appName.replacingOccurrences(of: "|", with: "\\|")
+                let safeTopic = topic.topic.replacingOccurrences(of: "|", with: "\\|")
+                md += "| **\(safeApp)** | \(safeTopic) | `\(topic.updatedAt)` |\n"
+            }
+            md += "\n"
+        }
+
+        return md
+    }
+}

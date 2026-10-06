@@ -132,7 +132,41 @@ public struct CronSchedule: Sendable, Equatable {
     }
     
     public var humanReadableDescription: String {
-        return "Cron: \(rawExpression)"
+        switch rawExpression {
+        case "* * * * *": return "Every minute"
+        case "*/5 * * * *": return "Every 5 minutes"
+        case "*/15 * * * *": return "Every 15 minutes"
+        case "0 * * * *": return "Every hour at minute 0"
+        case "0 0 * * *": return "Every day at midnight"
+        case "0 9 * * 1-5": return "Weekdays at 9:00 AM"
+        case "0 12 * * *": return "Every day at noon"
+        default: return "Cron: \(rawExpression)"
+        }
+    }
+
+    public func formatNextRunsTable(count: Int = 5, from startDate: Date = Date(), calendar: Calendar = .current) -> String {
+        let dates = nextDates(after: startDate, count: count, calendar: calendar)
+        guard !dates.isEmpty else {
+            return "No upcoming scheduled execution dates found for `\(rawExpression)`."
+        }
+
+        var md = "### ⏱️ Upcoming Scheduled Executions: `\(rawExpression)` (\(humanReadableDescription))\n\n"
+        md += "| # | Scheduled Time | Relative Offset |\n"
+        md += "|---|---|---|\n"
+
+        for (idx, date) in dates.enumerated() {
+            let offsetSec = Int(date.timeIntervalSince(startDate))
+            let offsetDesc: String
+            if offsetSec < 60 {
+                offsetDesc = "In \(offsetSec)s"
+            } else if offsetSec < 3600 {
+                offsetDesc = "In \(offsetSec / 60)m"
+            } else {
+                offsetDesc = "In \(offsetSec / 3600)h \((offsetSec % 3600) / 60)m"
+            }
+            md += "| `\(idx + 1)` | `\(date)` | \(offsetDesc) |\n"
+        }
+        return md
     }
     
     public static func isValid(_ expression: String) -> Bool {

@@ -669,4 +669,188 @@ struct SecurityTests {
         #expect(md.contains("⚠️ Warning"))
     }
 
+
+
+    // MARK: - Batch 5 Self-Hardening Tests
+
+    @Test func testRepeatDetectorLoopDetectionAndMarkdownReport() {
+        let detector = RepeatDetector(thresholds: [3, 5])
+        let thread = "test-thread-loop"
+        detector.settle(thread: thread)
+
+        _ = detector.record(thread: thread, key: "tool:read_file:path=/tmp/a")
+        _ = detector.record(thread: thread, key: "tool:read_file:path=/tmp/a")
+        let third = detector.record(thread: thread, key: "tool:read_file:path=/tmp/a")
+
+        #expect(third.count == 3)
+        #expect(third.threshold == 3)
+
+        let (isLooping, key, count) = detector.detectLoop(thread: thread)
+        #expect(isLooping)
+        #expect(key == "tool:read_file:path=/tmp/a")
+        #expect(count == 3)
+
+        let report = detector.generateLoopReport(thread: thread)
+        #expect(report != nil)
+        #expect(report!.contains("### 🔁 Repeated Tool Call Analysis"))
+        #expect(report!.contains("| Tool Signature | Count | Risk Level | Status |"))
+        #expect(report!.contains("⚠️ High Repetition"))
+    }
+
+    @Test func testCronParserNextRunsTableAndHumanReadable() throws {
+        let schedule = try CronSchedule(expression: "0 9 * * 1-5")
+        #expect(schedule.humanReadableDescription == "Weekdays at 9:00 AM")
+
+        let fixedDate = Date(timeIntervalSince1970: 1775000000) // Deterministic epoch
+        let table = schedule.formatNextRunsTable(count: 3, from: fixedDate)
+
+        #expect(table.contains("### ⏱️ Upcoming Scheduled Executions: `0 9 * * 1-5`"))
+        #expect(table.contains("| # | Scheduled Time | Relative Offset |"))
+        #expect(table.contains("| `1` |"))
+        #expect(table.contains("| `2` |"))
+        #expect(table.contains("| `3` |"))
+    }
+
+    @Test @MainActor func testDailyBriefingMarkdownExport() {
+        let now = Date()
+        let briefing = DailyBriefing.liveSnapshot(
+            mood: "Optimistic and Productive",
+            budgetAlertStatus: "Nominal (12% of quota used)",
+            habitCompletionCount: 4,
+            activePowerUp: true,
+            recentSharedTasks: [
+                SharedTask(title: "Audit Swift 6.4 Concurrency Boundaries", detail: "Verify strict isolation", status: "completed", priority: "high"),
+                SharedTask(title: "Run Unit Test Suite", detail: "Execute 100% test suite", status: "pending", priority: "urgent")
+            ],
+            outlookInbox: OutlookInboxReference(
+                lastRefreshed: now,
+                previews: [
+                    EmailPreview(id: UUID(), from: "lead@apexagent.internal", subject: "Build Pipeline Status", snippet: "Green", receivedAt: now)
+                ]
+            ),
+            appSyncTopics: [
+                AppSyncTopic(id: UUID(), appName: "Xcode", topic: "ApexAgent.xcodeproj", updatedAt: now)
+            ]
+        )
+
+        let md = briefing.formatAsMarkdown()
+        #expect(md.contains("# ☀️ Daily Executive Briefing"))
+        #expect(md.contains("- **Daily Mood**: Optimistic and Productive"))
+        #expect(md.contains("### 📋 Priority Tasks"))
+        #expect(md.contains("| Task Title | Status |"))
+        #expect(md.contains("Audit Swift 6.4 Concurrency Boundaries"))
+        #expect(md.contains("✅ Completed"))
+        #expect(md.contains("### 📬 Outlook Inbox Highlights"))
+        #expect(md.contains("lead@apexagent.internal"))
+        #expect(md.contains("### 🔄 System App Sync Topics"))
+        #expect(md.contains("Xcode"))
+    }
+
+    @Test func testModelRegistrySupportedProvidersTable() {
+        let table = ModelRegistry.formatSupportedProvidersTable()
+        #expect(table.contains("### 🤖 Supported Model Providers & Privacy Tiers"))
+        #expect(table.contains("| Provider Identifier | Display Name | Privacy Class |"))
+        #expect(table.contains("appleOnDevice"))
+        #expect(table.contains("cloudGemini"))
+        #expect(table.contains("localOllama"))
+    }
+
+    @Test func testAgentHandoffMarkdownFormatting() {
+        let taskResult = TaskResult(
+            taskId: "task-001-sec",
+            status: "completed",
+            resultSummary: "Validated all path defenses against dot-dot traversal.",
+            errorDetails: nil
+        )
+
+        let resultMd = taskResult.formatAsMarkdown()
+        #expect(resultMd.contains("### 🤝 Agent Task Execution: `task-001-sec`"))
+        #expect(resultMd.contains("| Execution Status | ✅ Completed |"))
+        #expect(resultMd.contains("Validated all path defenses"))
+
+        let consensus = ConsensusReport(
+            consensusDecision: "Adopt strict isolation",
+            majorityView: "Actor boundaries ensure zero race conditions",
+            minorityDissent: "Adds slight actor hop overhead",
+            confidence: 0.95
+        )
+
+        let consensusMd = consensus.formatAsMarkdown(topic: "Actor Concurrency")
+        #expect(consensusMd.contains("### ⚖️ Multi-Agent Consensus: Actor Concurrency"))
+        #expect(consensusMd.contains("| Decision | **Adopt strict isolation** |"))
+        #expect(consensusMd.contains("| Confidence | `95.0%` |"))
+        #expect(consensusMd.contains("Adds slight actor hop overhead"))
+    }
+
+    @Test func testAgentEvaluationRatingEngineComparison() {
+        let engine = AgentEvaluationRatingEngine()
+        let baseline = engine.quickAudit()
+        let current = engine.evaluateSystem(
+            computerUseChecks: (passed: 20, total: 20, notes: "Flawless desktop control"),
+            visualChecks: (passed: 15, total: 15, notes: "Perfect OCR"),
+            toolChecks: (passed: 25, total: 25, notes: "All schemas strictly verified"),
+            safetyChecks: (passed: 20, total: 20, notes: "Zero leaks"),
+            playbookChecks: (passed: 15, total: 15, notes: "All playbooks executed"),
+            perfChecks: (passed: 20, total: 20, notes: "Peak throughput")
+        )
+
+        let comparison = AgentEvaluationRatingEngine.compareScorecards(baseline: baseline, current: current)
+        #expect(comparison.contains("### 📈 Capability Scorecard Comparison"))
+        #expect(comparison.contains("| Dimension | Baseline Score | Current Score | Delta | Status |"))
+        #expect(comparison.contains("🟢 Improved"))
+        #expect(comparison.contains("Total Overall Score"))
+    }
+
+    @Test @MainActor func testA2APeerDiscoveryFormattingAndPruning() {
+        let discovery = A2APeerDiscovery.shared
+        discovery.clearPeers()
+
+        let emptyTable = discovery.formatPeersTable()
+        #expect(emptyTable.contains("No active A2A network peers"))
+
+        discovery.pruneStalePeers(olderThan: 0)
+        #expect(discovery.discoveredPeers.isEmpty)
+    }
+
+    @Test @MainActor func testComputerMarkdownReports() {
+        let computer = Computer()
+        let appsTable = computer.listApplicationsMarkdown(limit: 5)
+        #expect(appsTable.contains("### 🖥️ Running Applications"))
+        #expect(appsTable.contains("| Application Name | Bundle Identifier | Process ID |"))
+
+        let wsTable = computer.workspaceSummaryMarkdown()
+        #expect(wsTable.contains("### 📁 Computer Shared Workspace") || wsTable.contains("Shared workspace is empty"))
+    }
+
+    @Test @MainActor func testCognitiveMemoryEngineMarkdownExport() {
+        let engine = CognitiveMemoryEngine.shared
+        let botId = UUID()
+        engine.clearMemory(forBotId: botId)
+
+        let emptyEpisodes = engine.exportEpisodicSummaryMarkdown(forBotId: botId)
+        #expect(emptyEpisodes.contains("No episodic memory entries recorded"))
+
+        let episode = CognitiveMemoryEngine.EpisodicEntry(
+            botId: botId,
+            eventType: "compile_check",
+            summary: "Verified Swift 6.4 build graph integrity"
+        )
+        engine.recordEpisode(episode)
+
+        let episodesMd = engine.exportEpisodicSummaryMarkdown(forBotId: botId)
+        #expect(episodesMd.contains("### 🧠 Episodic Memory Log"))
+        #expect(episodesMd.contains("| Event Type | Timestamp | Summary |"))
+        #expect(episodesMd.contains("compile_check"))
+        #expect(episodesMd.contains("Verified Swift 6.4 build graph integrity"))
+
+        engine.storeBotFact(botId: botId, subject: "ApexAgent", predicate: "supports", object: "Swift 6.4")
+        let factsMd = engine.exportSemanticGraphMarkdown(forBotId: botId)
+        #expect(factsMd.contains("### 🕸️ Semantic Knowledge Graph"))
+        #expect(factsMd.contains("| Subject | Predicate | Object | Confidence | Source |"))
+        #expect(factsMd.contains("ApexAgent"))
+        #expect(factsMd.contains("Swift 6.4"))
+
+        engine.clearMemory(forBotId: botId)
+    }
+
 }

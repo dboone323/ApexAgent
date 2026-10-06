@@ -555,4 +555,28 @@ extension AgentModelPreference {
         case .hybrid: return .applePCC
         }
     }
+
+}
+
+// MARK: - ModelRegistry Markdown Extension
+extension ModelRegistry {
+    public static func formatSupportedProvidersTable() -> String {
+        var md = "### 🤖 Supported Model Providers & Privacy Tiers\n\n"
+        md += "| Provider Identifier | Display Name | Privacy Class |\n"
+        md += "|---|---|---|\n"
+
+        for p in ModelProvider.allCases {
+            let privClass: String
+            switch p {
+            case .appleOnDevice, .fmCLI: privClass = "🔒 Strictly On-Device (0 outgoing network)"
+            case .applePCC: privClass = "🛡️ Apple Private Cloud Compute (E2E Encrypted)"
+            case .localOllama, .localMLX: privClass = "🏠 Local Self-Hosted Daemon"
+            case .cloudGemini: privClass = "☁️ Google Gemini Cloud API"
+            case .autoPicker: privClass = "⚡️ Dynamic Balanced Routing"
+            }
+            md += "| `\(p.rawValue)` | **\(p.displayName)** | \(privClass) |\n"
+        }
+        return md
+    }
+
 }
