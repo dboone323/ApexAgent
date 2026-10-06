@@ -6,6 +6,52 @@ import SwiftData
 final class ReflectionManager {
     static let shared = ReflectionManager()
 
+    public struct ReflectionRecord: Identifiable, Sendable, Equatable {
+        public let id: UUID
+        public let skillName: String
+        public let triggerSummary: String
+        public let timestamp: Date
+        public let resolved: Bool
+
+        public init(
+            id: UUID = UUID(),
+            skillName: String,
+            triggerSummary: String,
+            timestamp: Date = Date(),
+            resolved: Bool = true
+        ) {
+            self.id = id
+            self.skillName = skillName
+            self.triggerSummary = triggerSummary
+            self.timestamp = timestamp
+            self.resolved = resolved
+        }
+    }
+
+    public private(set) var recentReflections: [ReflectionRecord] = []
+
+    public func recordReflection(skillName: String, triggerSummary: String) {
+        let rec = ReflectionRecord(skillName: skillName, triggerSummary: triggerSummary)
+        recentReflections.insert(rec, at: 0)
+        if recentReflections.count > 50 {
+            recentReflections.removeLast(recentReflections.count - 50)
+        }
+    }
+
+    public func exportReflectionHistory() -> String {
+        guard !recentReflections.isEmpty else {
+            return "No procedural reflection records captured yet."
+        }
+        var md = "### 🧠 Autonomous Procedural Reflection History\n\n"
+        md += "| Skill Name | Trigger / Error | Resolved | Timestamp |\n"
+        md += "|---|---|---|---|\n"
+        for rec in recentReflections {
+            let resBadge = rec.resolved ? "✅ Yes" : "❌ No"
+            md += "| `\(rec.skillName)` | `\(rec.triggerSummary)` | \(resBadge) | `\(rec.timestamp)` |\n"
+        }
+        return md
+    }
+
     private init() {}
 
     /// Checks the session history after a successful assistant message generation.

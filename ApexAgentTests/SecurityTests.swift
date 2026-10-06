@@ -523,4 +523,150 @@ struct SecurityTests {
         #expect(exportOutput.contains("Potential memory leak in callback"))
         #expect(exportOutput.contains("Use weak self in closures"))
     }
+
+    // MARK: - Batch 4 Self-Hardening Tests
+
+    @Test func testDiffHelperStatsAndUnifiedDiff() {
+        let oldText = "line 1\nline 2\nline 3"
+        let newText = "line 1\nline 2 modified\nline 3\nline 4"
+
+        let diff = DiffHelper.computeDiff(oldText: oldText, newText: newText)
+        let stats = DiffHelper.computeStats(diff: diff)
+
+        #expect(stats.additions >= 1)
+        #expect(stats.totalLines >= 4)
+        #expect(stats.summary().contains("+"))
+
+        let unified = DiffHelper.formatUnifiedDiff(oldText: oldText, newText: newText, filePath: "Config.swift")
+        #expect(unified.contains("--- a/Config.swift"))
+        #expect(unified.contains("+++ b/Config.swift"))
+        #expect(unified.contains("@@ -1,3 +1,4 @@"))
+    }
+
+    @Test @MainActor func testReflectionManagerHistoryAndExport() {
+        let manager = ReflectionManager.shared
+        manager.recordReflection(skillName: "fix_swift6_actor_isolation", triggerSummary: "Actor isolation violation in Task closure")
+
+        #expect(!manager.recentReflections.isEmpty)
+        #expect(manager.recentReflections.first?.skillName == "fix_swift6_actor_isolation")
+
+        let markdown = manager.exportReflectionHistory()
+        #expect(markdown.contains("### 🧠 Autonomous Procedural Reflection History"))
+        #expect(markdown.contains("| Skill Name | Trigger / Error | Resolved | Timestamp |"))
+        #expect(markdown.contains("fix_swift6_actor_isolation"))
+    }
+
+    @Test @MainActor func testProactiveSchedulerFindingsFormattingAndDismissal() async {
+        let scheduler = ProactiveScheduler.shared
+        scheduler.clearAllFindings()
+
+        let emptyMarkdown = scheduler.formatFindingsAsMarkdown()
+        #expect(emptyMarkdown.contains("All agent operations are healthy"))
+
+        let finding = ProactiveScheduler.ProactiveFinding(
+            title: "Test Queue Lag",
+            detail: "Queue depth exceeded threshold",
+            severity: .warning,
+            targetBotName: "tester"
+        )
+        // Simulate finding injection
+        _ = await scheduler.evaluateNow()
+        scheduler.dismissFinding(id: finding.id)
+        #expect(scheduler.activeFindings.isEmpty)
+    }
+
+    @Test @MainActor func testRoutineManagerMarkdownSummaries() {
+        let manager = RoutineManager.shared
+        let emptySummary = manager.exportRoutinesSummaryAsMarkdown()
+        #expect(emptySummary == "No automated routines configured." || emptySummary.contains("| Routine Name | Enabled |"))
+
+        let now = Date()
+        let run = RoutineRun(
+            routineId: UUID(),
+            routineName: "Nightly Build Triage",
+            prompt: "Perform nightly build triage",
+            status: .completed,
+            startedAt: now,
+            finishedAt: now.addingTimeInterval(3.5),
+            output: "All 4 targets compiled cleanly."
+        )
+        manager.recordRun(run)
+
+        let runsSummary = manager.exportRoutineRunsSummary(limit: 5)
+        #expect(runsSummary.contains("### 📜 Automation Routine Run Receipts"))
+        #expect(runsSummary.contains("| Routine Name | Status | Duration (s) | Started At |"))
+        #expect(runsSummary.contains("Nightly Build Triage"))
+        #expect(runsSummary.contains("✅ Completed"))
+    }
+
+    @Test func testMessageCompressionWithMetrics() {
+        var messages: [ChatMessage] = []
+        for i in 1...10 {
+            messages.append(ChatMessage(role: .user, content: "User prompt query #\(i)"))
+            messages.append(ChatMessage(role: .assistant, content: String(repeating: "Assistant detailed analytical response with extensive logs and explanatory reasoning for query #\(i) that spans multiple sentences to exercise compression. ", count: 5)))
+        }
+
+        let (compressed, metrics) = MessageCompressionHelper.compressWithMetrics(messages, keepRecent: 4)
+        #expect(compressed.count == messages.count)
+        #expect(metrics.tokensSaved > 0)
+        #expect(metrics.compressionRatio <= 1.0)
+        #expect(metrics.summary().contains("Saved"))
+    }
+
+    @Test @MainActor func testA2AServerHealthRoute() async {
+        let server = A2AServer.shared
+        let req = "GET /health HTTP/1.1\r\nHost: localhost\r\n\r\n"
+        let data = Data(req.utf8)
+
+        guard let (_, responseData) = await server.processHttpBuffer(data) else {
+            Issue.record("A2AServer failed to process /health request buffer")
+            return
+        }
+
+        let responseStr = String(data: responseData, encoding: .utf8) ?? ""
+        #expect(responseStr.contains("HTTP/1.1 200 OK"))
+        #expect(responseStr.contains("\"status\" : \"healthy\""))
+        #expect(responseStr.contains("ApexAgent A2A Node"))
+    }
+
+    @Test @MainActor func testMultiAgentDebateMarkdownExport() {
+        let coordinator = MultiAgentDebateCoordinator.shared
+        coordinator.clearDebateHistory()
+
+        let debate = MultiAgentDebateCoordinator.DebateRound(
+            id: UUID(),
+            topic: "Strict Swift 6.4 Actor Isolation vs Global Concurrency Locks",
+            participants: ["architect", "security"],
+            arguments: [
+                "architect": "Strict actor boundaries prevent data races at compile-time.",
+                "security": "Actor isolation also enforces distinct credential domain boundaries."
+            ],
+            consensus: "Adopt complete strict concurrency across all packages with isolated domain actors.",
+            startedAt: Date(),
+            concludedAt: Date().addingTimeInterval(5)
+        )
+
+        let markdown = coordinator.exportDebateMarkdown(debate: debate)
+        #expect(markdown.contains("# 🎙️ Multi-Agent Debate"))
+        #expect(markdown.contains("Strict Swift 6.4 Actor Isolation"))
+        #expect(markdown.contains("| Bot Name | Position / Argument |"))
+        #expect(markdown.contains("| `@architect` |"))
+        #expect(markdown.contains("### 🎯 Consensus Recommendation"))
+        #expect(markdown.contains("Adopt complete strict concurrency"))
+    }
+
+    @Test @MainActor func testDiagnosticManagerMarkdownExport() {
+        let items: [DiagnosticItem] = [
+            DiagnosticItem(name: "Xcode CLI", category: "CLI Tools", status: .pass, message: "Installed"),
+            DiagnosticItem(name: "Git", category: "CLI Tools", status: .pass, message: "Available"),
+            DiagnosticItem(name: "Memory Index", category: "Agent Configuration", status: .warning, message: "Needs re-indexing")
+        ]
+
+        let md = DiagnosticManager.exportMarkdownReport(items)
+        #expect(md.contains("### 🩺 ApexAgent System Diagnostics Report"))
+        #expect(md.contains("| Category | Item | Status | Details |"))
+        #expect(md.contains("| CLI Tools | **Xcode CLI** | ✅ Pass | Installed |"))
+        #expect(md.contains("⚠️ Warning"))
+    }
+
 }

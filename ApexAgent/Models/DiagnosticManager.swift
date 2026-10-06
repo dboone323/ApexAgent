@@ -112,6 +112,25 @@ struct DiagnosticManager {
         return String(data: data, encoding: .utf8) ?? "[]"
     }
 
+    @MainActor
+    static func exportMarkdownReport(_ items: [DiagnosticItem]) -> String {
+        var md = "### 🩺 ApexAgent System Diagnostics Report\n\n"
+        md += "| Category | Item | Status | Details |\n"
+        md += "|---|---|---|---|\n"
+
+        for item in items {
+            let statusBadge: String
+            switch item.status {
+            case .pass: statusBadge = "✅ Pass"
+            case .warning: statusBadge = "⚠️ Warning"
+            case .fail: statusBadge = "❌ Fail"
+            }
+            let safeMsg = item.message.replacingOccurrences(of: "|", with: "\\|").replacingOccurrences(of: "\n", with: " ")
+            md += "| \(item.category) | **\(item.name)** | \(statusBadge) | \(safeMsg) |\n"
+        }
+        return md
+    }
+
     private static func checkCommandExists(_ command: String, isFolderAccessRestricted: Bool) async -> Bool {
         let binaryName = command.components(separatedBy: " ").last ?? command
         let fm = FileManager.default
