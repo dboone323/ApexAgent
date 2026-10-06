@@ -99,3 +99,44 @@ public struct ConsensusReport: Codable, Sendable {
         self.confidence = confidence
     }
 }
+
+
+extension TaskResult {
+    public func formatAsMarkdown() -> String {
+        var md = "### 🤝 Agent Task Execution: `\(taskId)`\n\n"
+        let statusBadge: String
+        switch status.lowercased() {
+        case "completed": statusBadge = "✅ Completed"
+        case "failed": statusBadge = "❌ Failed"
+        case "partially_completed": statusBadge = "⚠️ Partially Completed"
+        default: statusBadge = "ℹ️ `\(status)`"
+        }
+
+        md += "| Property | Value |\n"
+        md += "|---|---|\n"
+        md += "| Task ID | `\(taskId)` |\n"
+        md += "| Execution Status | \(statusBadge) |\n"
+        md += "| Result Summary | \(resultSummary.replacingOccurrences(of: "|", with: "\\|")) |\n"
+
+        if let err = errorDetails, !err.isEmpty {
+            md += "| Error Details | `\(err.replacingOccurrences(of: "|", with: "\\|"))` |\n"
+        }
+        return md
+    }
+}
+
+extension ConsensusReport {
+    public func formatAsMarkdown(topic: String) -> String {
+        var md = "### ⚖️ Multi-Agent Consensus: \(topic)\n\n"
+        md += "| Metric | Details |\n"
+        md += "|---|---|\n"
+        md += "| Decision | **\(consensusDecision.replacingOccurrences(of: "|", with: "\\|"))** |\n"
+        md += "| Majority View | \(majorityView.replacingOccurrences(of: "|", with: "\\|")) |\n"
+        md += "| Confidence | `\(String(format: "%.1f%%", confidence * 100))` |\n"
+
+        if let dissent = minorityDissent, !dissent.isEmpty {
+            md += "| Minority Dissent | \(dissent.replacingOccurrences(of: "|", with: "\\|")) |\n"
+        }
+        return md
+    }
+}

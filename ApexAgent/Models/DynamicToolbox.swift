@@ -453,4 +453,25 @@ class DynamicToolbox {
         dynamicTools.removeValue(forKey: name)
     }
     #endif
+
+    // MARK: - Markdown Dynamic Toolbox Catalog
+
+    func exportToolboxCatalogMarkdown() -> String {
+        guard !dynamicTools.isEmpty else {
+            return "No dynamic tools currently registered in toolbox."
+        }
+
+        var md = "### 🧰 Dynamic Toolbox Registered Tools (\(dynamicTools.count) available)\n\n"
+        md += "| Tool Name | Origin | Execution Target | Description |\n"
+        md += "|---|---|---|---|\n"
+
+        for (name, entry) in dynamicTools.sorted(by: { $0.key < $1.key }) {
+            let origin = entry.mcpServerId != nil ? "🔌 MCP Server" : "📜 Dynamic Script"
+            let target = (entry.scriptPath ?? entry.mcpServerId?.uuidString ?? "Internal").replacingOccurrences(of: "|", with: "\\|")
+            let safeDesc = entry.description.replacingOccurrences(of: "|", with: "\\|").replacingOccurrences(of: "\n", with: " ")
+            md += "| `\(name)` | \(origin) | `\(target)` | \(safeDesc) |\n"
+        }
+        return md
+    }
+
 }

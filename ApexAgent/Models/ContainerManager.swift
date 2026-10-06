@@ -67,6 +67,23 @@ public struct ContainerHostDiagnostics: Sendable, Codable, Equatable {
         self.vmnetAvailable = vmnetAvailable
         self.statusMessage = statusMessage
     }
+
+    // MARK: - Markdown Diagnostics
+
+    public static func formatHostDiagnosticsMarkdown(_ d: ContainerHostDiagnostics) -> String {
+        var md = "### 📦 Apple Containerization & Virtualization Diagnostics\n\n"
+        md += "| Capability | Status | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Apple Silicon (arm64) | \(d.isAppleSilicon ? "✅ Supported" : "❌ Unsupported") | Hardware hypervisor requirement |\n"
+        md += "| Virtualization Framework | \(d.isVirtualizationSupported ? "✅ Supported" : "❌ Unsupported") | macOS hypervisor entitlement |\n"
+        md += "| macOS Version | `\(d.macOSVersionString)` | Host kernel environment |\n"
+        let freeGB = Double(d.availableDiskSpaceBytes) / (1024 * 1024 * 1024)
+        md += "| Free Disk Space | `\(String(format: "%.1f GB", freeGB))` | Storage for OCI rootfs and caches |\n"
+        md += "| vmnet Bridging | \(d.vmnetAvailable ? "✅ Available" : "⚪️ Disabled") | Isolated virtual networking |\n"
+        let safeStatus = d.statusMessage.replacingOccurrences(of: "|", with: "\\|")
+        md += "| Host Status Message | `\(safeStatus)` | Diagnostics verdict |\n"
+        return md
+    }
 }
 
 @Observable

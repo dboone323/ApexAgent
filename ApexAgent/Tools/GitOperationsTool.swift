@@ -13,11 +13,11 @@ struct GitOperationsTool: Tool {
     }
 
     let name = "git_operation"
-    let description = "Performs structured Git repository operations (status, diff, log, branch, checkout, commit, add, stash) within an allowed workspace repository."
+    let description = "Performs structured Git repository operations (status, diff, log, branch, checkout, commit, add, unstage, show, stash) within an allowed workspace repository."
 
     @Generable
     struct Arguments: Decodable {
-        @Guide(description: "The git action to execute: 'status', 'diff', 'log', 'branch', 'checkout', 'commit', 'add', 'stash'")
+        @Guide(description: "The git action to execute: 'status', 'diff', 'log', 'branch', 'checkout', 'commit', 'add', 'unstage', 'show', 'stash'")
         var action: String
 
         @Guide(description: "Absolute or tilde-expanded path to the repository directory. Defaults to current workspace if omitted.")
@@ -52,7 +52,7 @@ struct GitOperationsTool: Tool {
             return "ERROR: Access to repository directory is disabled in settings: \(repoDir)"
         }
 
-        let isMutating = ["commit", "checkout", "add", "stash"].contains(arguments.action.lowercased())
+        let isMutating = ["commit", "checkout", "add", "unstage", "restore", "stash"].contains(arguments.action.lowercased())
         let riskDesc = isMutating
             ? "Executing Git mutating operation '\(arguments.action)' in \(repoDir)"
             : "Executing Git read operation '\(arguments.action)' in \(repoDir)"
@@ -64,7 +64,48 @@ struct GitOperationsTool: Tool {
         ) {
             switch arguments.action.lowercased() {
             case "status":
-                return try runGit(repoDir: repoDir, args: ["status", "--short", "--branch"])
+                let rawStatus = try runGit(repoDir: repoDir, args: ["status", "--short", "--branch"])
+                let lines = rawStatus.components(separatedBy: .newlines).filter { !$0.isEmpty }
+                guard !lines.isEmpty else { return "Clean: working tree clean." }
+
+                var branchHeader = "### Git Status\n\n"
+                var tableRows: [(staged: String, path: String)] = []
+
+                for line in lines {
+                    if line.hasPrefix("##") {
+                        branchHeader += "**Branch**: `\(line.replacingOccurrences(of: "## ", with: ""))`\n\n"
+                        continue
+                    }
+                    guard line.count >= 3 else { continue }
+                    let statusPrefix = String(line.prefix(2))
+                    let filePath = String(line.dropFirst(3)).trimmingCharacters(in: .whitespaces)
+                    tableRows.append((staged: statusPrefix, path: filePath))
+                }
+
+                if tableRows.isEmpty {
+                    return branchHeader + "Working tree clean."
+                }
+
+                var md = branchHeader
+                md += "| Status | File Path |\n"
+                md += "|---|---|\n"
+                for row in tableRows {
+                    md += "| `\(row.staged)` | `\(row.path)` |\n"
+                }
+                return md
+
+            case "unstage", "restore":
+                guard let paths = arguments.paths, !paths.isEmpty else {
+                    return "ERROR: 'paths' argument is required for 'unstage'."
+                }
+                var args = ["restore", "--staged"]
+                args.append(contentsOf: paths)
+                _ = try runGit(repoDir: repoDir, args: args)
+                return "✅ Successfully unstaged \(paths.count) path(s)."
+
+            case "show":
+                let targetRef = arguments.message ?? "HEAD"
+                return try runGit(repoDir: repoDir, args: ["show", "--stat", targetRef])
 
             case "diff":
                 var args = ["diff"]
@@ -76,10 +117,36 @@ struct GitOperationsTool: Tool {
                 return diffOut.isEmpty ? "Clean: no unstaged changes." : diffOut
 
             case "log":
-                return try runGit(repoDir: repoDir, args: ["log", "-n", "10", "--oneline", "--graph"])
+                let logOut = try runGit(repoDir: repoDir, args: ["log", "-n", "10", "--pretty=format:%h|%an|%s"])
+                let lines = logOut.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                guard !lines.isEmpty else { return "No commit history found in repository." }
+                var md = "### 📜 Git Commit History (Recent \(lines.count))\n\n"
+                md += "| Commit | Author | Message |\n"
+                md += "|---|---|---|\n"
+                for line in lines {
+                    let parts = line.components(separatedBy: "|")
+                    let hash = parts.count > 0 ? parts[0] : ""
+                    let author = parts.count > 1 ? parts[1] : ""
+                    let message = parts.count > 2 ? parts.dropFirst(2).joined(separator: "|") : ""
+                    md += "| `\(hash)` | \(author) | \(message.replacingOccurrences(of: "|", with: "\\|")) |\n"
+                }
+                return md
 
             case "branch":
-                return try runGit(repoDir: repoDir, args: ["branch", "-a"])
+                let branchOut = try runGit(repoDir: repoDir, args: ["branch", "-a"])
+                let lines = branchOut.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                guard !lines.isEmpty else { return "No branches found." }
+                var md = "### 🌿 Git Branches\n\n"
+                md += "| Branch Name | Current | Scope |\n"
+                md += "|---|---|---|\n"
+                for line in lines {
+                    let isCurrent = line.hasPrefix("*")
+                    let clean = line.replacingOccurrences(of: "*", with: "").trimmingCharacters(in: .whitespaces)
+                    let scope = clean.hasPrefix("remotes/") ? "🌐 Remote" : "💻 Local"
+                    let badge = isCurrent ? "⭐️ Active" : "⚪️"
+                    md += "| `\(clean)` | \(badge) | \(scope) |\n"
+                }
+                return md
 
             case "add":
                 guard let paths = arguments.paths, !paths.isEmpty else {

@@ -192,4 +192,20 @@ public final class DiscordGatewayClient: ObservableObject {
             }
         }
     }
+
+    // MARK: - Markdown Telemetry
+
+    public func formatGatewayStatusMarkdown() -> String {
+        var md = "### 💬 Discord Gateway v10 Telemetry\n\n"
+        md += "| Metric / Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Connection Status | \(isConnected ? "🟢 Connected" : "⚪️ Disconnected") | WebSocket connection state |\n"
+        let tokenStatus = token != nil ? "🟢 Present (Redacted)" : "⚪️ Missing"
+        md += "| Bot Token | \(tokenStatus) | Discord developer bot credential |\n"
+        let ackStatus = lastHeartbeatAckReceived != nil ? "🟢 Alive" : "⚪️ Pending"
+        md += "| Heartbeat ACK | \(ackStatus) | Keep-alive heartbeat acknowledgement |\n"
+        md += "| Dispatched Messages | `\(receivedMessages.count)` | Inbound events received |\n"
+        return md
+    }
+
 }

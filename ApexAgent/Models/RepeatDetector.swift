@@ -90,4 +90,48 @@ final class RepeatDetector: @unchecked Sendable {
         defer { lock.unlock() }
         return states[thread]?.counts.count ?? 0
     }
+
+    /// Checks if a thread is actively looping on a repeated tool call (count >= 3).
+    func detectLoop(thread: String) -> (isLooping: Bool, repeatedKey: String?, count: Int) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard let state = states[thread] else {
+            return (false, nil, 0)
+        }
+
+        if let maxEntry = state.counts.max(by: { $0.value < $1.value }), maxEntry.value >= 3 {
+            return (true, maxEntry.key, maxEntry.value)
+        }
+
+        return (false, nil, 0)
+    }
+
+    /// Formats an actionable loop mitigation report as a Markdown table.
+    func generateLoopReport(thread: String) -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard let state = states[thread], !state.counts.isEmpty else { return nil }
+
+        let sorted = state.counts.sorted(by: { $0.value > $1.value })
+        var md = "### 🔁 Repeated Tool Call Analysis (Thread: `\(thread)`)\n\n"
+        md += "| Tool Signature | Count | Risk Level | Status |\n"
+        md += "|---|---|---|---|\n"
+
+        for (key, count) in sorted.prefix(10) {
+            let risk = count >= 5 ? "🛑 Critical Loop" : (count >= 3 ? "⚠️ High Repetition" : "ℹ️ Normal")
+            let status = count >= 3 ? "Mitigation Recommended" : "Observing"
+            md += "| `\(key)` | `\(count)` | \(risk) | \(status) |\n"
+        }
+        return md
+    }
+
+    /// Clears all recorded threads and counts.
+    func resetAll() {
+        lock.lock()
+        defer { lock.unlock() }
+        states.removeAll()
+    }
+
 }

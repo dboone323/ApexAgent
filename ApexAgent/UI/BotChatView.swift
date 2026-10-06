@@ -24,6 +24,13 @@ struct BotChatView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 6)
             }
+
+            if let runner = botManager.activePlaybookRunner,
+               let card = runner.pendingApprovalCard {
+                PlaybookApprovalBannerView(card: card, runner: runner)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+            }
             
             Divider()
             
@@ -82,6 +89,9 @@ struct BotChatView: View {
             isInputFocused = true
             session.checkAvailability()
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ApexAgent.focusChatInput"))) { _ in
+            isInputFocused = true
+        }
     }
 }
 
@@ -131,6 +141,8 @@ private struct PeerApprovalCard: View {
 
 struct BotChatHeaderBar: View {
     var session: BotSession
+    @Environment(BotManager.self) private var botManager
+    @State private var showQueuePopover = false
     
     var body: some View {
         HStack(spacing: 10) {
@@ -181,20 +193,91 @@ struct BotChatHeaderBar: View {
             
             // Queued prompt indicator in header
             if !session.queuedPrompts.isEmpty {
-                HStack(spacing: 4) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 11))
-                    Text("\(session.queuedPrompts.count)")
-                        .font(.system(size: 11, weight: .bold))
+                Button {
+                    showQueuePopover.toggle()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 11))
+                        Text("\(session.queuedPrompts.count)")
+                            .font(.system(size: 11, weight: .bold))
+                    }
+                    .foregroundStyle(AppTheme.Palette.accent)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(AppTheme.Palette.accent.opacity(0.12))
+                    .cornerRadius(10)
                 }
-                .foregroundStyle(AppTheme.Palette.accent)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(AppTheme.Palette.accent.opacity(0.12))
-                .cornerRadius(10)
-                .help("\(session.queuedPrompts.count) queued prompt(s)")
+                .buttonStyle(.plain)
+                .help("\(session.queuedPrompts.count) queued prompt(s) — click to manage")
+                .popover(isPresented: $showQueuePopover) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("Queued Prompts (\(session.queuedPrompts.count))")
+                                .font(.system(size: 12, weight: .semibold))
+                            Spacer()
+                            Button("Clear All") {
+                                session.queuedPrompts.removeAll()
+                                showQueuePopover = false
+                            }
+                            .font(.system(size: 11))
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.red)
+                        }
+
+                        Divider()
+
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(session.queuedPrompts) { item in
+                                    HStack(alignment: .top) {
+                                        Text(item.text)
+                                            .font(.system(size: 11))
+                                            .lineLimit(2)
+                                        Spacer()
+                                        Button {
+                                            session.queuedPrompts.removeAll { $0.id == item.id }
+                                        } label: {
+                                            Image(systemName: "xmark.circle")
+                                                .font(.system(size: 11))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    .padding(6)
+                                    .background(Color(nsColor: .controlBackgroundColor))
+                                    .cornerRadius(6)
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 180)
+                    }
+                    .padding(12)
+                    .frame(width: 280)
+                }
             }
             
+            // Playbook run menu
+            Menu {
+                ForEach(CollaborationPlaybook.builtInPresets) { preset in
+                    Button {
+                        let runner = PlaybookRunner(playbook: preset, availableBots: botManager.allBots, botManager: botManager)
+                        botManager.activePlaybookRunner = runner
+                        Task {
+                            _ = try? await runner.execute(contextInput: "Run \(preset.name) from \(session.bot.name)")
+                        }
+                    } label: {
+                        Label("Run \(preset.name)", systemImage: "play.circle")
+                    }
+                }
+            } label: {
+                Image(systemName: "play.circle")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            .menuStyle(.borderlessButton)
+            .help("Run Collaboration Playbook")
+
             // Clear history button
             Button {
                 session.clearMessages()
@@ -703,5 +786,98 @@ struct BotChatInputBar: View {
         }
 
         return .ignored
+    }
+}
+
+// MARK: - Playbook Approval Banner View
+
+struct PlaybookApprovalBannerView: View {
+    let card: PlaybookApprovalCard
+    let runner: PlaybookRunner
+    @Environment(BotManager.self) private var botManager
+    @State private var notesText: String = ""
+    @State private var showNotesField: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.shield.fill")
+                    .foregroundStyle(.orange)
+                    .font(.system(size: 13))
+                Text("Approval Required: \(card.stageName)")
+                    .font(.system(size: 12, weight: .semibold))
+                Spacer()
+                Text("Playbook: \(runner.playbook.name)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(card.summary)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .lineLimit(3)
+
+            if !card.proposedActions.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Proposed Actions:")
+                        .font(.system(size: 10, weight: .medium))
+                    ForEach(card.proposedActions.prefix(3), id: \.self) { action in
+                        Text("• \(action)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
+                }
+            }
+
+            if showNotesField {
+                TextField("Optional notes or reason...", text: $notesText)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 11))
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    showNotesField.toggle()
+                } label: {
+                    Label(showNotesField ? "Hide Note" : "Add Note", systemImage: "note.text")
+                        .font(.system(size: 10))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Button("Reject") {
+                    botManager.resolvePlaybookApproval(
+                        cardId: card.id,
+                        approved: false,
+                        notes: notesText.isEmpty ? "Rejected by user" : notesText
+                    )
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .font(.system(size: 11))
+
+                Button("Approve Stage") {
+                    botManager.resolvePlaybookApproval(
+                        cardId: card.id,
+                        approved: true,
+                        notes: notesText.isEmpty ? nil : notesText
+                    )
+                }
+                .buttonStyle(.borderedProminent)
+                .font(.system(size: 11))
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(nsColor: .windowBackgroundColor))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.orange.opacity(0.5), lineWidth: 1)
+                )
+        )
     }
 }

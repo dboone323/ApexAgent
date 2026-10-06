@@ -451,6 +451,36 @@ class PTYSession: @unchecked Sendable {
         }
     }
     
+    // MARK: - POSIX Signal & Terminal Control (Batch 2)
+
+    /// Sends a SIGINT (Ctrl+C) to the running foreground process in the PTY or container.
+    func sendInterrupt() {
+        if isContainerMode, let session = activeContainerSession {
+            session.write("\u{0003}")
+            return
+        }
+        write(command: "\u{0003}")
+        if childPid > 0 {
+            Darwin.kill(childPid, SIGINT)
+        }
+    }
+
+    /// Sends an arbitrary POSIX signal to the child shell process.
+    func sendSignal(_ sig: Int32) {
+        if childPid > 0 {
+            Darwin.kill(childPid, sig)
+        }
+    }
+
+    /// Sends an EOF (Ctrl+D) character to close interactive stdin.
+    func sendEOF() {
+        if isContainerMode, let session = activeContainerSession {
+            session.write("\u{0004}")
+            return
+        }
+        write(command: "\u{0004}")
+    }
+
     func cleanup() {
         if isContainerMode {
             isContainerMode = false
@@ -480,4 +510,20 @@ class PTYSession: @unchecked Sendable {
     deinit {
         cleanup()
     }
+
+    // MARK: - Markdown Session Status
+
+    public func formatSessionStatusMarkdown() -> String {
+        var md = "### 💻 PTY Shell Terminal Session Status\n\n"
+        md += "| Parameter | Value |\n"
+        md += "|---|---|\n"
+        md += "| Child Process ID (PID) | `\(childPid)` |\n"
+        md += "| Master File Descriptor | `\(masterFd)` |\n"
+        let isoBadge = isContainerMode ? "🐳 Apple Container Sandbox" : "🖥️ Host Process"
+        md += "| Execution Sandbox | \(isoBadge) |\n"
+        let activeStatus = childPid > 0 ? "🟢 Running" : "⚪️ Terminated / Idle"
+        md += "| Process Lifecycle | \(activeStatus) |\n"
+        return md
+    }
+
 }

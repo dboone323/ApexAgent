@@ -152,6 +152,39 @@ public final class ProactiveScheduler {
         return findings
     }
 
+
+    // MARK: - Finding Management & Markdown Formatting
+
+    public func dismissFinding(id: UUID) {
+        activeFindings.removeAll { $0.id == id }
+    }
+
+    public func clearAllFindings() {
+        activeFindings.removeAll()
+    }
+
+    public func formatFindingsAsMarkdown() -> String {
+        guard !activeFindings.isEmpty else {
+            return "No active proactive findings. All agent operations are healthy."
+        }
+
+        var md = "### ⚡️ Proactive Scheduler System Health Findings\n\n"
+        md += "| Severity | Title | Detail | Target Bot |\n"
+        md += "|---|---|---|---|\n"
+
+        for f in activeFindings {
+            let sevBadge: String
+            switch f.severity {
+            case .critical: sevBadge = "🛑 Critical"
+            case .warning: sevBadge = "⚠️ Warning"
+            case .info: sevBadge = "ℹ️ Info"
+            }
+            let botText = f.targetBotName.map { "`@\($0)`" } ?? "System"
+            md += "| \(sevBadge) | **\(f.title)** | \(f.detail) | \(botText) |\n"
+        }
+        return md
+    }
+
     private func notifyUser(title: String, body: String) {
         let isTesting = getenv("APEX_TEST_MODE") != nil
             || ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest")

@@ -552,6 +552,27 @@ private struct SpaceMessageBubbleView: View {
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(badgeColor.opacity(0.22), lineWidth: 0.8)
                     )
+                    .contextMenu {
+                        Button {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(message.content, forType: .string)
+                        } label: {
+                            Label("Copy Message Text", systemImage: "doc.on.doc")
+                        }
+
+                        Button {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString("apex://spaces/\(space.id)/\(channel.id)/\(message.id)", forType: .string)
+                        } label: {
+                            Label("Copy Message Link", systemImage: "link")
+                        }
+
+                        Divider()
+
+                        Button(action: onOpenThread) {
+                            Label("Reply in Thread", systemImage: "arrowshape.turn.up.left")
+                        }
+                    }
             }
         }
         .accessibilityElement(children: .contain)

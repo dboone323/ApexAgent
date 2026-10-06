@@ -108,4 +108,37 @@ public final class MultiAgentDebateCoordinator {
         
         return debate
     }
+
+    // MARK: - Markdown Report & History Clearing
+
+    public func clearDebateHistory() {
+        recentDebates.removeAll()
+    }
+
+    public func exportDebateMarkdown(debate: DebateRound) -> String {
+        var md = "# 🎙️ Multi-Agent Debate: \(debate.topic)\n\n"
+        md += "- **Started At**: `\(debate.startedAt)`\n"
+        if let conc = debate.concludedAt {
+            md += "- **Concluded At**: `\(conc)`\n"
+        }
+        md += "- **Participants**: \(debate.participants.map { "`@" + $0 + "`" }.joined(separator: ", "))\n"
+        md += "- **Status**: \(debate.passed ? "✅ Consensus Reached" : "⚠️ Inconclusive")\n\n"
+
+        md += "### Participant Positions\n\n"
+        md += "| Bot Name | Position / Argument |\n"
+        md += "|---|---|\n"
+        for (bot, arg) in debate.arguments.sorted(by: { $0.key < $1.key }) {
+            let sanitized = arg.replacingOccurrences(of: "|", with: "\\|").replacingOccurrences(of: "\n", with: " ")
+            md += "| `@\(bot)` | \(sanitized) |\n"
+        }
+        md += "\n"
+
+        if let consensus = debate.consensus {
+            md += "### 🎯 Consensus Recommendation\n\n"
+            md += consensus + "\n"
+        }
+
+        return md
+    }
+
 }

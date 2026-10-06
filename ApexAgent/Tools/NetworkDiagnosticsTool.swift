@@ -40,16 +40,20 @@ struct NetworkDiagnosticsTool: Tool {
                     monitor.start(queue: .global())
                 }
                 
-                var interfaceType = "unknown"
-                if path.usesInterfaceType(.wifi) { interfaceType = "wifi" } else if path.usesInterfaceType(.cellular) { interfaceType = "cellular" } else if path.usesInterfaceType(.wiredEthernet) { interfaceType = "wiredEthernet" }
+                var interfaceType = "Unknown"
+                if path.usesInterfaceType(.wifi) { interfaceType = "Wi-Fi" } else if path.usesInterfaceType(.cellular) { interfaceType = "Cellular" } else if path.usesInterfaceType(.wiredEthernet) { interfaceType = "Wired Ethernet" }
                 
                 return """
-                Interface Type: \(interfaceType)
-                Is Constrained: \(path.isConstrained)
-                Is Expensive: \(path.isExpensive)
-                Supports DNS: \(path.supportsDNS)
-                Supports IPv4: \(path.supportsIPv4)
-                Supports IPv6: \(path.supportsIPv6)
+                ### Network Interface Status
+
+                | Metric | Value |
+                |---|---|
+                | Primary Interface | `\(interfaceType)` |
+                | Constrained (Low Data Mode) | `\(path.isConstrained)` |
+                | Expensive (Metered) | `\(path.isExpensive)` |
+                | Supports DNS | `\(path.supportsDNS)` |
+                | Supports IPv4 | `\(path.supportsIPv4)` |
+                | Supports IPv6 | `\(path.supportsIPv6)` |
                 """
                 
             case "probe":
@@ -94,6 +98,7 @@ struct NetworkDiagnosticsTool: Tool {
                 
             case "dns":
                 guard let host = arguments.host else { return "ERROR: host required for dns" }
+                let startDns = CFAbsoluteTimeGetCurrent()
                 
                 return try await withCheckedThrowingContinuation { cont in
                     DispatchQueue.global().async {
@@ -109,21 +114,29 @@ struct NetworkDiagnosticsTool: Tool {
                             return
                         }
                         
-                        var ips: [String] = []
+                        var records: [(ip: String, family: String)] = []
                         var ptr = res
                         while let info = ptr {
                             var hostname = [CChar](repeating: 0, count: Int(NI_MAXHOST))
                             getnameinfo(info.pointee.ai_addr, info.pointee.ai_addrlen, &hostname, socklen_t(hostname.count), nil, 0, NI_NUMERICHOST)
+                            let family = (info.pointee.ai_family == AF_INET6) ? "IPv6" : "IPv4"
                             hostname.withUnsafeBufferPointer { ptr in
                                 if let base = ptr.baseAddress {
-                                    ips.append(String(cString: base))
+                                    records.append((ip: String(cString: base), family: family))
                                 }
                             }
                             ptr = info.pointee.ai_next
                         }
                         
                         freeaddrinfo(res)
-                        cont.resume(returning: "Resolved IPs for \(host):\n\(ips.joined(separator: "\n"))")
+                        let elapsedMs = (CFAbsoluteTimeGetCurrent() - startDns) * 1000
+                        var out = "### DNS Resolution for `\(host)` (Lookup: \(String(format: "%.1f", elapsedMs)) ms)\n\n"
+                        out += "| IP Address | Address Family |\n"
+                        out += "|---|---|\n"
+                        for r in records {
+                            out += "| `\(r.ip)` | \(r.family) |\n"
+                        }
+                        cont.resume(returning: out)
                     }
                 }
                 

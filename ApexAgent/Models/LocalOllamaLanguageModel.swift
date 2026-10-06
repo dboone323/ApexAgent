@@ -16,6 +16,18 @@ public struct LocalOllamaLanguageModel: LanguageModel {
     public init(hostURL: URL) {
         self.hostURL = hostURL
     }
+
+    // MARK: - Markdown Telemetry
+
+    public func formatOllamaStatusMarkdown() -> String {
+        var md = "### 🦙 Local Ollama Language Model Telemetry\n\n"
+        md += "| Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Host Endpoint | `\(hostURL.absoluteString)` | Local Ollama daemon URL |\n"
+        md += "| Capabilities | Tool Calling, Reasoning | Native FoundationModels extensions |\n"
+        md += "| Hardware Target | Apple Silicon Unified Memory | Metal acceleration |\n"
+        return md
+    }
 }
 
 public struct ParsedToolCall {

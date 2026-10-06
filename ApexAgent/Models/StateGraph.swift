@@ -188,4 +188,19 @@ class StateGraph {
         
         return currentState
     }
+
+    // MARK: - Markdown Telemetry
+
+    func formatGraphSummaryMarkdown() -> String {
+        var md = "### 🕸️ Directed State Graph: \(name)\n\n"
+        md += "| Component | Count / Status | Details |\n"
+        md += "|---|---|---|\n"
+        let nodeKeys = nodes.keys.sorted().joined(separator: ", ")
+        let safeKeys = nodeKeys.isEmpty ? "None" : nodeKeys.replacingOccurrences(of: "|", with: "\\|")
+        md += "| Registered Nodes | `\(nodes.count)` | \(safeKeys) |\n"
+        md += "| Transition Edges | `\(edges.count)` | Conditional graph routing |\n"
+        md += "| Entry Node | `\(entryNode ?? "Not configured")` | Initial execution node |\n"
+        return md
+    }
+
 }

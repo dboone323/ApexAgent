@@ -110,4 +110,28 @@ enum ChiefOfStaff {
         }
         return systemPrompt(chiefId: chiefId.uuidString, bots: members, canDelegate: canDelegate)
     }
+
+    // MARK: - Markdown Team Roster Directive
+
+    static func formatChiefTeamMarkdown(chiefId: String, bots: [ChiefTeamMember]) -> String {
+        guard !bots.isEmpty else {
+            return "No team members configured under Chief of Staff directive."
+        }
+
+        var md = "### 👑 Chief of Staff Specialist Team Directive (\(bots.count) bots)\n\n"
+        md += "| Bot ID | Name | Role Title | Status | Section |\n"
+        md += "|---|---|---|---|---|\n"
+
+        for b in bots {
+            let isChief = b.id == chiefId
+            let role = isChief ? "👑 Chief of Staff" : (b.title ?? "Specialist")
+            let status = (b.busy ?? false) ? "⚡️ Busy" : "💤 Available"
+            let sec = (b.section?.isEmpty ?? true) ? "General" : b.section!
+            let safeName = b.name.replacingOccurrences(of: "|", with: "\\|")
+            let safeRole = role.replacingOccurrences(of: "|", with: "\\|")
+            md += "| `\(b.id)` | **\(safeName)** | \(safeRole) | \(status) | `\(sec)` |\n"
+        }
+        return md
+    }
+
 }

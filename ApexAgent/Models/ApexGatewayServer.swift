@@ -361,4 +361,18 @@ public final class ApexGatewayServer {
             })
         }
     }
+
+    // MARK: - Markdown Telemetry
+
+    public func formatServerStatusMarkdown() -> String {
+        var md = "### 📡 Apex Gateway Server Status\n\n"
+        md += "| Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Listen Port | `\(port)` | TCP socket listener port |\n"
+        md += "| Active Sockets | `\(connections.count)` | Open client connections |\n"
+        md += "| Authenticated Clients | `\(authenticatedConnections.count)` | Authenticated client sessions |\n"
+        md += "| Max Inbound Frame | `\(Self.maxFrameBytes / (1024 * 1024)) MB` | Bounded payload size |\n"
+        return md
+    }
+
 }

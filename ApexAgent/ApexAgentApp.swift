@@ -69,11 +69,29 @@ public struct ApexAgentApp: App {
                     botManager.activeBotId = nil
                     spaceManager.activeSpaceId = nil
                     orchestrator.startNewConversation()
+                    NotificationCenter.default.post(name: NSNotification.Name("ApexAgent.focusChatInput"), object: nil)
                 }
                 .keyboardShortcut("n", modifiers: .command)
             }
 
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") {
+                    if #available(macOS 14.0, *) {
+                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    } else {
+                        NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+                    }
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+
             CommandGroup(replacing: .help) {
+                Button("Apex Agent Documentation & Guide") {
+                    if let url = URL(string: "https://github.com/dboone323/ApexAgent#readme") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+                .keyboardShortcut("/", modifiers: [.command, .shift])
                 Button("Apex Agent Documentation & Guide") {
                     if let url = URL(string: "https://github.com/dboone323/ApexAgent#readme") {
                         NSWorkspace.shared.open(url)
@@ -94,6 +112,7 @@ public struct ApexAgentApp: App {
                 .environment(spaceManager)
                 .environment(computer)
                 .environment(\.skillManager, skillManager)
+                .environment(skillManager)
                 .environment(routineManager)
                 .modelContainer(
                     for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self],

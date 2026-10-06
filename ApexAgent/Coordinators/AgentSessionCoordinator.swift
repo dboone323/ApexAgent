@@ -123,4 +123,18 @@ final class AgentSessionCoordinator {
             }
         }
     }
+
+    // MARK: - Markdown Session Diagnostics
+
+    func exportSessionCoordinatorMarkdown() -> String {
+        var md = "### 🎛️ Agent Session Coordinator Status\n\n"
+        md += "| Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Context Compaction Threshold | `\(Self.contextCompactionThreshold)` chars | Threshold triggering background compaction |\n"
+        md += "| Pruning Max Chars | `\(Self.contextPruningMaxChars)` chars | Individual message context limit |\n"
+        md += "| Rehydration Window Size | `\(Self.rehydrationWindowSize)` turns | Sliding message rehydration history |\n"
+        md += "| Default Ollama URL | `\(Self.defaultOllamaURLString)` | Local endpoint for Ollama language models |\n"
+        return md
+    }
+
 }

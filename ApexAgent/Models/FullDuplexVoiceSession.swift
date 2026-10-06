@@ -256,4 +256,26 @@ public final class FullDuplexVoiceSession: NSObject, ObservableObject, AVAudioPl
             self.stopMonitoringForBargeIn()
         }
     }
+
+    // MARK: - Markdown Session Diagnostics
+
+    public func sessionSummaryMarkdown() -> String {
+        var md = "### 🎙️ Full Duplex Voice Session Diagnostics\n\n"
+        md += "| Parameter | Current Value |\n"
+        md += "|---|---|\n"
+        md += "| Session Active | \(isSessionActive ? "🟢 Active" : "⚪️ Inactive") |\n"
+        md += "| Activity State | `\(state.rawValue)` |\n"
+        md += "| Current Signal Level | `\(String(format: "%.1f dB", currentDecibels))` |\n"
+        md += "| Speech Threshold | `\(String(format: "%.1f dB", speechThresholdDb))` |\n"
+        md += "| Barge-in Threshold | `\(String(format: "%.1f dB", bargeInSilenceThreshold))` |\n"
+        md += "| Turn Silence Timeout | `\(String(format: "%.1fs", silenceDurationForTurnSeconds))` |\n"
+        md += "| Speaking Synthesizer | \(isSpeaking ? "🗣️ Speaking" : "Silent") |\n"
+
+        if let lastTurn = lastCompletedTurnTranscript, !lastTurn.isEmpty {
+            let safeTranscript = lastTurn.replacingOccurrences(of: "|", with: "\\|")
+            md += "| Last Completed Turn | \(safeTranscript) |\n"
+        }
+        return md
+    }
+
 }

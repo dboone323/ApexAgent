@@ -188,4 +188,26 @@ public actor BenchmarkEvaluationPipeline {
         }
         return 1.0 - product
     }
+
+    // MARK: - Benchmark Run Comparison
+
+    public static func compareRuns(baseline: BenchmarkEvaluationSummary, current: BenchmarkEvaluationSummary) -> String {
+        var md = "### 📊 Benchmark Suite Comparison & Regression Matrix\n\n"
+        md += "| Metric | Baseline | Current | Delta | Status |\n"
+        md += "|---|---|---|---|---|\n"
+
+        let passDelta = current.passRate - baseline.passRate
+        let passStatus = passDelta > 0.001 ? "🟢 Improved" : (passDelta < -0.001 ? "🔴 Regressed" : "⚪️ Unchanged")
+        md += "| Pass@1 Accuracy | `\(String(format: "%.1f%%", baseline.passRate * 100))` | `\(String(format: "%.1f%%", current.passRate * 100))` | `\(String(format: "%+.1f%%", passDelta * 100))` | \(passStatus) |\n"
+
+        let durDelta = current.averageDuration - baseline.averageDuration
+        let durStatus = durDelta < -0.001 ? "🟢 Faster" : (durDelta > 0.001 ? "🔴 Slower" : "⚪️ Unchanged")
+        md += "| Average Latency | `\(String(format: "%.3fs", baseline.averageDuration))` | `\(String(format: "%.3fs", current.averageDuration))` | `\(String(format: "%+.3fs", durDelta))` | \(durStatus) |\n"
+
+        let passedDelta = current.passedTasks - baseline.passedTasks
+        md += "| Total Passed Tasks | `\(baseline.passedTasks)/\(baseline.totalTasks)` | `\(current.passedTasks)/\(current.totalTasks)` | `\(String(format: "%+d", passedDelta))` | \(passStatus) |\n"
+
+        return md
+    }
+
 }

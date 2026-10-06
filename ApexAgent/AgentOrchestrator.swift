@@ -716,6 +716,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         activeTerminalOutput = ""
         UIRegistry.shared.clearAll()
         resetSession()
+        NotificationCenter.default.post(name: NSNotification.Name("ApexAgent.focusChatInput"), object: nil)
     }
 
     func clearAllConversations() {
@@ -1626,6 +1627,22 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         pending.continuation?.resume(returning: approved)
         pendingConfirmation = nil
     }
+
+    // MARK: - Markdown Runtime Summary
+
+    public func exportOrchestratorSummaryMarkdown() -> String {
+        var md = "### 🎛️ Agent Orchestrator Runtime Telemetry\n\n"
+        md += "| Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Execution State | \(isGenerating ? "⚡️ Generating" : "💤 Idle") | Current task processing state |\n"
+        md += "| Active Plan Steps | `\(activePlan.count)` | Decomposition tasks in queue |\n"
+        let gov = activeGovernanceProfile?.id ?? "Standard SecurityAuditor"
+        md += "| Governance Profile | `\(gov)` | Active security sandboxing profile |\n"
+        md += "| Multi-Agent Swarm | \(multiAgentModeEnabled ? "🟢 Enabled" : "⚪️ Disabled") | Inter-bot coordination mode |\n"
+        md += "| Traces Recorded | `\(coordinationTraces.count)` | Agent coordination spans |\n"
+        md += "| Reasoning Logs | `\(reasoningLogs.count)` | Monologue reflection steps |\n"
+        return md
+    }
 }
 
 // MARK: - Apex Agent Dynamic Profile
@@ -1654,6 +1671,7 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
     private var createDirectoryTool: CreateDirectoryTool { CreateDirectoryTool(orchestrator: orchestrator) }
     private var deleteFileTool: DeleteFileTool { DeleteFileTool(orchestrator: orchestrator) }
     private var moveFileTool: MoveFileTool { MoveFileTool(orchestrator: orchestrator) }
+    private var rollbackTool: RollbackTool { RollbackTool(orchestrator: orchestrator) }
     private var webSearchTool: WebSearchTool { WebSearchTool(orchestrator: orchestrator) }
     private var appleScriptTool: AppleScriptTool { AppleScriptTool(orchestrator: orchestrator) }
     private var screenshotTool: ScreenshotTool { ScreenshotTool(orchestrator: orchestrator) }
@@ -1665,6 +1683,7 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
     private var getFrontmostAppTool: GetFrontmostAppTool { GetFrontmostAppTool(orchestrator: orchestrator) }
     private var storeMemoryTool: StoreMemoryTool { StoreMemoryTool(orchestrator: orchestrator) }
     private var searchMemoryTool: SearchMemoryTool { SearchMemoryTool(orchestrator: orchestrator) }
+    private var deleteMemoryTool: DeleteMemoryTool { DeleteMemoryTool(orchestrator: orchestrator) }
     private var applicationControlTool: ApplicationControlTool { ApplicationControlTool(orchestrator: orchestrator) }
     private var accessibilityControlTool: AccessibilityControlTool { AccessibilityControlTool(orchestrator: orchestrator) }
     private var browserAutomationTool: BrowserAutomationTool { BrowserAutomationTool(orchestrator: orchestrator) }
@@ -1684,6 +1703,7 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
             createDirectoryTool
             deleteFileTool
             moveFileTool
+            rollbackTool
             webSearchTool
             appleScriptTool
             screenshotTool
@@ -1695,6 +1715,7 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
             getFrontmostAppTool
             storeMemoryTool
             searchMemoryTool
+            deleteMemoryTool
             applicationControlTool
             accessibilityControlTool
             browserAutomationTool

@@ -66,3 +66,36 @@ public struct ToolEvent: Identifiable, Sendable {
         self.timestamp = Date()
     }
 }
+
+
+extension ToolEvent {
+    // MARK: - Markdown Events Table
+
+    public static func formatEventsTable(_ events: [ToolEvent]) -> String {
+        guard !events.isEmpty else {
+            return "No tool events logged."
+        }
+
+        var md = "### 🛠️ Tool Execution Event Telemetry (\(events.count) events)\n\n"
+        md += "| Tool Name | Status | Timestamp | Arguments |\n"
+        md += "|---|---|---|---|\n"
+
+        let formatter = ISO8601DateFormatter()
+        for evt in events {
+            let statusBadge: String
+            switch evt.status {
+            case .running: statusBadge = "🔵 Running"
+            case .success: statusBadge = "🟢 Success"
+            case .failed(let err): statusBadge = "🔴 Failed (\(err.replacingOccurrences(of: "|", with: "\\|")))"
+            case .awaitingConfirmation: statusBadge = "🟡 Pending Auth"
+            case .denied: statusBadge = "⛔️ Denied"
+            }
+
+            let safeName = evt.toolName.replacingOccurrences(of: "|", with: "\\|")
+            let safeArgs = evt.arguments.replacingOccurrences(of: "|", with: "\\|").replacingOccurrences(of: "\n", with: " ")
+            let ts = formatter.string(from: evt.timestamp)
+            md += "| `\(safeName)` | \(statusBadge) | `\(ts)` | `\(safeArgs)` |\n"
+        }
+        return md
+    }
+}

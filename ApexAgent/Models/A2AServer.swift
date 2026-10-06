@@ -292,6 +292,21 @@ public final class A2AServer {
 
     // Handle incoming A2A requests
     private func handleRequest(method: String, path: String, body: Data) async -> Data {
+        if method == "GET" && (path == "/health" || path == "/api/status") {
+            let botCount = botManager?.allBots.count ?? 0
+            let payload: [String: Any] = [
+                "status": "healthy",
+                "service": "ApexAgent A2A Node",
+                "port": port,
+                "running": isRunning,
+                "activeBotsCount": botCount
+            ]
+            if let d = try? JSONSerialization.data(withJSONObject: payload, options: [.prettyPrinted, .sortedKeys]) {
+                return d
+            }
+            return Data("{\"status\":\"healthy\"}".utf8)
+        }
+
         if method == "GET" && path == "/.well-known/agent.json" {
             let card = buildAgentCard()
             let encoder = JSONEncoder()

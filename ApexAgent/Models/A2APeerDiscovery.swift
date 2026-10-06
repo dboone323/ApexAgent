@@ -152,4 +152,33 @@ public final class A2APeerDiscovery {
             connection.start(queue: DispatchQueue.global(qos: .userInitiated))
         }
     }
+
+    // MARK: - Peer Management & Formatting
+
+    public func clearPeers() {
+        discoveredPeers.removeAll()
+    }
+
+    public func pruneStalePeers(olderThan seconds: TimeInterval = 300) {
+        let cutoff = Date().addingTimeInterval(-seconds)
+        discoveredPeers.removeAll { $0.discoveredAt < cutoff }
+    }
+
+    public func formatPeersTable() -> String {
+        guard !discoveredPeers.isEmpty else {
+            return "No active A2A network peers discovered on local Bonjour mesh."
+        }
+
+        var md = "### 📡 Discovered A2A Network Peers (\(discoveredPeers.count) online)\n\n"
+        md += "| Peer Name | Endpoint | Discovered At |\n"
+        md += "|---|---|---|\n"
+
+        for peer in discoveredPeers {
+            let safeName = peer.name.replacingOccurrences(of: "|", with: "\\|")
+            let safeEndpoint = "\(peer.endpoint)".replacingOccurrences(of: "|", with: "\\|")
+            md += "| **\(safeName)** | `\(safeEndpoint)` | `\(peer.discoveredAt)` |\n"
+        }
+        return md
+    }
+
 }

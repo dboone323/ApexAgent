@@ -305,4 +305,19 @@ final class VoiceController: NSObject, SFSpeechRecognizerDelegate, AVSpeechSynth
             }
         }
     }
+
+    // MARK: - Markdown Diagnostics
+
+    func formatVoiceControllerDiagnosticsMarkdown() -> String {
+        var md = "### 🎙️ Audio Engine & Voice Controller Telemetry\n\n"
+        md += "| Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Audio Engine Running | \(audioEngine.isRunning ? "🟢 Active" : "⚪️ Idle") | CoreAudio node state |\n"
+        md += "| Recording State | \(isRecording ? "🔴 Recording" : "⚪️ Idle") | Speech-to-text pipeline |\n"
+        md += "| Speaking State | \(isSpeaking ? "🗣️ Speaking" : "⚪️ Silent") | Text-to-speech synthesis |\n"
+        md += "| TTS Provider | `\(selectedProvider.rawValue)` | Active voice synthesizer |\n"
+        md += "| Permissions | \(permissionGranted ? "✅ Authorized" : "⚪️ Not Granted") | Microphone & speech recognition |\n"
+        return md
+    }
+
 }

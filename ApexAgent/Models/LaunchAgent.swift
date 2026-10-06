@@ -60,6 +60,23 @@ enum LaunchAgentPlist {
         "\(NSHomeDirectory())/Library/Logs/\(config.label).err.log"
     }
 
+    // MARK: - Markdown Configuration Summary
+
+    static func formatConfigMarkdown(_ config: LaunchAgentConfig) -> String {
+        var md = "### 🚀 macOS launchd Agent Daemon Configuration\n\n"
+        md += "| Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Reverse-DNS Label | `\(config.label)` | System service identifier |\n"
+        md += "| Target Program | `\(config.programPath)` | Executable binary |\n"
+        let argsJoined = config.arguments.joined(separator: " ").replacingOccurrences(of: "|", with: "\\|")
+        md += "| Arguments | `\(argsJoined)` | Startup parameters |\n"
+        md += "| Run At Load | \(config.runAtLoad ? "✅ Enabled" : "❌ Disabled") | Launch on user login |\n"
+        md += "| Keep Alive | \(config.keepAlive ? "✅ Enabled" : "❌ Disabled") | Auto-restart on crash |\n"
+        md += "| Standard Out Log | `\(stdoutPath(for: config))` | Stdout redirect destination |\n"
+        md += "| Standard Error Log | `\(stderrPath(for: config))` | Stderr redirect destination |\n"
+        return md
+    }
+
     private static func escaped(_ value: String) -> String {
         value
             .replacingOccurrences(of: "&", with: "&amp;")

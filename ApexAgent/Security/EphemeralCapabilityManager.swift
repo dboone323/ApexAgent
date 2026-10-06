@@ -83,4 +83,26 @@ import Observation
             token.toolName == toolName && (token.botName == botName || token.botName == nil || botName == nil) && token.isValid
         }
     }
+
+    // MARK: - Markdown Telemetry
+
+    public func exportActiveTokensMarkdown() -> String {
+        let tokens = activeTokens
+        guard !tokens.isEmpty else {
+            return "No active ephemeral capability tokens issued."
+        }
+
+        var md = "### 🔑 Active Ephemeral Capability Grants (\(tokens.count) active)\n\n"
+        md += "| Token ID | Scoped Tool | Target Bot | Expiration | Status |\n"
+        md += "|---|---|---|---|---|\n"
+
+        let iso = ISO8601DateFormatter()
+        for tok in tokens {
+            let botStr = tok.botName ?? "Any Bot"
+            let expStr = iso.string(from: tok.expiresAt)
+            md += "| `\(tok.id.uuidString.prefix(8))` | `\(tok.toolName)` | `\(botStr)` | `\(expStr)` | 🟢 Valid |\n"
+        }
+        return md
+    }
+
 }

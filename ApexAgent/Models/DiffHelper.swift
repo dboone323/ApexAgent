@@ -54,3 +54,54 @@ struct DiffHelper {
         return diff.reversed()
     }
 }
+
+
+public struct DiffStats: Sendable, Equatable {
+    public let additions: Int
+    public let deletions: Int
+    public let unchanged: Int
+
+    public var netChange: Int { additions - deletions }
+    public var totalLines: Int { additions + deletions + unchanged }
+
+    public func summary() -> String {
+        "+\(additions), -\(deletions) (net \(netChange >= 0 ? "+\(netChange)" : "\(netChange)"))"
+    }
+}
+
+extension DiffHelper {
+    public static func computeStats(diff: [DiffLine]) -> DiffStats {
+        var add = 0
+        var del = 0
+        var unc = 0
+        for line in diff {
+            switch line.kind {
+            case .added: add += 1
+            case .deleted: del += 1
+            case .unchanged: unc += 1
+            }
+        }
+        return DiffStats(additions: add, deletions: del, unchanged: unc)
+    }
+
+    public static func formatUnifiedDiff(oldText: String, newText: String, filePath: String) -> String {
+        let diff = computeDiff(oldText: oldText, newText: newText)
+        let stats = computeStats(diff: diff)
+
+        var header = "--- a/\(filePath)\n+++ b/\(filePath)\n"
+        header += "@@ -1,\(oldText.components(separatedBy: .newlines).count) +1,\(newText.components(separatedBy: .newlines).count) @@ [\(stats.summary())]\n"
+
+        var lines: [String] = []
+        for line in diff {
+            switch line.kind {
+            case .unchanged:
+                lines.append(" \(line.text)")
+            case .added:
+                lines.append("+\(line.text)")
+            case .deleted:
+                lines.append("-\(line.text)")
+            }
+        }
+        return header + lines.joined(separator: "\n")
+    }
+}

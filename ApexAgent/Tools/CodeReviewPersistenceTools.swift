@@ -85,10 +85,16 @@ struct ListReviewSessionsTool: Tool {
     }
 
     let name = "list_review_sessions"
-    let description = "Lists past code review sessions stored in the database."
+    let description = "Lists past code review sessions stored in the database with optional filtering."
 
     @Generable
-    struct Arguments: Decodable {}
+    struct Arguments: Decodable {
+        @Guide(description: "Filter sessions by file name.")
+        var fileName: String?
+
+        @Guide(description: "Maximum number of review sessions to return (defaults to 20).", .range(1...100))
+        var limit: Int?
+    }
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
@@ -98,17 +104,24 @@ struct ListReviewSessionsTool: Tool {
                     return "ERROR: Database context not available."
                 }
                 
-                let descriptor = FetchDescriptor<ReviewSession>()
-                guard let sessions = try? context.fetch(descriptor) else {
+                var descriptor = FetchDescriptor<ReviewSession>(sortBy: [SortDescriptor(\ReviewSession.createdAt, order: .reverse)])
+                guard var sessions = try? context.fetch(descriptor) else {
                     return "ERROR: Failed to fetch review sessions."
                 }
+
+                if let filterName = arguments.fileName, !filterName.isEmpty {
+                    sessions = sessions.filter { $0.fileName.localizedCaseInsensitiveContains(filterName) }
+                }
+
+                let maxCount = arguments.limit ?? 20
+                let sliced = Array(sessions.prefix(maxCount))
                 
-                if sessions.isEmpty {
+                if sliced.isEmpty {
                     return "No review sessions found."
                 }
                 
-                var result = "## Code Review History:\n\n"
-                for session in sessions {
+                var result = "## Code Review History (\(sliced.count) sessions):\n\n"
+                for session in sliced {
                     result += "• **\(session.fileName)** (Date: \(session.createdAt))\n"
                     result += "  - Summary: \(session.summary)\n"
                     result += "  - Issues count: \(session.issues.count)\n"
@@ -127,6 +140,75 @@ struct ListReviewSessionsTool: Tool {
                     result += "\n"
                 }
                 return result
+            }
+        }
+    }
+}
+
+// MARK: - Export Review Session Tool
+struct ExportReviewSessionTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
+    let name = "export_review_session"
+    let description = "Exports a specific code review session and its issues into a structured Markdown report."
+
+    @Generable
+    struct Arguments: Decodable {
+        @Guide(description: "File name of the review session to export.")
+        var fileName: String
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+            await MainActor.run {
+                let orch = orchestrator.orchestrator
+                guard let context = orch.modelContext else {
+                    return "ERROR: Database context not available."
+                }
+
+                let descriptor = FetchDescriptor<ReviewSession>(sortBy: [SortDescriptor(\ReviewSession.createdAt, order: .reverse)])
+                guard let sessions = try? context.fetch(descriptor) else {
+                    return "ERROR: Failed to fetch review sessions."
+                }
+
+                guard let session = sessions.first(where: { $0.fileName.localizedCaseInsensitiveContains(arguments.fileName) }) else {
+                    return "ERROR: No review session found for '\(arguments.fileName)'."
+                }
+
+                var md = "# Code Review Report: `\(session.fileName)`\n\n"
+                md += "- **Timestamp**: `\(session.createdAt)`\n"
+                md += "- **Summary**: \(session.summary)\n"
+                md += "- **Total Issues**: \(session.issues.count)\n\n"
+
+                if !session.issues.isEmpty {
+                    md += "### Detected Issues\n\n"
+                    md += "| Line | Severity | Message |\n"
+                    md += "|---|---|---|\n"
+                    for issue in session.issues.sorted(by: { $0.line < $1.line }) {
+                        let sevBadge: String
+                        switch issue.severity {
+                        case .error: sevBadge = "🛑 Error"
+                        case .warning: sevBadge = "⚠️ Warning"
+                        case .info: sevBadge = "ℹ️ Info"
+                        }
+                        md += "| `\(issue.line)` | \(sevBadge) | \(issue.message) |\n"
+                    }
+                    md += "\n"
+                }
+
+                if !session.suggestions.isEmpty {
+                    md += "### Recommended Improvements\n\n"
+                    for suggestion in session.suggestions {
+                        md += "- \(suggestion)\n"
+                    }
+                    md += "\n"
+                }
+
+                return md
             }
         }
     }

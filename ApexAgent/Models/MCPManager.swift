@@ -239,4 +239,26 @@ final class MCPManager: OrchestratorProvider {
             history: history
         )
     }
+
+    // MARK: - Markdown MCP Registry Export
+
+    func exportMCPServersTable() -> String {
+        guard !servers.isEmpty else {
+            return "No external MCP servers configured."
+        }
+
+        var md = "### 🔌 Configured MCP Servers (\(servers.count) servers)\n\n"
+        md += "| Server Name | Transport | Command | Arguments | In-Memory Client |\n"
+        md += "|---|---|---|---|---|\n"
+
+        for s in servers {
+            let active = clients[s.id] != nil ? "🟢 Connected" : "⚪️ Offline"
+            let cmd = s.command.isEmpty ? "None" : s.command
+            let args = s.arguments.joined(separator: " ").replacingOccurrences(of: "|", with: "\\|")
+            let safeName = s.name.replacingOccurrences(of: "|", with: "\\|")
+            md += "| **\(safeName)** | `\(s.transport)` | `\(cmd)` | `\(args)` | \(active) |\n"
+        }
+        return md
+    }
+
 }

@@ -109,8 +109,79 @@ final class SkillManager: Observable {
         DynamicToolbox.shared.loadTools()
     }
 
+    // MARK: - Validation
+
+    public func validateSkillManifest(at fileURL: URL) -> Result<SkillManifestInfo, SkillValidationError> {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: fileURL.path) else {
+            return .failure(.fileNotFound(fileURL.path))
+        }
+
+        guard let content = try? String(contentsOf: fileURL, encoding: .utf8),
+              let data = content.data(using: .utf8) else {
+            return .failure(.unreadableFile(fileURL.path))
+        }
+
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return .failure(.invalidJSON("Failed to parse JSON dictionary"))
+        }
+
+        let skillName = fileURL.deletingPathExtension().lastPathComponent
+        guard let desc = json["description"] as? String, !desc.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .failure(.missingDescription(skillName))
+        }
+
+        guard let script = json["script_path"] as? String, !script.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return .failure(.missingScriptPath(skillName))
+        }
+
+        let resolvedScript = (script as NSString).expandingTildeInPath
+        if !fm.fileExists(atPath: resolvedScript) && !fm.fileExists(atPath: fileURL.deletingLastPathComponent().appendingPathComponent(script).path) {
+            return .failure(.scriptFileNotFound(script))
+        }
+
+        let paramDict = json["parameters"] as? [String: Any] ?? [:]
+        let propCount = (paramDict["properties"] as? [String: Any])?.count ?? paramDict.count
+
+        return .success(SkillManifestInfo(
+            name: skillName,
+            description: desc,
+            scriptPath: script,
+            parameterCount: propCount
+        ))
+    }
+
     // MARK: - Helpers
 
     var enabledSkills: [Skill] { skills.filter { $0.enabled } }
     func skill(named name: String) -> Skill? { skills.first { $0.name == name } }
+}
+
+// MARK: - Skill Manifest Pre-Flight Validator
+
+public struct SkillManifestInfo: Sendable, Equatable {
+    public let name: String
+    public let description: String
+    public let scriptPath: String
+    public let parameterCount: Int
+}
+
+public enum SkillValidationError: LocalizedError, Sendable, Equatable {
+    case fileNotFound(String)
+    case unreadableFile(String)
+    case invalidJSON(String)
+    case missingDescription(String)
+    case missingScriptPath(String)
+    case scriptFileNotFound(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .fileNotFound(let p): return "Skill manifest file not found: \(p)"
+        case .unreadableFile(let p): return "Skill manifest file cannot be read: \(p)"
+        case .invalidJSON(let err): return "Invalid JSON manifest: \(err)"
+        case .missingDescription(let name): return "Skill '\(name)' manifest is missing 'description' field"
+        case .missingScriptPath(let name): return "Skill '\(name)' manifest is missing 'script_path' field"
+        case .scriptFileNotFound(let path): return "Executable script file referenced does not exist: \(path)"
+        }
+    }
 }

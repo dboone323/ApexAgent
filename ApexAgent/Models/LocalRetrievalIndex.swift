@@ -136,3 +136,25 @@ public struct SpotlightRetrievalIndex: LocalRetrievalIndex {
 public enum CoreSpotlightRAGAvailability {
     public static var isAvailable: Bool { CoreSpotlightRAG.isAvailable }
 }
+
+
+// MARK: - Markdown Results Table
+extension SpotlightRetrievalIndex {
+    public static func formatResultsTable(_ items: [RetrievalItem]) -> String {
+        guard !items.isEmpty else {
+            return "No local items matched the Spotlight retrieval query."
+        }
+
+        var md = "### 🔍 Spotlight RAG Retrieved Documents (\(items.count) matches)\n\n"
+        md += "| Document Title | File Path | Preview Content |\n"
+        md += "|---|---|---|\n"
+
+        for item in items {
+            let safeTitle = item.title.replacingOccurrences(of: "|", with: "\\|")
+            let safePath = (item.url?.path ?? item.id).replacingOccurrences(of: "|", with: "\\|")
+            let safeSnippet = item.content.replacingOccurrences(of: "|", with: "\\|").replacingOccurrences(of: "\n", with: " ")
+            md += "| **\(safeTitle)** | `\(safePath)` | \(safeSnippet) |\n"
+        }
+        return md
+    }
+}

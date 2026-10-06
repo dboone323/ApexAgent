@@ -148,4 +148,49 @@ final class PeerApprovalCoordinator: @unchecked Sendable {
         defer { lock.unlock() }
         return pending[id]
     }
+
+    // MARK: - Markdown Peer Approval Exports
+
+    func exportPendingApprovalsMarkdown() -> String {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard !pending.isEmpty else {
+            return "No pending inter-bot peer approval requests."
+        }
+
+        var md = "### 🤝 Pending Inter-Bot Peer Approvals (\(pending.count) requests)\n\n"
+        md += "| Request ID | Sender Bot | Target Bot | Action | Message Preview |\n"
+        md += "|---|---|---|---|---|\n"
+
+        for (id, req) in pending.sorted(by: { $0.key < $1.key }) {
+            let safeMsg = req.message.replacingOccurrences(of: "|", with: "\\|").replacingOccurrences(of: "\n", with: " ")
+            let truncated = safeMsg.count > 60 ? String(safeMsg.prefix(57)) + "..." : safeMsg
+            md += "| `\(id)` | `\(req.fromBotId)` | `\(req.toBotId)` | `\(req.action.rawValue)` | \(truncated) |\n"
+        }
+        return md
+    }
+
+    func exportGrantsMarkdown() -> String {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard !grants.isEmpty else {
+            return "No persistent peer approval grants issued."
+        }
+
+        var md = "### 🛡️ Persistent Inter-Bot Peer Grants (\(grants.count) grants)\n\n"
+        md += "| Grant Key | Action | Sender Bot | Target Bot |\n"
+        md += "|---|---|---|---|\n"
+
+        for key in grants.sorted() {
+            let parts = key.split(separator: ":")
+            let action = parts.count > 0 ? String(parts[0]) : "unknown"
+            let sender = parts.count > 1 ? String(parts[1]) : "any"
+            let target = parts.count > 2 ? String(parts[2]) : "any"
+            md += "| `\(key)` | `\(action)` | `\(sender)` | `\(target)` |\n"
+        }
+        return md
+    }
+
 }

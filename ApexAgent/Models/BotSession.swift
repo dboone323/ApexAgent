@@ -511,4 +511,21 @@ final class BotSession {
     func getSemanticContext(for prompt: String) -> String {
         orchestrator?.getSemanticContext(for: prompt) ?? ""
     }
+
+    // MARK: - Markdown Session Diagnostics
+
+    func formatSessionDiagnosticsMarkdown() -> String {
+        var md = "### 🤖 BotSession Runtime Diagnostics: \(bot.name)\n\n"
+        md += "| Metric / Property | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Bot Persona | `\(bot.name)` | Assigned agent persona |\n"
+        md += "| Generation Status | \(isGenerating ? "⚡️ Generating" : "💤 Idle") | Active streaming state |\n"
+        md += "| Transcript Messages | `\(messages.count)` | Session message count |\n"
+        md += "| Effective Tools | `\(effectiveToolAllowlist.count)` tools | Allowed tools in sandbox |\n"
+        md += "| Hardware Privacy Tier | `\(effectivePrivacyTier.displayName)` | Privacy assurance level |\n"
+        md += "| Queued Prompts | `\(queuedPrompts.count)` | Pending prompt queue |\n"
+        md += "| Tool Calling Mode | `\(String(describing: toolCallingMode))` | Tool invocation strategy |\n"
+        return md
+    }
+
 }

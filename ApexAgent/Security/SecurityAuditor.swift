@@ -85,7 +85,7 @@ final class SecurityAuditor {
         }
         // Helper: does `p` land inside any forbidden home-relative directory?
         func isForbiddenHomeSubpath(_ p: String) -> Bool {
-            let sensitiveNames = [".ssh", ".aws", ".gnupg", ".config"]
+            let sensitiveNames = [".ssh", ".aws", ".gnupg", ".config", ".bash_history", ".zsh_history", ".netrc", ".zshrc", ".bashrc"]
             for name in sensitiveNames {
                 let forbidden = (homeDir as NSString).appendingPathComponent(name)
                 if p == forbidden || p.hasPrefix(forbidden + "/") { return true }
@@ -101,6 +101,9 @@ final class SecurityAuditor {
         let awsPath = (homeDir as NSString).appendingPathComponent(".aws")
         let gnupgPath = (homeDir as NSString).appendingPathComponent(".gnupg")
         let configPath = (homeDir as NSString).appendingPathComponent(".config")
+        let bashHistoryPath = (homeDir as NSString).appendingPathComponent(".bash_history")
+        let zshHistoryPath = (homeDir as NSString).appendingPathComponent(".zsh_history")
+        let netrcPath = (homeDir as NSString).appendingPathComponent(".netrc")
 
         let resolvedWorkspace = URL(fileURLWithPath: ws).resolvingSymlinksInPath().path
         let isInWorkspace = standardized == resolvedWorkspace || standardized.hasPrefix(resolvedWorkspace + "/")
@@ -127,6 +130,15 @@ final class SecurityAuditor {
             throw .pathViolation(path)
         }
         if standardized == configPath || standardized.hasPrefix(configPath + "/") {
+            throw .pathViolation(path)
+        }
+        if standardized == bashHistoryPath || standardized.hasPrefix(bashHistoryPath + "/") {
+            throw .pathViolation(path)
+        }
+        if standardized == zshHistoryPath || standardized.hasPrefix(zshHistoryPath + "/") {
+            throw .pathViolation(path)
+        }
+        if standardized == netrcPath || standardized.hasPrefix(netrcPath + "/") {
             throw .pathViolation(path)
         }
 
@@ -272,4 +284,22 @@ final class SecurityAuditor {
 
         return sanitized
     }
+
+    // MARK: - Security Policy Markdown Export
+
+    nonisolated public static func exportSecurityPolicyMarkdown() -> String {
+        var md = "### 🛡️ ApexAgent Security & Host Sandbox Enforcement Policy\n\n"
+        md += "| Security Domain | Protected Scope | Enforcement Mechanism |\n"
+        md += "|---|---|---|\n"
+        md += "| Credential Vault | `~/.ssh`, `~/.aws`, `~/.gnupg` | Hard Deny (Path Violation) |\n"
+        md += "| Shell & Secrets | `~/.bash_history`, `~/.zsh_history`, `~/.netrc` | Hard Deny (Path Violation) |\n"
+        md += "| User Config | `~/.config` | Hard Deny (Path Violation) |\n"
+        md += "| OS System Trees | `/System`, `/Library`, `/etc`, `/usr`, `/bin` | Hard Deny (System Restriction) |\n"
+        md += "| Root Filesystem | `/` | Hard Deny (System Restriction) |\n"
+        md += "| User Media Dirs | `~/Desktop`, `~/Documents`, `~/Downloads` | Permission-gated via AppPermissions |\n"
+        md += "| Symlink Traversal | Symlinks resolving outside workspace/tmp | Hard Deny (Symlink Traversal Trap) |\n"
+        md += "| Data Leak Prevention | Bearer tokens, OpenAI keys, Gemini keys, PEM | Dynamic Regular Expression Sanitization |\n"
+        return md
+    }
+
 }

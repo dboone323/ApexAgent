@@ -94,4 +94,33 @@ public enum ApexWorkflows {
         }
         return results
     }
+
+    // MARK: - Markdown Catalog Export
+
+    public static func exportWorkflowsCatalogMarkdown() -> String {
+        let workflows: [(Int, String, String)] = [
+            (1, "AI Code Review findings", "CodeReviewPersistenceTools, ProjectAuditor"),
+            (2, "NL query over project store", "SwiftData ModelContext, ProjectModel"),
+            (3, "Test generation & repair", "RunSomeTests, DiffHelper"),
+            (4, "Documentation pipeline", "FileSystemTools, Markdown Generator"),
+            (5, "CI/CD failure triage", "Terminal/PTY, OSLog Diagnostics"),
+            (6, "Multi-agent orchestration", "StateGraph, BotSession swarm"),
+            (7, "Pipeline & schema-drift monitor", "ContainerManager, DiagnosticManager"),
+            (8, "Ticket triage & routing", "AgentRegistry, DynamicToolbox"),
+            (9, "Legacy refactor sweep", "DiffStats, WorkspaceProactiveAuditor"),
+            (10, "Personal productivity agent", "DailyBriefing, RoutineManager"),
+        ]
+
+        var md = "### ⚙️ Autonomous Local Workflows Catalog (10 workflows)\n\n"
+        md += "| ID | Workflow Name | Target Subsystems | Engine |\n"
+        md += "|---|---|---|---|\n"
+
+        for wf in workflows {
+            let safeName = wf.1.replacingOccurrences(of: "|", with: "\\|")
+            let safeSub = wf.2.replacingOccurrences(of: "|", with: "\\|")
+            md += "| `\(wf.0)` | **\(safeName)** | \(safeSub) | Native Swift 6.4 |\n"
+        }
+        return md
+    }
+
 }

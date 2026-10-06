@@ -669,4 +669,51 @@ public final class CognitiveMemoryEngine {
         let data = try JSONEncoder().encode(object)
         try data.write(to: url, options: .atomic)
     }
+
+    // MARK: - Markdown Summaries & Memory Management
+
+    public func clearMemory(forBotId botId: UUID) {
+        clearWorkingContext(forBotId: botId)
+        let dir = getMemoryDirectory(forBotId: botId)
+        try? FileManager.default.removeItem(at: dir)
+    }
+
+    public func exportEpisodicSummaryMarkdown(forBotId botId: UUID, limit: Int = 20) -> String {
+        let episodes = recentEpisodes(forBotId: botId, limit: limit)
+        guard !episodes.isEmpty else {
+            return "No episodic memory entries recorded for bot `\(botId.uuidString.prefix(8))`."
+        }
+
+        var md = "### 🧠 Episodic Memory Log (Bot `\(botId.uuidString.prefix(8))`)\n\n"
+        md += "| Event Type | Timestamp | Summary |\n"
+        md += "|---|---|---|\n"
+
+        for ep in episodes {
+            let safeType = ep.eventType.replacingOccurrences(of: "|", with: "\\|")
+            let safeSummary = ep.summary.replacingOccurrences(of: "|", with: "\\|").replacingOccurrences(of: "\n", with: " ")
+            md += "| `\(safeType)` | `\(ep.timestamp)` | \(safeSummary) |\n"
+        }
+        return md
+    }
+
+    public func exportSemanticGraphMarkdown(forBotId botId: UUID) -> String {
+        let facts = allFacts(forBotId: botId)
+        guard !facts.isEmpty else {
+            return "No semantic knowledge facts established for bot `\(botId.uuidString.prefix(8))`."
+        }
+
+        var md = "### 🕸️ Semantic Knowledge Graph (Bot `\(botId.uuidString.prefix(8))`)\n\n"
+        md += "| Subject | Predicate | Object | Confidence | Source |\n"
+        md += "|---|---|---|---|---|\n"
+
+        for fact in facts {
+            let s = fact.subject.replacingOccurrences(of: "|", with: "\\|")
+            let p = fact.predicate.replacingOccurrences(of: "|", with: "\\|")
+            let o = fact.object.replacingOccurrences(of: "|", with: "\\|")
+            let confStr = String(format: "%.2f", fact.confidence)
+            md += "| **\(s)** | `\(p)` | \(o) | `\(confStr)` | \(fact.source) |\n"
+        }
+        return md
+    }
+
 }

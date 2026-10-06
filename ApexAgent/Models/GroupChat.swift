@@ -439,6 +439,23 @@ final class GroupChatSession {
         return context
     }
 
+    // MARK: - Markdown Session Diagnostics
+
+    func formatGroupChatSummaryMarkdown() -> String {
+        var md = "### 👥 Group Chat Session: \(name)\n\n"
+        md += "| Property | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Session ID | `\(id.uuidString.prefix(8))` | Unique group identifier |\n"
+        md += "| Moderator / Host | `\(hostBot?.name ?? "Decentralized")` | Leading agent persona |\n"
+        let names = participants.map { $0.name }.joined(separator: ", ")
+        let safeNames = names.isEmpty ? "None" : names.replacingOccurrences(of: "|", with: "\\|")
+        md += "| Participants | `\(participants.count)` (\(safeNames)) | Active bots in swarm |\n"
+        md += "| Transcript Messages | `\(messages.count)` | Conversation turn history |\n"
+        md += "| Execution State | \(isGenerating ? "⚡️ Generating" : "💤 Idle") | Round-robin turn processing |\n"
+        md += "| Tool Calling | \(toolCallsEnabled ? "🟢 Enabled" : "⚪️ Disabled") | Group tool invocation permission |\n"
+        return md
+    }
+
     private func groupBotInstructions(botName: String) -> String {
         """
         You are in a collaborative group conversation.

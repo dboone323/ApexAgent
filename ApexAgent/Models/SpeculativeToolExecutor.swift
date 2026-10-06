@@ -108,4 +108,20 @@ public final class SpeculativeToolExecutor {
         pendingSpeculations.removeAll()
         cache.removeAll()
     }
+
+    // MARK: - Markdown Metrics
+
+    public func formatMetricsMarkdown() -> String {
+        var md = "### ⚡️ Speculative Tool Execution Telemetry\n\n"
+        md += "| Metric | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Speculative Cache Hits | `\(cacheHitCount)` | Queries resolved immediately from pre-execution |\n"
+        md += "| Speculative Cache Misses | `\(cacheMissCount)` | Queries requiring full synchronous execution |\n"
+        md += "| Speculation Hit Rate | `\(String(format: "%.1f%%", hitRate * 100))` | Ratio of speculative matches |\n"
+        md += "| Active In-Flight Tasks | `\(pendingSpeculations.count)` | Currently executing background speculative tasks |\n"
+        md += "| Active Cached Entries | `\(cache.count)` | Valid speculative results in memory |\n"
+        md += "| Cache TTL | `\(String(format: "%.0fs", cacheTTLSeconds))` | Cache freshness lifetime |\n"
+        return md
+    }
+
 }

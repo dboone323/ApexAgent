@@ -336,4 +336,50 @@ final class RoutineManager: Observable {
             isPinned: false
         )
     }
+
+    // MARK: - Markdown Summaries
+
+    public func exportRoutinesSummaryAsMarkdown() -> String {
+        guard !routines.isEmpty else {
+            return "No automated routines configured."
+        }
+
+        var md = "### ⏱️ Configured Automation Routines\n\n"
+        md += "| Routine Name | Enabled | Schedule / Trigger | Last Updated |\n"
+        md += "|---|---|---|---|\n"
+
+        for r in routines {
+            let enabledBadge = r.enabled ? "🟢 Enabled" : "⚪️ Disabled"
+            let triggerText = r.effectiveScheduleDescription
+            md += "| **\(r.name)** | \(enabledBadge) | `\(triggerText)` | `\(r.updatedAt)` |\n"
+        }
+        return md
+    }
+
+    public func exportRoutineRunsSummary(limit: Int = 20) -> String {
+        guard !recentRuns.isEmpty else {
+            return "No routine execution receipts recorded."
+        }
+
+        let runs = Array(recentRuns.prefix(limit))
+        var md = "### 📜 Automation Routine Run Receipts (\(runs.count) entries)\n\n"
+        md += "| Routine Name | Status | Duration (s) | Started At |\n"
+        md += "|---|---|---|---|\n"
+
+        for run in runs {
+            let statusBadge: String
+            switch run.status {
+            case .completed: statusBadge = "✅ Completed"
+            case .failed: statusBadge = "❌ Failed"
+            case .running: statusBadge = "⏳ Running"
+            case .queued: statusBadge = "📋 Queued"
+            case .cancelled: statusBadge = "⏹️ Cancelled"
+            }
+            let durationSeconds = (run.finishedAt?.timeIntervalSince(run.startedAt)) ?? 0.0
+            let durationStr = String(format: "%.2f", durationSeconds)
+            md += "| **\(run.routineName)** | \(statusBadge) | `\(durationStr)` | `\(run.startedAt)` |\n"
+        }
+        return md
+    }
+
 }

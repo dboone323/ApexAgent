@@ -732,6 +732,23 @@ public struct CollaborationPlaybook: Identifiable, Codable, Sendable, Equatable 
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode(CollaborationPlaybook.self, from: data)
     }
+
+    // MARK: - Markdown Catalog
+
+    public static func formatPlaybooksCatalogMarkdown() -> String {
+        var md = "### 📋 Multi-Agent Collaboration Playbooks (\(builtInPresets.count) built-in presets)\n\n"
+        md += "| Playbook Name | Version | Stages | Required Roles | Mode |\n"
+        md += "|---|---|---|---|---|\n"
+
+        for pb in builtInPresets {
+            let roleCount = pb.roles.count
+            let stageCount = pb.stages.count
+            let hasParallel = pb.stages.contains(where: { $0.dispatchMode == .parallel }) ? "⚡️ Parallel" : "➡️ Sequential"
+            let rolesSummary = pb.roles.map(\.title).joined(separator: ", ").replacingOccurrences(of: "|", with: "\\|")
+            md += "| **\(pb.name)** | `v\(pb.version)` | `\(stageCount)` stages | `\(roleCount)` (\(rolesSummary)) | \(hasParallel) |\n"
+        }
+        return md
+    }
 }
 
 // MARK: - Playbook Participant Assigner

@@ -3,35 +3,91 @@ import Foundation
 /// File-write rollback safety net (WS5.7).
 ///
 /// Before a destructive file operation (overwrite, delete, move), call
-/// `snapshot(path:)` to stash the current bytes at `<path>.apex-bak`. If the
-/// operation needs to be undone, `rollback(path:)` restores the stashed bytes
-/// (or recreates a deleted file). This gives the agent a per-file "undo" for
-/// its own writes without a full version-control layer.
+/// `snapshot(path:)` to stash the current bytes at `<path>.apex-bak` and into
+/// the `.apex/snapshots` directory. If the operation needs to be undone,
+/// `rollback(path:)` restores the stashed bytes (or recreates a deleted file).
+/// `rollbackLast()` undoes the most recent agent file modification.
 ///
-/// Snapshots are keyed by the canonical path so repeated edits keep the most
-/// recent pre-edit state. The `.apex-bak` sidecar is intentionally simple and
-/// local — it is not a substitute for git, just a last-resort recovery for a
-/// single agent write.
+/// Snapshots directory is automatically pruned to keep at most 50 snapshots.
+public struct FileRollbackSnapshot: Identifiable, Sendable, Codable {
+    public let id: UUID
+    public let originalPath: String
+    public let snapshotPath: String
+    public let timestamp: Date
+    public let sizeBytes: Int64
+
+    public var snapshotURL: URL {
+        URL(fileURLWithPath: snapshotPath)
+    }
+
+    public init(
+        id: UUID = UUID(),
+        originalPath: String,
+        snapshotPath: String,
+        timestamp: Date = Date(),
+        sizeBytes: Int64 = 0
+    ) {
+        self.id = id
+        self.originalPath = originalPath
+        self.snapshotPath = snapshotPath
+        self.timestamp = timestamp
+        self.sizeBytes = sizeBytes
+    }
+}
+
 public enum FileRollback {
-    /// Snapshot `path`'s current contents (if any) to `<path>.apex-bak`.
-    /// Safe to call before any write/delete/move. Returns the snapshot URL on
-    /// success, or `nil` if nothing needed snapshotting.
+    private static let maxSnapshotsToKeep = 50
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var recordedSnapshots: [FileRollbackSnapshot] = []
+
+    private static var snapshotsDirectory: URL {
+        ApexAgentStoragePaths.directory("snapshots")
+    }
+
+    /// Snapshot `path`'s current contents (if any) to `<path>.apex-bak` and to
+    /// the central snapshots archive. Safe to call before any write/delete/move.
+    /// Returns the primary snapshot URL on success, or `nil` if nothing needed snapshotting.
     @discardableResult
     public static func snapshot(path: String) -> URL? {
         let fm = FileManager.default
-        let snapshotURL = snapshotURL(for: path)
+        let sidecarURL = snapshotURL(for: path)
         let sourceURL = URL(fileURLWithPath: path)
 
         // Nothing to snapshot for a non-existent file (e.g. creating new).
         guard fm.fileExists(atPath: path) else { return nil }
 
         do {
-            // Remove any stale snapshot first so we don't append/merge.
-            if fm.fileExists(atPath: snapshotURL.path) {
-                try fm.removeItem(at: snapshotURL)
+            // Remove any stale sidecar first so we don't append/merge.
+            if fm.fileExists(atPath: sidecarURL.path) {
+                try fm.removeItem(at: sidecarURL)
             }
-            try fm.copyItem(at: sourceURL, to: snapshotURL)
-            return snapshotURL
+            try fm.copyItem(at: sourceURL, to: sidecarURL)
+
+            // Central snapshot directory storage (auto-pruned to 50 items)
+            let snapshotsDir = snapshotsDirectory
+            try? fm.createDirectory(at: snapshotsDir, withIntermediateDirectories: true)
+            
+            let filename = sourceURL.lastPathComponent
+            let timestampStr = Int(Date().timeIntervalSince1970 * 1000)
+            let archiveName = "\(filename).\(timestampStr).bak"
+            let archiveURL = snapshotsDir.appendingPathComponent(archiveName)
+            
+            try? fm.copyItem(at: sourceURL, to: archiveURL)
+            let fileSize = (try? fm.attributesOfItem(atPath: path)[.size] as? Int64) ?? 0
+
+            let record = FileRollbackSnapshot(
+                originalPath: path,
+                snapshotPath: archiveURL.path,
+                timestamp: Date(),
+                sizeBytes: fileSize
+            )
+
+            lock.lock()
+            recordedSnapshots.insert(record, at: 0)
+            pruneSnapshotsLocked(fm: fm)
+            lock.unlock()
+
+            return sidecarURL
         } catch {
             return nil
         }
@@ -41,10 +97,25 @@ public enum FileRollback {
     /// Returns `true` if a rollback was performed (file restored or recreated).
     public static func rollback(path: String) -> Bool {
         let fm = FileManager.default
-        let snapshotURL = snapshotURL(for: path)
+        let sidecarURL = snapshotURL(for: path)
         let targetURL = URL(fileURLWithPath: path)
 
-        guard fm.fileExists(atPath: snapshotURL.path) else { return false }
+        // Check sidecar first, then fallback to most recent archive snapshot
+        var sourceSnapshotURL: URL?
+        if fm.fileExists(atPath: sidecarURL.path) {
+            sourceSnapshotURL = sidecarURL
+        } else {
+            lock.lock()
+            let match = recordedSnapshots.first(where: { $0.originalPath == path })
+            lock.unlock()
+            if let match = match, fm.fileExists(atPath: match.snapshotPath) {
+                sourceSnapshotURL = match.snapshotURL
+            }
+        }
+
+        guard let snapshotURL = sourceSnapshotURL, fm.fileExists(atPath: snapshotURL.path) else {
+            return false
+        }
 
         do {
             // If the live file exists, replace it; if the op deleted it,
@@ -59,17 +130,61 @@ public enum FileRollback {
         }
     }
 
+    /// Reverts the most recently snapshot file across all tools.
+    /// Returns the restored path and success flag, or nil if no snapshots exist.
+    public static func rollbackLast() -> (path: String, success: Bool)? {
+        lock.lock()
+        let mostRecent = recordedSnapshots.first
+        lock.unlock()
+
+        guard let target = mostRecent else { return nil }
+        let success = rollback(path: target.originalPath)
+        return (path: target.originalPath, success: success)
+    }
+
+    /// List recorded snapshots, most recent first.
+    public static func recentSnapshots(limit: Int = 50) -> [FileRollbackSnapshot] {
+        lock.lock()
+        defer { lock.unlock() }
+        return Array(recordedSnapshots.prefix(limit))
+    }
+
     /// Whether a snapshot exists for `path`.
     public static func hasSnapshot(path: String) -> Bool {
-        FileManager.default.fileExists(atPath: snapshotURL(for: path).path)
+        let fm = FileManager.default
+        if fm.fileExists(atPath: snapshotURL(for: path).path) {
+            return true
+        }
+        lock.lock()
+        defer { lock.unlock() }
+        return recordedSnapshots.contains(where: { $0.originalPath == path && fm.fileExists(atPath: $0.snapshotPath) })
     }
 
     /// Discard a snapshot for `path` (e.g. after a successful confirmed op).
     public static func discard(path: String) {
         try? FileManager.default.removeItem(at: snapshotURL(for: path))
+        lock.lock()
+        recordedSnapshots.removeAll(where: { $0.originalPath == path })
+        lock.unlock()
+    }
+
+    public static func clearAllSnapshots() {
+        lock.lock()
+        recordedSnapshots.removeAll()
+        lock.unlock()
+        try? FileManager.default.removeItem(at: snapshotsDirectory)
     }
 
     private static func snapshotURL(for path: String) -> URL {
         URL(fileURLWithPath: path + ".apex-bak")
+    }
+
+    private static func pruneSnapshotsLocked(fm: FileManager) {
+        guard recordedSnapshots.count > maxSnapshotsToKeep else { return }
+        let excess = recordedSnapshots.suffix(from: maxSnapshotsToKeep)
+        for item in excess {
+            try? fm.removeItem(atPath: item.snapshotPath)
+        }
+        recordedSnapshots = Array(recordedSnapshots.prefix(maxSnapshotsToKeep))
     }
 }

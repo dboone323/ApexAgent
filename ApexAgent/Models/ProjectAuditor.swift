@@ -24,6 +24,49 @@ class ProjectAuditor {
         return cachedReports
     }
 
+    public func formatReportsAsMarkdown(_ reports: [ProjectAuditReport]) -> String {
+        guard !reports.isEmpty else {
+            return "No Xcode project reports available."
+        }
+
+        var md = "## 📊 Xcode Workspace Audit Report\n\n"
+        md += "| Project | Target | Swift | Concurrency | Files | TODOs | Broken Refs | Warnings |\n"
+        md += "|---|---|---|---|---|---|---|---|\n"
+
+        for r in reports {
+            let warnCount = r.warnings.count
+            let brokenCount = r.brokenReferences.count
+            md += "| **\(r.name)** | `\(r.deploymentTarget)` | `\(r.swiftVersion)` | `\(r.strictConcurrency)` | \(r.fileCount) | \(r.todoCount) | \(brokenCount) | \(warnCount) |\n"
+        }
+        md += "\n"
+
+        for r in reports {
+            md += "### 📦 \(r.name)\n\n"
+            md += "- **Path**: `\(r.path)`\n"
+            md += "- **Swift Version**: `\(r.swiftVersion)`\n"
+            md += "- **Strict Concurrency**: `\(r.strictConcurrency)`\n"
+            md += "- **Deployment Target**: `\(r.deploymentTarget)`\n"
+            md += "- **Swift Files**: \(r.fileCount) | **TODO/FIXME**: \(r.todoCount)\n"
+
+            if !r.brokenReferences.isEmpty {
+                md += "\n**⚠️ Broken References (\(r.brokenReferences.count))**:\n"
+                for ref in r.brokenReferences {
+                    md += "- `\(ref)`\n"
+                }
+            }
+
+            if !r.warnings.isEmpty {
+                md += "\n**⚠️ Warnings (\(r.warnings.count))**:\n"
+                for warn in r.warnings {
+                    md += "- \(warn)\n"
+                }
+            }
+            md += "\n---\n\n"
+        }
+
+        return md
+    }
+
     func runWorkspaceAudit(at path: String) async -> [ProjectAuditReport] {
         #if DEBUG
         if getenv("APEX_ENABLE_FS_WATCHER").flatMap({ String(cString: $0) }) == "1" {

@@ -171,4 +171,45 @@ final class Computer {
         isTakeoverActive = false
         activeTakeoverConversationId = nil
     }
+
+    // MARK: - Markdown Summaries
+
+    func listApplicationsMarkdown(limit: Int = 20) -> String {
+        let apps = Array(NSWorkspace.shared.runningApplications.prefix(limit))
+        guard !apps.isEmpty else {
+            return "No running applications detected."
+        }
+
+        var md = "### 🖥️ Running Applications (\(apps.count) shown)\n\n"
+        md += "| Application Name | Bundle Identifier | Process ID |\n"
+        md += "|---|---|---|\n"
+
+        for app in apps {
+            let name = app.localizedName ?? "Unknown"
+            let bundle = app.bundleIdentifier ?? "none"
+            md += "| **\(name)** | `\(bundle)` | `\(app.processIdentifier)` |\n"
+        }
+        return md
+    }
+
+    func workspaceSummaryMarkdown() -> String {
+        let ws = Computer.sharedWorkspaceURL
+        guard let files = try? FileManager.default.contentsOfDirectory(atPath: ws.path) else {
+            return "Shared workspace is empty or inaccessible at `\(ws.path)`."
+        }
+
+        var md = "### 📁 Computer Shared Workspace: `\(ws.path)`\n\n"
+        md += "| File / Subdirectory | Size / Type |\n"
+        md += "|---|---|\n"
+
+        for f in files.prefix(30) {
+            let fullPath = ws.appendingPathComponent(f).path
+            var isDir: ObjCBool = false
+            FileManager.default.fileExists(atPath: fullPath, isDirectory: &isDir)
+            let typeBadge = isDir.boolValue ? "📁 Directory" : "📄 File"
+            md += "| `\(f)` | \(typeBadge) |\n"
+        }
+        return md
+    }
+
 }

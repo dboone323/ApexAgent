@@ -166,4 +166,25 @@ public final class VirtualDisplayManager {
         guard bounds.contains(point) else { return nil }
         return CGPoint(x: point.x - bounds.origin.x, y: point.y - bounds.origin.y)
     }
+
+    // MARK: - Markdown Telemetry
+
+    public func formatDisplayStatusMarkdown() -> String {
+        guard !activeDisplays.isEmpty else {
+            return "No active display devices detected."
+        }
+
+        var md = "### 🖥️ Virtual Display & Off-Screen Window Subsystem (\(activeDisplays.count) displays)\n\n"
+        md += "| Display ID | Primary | Resolution (Bounds) | Backing Scale |\n"
+        md += "|---|---|---|---|\n"
+
+        for d in activeDisplays {
+            let primaryStr = d.isMain ? "⭐ Yes" : "No"
+            let resStr = "\(Int(d.bounds.width))x\(Int(d.bounds.height))"
+            let scaleStr = String(format: "%.1fx", d.scaleFactor)
+            md += "| `\(d.id)` | \(primaryStr) | `\(resStr)` | `\(scaleStr)` |\n"
+        }
+        return md
+    }
+
 }

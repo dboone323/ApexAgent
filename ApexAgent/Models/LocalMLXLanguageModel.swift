@@ -45,6 +45,19 @@ public struct LocalMLXLanguageModel: LanguageModel {
             return false
         }
     }
+
+    // MARK: - Markdown Telemetry
+
+    public func formatMLXModelConfigurationMarkdown() -> String {
+        var md = "### 🧠 Local MLX-LM Model Engine Telemetry\n\n"
+        md += "| Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Host Endpoint | `\(hostURL.absoluteString)` | Local HTTP inference server |\n"
+        md += "| Capabilities | Tool Calling, Reasoning | Native FoundationModels extensions |\n"
+        md += "| Wire Protocol | OpenAI v1/chat/completions (SSE) | Standard streaming format |\n"
+        md += "| Default Port | `8080` | MLX Community standard port |\n"
+        return md
+    }
 }
 
 public struct LocalMLXLanguageModelExecutor: LanguageModelExecutor, DynamicToolRouting {

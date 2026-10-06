@@ -791,4 +791,32 @@ final class PlaybookRunner: Identifiable {
             metadata: metadata
         ))
     }
+
+    // MARK: - Markdown Report Generation
+
+    nonisolated static func formatExecutionReportMarkdown(_ report: PlaybookExecutionReport) -> String {
+        var md = "### 📜 Multi-Agent Collaboration Report: \(report.playbookName)\n\n"
+        md += "| Metric | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Status | \(report.isSuccessful ? "🟢 Success" : "🔴 Failed") | Playbook outcome |\n"
+        md += "| Execution Mode | `\(report.executionMode.rawValue)` | Live vs. simulated session |\n"
+        md += "| Total Duration | `\(String(format: "%.2fs", report.totalDuration))` | Wall clock execution time |\n"
+        md += "| Stages Executed | `\(report.stageResults.count)` | Completed stages |\n"
+        md += "| Peer Delegations | `\(report.delegationEvents.count)` | Inter-bot delegations |\n"
+        md += "| Approval Gates | `\(report.approvalCards.count)` | Human-in-the-loop checkpoints |\n\n"
+
+        if !report.stageResults.isEmpty {
+            md += "#### 🏁 Stage Summary Breakdown\n\n"
+            md += "| Stage | Dispatch | Duration | Status | Bot Participants |\n"
+            md += "|---|---|---|---|---|\n"
+            for st in report.stageResults {
+                let bots = st.botResults.map(\.botName).joined(separator: ", ")
+                let safeBots = bots.isEmpty ? "None" : bots.replacingOccurrences(of: "|", with: "\\|")
+                let safeName = st.stageName.replacingOccurrences(of: "|", with: "\\|")
+                md += "| **\(safeName)** | `\(st.dispatchMode.rawValue)` | `\(String(format: "%.2fs", st.duration))` | `\(st.status.rawValue)` | \(safeBots) |\n"
+            }
+        }
+        return md
+    }
+
 }
