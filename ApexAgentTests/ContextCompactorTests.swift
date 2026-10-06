@@ -2,17 +2,11 @@ import Testing
 import Foundation
 @testable import ApexAgentCore
 
-@Suite("HardeningLoopBatch18Tests")
-struct HardeningLoopBatch18Tests {
-    @Test func testSnapshotMarkdown() {
-        let s = FileRollbackSnapshot(originalPath: "/tmp/a.txt", snapshotPath: "/tmp/a.bak", sizeBytes: 42)
-        #expect(s.isNonEmpty)
-        #expect(s.formatAsMarkdown().contains("a.txt"))
-        let empty = FileRollbackSnapshot(originalPath: "/x", snapshotPath: "/y", sizeBytes: 0)
-        #expect(!empty.isNonEmpty)
-    }
+// MARK: - Context compaction reporting, budget health & input validation
 
-    @Test func testCompactionMarkdown() {
+@Suite("ContextCompactorTests")
+struct ContextCompactorTests {
+    @Test func compactionMarkdown() {
         let r = CompactionResult(compactedMessages: [("user", "hi")], summarizedTurnCount: 3, approximateTokensSaved: 500, summary: "digest")
         #expect(r.savedAnything)
         #expect(r.formatAsMarkdown().contains("3 turns"))
@@ -20,7 +14,7 @@ struct HardeningLoopBatch18Tests {
         #expect(!none.savedAnything)
     }
 
-    @Test func testBudgetHealth() {
+    @Test func budgetHealth() {
         let ok = ContextBudgetBreakdown(systemPromptTokens: 10, userTokens: 10, assistantTokens: 10, totalEstimatedTokens: 30, budgetLimit: 1000)
         #expect(ok.healthBadge.contains("Healthy"))
         #expect(ok.formatHealthMarkdown().contains("30"))
@@ -29,7 +23,7 @@ struct HardeningLoopBatch18Tests {
         #expect(over.healthBadge.contains("Over Budget"))
     }
 
-    @Test func testCompactionInputValidation() {
+    @Test func compactionInputValidation() {
         let ok = CompactionInput(messages: [("user", "hi")], maxTokenBudget: 4000, pinnedSystemPrompt: "sys", recentTurnsToPreserve: 2)
         #expect(ok.isValid)
         let bad = CompactionInput(messages: [], maxTokenBudget: -1, pinnedSystemPrompt: "", recentTurnsToPreserve: -1)

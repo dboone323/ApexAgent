@@ -164,3 +164,43 @@ public actor ContextCompactor {
     }
 
 }
+
+extension CompactionResult {
+    public func formatAsMarkdown() -> String {
+        var md = "### 🗜️ Context Compaction: \(summarizedTurnCount) turns summarized\n\n"
+        md += "| Metric | Value |\n"
+        md += "|---|---|\n"
+        md += "| Turns Summarized | `\(summarizedTurnCount)` |\n"
+        md += "| Tokens Saved | `\(approximateTokensSaved)` |\n"
+        md += "| Kept Messages | `\(compactedMessages.count)` |\n"
+        if !summary.isEmpty {
+            md += "| Summary | \(String(summary.prefix(250)).replacingOccurrences(of: "|", with: "\\|")) |\n"
+        }
+        return md
+    }
+
+    public var savedAnything: Bool { approximateTokensSaved > 0 }
+}
+
+extension ContextBudgetBreakdown {
+    public var healthBadge: String {
+        if isExceeded { return "🔴 Over Budget" }
+        if utilizationPercentage > 85 { return "🟡 Near Limit" }
+        return "🟢 Healthy"
+    }
+
+    public func formatHealthMarkdown() -> String {
+        "| Budget | `\(totalEstimatedTokens)` / `\(budgetLimit)` | \(healthBadge) (`\(String(format: "%.1f%%", utilizationPercentage))`) |"
+    }
+}
+
+extension CompactionInput {
+    public func validationError() -> String? {
+        if maxTokenBudget <= 0 { return "maxTokenBudget must be positive." }
+        if recentTurnsToPreserve < 0 { return "recentTurnsToPreserve cannot be negative." }
+        if messages.isEmpty { return "No messages to compact." }
+        return nil
+    }
+
+    public var isValid: Bool { validationError() == nil }
+}

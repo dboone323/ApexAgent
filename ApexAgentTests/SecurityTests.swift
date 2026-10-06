@@ -1462,3 +1462,16 @@ struct KeychainAuditFormattingTests {
         #expect(entry.formatAsMarkdown().contains("svc"))
     }
 }
+
+// MARK: - Rollback snapshot reporting
+
+@Suite("FileRollbackReportingTests")
+struct FileRollbackReportingTests {
+    @Test func snapshotMarkdown() {
+        let s = FileRollbackSnapshot(originalPath: "/tmp/a.txt", snapshotPath: "/tmp/a.bak", sizeBytes: 42)
+        #expect(s.isNonEmpty)
+        #expect(s.formatAsMarkdown().contains("a.txt"))
+        let empty = FileRollbackSnapshot(originalPath: "/x", snapshotPath: "/y", sizeBytes: 0)
+        #expect(!empty.isNonEmpty)
+    }
+}

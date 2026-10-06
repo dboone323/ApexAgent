@@ -188,3 +188,18 @@ public enum FileRollback {
         recordedSnapshots = Array(recordedSnapshots.prefix(maxSnapshotsToKeep))
     }
 }
+
+extension FileRollbackSnapshot {
+    public func formatAsMarkdown() -> String {
+        var md = "### 🗂️ Rollback Snapshot `\(originalPath)`\n\n"
+        md += "| Field | Value |\n"
+        md += "|---|---|\n"
+        md += "| Original | `\(originalPath)` |\n"
+        md += "| Snapshot | `\(snapshotPath)` |\n"
+        md += "| Taken | `\(timestamp)` |\n"
+        md += "| Size | `\(sizeBytes)` bytes |\n"
+        return md
+    }
+
+    public var isNonEmpty: Bool { sizeBytes > 0 }
+}
