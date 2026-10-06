@@ -4,7 +4,7 @@ import FoundationModels
 import SwiftData
 import Observation
 
-// MARK: - BotProfile: A persistent, named AI teammate (Grok Bot-style)
+// MARK: - BotProfile: A persistent, named AI teammate
 
 /// A Bot is a durable AI teammate with a name, a job, its own conversation,
 /// and working context that develops over time. Bots share the local computer
@@ -31,7 +31,7 @@ final class BotProfile {
     var lastActiveAt: Date
 
     /// When true, this Bot's instructions include a live roster of its team
-    /// (Grok-style "chief of staff") so it can coordinate specialists.
+    /// ("chief of staff") so it can coordinate specialists.
     var isChiefOfStaff: Bool = false
 
     /// Per-bot model provider override. When nil, the bot uses the global

@@ -104,7 +104,7 @@ struct ListReviewSessionsTool: Tool {
                     return "ERROR: Database context not available."
                 }
                 
-                var descriptor = FetchDescriptor<ReviewSession>(sortBy: [SortDescriptor(\ReviewSession.createdAt, order: .reverse)])
+                let descriptor = FetchDescriptor<ReviewSession>(sortBy: [SortDescriptor(\ReviewSession.createdAt, order: .reverse)])
                 guard var sessions = try? context.fetch(descriptor) else {
                     return "ERROR: Failed to fetch review sessions."
                 }

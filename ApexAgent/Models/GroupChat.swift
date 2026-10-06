@@ -545,3 +545,17 @@ extension DefaultGroupToolAllowlist {
         set.contains(tool)
     }
 }
+
+extension GroupChatSession {
+    /// Turn-progress snapshot without starting or mutating generation.
+    public func turnProgressMarkdown() -> String {
+        let total = generationOrder.count
+        var md = "### 👥 Group Chat `\(name)`: \(currentTurnIndex)/\(total) turns\n\n"
+        md += "| Field | Value |\n"
+        md += "|---|---|\n"
+        md += "| Participants | `\(participants.count)` |\n"
+        md += "| Generating | \(isGenerating ? "⚡️ Active" : "💤 Idle") |\n"
+        md += "| Tool Calls | \(toolCallsEnabled ? "🟢 Enabled" : "⚪️ Disabled") (`\(toolExecutionLog.count)` logged) |\n"
+        return md
+    }
+}

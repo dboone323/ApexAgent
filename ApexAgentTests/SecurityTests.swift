@@ -289,14 +289,16 @@ struct SecurityTests {
         session.cleanup()
     }
 
-    @Test func testAgentRegistryNotificationEmission() async {
+    @Test @MainActor func testAgentRegistryNotificationEmission() async {
         var didReceiveNotification = false
         let observer = NotificationCenter.default.addObserver(
             forName: .agentRegistryUpdated,
             object: nil,
             queue: .main
         ) { _ in
-            didReceiveNotification = true
+            MainActor.assumeIsolated {
+                didReceiveNotification = true
+            }
         }
         defer { NotificationCenter.default.removeObserver(observer) }
 

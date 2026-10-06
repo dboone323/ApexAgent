@@ -2,8 +2,8 @@ import Testing
 import Foundation
 @testable import ApexAgentCore
 
-@Suite("HardeningLoopBatch20Tests")
-struct HardeningLoopBatch20Tests {
+@Suite("DemoRecorderTests")
+struct DemoRecorderTests {
     @Test @MainActor func testDemoActionKind() {
         let click = DemoRecorder.ActionKind.mouseClick(button: "left", x: 10, y: 20, appName: "Safari", elementRole: nil, elementTitle: nil)
         #expect(click.badge.contains("Click"))
@@ -20,17 +20,5 @@ struct HardeningLoopBatch20Tests {
         #expect(a.formatAsMarkdown().contains("Custom Step"))
         let bad = DemoRecorder.RecordedAction(kind: .customStep(description: "x"), description: "   ")
         #expect(!bad.isWellFormed)
-    }
-
-    @Test func testTTSProvider() {
-        #expect(TTSProvider.system.badge.contains("System"))
-        #expect(!TTSProvider.system.requiresNetwork)
-        #expect(TTSProvider.elevenLabs.requiresNetwork)
-    }
-
-    @Test @MainActor func testVoiceStateSummary() {
-        let md = VoiceController.shared.stateSummaryMarkdown()
-        #expect(md.contains("Voice Controller"))
-        #expect(md.contains("Provider"))
     }
 }

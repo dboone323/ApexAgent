@@ -19,7 +19,7 @@ final class RoutinesAndSkillsUITests: XCTestCase {
         _ = fresh.wait(for: .runningForeground, timeout: 10)
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         if let app {
             app.terminate()
             _ = app.wait(for: .notRunning, timeout: 5)
@@ -29,7 +29,7 @@ final class RoutinesAndSkillsUITests: XCTestCase {
     func testSettingsSheetRoutinesAndSkillsNavigation() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Open Settings Sheet") { _ in
+        UITestActivity.step("1. Open Settings Sheet") { _ in
             let settingsBtn = app.buttons["settingsButton"].firstMatch
             XCTAssertTrue(settingsBtn.waitForExistence(timeout: 5), "Settings button must exist")
             settingsBtn.click()
@@ -38,7 +38,7 @@ final class RoutinesAndSkillsUITests: XCTestCase {
             XCTAssertTrue(settingsForm.waitForExistence(timeout: 10), "Settings form must be presented")
         }
 
-        try UITestActivity.step("2. Inspect Settings Form Elements and Dismiss") { _ in
+        UITestActivity.step("2. Inspect Settings Form Elements and Dismiss") { _ in
             let doneBtn = app.buttons["settingsDoneButton"].firstMatch
             XCTAssertTrue(doneBtn.waitForExistence(timeout: 5), "settingsDoneButton must exist on Settings sheet")
             doneBtn.click()
@@ -50,7 +50,7 @@ final class RoutinesAndSkillsUITests: XCTestCase {
     func testTerminalPanelInteractiveToggle() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Open Terminal Panel") { _ in
+        UITestActivity.step("1. Open Terminal Panel") { _ in
             let terminalBtn = app.buttons["toggleTerminalButton"].firstMatch
             XCTAssertTrue(terminalBtn.waitForExistence(timeout: 5), "toggleTerminalButton must exist")
             let terminalView = app.descendants(matching: .any)["terminalView"].firstMatch
@@ -68,7 +68,7 @@ final class RoutinesAndSkillsUITests: XCTestCase {
     func testNewConversationButtonClearsInputAndState() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Type input and click New Conversation button") { _ in
+        UITestActivity.step("1. Type input and click New Conversation button") { _ in
             let input = app.textViews["chatInputField"].firstMatch
             XCTAssertTrue(input.waitForExistence(timeout: 5), "Chat input must exist")
             input.click()

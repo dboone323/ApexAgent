@@ -98,7 +98,7 @@ public struct CompanionLiveActivityState: Codable, Sendable, Equatable {
     }
 }
 
-// MARK: - Typed Message Frames & Sensor Payloads (OpenClaw Node Protocol)
+// MARK: - Typed Message Frames & Sensor Payloads
 
 public enum CompanionMessageType: String, Codable, Sendable {
     case hello = "client_hello"

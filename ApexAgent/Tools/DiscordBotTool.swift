@@ -8,7 +8,7 @@ import FoundationModels
 // UserDefaults key "apex.discordBotToken".
 //
 // Bot identity: @ApexAgent (ID: 1537957778998431775).
-// Mirrors the patterns used by Hermes/OpenClaw Discord adapters
+// Follows common Discord bot adapter patterns
 // (Authorization: Bot *** REST API calls to Discord).
 
 struct DiscordBotTool: Tool {

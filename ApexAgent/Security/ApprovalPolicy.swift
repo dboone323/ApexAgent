@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - ApprovalPolicy: auto-approve verdicts for the confirmation gate (O3, port of OpenMausBot auto-approve.ts)
+// MARK: - ApprovalPolicy: auto-approve verdicts for the confirmation gate
 //
 // Two ways in — the bot is in auto mode, or the user pressed "Always allow"
 // for one specific tool — and one way out: anything that reads as destructive
@@ -82,7 +82,7 @@ struct ApprovalVerdict: Equatable, Sendable {
 /// Command-running tools whose "always allow" grant is narrowed to a specific
 /// program, so remembering `run_shell_command` grants `run_shell_command:git`,
 /// never a permanent unattended shell. Includes both ApexAgent's native shell
-/// tool name and generic/OpenMausBot-style aliases.
+/// tool name and generic aliases.
 private let commandTools: Set<String> = [
     "run_shell_command", "bash", "shell", "execute", "run_command",
     "computer_exec", "terminal",

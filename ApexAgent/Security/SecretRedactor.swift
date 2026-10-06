@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - SecretRedactor: keep secrets out of transcripts, audit logs, and UI (O2, port of OpenMausBot redact.ts)
+// MARK: - SecretRedactor: keep secrets out of transcripts, audit logs, and UI
 //
 // ApexAgent logs tool arguments and assistant text to transcripts, the audit
 // log, and (soon) the decision log. Those artifacts are read by people

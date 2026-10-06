@@ -3,7 +3,7 @@ import AppKit
 import ApplicationServices
 import Observation
 
-// MARK: - DemoRecorder: Teach-a-Task Demonstration Recording Engine (Grok Bot F2 / WS2)
+// MARK: - DemoRecorder: Teach-a-Task Demonstration Recording Engine
 //
 // Allows users to demonstrate a workflow once (mouse clicks, keystrokes, application switches).
 // DemoRecorder captures system interactions and synthesizes them into automated Routines
@@ -300,4 +300,34 @@ public final class DemoRecorder {
         return md
     }
 
+}
+
+extension DemoRecorder.ActionKind {
+    public var badge: String {
+        switch self {
+        case .mouseClick: return "🖱️ Click"
+        case .keyStroke: return "⌨️ Keystroke"
+        case .appSwitch: return "🔄 App Switch"
+        case .customStep: return "📝 Custom Step"
+        }
+    }
+
+    public var appName: String {
+        switch self {
+        case .mouseClick(_, _, _, let app, _, _): return app
+        case .keyStroke(_, _, let app): return app
+        case .appSwitch(let app, _): return app
+        case .customStep: return ""
+        }
+    }
+}
+
+extension DemoRecorder.RecordedAction {
+    public func formatAsMarkdown() -> String {
+        "| `\(timestamp)` | \(kind.badge) | \(String(description.prefix(160)).replacingOccurrences(of: "|", with: "\\|")) |"
+    }
+
+    public var isWellFormed: Bool {
+        !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 }

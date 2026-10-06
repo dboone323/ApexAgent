@@ -18,7 +18,7 @@ final class LiveAgentTriageTests: XCTestCase {
         sleep(1)
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         if let app {
             app.terminate()
             _ = app.wait(for: .notRunning, timeout: 5)

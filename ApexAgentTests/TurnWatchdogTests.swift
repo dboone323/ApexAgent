@@ -24,3 +24,76 @@ struct TurnWatchdogGuardTests {
         #expect(ok.validationError() == nil)
     }
 }
+
+@Suite("TurnWatchdogTests")
+struct TurnWatchdogTests {
+
+    @Test func stallFiresOnStallExactlyOnce() {
+        var time = 0.0
+        var stalled: [WatchedTurn] = []
+        let watchdog = TurnWatchdog(options: .init(
+            stallMs: 1_000, checkMs: 500,
+            onStall: { stalled.append($0) },
+            now: { time }
+        ))
+        watchdog.watch(threadId: "t", botId: "b")
+        watchdog.touch(threadId: "t")
+        watchdog.sweep()
+        #expect(stalled.isEmpty) // fresh
+
+        time = 2_000
+        watchdog.sweep()
+        #expect(stalled.count == 1)
+        #expect(stalled[0].threadId == "t")
+
+        watchdog.sweep() // removed → no double fire
+        #expect(stalled.count == 1)
+        #expect(!watchdog.isWatching(threadId: "t"))
+    }
+
+    @Test func touchResetsTheClock() {
+        var time = 0.0
+        var stalled: [WatchedTurn] = []
+        let watchdog = TurnWatchdog(options: .init(
+            stallMs: 1_000, checkMs: 500,
+            onStall: { stalled.append($0) },
+            now: { time }
+        ))
+        watchdog.watch(threadId: "t", botId: "b")
+        time = 900
+        watchdog.touch(threadId: "t")
+        time = 1_000
+        watchdog.sweep()
+        #expect(stalled.isEmpty) // activity restarted the clock
+    }
+
+    @Test func waitingOnHumanIsExempt() {
+        var time = 0.0
+        var stalled: [WatchedTurn] = []
+        let watchdog = TurnWatchdog(options: .init(
+            stallMs: 1_000, checkMs: 500,
+            onStall: { stalled.append($0) },
+            now: { time }
+        ))
+        watchdog.watch(threadId: "t", botId: "b")
+        watchdog.setWaitingOnHuman(threadId: "t", waiting: true)
+        time = 10_000
+        watchdog.sweep()
+        #expect(stalled.isEmpty)
+        #expect(watchdog.isWatching(threadId: "t"))
+    }
+
+    @Test func settleStopsWatching() {
+        var time = 0.0
+        let watchdog = TurnWatchdog(options: .init(
+            stallMs: 1_000, checkMs: 500,
+            onStall: { _ in },
+            now: { time }
+        ))
+        watchdog.watch(threadId: "t", botId: "b")
+        watchdog.settle(threadId: "t")
+        time = 2_000
+        watchdog.sweep()
+        #expect(!watchdog.isWatching(threadId: "t"))
+    }
+}

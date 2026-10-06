@@ -6,7 +6,7 @@ import Vision
 // MARK: - RecordedStep: one discrete action captured during a demo
 
 /// A single step a user performed while "showing a Bot how it's done" (the
-/// Grok Bot teach-a-task flow). Discrete and replayable: `action` is the kind
+/// the agent teach-a-task flow). Discrete and replayable: `action` is the kind
 /// of step (`open_app`, `shell`, `applescript`, `note`), `detail` is the payload
 /// (app name, command, script text, or a free-form note), and `occurredAt`
 /// lets the recorder preserve ordering even across rapid captures.
@@ -69,7 +69,7 @@ enum RecipeRenderer {
 // MARK: - RoutineRecorder: the teach-a-task / watch-and-learn service
 
 /// The runtime object that watches the user do a job once and turns it into a
-/// reusable `Routine` (Grok Bot's "Show a Bot how it's done"). It is a native
+/// reusable `Routine` ("Show a Bot how it's done"). It is a native
 /// Swift observer: it subscribes to frontmost-app activation changes and also
 /// accepts discrete `capture` hooks from the tool layer, so a demo can be
 /// recorded either by watching the user or by the agent logging its own steps.

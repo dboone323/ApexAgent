@@ -18,10 +18,8 @@ final class SpaceRoutingMatrixTests: XCTestCase {
             BotProfile.self, SpaceModel.self, SpaceParticipant.self,
             SpaceChannel.self, SpaceMessage.self, SpacePage.self
         ])
-        let container = try ModelContainer(
-            for: schema,
-            configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)]
-        )
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: [config])
         let context = ModelContext(container)
         let orchestrator = AgentOrchestrator()
         let botManager = BotManager(orchestrator: orchestrator, computer: Computer())

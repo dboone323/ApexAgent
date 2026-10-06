@@ -41,7 +41,7 @@ struct ScreenshotTool: Tool {
             // that defaults to false and is never set to true by the OS after a grant.
             // CGPreflightScreenCaptureAccess() is the same probe DiagnosticManager uses.
             guard CGPreflightScreenCaptureAccess() else {
-                return "ERROR: Screen Recording is not permitted by macOS. Enable it in System Settings → Privacy & Security → Screen Recording, grant access to Apex Agent / Hermes, then retry."
+                return "ERROR: Screen Recording is not permitted by macOS. Enable it in System Settings → Privacy & Security → Screen Recording, grant access to Apex Agent, then retry."
             }
 
             let isDesktopAllowed = DispatchQueue.main.sync {

@@ -73,7 +73,7 @@ actor AgentAuditLog {
     }
 
     /// Append an authorization DECISION row: which tool call was allowed or
-    /// denied, by which rule, from which source (O6, port of OpenMausBot
+    /// denied, by which rule, from which source (O6, port of bot runtime
     /// decision-log.ts). Arguments are redacted through SecretRedactor first —
     /// summaries carry whatever the agent typed, credentials included.
     func recordDecision(

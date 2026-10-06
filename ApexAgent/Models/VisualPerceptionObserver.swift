@@ -168,8 +168,8 @@ public final class VisualPerceptionObserver: ObservableObject {
                 }
             }
 
-            request.recognitionLevel = .accurate
-            request.usesLanguageCorrection = true
+            request.recognitionLevel = .fast
+            request.usesLanguageCorrection = false
 
             let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
             do {

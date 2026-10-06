@@ -19,7 +19,7 @@ final class PlaybooksAndApprovalUITests: XCTestCase {
         _ = fresh.wait(for: .runningForeground, timeout: 10)
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         if let app {
             app.terminate()
             _ = app.wait(for: .notRunning, timeout: 5)
@@ -29,7 +29,7 @@ final class PlaybooksAndApprovalUITests: XCTestCase {
     func testPlanDashboardToggleLifecycle() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Toggle Plan Dashboard On and Off") { _ in
+        UITestActivity.step("1. Toggle Plan Dashboard On and Off") { _ in
             let planToggle = app.buttons["togglePlanDashboardButton"].firstMatch
             XCTAssertTrue(planToggle.waitForExistence(timeout: 5), "togglePlanDashboardButton must exist in toolbar")
 
@@ -49,7 +49,7 @@ final class PlaybooksAndApprovalUITests: XCTestCase {
     func testToolActivityViewToggleAndClear() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Toggle Activity Log View") { _ in
+        UITestActivity.step("1. Toggle Activity Log View") { _ in
             let activityToggle = app.buttons["toggleActivityLogButton"].firstMatch
             XCTAssertTrue(activityToggle.waitForExistence(timeout: 5), "toggleActivityLogButton must exist in toolbar")
 
@@ -67,7 +67,7 @@ final class PlaybooksAndApprovalUITests: XCTestCase {
             }
         }
 
-        try UITestActivity.step("2. Test Clear Activity Log button") { _ in
+        UITestActivity.step("2. Test Clear Activity Log button") { _ in
             let clearBtn = app.buttons["clearActivityLogButton"].firstMatch
             XCTAssertTrue(clearBtn.waitForExistence(timeout: 5), "clearActivityLogButton must exist in toolActivityView")
             clearBtn.click()
@@ -79,7 +79,7 @@ final class PlaybooksAndApprovalUITests: XCTestCase {
     func testHighRiskConfirmationApprovalGating() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Check confirmation overlay gating") { _ in
+        UITestActivity.step("1. Check confirmation overlay gating") { _ in
             let approveBtn = app.buttons["confirmationApprove"].firstMatch
             let denyBtn = app.buttons["confirmationDeny"].firstMatch
 

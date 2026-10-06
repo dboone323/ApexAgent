@@ -76,7 +76,7 @@ final class CreationSheetsTests {
     @Test func testRoutineCronScheduleValidation() {
         let validSheet1 = CreateRoutineSheet(cronExpression: "*/15 * * * *")
         #expect(validSheet1.isCronValid)
-        #expect(validSheet1.cronDescription.contains("Cron:"))
+        #expect(validSheet1.cronDescription == "Every 15 minutes")
 
         let validSheet2 = CreateRoutineSheet(cronExpression: "0 0 1 1 *")
         #expect(validSheet2.isCronValid)

@@ -1498,7 +1498,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     // MARK: - Auto-approve policy (O3/O6 wiring)
     //
     /// When true, tool calls that survive the destructive/sensitive guards are
-    /// approved without showing the human a card (Grok Bot-style auto mode).
+    /// approved without showing the human a card (auto-approve mode).
     public var autoApproveToolCalls: Bool = false
     /// Remembered "Always allow" grant keys (narrowed per-program for shell
     /// tools by `ApprovalPolicy.approvalKey`).

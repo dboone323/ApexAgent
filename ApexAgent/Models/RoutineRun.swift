@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-// MARK: - RoutineRun: a receipt for one execution of a Routine (O5, port of OpenMausBot routines.ts run receipts)
+// MARK: - RoutineRun: a receipt for one execution of a Routine
 //
 // RoutineManager.execute() is fire-and-forget today. A run receipt snapshots
 // the work so an edited/deleted definition cannot rewrite history, and lets

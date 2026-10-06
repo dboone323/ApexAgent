@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Companion Camera & Hardware Sensor Node (OpenClaw Style)
+// MARK: - Companion Camera & Hardware Sensor Node
 
 public struct CompanionCameraSensor: Sendable {
     public init() {}

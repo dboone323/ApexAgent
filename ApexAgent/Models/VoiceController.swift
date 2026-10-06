@@ -321,3 +321,33 @@ final class VoiceController: NSObject, SFSpeechRecognizerDelegate, AVSpeechSynth
     }
 
 }
+
+extension TTSProvider {
+    public var badge: String {
+        switch self {
+        case .system: return "🔊 System TTS"
+        case .elevenLabs: return "🎙️ ElevenLabs"
+        }
+    }
+
+    public var requiresNetwork: Bool {
+        switch self {
+        case .system: return false
+        case .elevenLabs: return true
+        }
+    }
+}
+
+extension VoiceController {
+    /// Snapshot summary that never touches the audio engine.
+    public func stateSummaryMarkdown() -> String {
+        var md = "### 🎙️ Voice Controller State\n\n"
+        md += "| Field | Value |\n"
+        md += "|---|---|\n"
+        md += "| Recording | \(isRecording ? "🔴 Active" : "⚪️ Idle") |\n"
+        md += "| Speaking | \(isSpeaking ? "🔊 Active" : "⚪️ Idle") |\n"
+        md += "| Provider | \(selectedProvider.badge) |\n"
+        md += "| Permission | \(permissionGranted ? "✅ Granted" : "⚪️ Not Granted") |\n"
+        return md
+    }
+}

@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - ChiefOfStaff: roster-aware commander prompt (O7, port of OpenMausBot chief-of-staff.ts)
+// MARK: - ChiefOfStaff: roster-aware commander prompt
 //
 // The roster is interpolated into a TRUSTED bot's system prompt on every turn,
 // and its inputs (name/title/description) are user-editable — and via team

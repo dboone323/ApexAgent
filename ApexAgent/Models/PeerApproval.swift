@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - PeerApproval: harness-native bot-to-bot contact gate (O9, port of OpenMausBot peer-approval.ts + peer-approval-key.ts)
+// MARK: - PeerApproval: harness-native bot-to-bot contact gate
 //
 // A bot without an existing grant may not contact or delegate to another bot
 // until a human approves that specific pair+action. The approval is a pending

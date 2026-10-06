@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - RepeatDetector: notice a bot going in circles (O1, port of OpenMausBot repeat-detector.ts)
+// MARK: - RepeatDetector: notice a bot going in circles
 //
 // The same tool call, the same arguments, again and again in one turn is a
 // loop — wasted tokens and, for state-changing tools, wasted actions. This

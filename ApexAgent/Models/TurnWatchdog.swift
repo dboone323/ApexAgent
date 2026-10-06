@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - TurnWatchdog: activity-based stall detection (O4, port of OpenMausBot turn-watchdog.ts)
+// MARK: - TurnWatchdog: activity-based stall detection
 //
 // A wedged provider (hung network call, dead MCP child, a model that stops
 // streaming without exiting) would otherwise leave a bot "busy" forever —

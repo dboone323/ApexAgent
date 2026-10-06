@@ -4,7 +4,7 @@ import FoundationModels
 import AppKit
 @testable import ApexAgentCore
 
-// MARK: - P-WS1: Bot / GroupChat / Routine / Skill layer tests (Grok Bot parity)
+// MARK: - P-WS1: Bot / GroupChat / Routine / Skill layer tests
 //
 // These are the missing unit tests for the multi-bot "teammate" layer that
 // BotLayer introduced. They are headless and fast: they exercise only the

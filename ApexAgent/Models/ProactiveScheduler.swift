@@ -3,7 +3,7 @@ import Observation
 import UserNotifications
 import AppKit
 
-// MARK: - ProactiveScheduler: Autonomous Bot Proactivity Engine (Grok Bot F4 / WS5)
+// MARK: - ProactiveScheduler: Autonomous Bot Proactivity Engine
 //
 // Automatically scans running operations for stalled delegations, pending confirmations
 // approaching timeout, unhandled bot attention flags, and failed recurring routines.

@@ -6,7 +6,7 @@ import Network
 // Translates raw TCP bytes into `WebhookDelivery`, delegates every decision to
 // the pure `WebhookRouter`, and writes the status back as JSON. Binds
 // localhost only (capability URLs are local-first; expose via a relay or
-// Tailscale Funnel if you need public delivery, mirroring OpenMausBot's
+// Tailscale Funnel if you need public delivery, as a conventional
 // guidance). HTTP handling is deliberately minimal: request line + headers,
 // read exactly Content-Length body bytes, answer once, close.
 

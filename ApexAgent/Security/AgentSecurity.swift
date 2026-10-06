@@ -62,6 +62,10 @@ enum AgentSecurity {
         "network_diagnostics": .medium,
         "query_logs": .medium,
         "watch_paths": .medium,
+        "rollback_file": .medium,
+        "delete_memory": .medium,
+        "export_review_session": .low,
+        "verify_execution": .medium,
 
         // ── High: destructive, code-executing, or externally visible ─────
         "run_shell_command": .high,

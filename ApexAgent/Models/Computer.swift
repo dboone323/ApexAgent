@@ -5,7 +5,7 @@ import SharedKit
 
 // MARK: - Computer: The local Mac as the shared execution environment
 
-/// The "computer" abstraction — in Grok Bot this is a persistent cloud VM with
+/// The "computer" abstraction — here this is a persistent cloud VM with
 /// browser, filesystem, and terminal. In ApexAgent v1, the computer is the
 /// local Mac itself. All Bots share it; each Bot gets its own screen (chat
 /// session) on that computer.
@@ -16,7 +16,7 @@ import SharedKit
 @MainActor
 final class Computer {
     /// The shared workspace directory where Bots can persist project files.
-    /// Resembles Grok Bot's `/workspace` on the cloud VM.
+    /// Resembles the agent's `/workspace` on the cloud VM.
     static var sharedWorkspaceURL: URL {
         let ws = ApexAgentStoragePaths.directory("computer-workspace")
         try? FileManager.default.createDirectory(at: ws, withIntermediateDirectories: true)
@@ -129,7 +129,7 @@ final class Computer {
     // MARK: - Terminal Interface
 
     /// Runs a shell command on the local Mac.
-    /// This is the Computer's terminal — in Grok Bot this runs on the cloud VM.
+    /// This is the Computer's terminal — here this runs on the cloud VM.
     func runShellCommand(_ command: String, workspace: String? = nil) -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")

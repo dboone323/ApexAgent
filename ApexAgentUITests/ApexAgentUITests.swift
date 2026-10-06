@@ -61,7 +61,7 @@ final class ApexAgentUITests: XCTestCase {
         }
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         if let app {
             if testRun?.hasSucceeded == false {
                 UITestActivity.attachScreenshot(of: app.windows.firstMatch, named: "Failure_Screenshot")

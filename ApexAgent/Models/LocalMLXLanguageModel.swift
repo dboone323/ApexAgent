@@ -75,7 +75,7 @@ public struct LocalMLXLanguageModelExecutor: LanguageModelExecutor, DynamicToolR
 
     public func prewarm(model: LocalMLXLanguageModel, transcript: Transcript) {}
 
-    private func getOpenAITools(for names: [String]) async -> [[String: Any]] {
+    private func getChatCompletionTools(for names: [String]) async -> [[String: Any]] {
         let data = await getParsedSchemasJSONData()
         guard let schemas = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
             return []
@@ -165,7 +165,7 @@ public struct LocalMLXLanguageModelExecutor: LanguageModelExecutor, DynamicToolR
             ]
             if request.generationOptions.toolCallingMode != .disallowed {
                 let names = request.enabledToolDefinitions.map { $0.name }
-                let tools = await getOpenAITools(for: names)
+                let tools = await getChatCompletionTools(for: names)
                 if !tools.isEmpty { requestBody["tools"] = tools }
             }
 

@@ -19,7 +19,7 @@ final class SettingsAndMCPDashboardUITests: XCTestCase {
         _ = fresh.wait(for: .runningForeground, timeout: 10)
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         if let app {
             app.terminate()
             _ = app.wait(for: .notRunning, timeout: 5)
@@ -29,7 +29,7 @@ final class SettingsAndMCPDashboardUITests: XCTestCase {
     func testDiagnosticsSheetSelfCheckLifecycle() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Open Diagnostics Sheet") { _ in
+        UITestActivity.step("1. Open Diagnostics Sheet") { _ in
             let diagBtn = app.buttons["diagnosticsButton"].firstMatch
             XCTAssertTrue(diagBtn.waitForExistence(timeout: 5), "Diagnostics button should exist in toolbar")
             diagBtn.click()
@@ -38,7 +38,7 @@ final class SettingsAndMCPDashboardUITests: XCTestCase {
             XCTAssertTrue(diagSheet.waitForExistence(timeout: 8), "Diagnostics sheet should open")
         }
 
-        try UITestActivity.step("2. Dismiss Diagnostics Sheet") { _ in
+        UITestActivity.step("2. Dismiss Diagnostics Sheet") { _ in
             let doneBtn = app.buttons["diagnosticsDoneButton"].firstMatch
             XCTAssertTrue(doneBtn.waitForExistence(timeout: 5), "diagnosticsDoneButton must exist on Diagnostics sheet")
             doneBtn.click()
@@ -50,7 +50,7 @@ final class SettingsAndMCPDashboardUITests: XCTestCase {
     func testToolCallingModePickerTraversal() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Inspect and cycle Tool Calling Mode Picker options") { _ in
+        UITestActivity.step("1. Inspect and cycle Tool Calling Mode Picker options") { _ in
             let picker = app.descendants(matching: .any)["toolCallingModePicker"].firstMatch
             XCTAssertTrue(picker.waitForExistence(timeout: 5), "Tool calling mode picker must exist in toolbar")
 
@@ -71,7 +71,7 @@ final class SettingsAndMCPDashboardUITests: XCTestCase {
     func testSidebarToggleToolbarButton() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Toggle sidebar visibility via toolbar button") { _ in
+        UITestActivity.step("1. Toggle sidebar visibility via toolbar button") { _ in
             let sidebarBtn = app.buttons["toggleSidebarButton"].firstMatch
             XCTAssertTrue(sidebarBtn.waitForExistence(timeout: 5), "toggleSidebarButton must exist in toolbar")
             sidebarBtn.click()

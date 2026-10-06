@@ -87,8 +87,8 @@ public final class SpaceManager {
     public static let shared = SpaceManager()
 
     // MARK: - Dependencies
-    weak var orchestrator: AgentOrchestrator?
-    weak var botManager: BotManager?
+    var orchestrator: AgentOrchestrator?
+    var botManager: BotManager?
     public var modelContext: ModelContext?
 
     // MARK: - State

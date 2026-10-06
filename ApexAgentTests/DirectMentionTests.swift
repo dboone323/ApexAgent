@@ -128,7 +128,7 @@ final class DirectMentionTests: XCTestCase {
         let space = try XCTUnwrap(spaceManager.activeSpace)
         let channel = try XCTUnwrap(space.sortedChannels.first)
 
-        botManager.createBot(
+        _ = botManager.createBot(
             name: "Code Architect", title: "Engineer", descriptionText: "Reviews code."
         )
         let bot = try XCTUnwrap(botManager.botByName("Code Architect"))
@@ -394,7 +394,7 @@ final class DirectMentionTests: XCTestCase {
 
     func testOrchestratorResolvesDirectMentionBotFromPrompt() throws {
         let (_, botManager, orchestrator, _) = try makeRig()
-        botManager.createBot(name: "Code Architect", title: "Engineer", descriptionText: "Writes code")
+        _ = botManager.createBot(name: "Code Architect", title: "Engineer", descriptionText: "Writes code")
         orchestrator.botManager = botManager
 
         let prompt = "@code-architect what is two plus two?"

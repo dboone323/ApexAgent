@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Webhooks: external triggers for .webhook routines (O5, port of OpenMausBot webhook-ingress.ts)
+// MARK: - Webhooks: external triggers for .webhook routines
 //
 // A routine with trigger == .webhook can be fired by an external POST to
 // /hooks/<endpointId>. The HTTP plumbing stays thin: this file owns the whole
@@ -31,7 +31,7 @@ struct WebhookDelivery {
     var method: String = "POST"
     var path: String
     var authorizationHeader: String?
-    /// Fallback secret header (x-apex-secret), mirroring OpenMausBot's x-openmaus-secret.
+    /// Fallback secret header (x-apex-secret), a conventional secret header.
     var secretHeader: String?
     var contentType: String?
     var rawBody: String?

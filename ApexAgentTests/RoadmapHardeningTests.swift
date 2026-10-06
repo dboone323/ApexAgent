@@ -146,10 +146,9 @@ struct RoadmapHardeningTests {
     func testAllToolsRegistrationCount() {
         let orchestrator = AgentOrchestrator()
         let tools = orchestrator.allTools
-        // 63 tools registered across all pillars and specialized features
-        // (recounted 2026-09-28 against the live dispatch registrations;
-        // matches the tool count in README.md).
-        #expect(tools.count == 63)
+        // 65 tools registered across all pillars and specialized features
+        // (includes RollbackTool and DeleteMemoryTool).
+        #expect(tools.count == 67)
 
         let names = Set(tools.map(\.name))
         #expect(names.contains("run_shell_command"))

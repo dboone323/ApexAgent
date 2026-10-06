@@ -32,8 +32,8 @@ struct DetectImageTextTool: Tool {
             let requestHandler = VNImageRequestHandler(url: url, options: [:])
             
             let request = VNRecognizeTextRequest()
-            request.recognitionLevel = .accurate
-            request.usesLanguageCorrection = true
+            request.recognitionLevel = .fast
+            request.usesLanguageCorrection = false
             
             do {
                 try requestHandler.perform([request])

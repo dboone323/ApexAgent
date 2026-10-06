@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - SkillCatalog: SKILL.md-style manifests + trigger-term matching (O8, port of OpenMausBot skill-library.ts)
+// MARK: - SkillCatalog: SKILL.md-style manifests + trigger-term matching
 //
 // A bundled/user skill is a directory with manifest.json + SKILL.md. The
 // manifest declares trigger terms and required capabilities; enabled skills
