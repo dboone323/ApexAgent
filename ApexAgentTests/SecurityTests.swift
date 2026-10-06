@@ -111,4 +111,111 @@ struct SecurityTests {
         #expect(!FileRollback.hasSnapshot(path: missing))
         #expect(!FileRollback.rollback(path: missing))
     }
+
+    // MARK: - WS5.5 Keychain Audit Logging Tests
+
+    @Test func testKeychainAuditLoggingRecordsOperations() async throws {
+        let logger = KeychainAuditLogger.shared
+        await logger.clear()
+
+        await logger.record(operation: "save", key: "test_service_key", success: true, caller: "UnitTests")
+        await logger.record(operation: "get", key: "test_service_key", success: true, caller: "UnitTests")
+        await logger.record(operation: "delete", key: "test_service_key", success: true, caller: "UnitTests")
+
+        let entries = await logger.recentEntries(limit: 10)
+        #expect(entries.count == 3)
+        #expect(entries.contains(where: { $0.operation == "save" && $0.key == "test_service_key" }))
+        #expect(entries.contains(where: { $0.operation == "get" && $0.key == "test_service_key" }))
+        #expect(entries.contains(where: { $0.operation == "delete" && $0.key == "test_service_key" }))
+
+        // Secrecy guarantee: Log entries must never contain secret values
+        let logURL = KeychainAuditLogger.logFileURL
+        if let rawLog = try? String(contentsOf: logURL, encoding: .utf8) {
+            #expect(!rawLog.contains("secret_token"))
+            #expect(!rawLog.contains("password"))
+        }
+
+        await logger.clear()
+        let cleared = await logger.recentEntries(limit: 10)
+        #expect(cleared.isEmpty)
+    }
+
+    // MARK: - WS5.7 File Rollback UndoLast & RollbackTool Tests
+
+    @Test func testFileRollbackUndoLastRestoresPreviousContent() throws {
+        let fm = FileManager.default
+        let tempDir = fm.temporaryDirectory.appendingPathComponent("rollback_undo_\(UUID().uuidString)")
+        try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: tempDir) }
+
+        let targetFile = tempDir.appendingPathComponent("notes.md").path
+        try "# Initial Notes".write(toFile: targetFile, atomically: true, encoding: .utf8)
+
+        FileRollback.snapshot(path: targetFile)
+        try "# Overwritten Notes".write(toFile: targetFile, atomically: true, encoding: .utf8)
+
+        let result = FileRollback.rollbackLast()
+        #expect(result != nil)
+        #expect(result?.success == true)
+        #expect(result?.path == targetFile)
+
+        let finalContent = try String(contentsOfFile: targetFile, encoding: .utf8)
+        #expect(finalContent == "# Initial Notes")
+    }
+
+    @Test @MainActor func testRollbackToolDispatch() async throws {
+        let orchestrator = AgentOrchestrator()
+        let tool = RollbackTool(orchestrator: orchestrator)
+
+        let listResult = try await tool.call(arguments: .init(action: "list", path: nil))
+        #expect(!listResult.isEmpty)
+
+        let unknownResult = try await tool.call(arguments: .init(action: "invalid_action", path: nil))
+        #expect(unknownResult.contains("ERROR"))
+    }
+
+    @Test @MainActor func testToolPolicyKillSwitchEnforcementInEngine() async throws {
+        let engine = ToolDispatchEngine()
+        let orchestrator = AgentOrchestrator()
+        let allTools = engine.buildAllTools(orchestrator: orchestrator, botManager: nil)
+
+        let testTool = "test_kill_switch_tool"
+        ToolPolicy.shared.setToolEnabled(testTool, enabled: false)
+        #expect(!ToolPolicy.shared.isGloballyAllowed(testTool))
+
+        var didCatch403 = false
+        do {
+            _ = try await engine.executeToolByName(
+                name: testTool,
+                jsonArguments: "{}",
+                allTools: allTools
+            )
+        } catch let nsErr as NSError {
+            if nsErr.domain == "AgentSecurity" && nsErr.code == 403 {
+                didCatch403 = true
+            }
+        }
+        #expect(didCatch403 == true)
+
+        ToolPolicy.shared.setToolEnabled(testTool, enabled: true)
+        #expect(ToolPolicy.shared.isGloballyAllowed(testTool))
+        ToolPolicy.shared.reset()
+    }
+
+    // MARK: - WS4.6 Tracing Span Emission Tests
+
+    @Test func testTracingSpanEmissionToTraceBus() async {
+        let opName: StaticString = "test.security.trace"
+        let testSource = "SecurityTests"
+
+        await Tracing.span(opName, source: testSource, metadata: ["batch": "1"]) {
+            try? await Task.sleep(nanoseconds: 500_000)
+        }
+
+        let traces = Tracing.recentTraces(limit: 20)
+        let found = traces.contains { trace in
+            trace.source == testSource && trace.operation.contains("test.security.trace")
+        }
+        #expect(found == true)
+    }
 }

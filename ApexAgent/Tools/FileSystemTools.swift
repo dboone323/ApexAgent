@@ -484,3 +484,74 @@ struct MoveFileTool: Tool {
         }
     }
 }
+
+
+// MARK: - Rollback File Tool (WS5.7)
+
+struct RollbackTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
+    let name = "rollback_file"
+    let description = "Restores previous versions of files modified or deleted by the agent. Supports listing recent backups (list), reverting a specific file (restore), or undoing the last write (undo_last)."
+
+    @Generable
+    struct Arguments: Decodable {
+        @Guide(description: "Action to perform: 'list', 'restore', or 'undo_last'")
+        var action: String
+
+        @Guide(description: "Path of the file to restore (required if action is 'restore')")
+        var path: String?
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        switch arguments.action.lowercased() {
+        case "list":
+            let snapshots = FileRollback.recentSnapshots(limit: 20)
+            guard !snapshots.isEmpty else {
+                return "No file rollback snapshots recorded."
+            }
+
+            var output = "### Recent File Rollback Snapshots\n\n"
+            output += "| Timestamp | File Path | Size |\n"
+            output += "|---|---|---|\n"
+            let formatter = ISO8601DateFormatter()
+            for s in snapshots {
+                let timeStr = formatter.string(from: s.timestamp)
+                output += "| `\(timeStr)` | `\(s.originalPath)` | \(s.sizeBytes) bytes |\n"
+            }
+            return output
+
+        case "undo_last":
+            if let result = FileRollback.rollbackLast() {
+                if result.success {
+                    return "✅ Successfully rolled back most recent file modification: \(result.path)"
+                } else {
+                    return "❌ Failed to restore snapshot for \(result.path)"
+                }
+            } else {
+                return "No previous file modifications available to undo."
+            }
+
+        case "restore":
+            guard let rawPath = arguments.path, !rawPath.isEmpty else {
+                return "ERROR: 'path' argument is required for 'restore' action."
+            }
+            let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
+            let targetPath = resolveToWorkspace(rawPath: rawPath, workspacePath: wsPath)
+            
+            let success = FileRollback.rollback(path: targetPath)
+            if success {
+                return "✅ Successfully restored file from snapshot: \(targetPath)"
+            } else {
+                return "❌ No snapshot found or rollback failed for path: \(targetPath)"
+            }
+
+        default:
+            return "ERROR: Unknown action '\(arguments.action)'. Supported actions are: 'list', 'restore', 'undo_last'."
+        }
+    }
+}

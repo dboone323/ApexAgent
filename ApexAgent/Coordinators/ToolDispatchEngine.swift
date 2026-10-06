@@ -32,6 +32,7 @@ final class ToolDispatchEngine {
             AnyExecutableTool(CreateDirectoryTool(orchestrator: orchestrator)),
             AnyExecutableTool(DeleteFileTool(orchestrator: orchestrator)),
             AnyExecutableTool(MoveFileTool(orchestrator: orchestrator)),
+            AnyExecutableTool(RollbackTool(orchestrator: orchestrator)),
             AnyExecutableTool(WebSearchTool(orchestrator: orchestrator)),
             AnyExecutableTool(AppleScriptTool(orchestrator: orchestrator)),
             AnyExecutableTool(ScreenshotTool(orchestrator: orchestrator)),
@@ -101,6 +102,15 @@ final class ToolDispatchEngine {
         bot: BotProfile? = nil,
         agentIdentity: AgentIdentity? = nil
     ) async throws -> String {
+        // Workstream 5.6: Global Tool Governance policy enforcement
+        guard ToolPolicy.shared.isGloballyAllowed(name) else {
+            throw NSError(
+                domain: "AgentSecurity",
+                code: 403,
+                userInfo: [NSLocalizedDescriptionKey: "Security Policy Denied: Tool '\(name)' has been disabled globally by security policy."]
+            )
+        }
+
         // RBAC Allowlist enforcement: If a Bot defines allowed tools, reject any disallowed tool
         if let bot = bot, !bot.allowedToolNames.isEmpty {
             if !bot.allowedToolNames.contains(name) {

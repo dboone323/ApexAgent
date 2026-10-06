@@ -283,6 +283,24 @@ class CollaborativeServer: NSObject, ObservableObject {
                     sendHTTPResponse(html: "{\"error\":\"Could not route message to Space\"}", status: "404 Not Found", contentType: "application/json", connection: connection)
                 }
             }
+        } else if plainPath == "/api/traces" && method == "GET" {
+            // Serve Structured Tracing Data (Workstream 4.6)
+            var limit = 50
+            if let url = URL(string: "http://localhost" + path),
+               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+               let limitVal = components.queryItems?.first(where: { $0.name == "limit" })?.value,
+               let parsed = Int(limitVal) {
+                limit = max(1, min(parsed, 500))
+            }
+            let traces = Tracing.recentTraces(limit: limit)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = .prettyPrinted
+            if let data = try? encoder.encode(traces),
+               let json = String(data: data, encoding: .utf8) {
+                sendHTTPResponse(html: json, status: "200 OK", contentType: "application/json", connection: connection)
+            } else {
+                sendHTTPResponse(html: "[]", status: "200 OK", contentType: "application/json", connection: connection)
+            }
         } else if plainPath.starts(with: "/api/screen") {
             // Serve Screen Capture
             Task { @MainActor in

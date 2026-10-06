@@ -716,6 +716,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         activeTerminalOutput = ""
         UIRegistry.shared.clearAll()
         resetSession()
+        NotificationCenter.default.post(name: NSNotification.Name("ApexAgent.focusChatInput"), object: nil)
     }
 
     func clearAllConversations() {
@@ -1654,6 +1655,7 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
     private var createDirectoryTool: CreateDirectoryTool { CreateDirectoryTool(orchestrator: orchestrator) }
     private var deleteFileTool: DeleteFileTool { DeleteFileTool(orchestrator: orchestrator) }
     private var moveFileTool: MoveFileTool { MoveFileTool(orchestrator: orchestrator) }
+    private var rollbackTool: RollbackTool { RollbackTool(orchestrator: orchestrator) }
     private var webSearchTool: WebSearchTool { WebSearchTool(orchestrator: orchestrator) }
     private var appleScriptTool: AppleScriptTool { AppleScriptTool(orchestrator: orchestrator) }
     private var screenshotTool: ScreenshotTool { ScreenshotTool(orchestrator: orchestrator) }
@@ -1684,6 +1686,7 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
             createDirectoryTool
             deleteFileTool
             moveFileTool
+            rollbackTool
             webSearchTool
             appleScriptTool
             screenshotTool

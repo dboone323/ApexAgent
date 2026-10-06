@@ -126,6 +126,7 @@ struct ContentView: View {
                     botManager.activeBotId = nil
                     spaceManager.activeSpaceId = nil
                     orchestrator.startNewConversation()
+                    NotificationCenter.default.post(name: NSNotification.Name("ApexAgent.focusChatInput"), object: nil)
                 } label: {
                     Image(systemName: "square.and.pencil")
                 }
@@ -211,6 +212,7 @@ struct ContentView: View {
                 .environment(botManager)
                 .environment(spaceManager)
                 .environment(computer)
+                .environment(\.skillManager, SkillManager.shared)
                 .environment(SkillManager.shared)
                 .environment(RoutineManager.shared)
         }

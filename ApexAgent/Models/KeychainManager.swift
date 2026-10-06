@@ -118,6 +118,7 @@ struct KeychainManager {
         FallbackStorage.shared.set(value, for: key)
 
         Task { await AgentAuditLog.shared.record(toolName: "keychain.save", arguments: "key=\(key)", wasConfirmed: false, status: success ? "success" : "failed") }
+        Task { await KeychainAuditLogger.shared.record(operation: "save", key: key, success: success) }
         return success
     }
 
@@ -125,6 +126,7 @@ struct KeychainManager {
         runLegacyMigration()
         if let fallback = FallbackStorage.shared.get(key) {
             Task { await AgentAuditLog.shared.record(toolName: "keychain.get", arguments: "key=\(key)", wasConfirmed: false, status: "success") }
+            Task { await KeychainAuditLogger.shared.record(operation: "get", key: key, success: true) }
             return fallback
         }
 
@@ -145,10 +147,12 @@ struct KeychainManager {
         
         if status == errSecSuccess, let data = dataTypeRef as? Data, let str = String(data: data, encoding: .utf8) {
             Task { await AgentAuditLog.shared.record(toolName: "keychain.get", arguments: "key=\(key)", wasConfirmed: false, status: "success") }
+            Task { await KeychainAuditLogger.shared.record(operation: "get", key: key, success: true) }
             return str
         }
 
         Task { await AgentAuditLog.shared.record(toolName: "keychain.get", arguments: "key=\(key)", wasConfirmed: false, status: "failed") }
+        Task { await KeychainAuditLogger.shared.record(operation: "get", key: key, success: false) }
         return nil
     }
 
@@ -171,6 +175,83 @@ struct KeychainManager {
 
         let success = status == errSecSuccess || status == errSecItemNotFound
         Task { await AgentAuditLog.shared.record(toolName: "keychain.delete", arguments: "key=\(key)", wasConfirmed: false, status: success ? "success" : "failed") }
+        Task { await KeychainAuditLogger.shared.record(operation: "delete", key: key, success: success) }
         return success
     }
 }
+
+// MARK: - Keychain Audit Logging (WS 5.5)
+
+public struct KeychainAuditEntry: Codable, Sendable, Identifiable {
+    public var id: String { "\(timestamp)-\(key)-\(operation)" }
+    public let timestamp: String
+    public let operation: String
+    public let key: String
+    public let success: Bool
+    public let caller: String?
+
+    public init(
+        timestamp: String = ISO8601DateFormatter().string(from: Date()),
+        operation: String,
+        key: String,
+        success: Bool,
+        caller: String? = nil
+    ) {
+        self.timestamp = timestamp
+        self.operation = operation
+        self.key = key
+        self.success = success
+        self.caller = caller
+    }
+}
+
+public actor KeychainAuditLogger {
+    public static let shared = KeychainAuditLogger()
+
+    public static var logFileURL: URL {
+        ApexAgentStoragePaths.collaborationLogs.appendingPathComponent("keychain-audit.log")
+    }
+
+    public func record(operation: String, key: String, success: Bool, caller: String? = nil) {
+        let entry = KeychainAuditEntry(
+            timestamp: ISO8601DateFormatter().string(from: Date()),
+            operation: operation,
+            key: key,
+            success: success,
+            caller: caller
+        )
+        guard let data = try? JSONEncoder().encode(entry),
+              var line = String(data: data, encoding: .utf8) else { return }
+        line.append("\n")
+        guard let lineData = line.data(using: .utf8) else { return }
+
+        let fm = FileManager.default
+        let url = Self.logFileURL
+        try? fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if fm.fileExists(atPath: url.path) {
+            if let fileHandle = try? FileHandle(forWritingTo: url) {
+                defer { try? fileHandle.close() }
+                _ = try? fileHandle.seekToEnd()
+                try? fileHandle.write(contentsOf: lineData)
+            }
+        } else {
+            try? lineData.write(to: url, options: .atomic)
+        }
+    }
+
+    public func recentEntries(limit: Int = 50) -> [KeychainAuditEntry] {
+        let url = Self.logFileURL
+        guard let contents = try? String(contentsOf: url, encoding: .utf8) else { return [] }
+        let lines = contents.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        let entries: [KeychainAuditEntry] = lines.compactMap { line in
+            guard let data = line.data(using: .utf8) else { return nil }
+            return try? JSONDecoder().decode(KeychainAuditEntry.self, from: data)
+        }
+        return Array(entries.suffix(limit))
+    }
+
+    public func clear() {
+        try? FileManager.default.removeItem(at: Self.logFileURL)
+    }
+}
+

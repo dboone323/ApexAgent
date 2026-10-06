@@ -11,7 +11,7 @@ struct DiagnosticsView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                if isRunning {
+                if isRunning && results.isEmpty {
                     runningState
                 } else if results.isEmpty {
                     EmptyState(
@@ -22,6 +22,21 @@ struct DiagnosticsView: View {
                         action: runDiagnostics
                     )
                 } else {
+                    if isRunning {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Analyzing system health...")
+                                .font(AppTheme.Font.caption(11))
+                                .foregroundStyle(AppTheme.Palette.textSecondary)
+                            Spacer()
+                        }
+                        .padding(.horizontal, AppTheme.Spacing.md)
+                        .padding(.vertical, 8)
+                        .background(Color(nsColor: .controlBackgroundColor))
+                        Divider()
+                    }
+
                     ScrollView {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: AppTheme.Spacing.md)], spacing: AppTheme.Spacing.md) {
                             ForEach(results) { item in

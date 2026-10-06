@@ -24,6 +24,13 @@ struct BotChatView: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 6)
             }
+
+            if let runner = botManager.activePlaybookRunner,
+               let card = runner.pendingApprovalCard {
+                PlaybookApprovalBannerView(card: card, runner: runner)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+            }
             
             Divider()
             
@@ -82,6 +89,9 @@ struct BotChatView: View {
             isInputFocused = true
             session.checkAvailability()
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ApexAgent.focusChatInput"))) { _ in
+            isInputFocused = true
+        }
     }
 }
 
@@ -131,6 +141,7 @@ private struct PeerApprovalCard: View {
 
 struct BotChatHeaderBar: View {
     var session: BotSession
+    @Environment(BotManager.self) private var botManager
     
     var body: some View {
         HStack(spacing: 10) {
@@ -195,6 +206,27 @@ struct BotChatHeaderBar: View {
                 .help("\(session.queuedPrompts.count) queued prompt(s)")
             }
             
+            // Playbook run menu
+            Menu {
+                ForEach(CollaborationPlaybook.builtInPresets) { preset in
+                    Button {
+                        let runner = PlaybookRunner(playbook: preset, availableBots: botManager.allBots, botManager: botManager)
+                        botManager.activePlaybookRunner = runner
+                        Task {
+                            _ = try? await runner.execute(contextInput: "Run \(preset.name) from \(session.bot.name)")
+                        }
+                    } label: {
+                        Label("Run \(preset.name)", systemImage: "play.circle")
+                    }
+                }
+            } label: {
+                Image(systemName: "play.circle")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            .menuStyle(.borderlessButton)
+            .help("Run Collaboration Playbook")
+
             // Clear history button
             Button {
                 session.clearMessages()
@@ -703,5 +735,98 @@ struct BotChatInputBar: View {
         }
 
         return .ignored
+    }
+}
+
+// MARK: - Playbook Approval Banner View
+
+struct PlaybookApprovalBannerView: View {
+    let card: PlaybookApprovalCard
+    let runner: PlaybookRunner
+    @Environment(BotManager.self) private var botManager
+    @State private var notesText: String = ""
+    @State private var showNotesField: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.shield.fill")
+                    .foregroundStyle(.orange)
+                    .font(.system(size: 13))
+                Text("Approval Required: \(card.stageName)")
+                    .font(.system(size: 12, weight: .semibold))
+                Spacer()
+                Text("Playbook: \(runner.playbook.name)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(card.summary)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .lineLimit(3)
+
+            if !card.proposedActions.isEmpty {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Proposed Actions:")
+                        .font(.system(size: 10, weight: .medium))
+                    ForEach(card.proposedActions.prefix(3), id: \.self) { action in
+                        Text("• \(action)")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
+                }
+            }
+
+            if showNotesField {
+                TextField("Optional notes or reason...", text: $notesText)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 11))
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    showNotesField.toggle()
+                } label: {
+                    Label(showNotesField ? "Hide Note" : "Add Note", systemImage: "note.text")
+                        .font(.system(size: 10))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Button("Reject") {
+                    botManager.resolvePlaybookApproval(
+                        cardId: card.id,
+                        approved: false,
+                        notes: notesText.isEmpty ? "Rejected by user" : notesText
+                    )
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .font(.system(size: 11))
+
+                Button("Approve Stage") {
+                    botManager.resolvePlaybookApproval(
+                        cardId: card.id,
+                        approved: true,
+                        notes: notesText.isEmpty ? nil : notesText
+                    )
+                }
+                .buttonStyle(.borderedProminent)
+                .font(.system(size: 11))
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color(nsColor: .windowBackgroundColor))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.orange.opacity(0.5), lineWidth: 1)
+                )
+        )
     }
 }

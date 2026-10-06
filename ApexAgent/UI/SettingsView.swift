@@ -734,6 +734,32 @@ struct SettingsView: View {
     private var toolGovernanceSection: some View {
         Section("Tool Governance & Auto-Approval") {
             Toggle("Auto-Approve Safe Tool Calls", isOn: $autoApproveToolCalls)
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Global Tool Access (Kill Switches)")
+                    .font(AppTheme.Font.headline(12, weight: .semibold))
+                Text("Disable high-risk tools app-wide across all agents and automated routines.")
+                    .font(AppTheme.Font.caption(10))
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+
+                ForEach(["run_shell_command", "write_file", "delete_file", "run_applescript", "browser_automation", "computer_use", "create_skill"], id: \.self) { toolName in
+                    HStack {
+                        Text(toolName)
+                            .font(AppTheme.Font.mono(11))
+                        Spacer()
+                        Toggle("", isOn: Binding(
+                            get: { ToolPolicy.shared.isGloballyAllowed(toolName) },
+                            set: { allowed in
+                                ToolPolicy.shared.setToolEnabled(toolName, enabled: allowed)
+                            }
+                        ))
+                        .toggleStyle(.switch)
+                    }
+                }
+            }
+            .padding(.vertical, AppTheme.Spacing.xs)
             
             if !alwaysAllowKeys.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {

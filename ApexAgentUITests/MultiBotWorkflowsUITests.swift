@@ -19,7 +19,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
         _ = fresh.wait(for: .runningForeground, timeout: 10)
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         if let app {
             app.terminate()
             _ = app.wait(for: .notRunning, timeout: 5)
@@ -29,7 +29,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
     func testSwitchingBetweenBotsUpdatesHeaderAndActiveState() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Select Code Architect bot in sidebar") { _ in
+        UITestActivity.step("1. Select Code Architect bot in sidebar") { _ in
             let codeArchitectBot = app.buttons["botSidebarItem_Code Architect"].firstMatch
             XCTAssertTrue(codeArchitectBot.waitForExistence(timeout: 5), "Code Architect button must exist in sidebar")
             codeArchitectBot.click()
@@ -37,7 +37,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
             XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Header must display 'Code Architect'")
         }
 
-        try UITestActivity.step("2. Select Researcher bot in sidebar") { _ in
+        UITestActivity.step("2. Select Researcher bot in sidebar") { _ in
             let researcherBot = app.buttons["botSidebarItem_Researcher"].firstMatch
             XCTAssertTrue(researcherBot.waitForExistence(timeout: 5), "Researcher button must exist in sidebar")
             researcherBot.click()
@@ -45,7 +45,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
             XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Header must switch to 'Researcher'")
         }
 
-        try UITestActivity.step("3. Return to Apex default bot") { _ in
+        UITestActivity.step("3. Return to Apex default bot") { _ in
             let apexBot = app.buttons["botSidebarItem_Apex"].firstMatch
             XCTAssertTrue(apexBot.waitForExistence(timeout: 5), "Apex button must exist in sidebar")
             apexBot.click()
@@ -57,7 +57,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
     func testCreateBotSheetValidationAndDismissal() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Open Create Bot Sheet") { _ in
+        UITestActivity.step("1. Open Create Bot Sheet") { _ in
             let createBtn = app.buttons["createBotButton"].firstMatch
             XCTAssertTrue(createBtn.waitForExistence(timeout: 5), "Create Bot button should appear in UI")
             createBtn.click()
@@ -65,7 +65,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
             XCTAssertTrue(sheet.waitForExistence(timeout: 8), "Create Bot sheet should appear")
         }
 
-        try UITestActivity.step("2. Validate bot name input and button gating") { _ in
+        UITestActivity.step("2. Validate bot name input and button gating") { _ in
             let saveBtn = app.buttons["saveBotButton"].firstMatch
             XCTAssertTrue(saveBtn.waitForExistence(timeout: 3), "Save button must exist in Create Bot sheet")
             XCTAssertFalse(saveBtn.isEnabled, "Save button must be disabled when bot name is empty")
@@ -78,7 +78,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
             XCTAssertTrue(saveBtn.isEnabled, "Save button must become enabled once bot name is provided")
         }
 
-        try UITestActivity.step("3. Dismiss sheet via Cancel button") { _ in
+        UITestActivity.step("3. Dismiss sheet via Cancel button") { _ in
             let cancelBtn = app.buttons["Cancel"].firstMatch
             XCTAssertTrue(cancelBtn.waitForExistence(timeout: 5), "Cancel button must exist on Create Bot sheet")
             cancelBtn.click()
@@ -90,7 +90,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
     func testCreateBotSheetFullLifecycleAndSidebarSelection() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Open Create Bot Sheet") { _ in
+        UITestActivity.step("1. Open Create Bot Sheet") { _ in
             let createBtn = app.buttons["createBotButton"].firstMatch
             XCTAssertTrue(createBtn.waitForExistence(timeout: 5), "Create Bot button should appear in UI")
             createBtn.click()
@@ -98,7 +98,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
             XCTAssertTrue(sheet.waitForExistence(timeout: 8), "Create Bot sheet should appear")
         }
 
-        try UITestActivity.step("2. Fill form and click Save button") { _ in
+        UITestActivity.step("2. Fill form and click Save button") { _ in
             let saveBtn = app.buttons["saveBotButton"].firstMatch
             XCTAssertTrue(saveBtn.waitForExistence(timeout: 3), "Save button must exist")
             XCTAssertFalse(saveBtn.isEnabled, "Save button must be disabled when empty")
@@ -115,7 +115,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
             XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Create Bot sheet must dismiss after save")
         }
 
-        try UITestActivity.step("3. Select newly created bot in sidebar and verify header") { _ in
+        UITestActivity.step("3. Select newly created bot in sidebar and verify header") { _ in
             let newBotItem = app.buttons["botSidebarItem_Security Auditor"].firstMatch
             XCTAssertTrue(newBotItem.waitForExistence(timeout: 5), "New bot should appear in sidebar")
             newBotItem.click()
@@ -128,7 +128,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
     func testLiveCustomBotAtMentionInteractionAndResponseEvaluation() throws {
         launchFreshApp()
 
-        try UITestActivity.step("1. Create a bot named Code Architect") { _ in
+        UITestActivity.step("1. Create a bot named Code Architect") { _ in
             let createBtn = app.buttons["createBotButton"].firstMatch
             XCTAssertTrue(createBtn.waitForExistence(timeout: 5), "Create Bot button should appear in UI")
             createBtn.click()
@@ -148,7 +148,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
             XCTAssertTrue(sheet.waitForNonExistence(timeout: 5), "Create Bot sheet must dismiss")
         }
 
-        try UITestActivity.step("2. Select the created bot from the sidebar") { _ in
+        UITestActivity.step("2. Select the created bot from the sidebar") { _ in
             let botItem = app.buttons["botSidebarItem_Code Architect"].firstMatch
             XCTAssertTrue(botItem.waitForExistence(timeout: 5), "Created bot must appear in sidebar")
             botItem.click()
@@ -157,7 +157,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
             XCTAssertTrue(headerText.waitForExistence(timeout: 5), "Header must switch to Code Architect")
         }
 
-        try UITestActivity.step("3. Verify Bot Chat input bar buttons") { _ in
+        UITestActivity.step("3. Verify Bot Chat input bar buttons") { _ in
             let botInput = app.textFields["botChatInputField"].firstMatch
             XCTAssertTrue(botInput.waitForExistence(timeout: 5), "Bot chat input field should exist")
 
@@ -171,7 +171,7 @@ final class MultiBotWorkflowsUITests: XCTestCase {
             botSend.click()
         }
 
-        try UITestActivity.step("4. Verify response happens first and secondly is correct") { _ in
+        UITestActivity.step("4. Verify response happens first and secondly is correct") { _ in
             let agentMessage = app.descendants(matching: .any)
                 .matching(NSPredicate(format: "identifier BEGINSWITH %@", "BotAgentResponse_")).firstMatch
             XCTAssertTrue(agentMessage.waitForExistence(timeout: 60), "First: Response bubble must appear and stream")
