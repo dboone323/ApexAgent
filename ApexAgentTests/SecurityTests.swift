@@ -1451,3 +1451,14 @@ struct EphemeralCapabilityGuardsTests {
         EphemeralCapabilityManager.shared.revokeAll(for: "delete_file")
     }
 }
+
+// MARK: - Keychain audit formatting
+
+@Suite("KeychainAuditFormattingTests")
+struct KeychainAuditFormattingTests {
+    @Test func keychainAuditMarkdown() {
+        let entry = KeychainAuditEntry(operation: "get", key: "svc", success: true)
+        #expect(entry.operationBadge.contains("Read"))
+        #expect(entry.formatAsMarkdown().contains("svc"))
+    }
+}

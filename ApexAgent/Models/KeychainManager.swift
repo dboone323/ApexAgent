@@ -276,3 +276,18 @@ public actor KeychainAuditLogger {
     }
 }
 
+
+extension KeychainAuditEntry {
+    public var operationBadge: String {
+        switch operation {
+        case "save": return "💾 Save"
+        case "get": return "📖 Read"
+        case "delete": return "🗑️ Delete"
+        default: return "ℹ️ `\(operation)`"
+        }
+    }
+
+    public func formatAsMarkdown() -> String {
+        "| `\(timestamp)` | \(operationBadge) | `\(key)` | \(success ? "✅" : "❌") |"
+    }
+}

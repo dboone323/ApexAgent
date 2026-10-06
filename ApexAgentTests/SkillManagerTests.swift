@@ -12,3 +12,22 @@ struct SkillManifestMarkdownTests {
         #expect(md.contains("demo"))
     }
 }
+
+// MARK: - Skill validation badges & manifest preflight
+
+@Suite("SkillValidationGuardTests")
+struct SkillValidationGuardTests {
+    @Test func skillValidationBadges() {
+        #expect(SkillValidationError.fileNotFound("x").badge.contains("Missing"))
+        #expect(SkillValidationError.invalidJSON("x").formatAsMarkdown().contains("Bad JSON"))
+    }
+
+    @Test func skillManifestPreflight() {
+        let ok = SkillManifestInfo(name: "n", description: "d", scriptPath: "/tmp/x.sh", parameterCount: 1)
+        #expect(ok.preflightError() == nil)
+        #expect(ok.isPreflightClean)
+        let bad = SkillManifestInfo(name: "", description: "", scriptPath: "", parameterCount: -1)
+        #expect(bad.preflightError() != nil)
+        #expect(!bad.isPreflightClean)
+    }
+}

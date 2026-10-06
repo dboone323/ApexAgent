@@ -717,3 +717,22 @@ public final class CognitiveMemoryEngine {
     }
 
 }
+
+extension CognitiveMemoryEngine.EpisodicEntry {
+    public func formatAsMarkdown() -> String {
+        var md = "### 🧠 Episode: \(eventType) — \(timestamp)\n\n"
+        md += "| Field | Value |\n"
+        md += "|---|---|\n"
+        md += "| Type | `\(eventType)` |\n"
+        md += "| Summary | \(String(summary.prefix(250)).replacingOccurrences(of: "|", with: "\\|")) |\n"
+        if !metadata.isEmpty {
+            md += "| Metadata | `\(metadata.count)` keys |\n"
+        }
+        return md
+    }
+
+    public var isWellFormed: Bool {
+        !eventType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+}

@@ -396,3 +396,16 @@ final class CognitiveMemoryTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Episodic entry diagnostics
+
+final class EpisodicEntryDiagnosticsTests: XCTestCase {
+    @MainActor
+    func testEpisodicEntry() {
+        let e = CognitiveMemoryEngine.EpisodicEntry(botId: UUID(), eventType: "tool_call", summary: "ran ls")
+        XCTAssertTrue(e.isWellFormed)
+        XCTAssertTrue(e.formatAsMarkdown().contains("tool_call"))
+        let bad = CognitiveMemoryEngine.EpisodicEntry(botId: UUID(), eventType: "  ", summary: "")
+        XCTAssertFalse(bad.isWellFormed)
+    }
+}

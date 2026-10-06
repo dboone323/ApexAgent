@@ -198,3 +198,39 @@ extension SkillManifestInfo {
         return md
     }
 }
+
+extension SkillValidationError {
+    public var badge: String {
+        switch self {
+        case .fileNotFound: return "📄 Missing File"
+        case .unreadableFile: return "🔒 Unreadable"
+        case .invalidJSON: return "🧩 Bad JSON"
+        case .missingDescription: return "📝 No Description"
+        case .missingScriptPath: return "🔧 No Script"
+        case .scriptFileNotFound: return "❌ Script Missing"
+        }
+    }
+
+    public func formatAsMarkdown() -> String {
+        "| \(badge) | \(errorDescription ?? "unknown") |"
+    }
+}
+
+extension SkillManifestInfo {
+    /// Length/emptiness guards before heavier validation runs.
+    public func preflightError() -> String? {
+        if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Skill name must not be empty."
+        }
+        if description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Skill description must not be empty."
+        }
+        if scriptPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Skill scriptPath must not be empty."
+        }
+        if parameterCount < 0 { return "parameterCount cannot be negative." }
+        return nil
+    }
+
+    public var isPreflightClean: Bool { preflightError() == nil }
+}
