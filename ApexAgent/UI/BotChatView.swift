@@ -142,6 +142,7 @@ private struct PeerApprovalCard: View {
 struct BotChatHeaderBar: View {
     var session: BotSession
     @Environment(BotManager.self) private var botManager
+    @State private var showQueuePopover = false
     
     var body: some View {
         HStack(spacing: 10) {
@@ -192,18 +193,68 @@ struct BotChatHeaderBar: View {
             
             // Queued prompt indicator in header
             if !session.queuedPrompts.isEmpty {
-                HStack(spacing: 4) {
-                    Image(systemName: "clock.arrow.circlepath")
-                        .font(.system(size: 11))
-                    Text("\(session.queuedPrompts.count)")
-                        .font(.system(size: 11, weight: .bold))
+                Button {
+                    showQueuePopover.toggle()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 11))
+                        Text("\(session.queuedPrompts.count)")
+                            .font(.system(size: 11, weight: .bold))
+                    }
+                    .foregroundStyle(AppTheme.Palette.accent)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(AppTheme.Palette.accent.opacity(0.12))
+                    .cornerRadius(10)
                 }
-                .foregroundStyle(AppTheme.Palette.accent)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(AppTheme.Palette.accent.opacity(0.12))
-                .cornerRadius(10)
-                .help("\(session.queuedPrompts.count) queued prompt(s)")
+                .buttonStyle(.plain)
+                .help("\(session.queuedPrompts.count) queued prompt(s) — click to manage")
+                .popover(isPresented: $showQueuePopover) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("Queued Prompts (\(session.queuedPrompts.count))")
+                                .font(.system(size: 12, weight: .semibold))
+                            Spacer()
+                            Button("Clear All") {
+                                session.queuedPrompts.removeAll()
+                                showQueuePopover = false
+                            }
+                            .font(.system(size: 11))
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.red)
+                        }
+
+                        Divider()
+
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(session.queuedPrompts) { item in
+                                    HStack(alignment: .top) {
+                                        Text(item.text)
+                                            .font(.system(size: 11))
+                                            .lineLimit(2)
+                                        Spacer()
+                                        Button {
+                                            session.queuedPrompts.removeAll { $0.id == item.id }
+                                        } label: {
+                                            Image(systemName: "xmark.circle")
+                                                .font(.system(size: 11))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    .padding(6)
+                                    .background(Color(nsColor: .controlBackgroundColor))
+                                    .cornerRadius(6)
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 180)
+                    }
+                    .padding(12)
+                    .frame(width: 280)
+                }
             }
             
             // Playbook run menu

@@ -61,7 +61,22 @@ class ScreenStreamer: NSObject, SCStreamDelegate, SCStreamOutput {
         print("ScreenCaptureKit streaming stopped.")
     }
     
+    private(set) var lastAccessTimestamp: Date = Date()
+
+    var isIdle: Bool {
+        Date().timeIntervalSince(lastAccessTimestamp) > 30.0
+    }
+
+    func recordTestFrame(_ image: NSImage) {
+        circularBuffer.append(image)
+        if circularBuffer.count > maxBufferCount {
+            circularBuffer.removeFirst()
+        }
+        lastAccessTimestamp = Date()
+    }
+
     func getLatestFrame() -> NSImage? {
+        lastAccessTimestamp = Date()
         return circularBuffer.last
     }
     

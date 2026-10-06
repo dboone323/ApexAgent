@@ -166,11 +166,13 @@ public actor AgentRegistry {
     public nonisolated func register(_ agent: RegisteredAgent) {
         let key = agent.name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         store.set(agent, forKey: key)
+        NotificationCenter.default.post(name: .agentRegistryUpdated, object: nil)
     }
     
     public nonisolated func unregister(name: String) {
         let key = name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         store.remove(key: key)
+        NotificationCenter.default.post(name: .agentRegistryUpdated, object: nil)
     }
     
     public func loadAgentsFromDisk(directory: URL? = nil) {
@@ -194,5 +196,10 @@ public actor AgentRegistry {
                 store.set(agent, forKey: key)
             }
         }
+        NotificationCenter.default.post(name: .agentRegistryUpdated, object: nil)
     }
+}
+
+extension Notification.Name {
+    public static let agentRegistryUpdated = Notification.Name("ApexAgent.agentRegistryUpdated")
 }

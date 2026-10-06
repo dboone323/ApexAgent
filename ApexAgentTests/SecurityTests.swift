@@ -1,7 +1,8 @@
 import Testing
 import Foundation
+import SwiftData
+import AppKit
 @testable import ApexAgentCore
-
 @Suite("SecurityTests", .serialized)
 struct SecurityTests {
 
@@ -217,5 +218,159 @@ struct SecurityTests {
             trace.source == testSource && trace.operation.contains("test.security.trace")
         }
         #expect(found == true)
+    }
+
+    // MARK: - Batch 2 Self-Hardening Tests
+
+    @Test @MainActor func testSpaceManagerMarkdownExport() throws {
+        let schema = Schema([SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+
+        let manager = SpaceManager.shared
+        manager.modelContext = context
+
+        let space = SpaceModel(name: "Engineering Core", summary: "Cross-functional bot and engineer collaboration")
+        let participant = SpaceParticipant(
+            displayName: "Alice Dev",
+            handle: "alice",
+            kind: .humanLocal,
+            role: .owner
+        )
+        space.participants.append(participant)
+
+        let channel = SpaceChannel(
+            name: "architecture",
+            topic: "System design discussions",
+            channelType: .chat
+        )
+        let message = SpaceMessage(
+            senderParticipantId: participant.id,
+            senderName: "Alice Dev",
+            senderHandle: "alice",
+            senderKind: .human,
+            content: "Welcome to the architecture channel!"
+        )
+        channel.messages.append(message)
+        space.channels.append(channel)
+
+        let page = SpacePage(
+            title: "Roadmap 2026",
+            markdownBody: "## Next milestones\n- Complete Batch 2 self-improvement loop",
+            lastEditedByName: "Alice Dev"
+        )
+        space.pages.append(page)
+
+        manager.spaces = [space]
+
+        guard let markdown = manager.exportSpaceAsMarkdown(spaceId: space.id) else {
+            Issue.record("Failed to export space as markdown")
+            return
+        }
+
+        #expect(markdown.contains("# Space: Engineering Core"))
+        #expect(markdown.contains("| Name | Handle | Kind | Role | Status |"))
+        #expect(markdown.contains("| **Alice Dev** | `@alice` |"))
+        #expect(markdown.contains("### #architecture"))
+        #expect(markdown.contains("Welcome to the architecture channel!"))
+        #expect(markdown.contains("### Page: Roadmap 2026"))
+    }
+
+    @Test @MainActor func testPTYSessionSignalControls() async throws {
+        let orchestrator = AgentOrchestrator()
+        let session = try await PTYSession(orchestrator: orchestrator)
+
+        // Verifying signal calls are safe and non-crashing in all states
+        session.sendInterrupt()
+        session.sendSignal(15) // SIGTERM
+        session.sendEOF()
+        session.cleanup()
+    }
+
+    @Test func testAgentRegistryNotificationEmission() async {
+        var didReceiveNotification = false
+        let observer = NotificationCenter.default.addObserver(
+            forName: .agentRegistryUpdated,
+            object: nil,
+            queue: .main
+        ) { _ in
+            didReceiveNotification = true
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+
+        let testAgent = RegisteredAgent(
+            name: "temporary_test_bot_\(UUID().uuidString.prefix(6))",
+            systemPrompt: "You are a test agent.",
+            allowedTools: ["read_file"]
+        )
+        AgentRegistry.shared.register(testAgent)
+
+        // Give the notification loop a brief window
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        #expect(didReceiveNotification == true)
+
+        AgentRegistry.shared.unregister(name: testAgent.name)
+    }
+
+    @Test @MainActor func testDeleteMemoryToolKeyAndCategory() async throws {
+        let schema = Schema([AgentMemory.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: config)
+        let context = ModelContext(container)
+
+        let orchestrator = AgentOrchestrator()
+        orchestrator.modelContext = context
+
+        // Insert memories
+        let mem1 = AgentMemory(key: "test_key_alpha", val: "Alpha Value", category: "test_cat")
+        let mem2 = AgentMemory(key: "test_key_beta", val: "Beta Value", category: "test_cat")
+        let mem3 = AgentMemory(key: "test_key_gamma", val: "Gamma Value", category: "other_cat")
+        context.insert(mem1)
+        context.insert(mem2)
+        context.insert(mem3)
+        try context.save()
+
+        let deleteTool = DeleteMemoryTool(orchestrator: orchestrator)
+
+        // Delete single key
+        let res1 = try await deleteTool.call(arguments: .init(key: "test_key_alpha", category: nil))
+        #expect(res1.contains("Successfully deleted memory record for key 'test_key_alpha'"))
+
+        let remainingKeys = try context.fetch(FetchDescriptor<AgentMemory>())
+        #expect(remainingKeys.count == 2)
+        #expect(!remainingKeys.contains(where: { $0.key == "test_key_alpha" }))
+
+        // Delete entire category
+        let res2 = try await deleteTool.call(arguments: .init(key: nil, category: "test_cat"))
+        #expect(res2.contains("Successfully deleted 1 memory record(s) in category 'test_cat'"))
+
+        let finalRemaining = try context.fetch(FetchDescriptor<AgentMemory>())
+        #expect(finalRemaining.count == 1)
+        #expect(finalRemaining.first?.key == "test_key_gamma")
+    }
+
+    @Test @MainActor func testNetworkDiagnosticsFormattingAndDNS() async throws {
+        let orchestrator = AgentOrchestrator()
+        let tool = NetworkDiagnosticsTool(orchestrator: orchestrator)
+
+        let statusResult = try await tool.call(arguments: .init(action: "status", host: nil, port: nil, timeoutSeconds: nil))
+        #expect(statusResult.contains("### Network Interface Status"))
+        #expect(statusResult.contains("| Metric | Value |"))
+        #expect(statusResult.contains("|---|---|"))
+
+        let dnsResult = try await tool.call(arguments: .init(action: "dns", host: "127.0.0.1", port: nil, timeoutSeconds: nil))
+        #expect(dnsResult.contains("### DNS Resolution for `127.0.0.1`"))
+        #expect(dnsResult.contains("| IP Address | Address Family |"))
+        #expect(dnsResult.contains("|---|---|"))
+    }
+
+    @Test @MainActor func testScreenStreamerIdleTracking() {
+        let streamer = ScreenStreamer.shared
+        let dummyImage = NSImage(size: NSSize(width: 10, height: 10))
+
+        streamer.recordTestFrame(dummyImage)
+        #expect(streamer.getLatestFrame() != nil)
+        #expect(streamer.isIdle == false)
     }
 }

@@ -1188,6 +1188,63 @@ public final class SpaceManager {
         return json
     }
 
+    public func exportSpaceAsMarkdown(spaceId: UUID) -> String? {
+        guard let space = spaces.first(where: { $0.id == spaceId }) else { return nil }
+        var md = "# Space: \(space.name)\n\n"
+        if !space.summary.isEmpty {
+            md += "> \(space.summary)\n\n"
+        }
+        md += "- **Orchestration Mode**: \(space.orchestrationMode.displayName)\n"
+        md += "- **Created**: \(space.createdAt.formatted())\n\n"
+
+        // Participants Table
+        md += "## Participants (\(space.participants.count))\n\n"
+        md += "| Name | Handle | Kind | Role | Status |\n"
+        md += "|---|---|---|---|---|\n"
+        for p in space.participants {
+            md += "| **\(p.displayName)** | `@\(p.handle)` | `\(p.kind.rawValue)` | `\(p.role.badgeLabel)` | `\(p.presenceState.rawValue)` |\n"
+        }
+        md += "\n"
+
+        // Channels & Messages
+        md += "## Channels (\(space.channels.count))\n\n"
+        for channel in space.channels {
+            md += "### #\(channel.name)\n\n"
+            if !channel.topic.isEmpty {
+                md += "*Topic: \(channel.topic)*\n\n"
+            }
+            let rootMessages = channel.rootMessages
+            if rootMessages.isEmpty {
+                md += "_No messages in this channel._\n\n"
+            } else {
+                for msg in rootMessages {
+                    let kindTag = msg.senderKind == .human ? "[HUMAN]" : (msg.senderKind == .bot ? "[AGENT]" : "[SYSTEM]")
+                    md += "- **\(msg.senderName)** (`@\(msg.senderHandle)`) \(kindTag) — *\(msg.timestamp.formatted())*:\n"
+                    md += "  > \(msg.content.replacingOccurrences(of: "\n", with: "\n  > "))\n\n"
+
+                    let replies = channel.threadReplies(for: msg.id)
+                    for reply in replies {
+                        let replyKindTag = reply.senderKind == .human ? "[HUMAN]" : (reply.senderKind == .bot ? "[AGENT]" : "[SYSTEM]")
+                        md += "  - ↳ **\(reply.senderName)** (`@\(reply.senderHandle)`) \(replyKindTag) — *\(reply.timestamp.formatted())*:\n"
+                        md += "    > \(reply.content.replacingOccurrences(of: "\n", with: "\n    > "))\n\n"
+                    }
+                }
+            }
+        }
+
+        // Shared Pages
+        if !space.pages.isEmpty {
+            md += "## Shared Pages (\(space.pages.count))\n\n"
+            for page in space.pages {
+                md += "### Page: \(page.title)\n\n"
+                md += "*Last edited by \(page.lastEditedByName) on \(page.updatedAt.formatted())*\n\n"
+                md += "\(page.markdownBody)\n\n---\n\n"
+            }
+        }
+
+        return md
+    }
+
     private func saveContext() {
         guard let context = modelContext else { return }
         try? context.save()

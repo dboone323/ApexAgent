@@ -451,6 +451,36 @@ class PTYSession: @unchecked Sendable {
         }
     }
     
+    // MARK: - POSIX Signal & Terminal Control (Batch 2)
+
+    /// Sends a SIGINT (Ctrl+C) to the running foreground process in the PTY or container.
+    func sendInterrupt() {
+        if isContainerMode, let session = activeContainerSession {
+            session.write("\u{0003}")
+            return
+        }
+        write(command: "\u{0003}")
+        if childPid > 0 {
+            Darwin.kill(childPid, SIGINT)
+        }
+    }
+
+    /// Sends an arbitrary POSIX signal to the child shell process.
+    func sendSignal(_ sig: Int32) {
+        if childPid > 0 {
+            Darwin.kill(childPid, sig)
+        }
+    }
+
+    /// Sends an EOF (Ctrl+D) character to close interactive stdin.
+    func sendEOF() {
+        if isContainerMode, let session = activeContainerSession {
+            session.write("\u{0004}")
+            return
+        }
+        write(command: "\u{0004}")
+    }
+
     func cleanup() {
         if isContainerMode {
             isContainerMode = false

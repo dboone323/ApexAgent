@@ -203,3 +203,73 @@ private extension String {
         return self.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
+
+// MARK: - Delete Memory Tool
+
+struct DeleteMemoryTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+    let name = "delete_memory"
+    let description = "Deletes an agent memory record by key, or clears all memory records matching a category."
+
+    @Generable
+    struct Arguments: Decodable {
+        @Guide(description: "The specific memory key to delete")
+        var key: String?
+
+        @Guide(description: "The category of memories to clear (if deleting an entire category)")
+        var category: String?
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Deleting stored agent memories") {
+            return await MainActor.run {
+                guard let context = self.orchestrator.orchestrator.modelContext else {
+                    return "Memory unavailable: model context is not initialized."
+                }
+
+                if let key = arguments.key?.trimmingCharacters(in: .whitespacesAndNewlines), !key.isEmpty {
+                    let descriptor = FetchDescriptor<AgentMemory>(
+                        predicate: #Predicate { $0.key == key }
+                    )
+                    do {
+                        let records = try context.fetch(descriptor)
+                        guard !records.isEmpty else {
+                            return "No memory record found with key '\(key)'."
+                        }
+                        for r in records {
+                            context.delete(r)
+                        }
+                        try context.save()
+                        return "✅ Successfully deleted memory record for key '\(key)'."
+                    } catch {
+                        return "ERROR: Failed to delete memory record: \(error.localizedDescription)"
+                    }
+                } else if let cat = arguments.category?.trimmingCharacters(in: .whitespacesAndNewlines), !cat.isEmpty {
+                    let descriptor = FetchDescriptor<AgentMemory>(
+                        predicate: #Predicate { $0.category == cat }
+                    )
+                    do {
+                        let records = try context.fetch(descriptor)
+                        guard !records.isEmpty else {
+                            return "No memory records found in category '\(cat)'."
+                        }
+                        let count = records.count
+                        for r in records {
+                            context.delete(r)
+                        }
+                        try context.save()
+                        return "✅ Successfully deleted \(count) memory record(s) in category '\(cat)'."
+                    } catch {
+                        return "ERROR: Failed to delete category memories: \(error.localizedDescription)"
+                    }
+                } else {
+                    return "ERROR: Either 'key' or 'category' argument must be provided to delete memories."
+                }
+            }
+        }
+    }
+}

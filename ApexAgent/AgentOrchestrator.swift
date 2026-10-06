@@ -1667,6 +1667,7 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
     private var getFrontmostAppTool: GetFrontmostAppTool { GetFrontmostAppTool(orchestrator: orchestrator) }
     private var storeMemoryTool: StoreMemoryTool { StoreMemoryTool(orchestrator: orchestrator) }
     private var searchMemoryTool: SearchMemoryTool { SearchMemoryTool(orchestrator: orchestrator) }
+    private var deleteMemoryTool: DeleteMemoryTool { DeleteMemoryTool(orchestrator: orchestrator) }
     private var applicationControlTool: ApplicationControlTool { ApplicationControlTool(orchestrator: orchestrator) }
     private var accessibilityControlTool: AccessibilityControlTool { AccessibilityControlTool(orchestrator: orchestrator) }
     private var browserAutomationTool: BrowserAutomationTool { BrowserAutomationTool(orchestrator: orchestrator) }
@@ -1698,6 +1699,7 @@ struct ApexAgentProfile<Model: LanguageModel>: LanguageModelSession.DynamicProfi
             getFrontmostAppTool
             storeMemoryTool
             searchMemoryTool
+            deleteMemoryTool
             applicationControlTool
             accessibilityControlTool
             browserAutomationTool

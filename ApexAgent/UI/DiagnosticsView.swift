@@ -67,6 +67,14 @@ struct DiagnosticsView: View {
                         }
                         Button("Re-Run") { runDiagnostics() }
                             .disabled(isRunning)
+                        Button("Copy Report") {
+                            let report = DiagnosticManager.exportReport(results)
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(report, forType: .string)
+                            exportMessage = "Copied to clipboard!"
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { exportMessage = nil }
+                        }
+                        .disabled(results.isEmpty)
                         Button("Export") {
                             let report = DiagnosticManager.exportReport(results)
                             let panel = NSSavePanel()
