@@ -46,6 +46,18 @@ public struct CompactionResult: Sendable {
     public let summarizedTurnCount: Int
     public let approximateTokensSaved: Int
     public let summary: String  // the synthesized digest of removed turns
+
+    public init(
+        compactedMessages: [(role: String, content: String)],
+        summarizedTurnCount: Int,
+        approximateTokensSaved: Int,
+        summary: String
+    ) {
+        self.compactedMessages = compactedMessages
+        self.summarizedTurnCount = summarizedTurnCount
+        self.approximateTokensSaved = approximateTokensSaved
+        self.summary = summary
+    }
 }
 
 public actor ContextCompactor {
@@ -133,4 +145,22 @@ public actor ContextCompactor {
             budgetLimit: maxBudget
         )
     }
+
+    // MARK: - Markdown Compaction Summary
+
+    nonisolated public func formatCompactionResultMarkdown(_ result: CompactionResult) -> String {
+        var md = "### 🗜️ Context Compaction Performance Summary\n\n"
+        md += "| Metric | Value |\n"
+        md += "|---|---|\n"
+        md += "| Summarized Turns | `\(result.summarizedTurnCount)` |\n"
+        md += "| Approximate Tokens Saved | `\(result.approximateTokensSaved)` |\n"
+        md += "| Retained Messages Count | `\(result.compactedMessages.count)` |\n\n"
+
+        if !result.summary.isEmpty {
+            md += "#### 📑 Distilled Summary Points\n\n"
+            md += "\(result.summary)\n"
+        }
+        return md
+    }
+
 }

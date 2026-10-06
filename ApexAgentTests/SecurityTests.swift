@@ -853,4 +853,112 @@ struct SecurityTests {
         engine.clearMemory(forBotId: botId)
     }
 
+
+
+    // MARK: - Batch 6 Self-Hardening Tests
+
+    @Test @MainActor func testFullDuplexVoiceSessionSummaryMarkdown() {
+        let session = FullDuplexVoiceSession()
+        let summary = session.sessionSummaryMarkdown()
+
+        #expect(summary.contains("### 🎙️ Full Duplex Voice Session Diagnostics"))
+        #expect(summary.contains("| Parameter | Current Value |"))
+        #expect(summary.contains("| Session Active | ⚪️ Inactive |"))
+        #expect(summary.contains("| Activity State | `idle` |"))
+        #expect(summary.contains("| Speech Threshold |"))
+    }
+
+    @Test func testWorkspaceProactiveAuditorSummaryTable() async {
+        let auditor = WorkspaceProactiveAuditor()
+        let table = await auditor.formatAuditSummaryTable()
+
+        #expect(table.contains("### 📊 Workspace Proactive Audit Summary"))
+        #expect(table.contains("| Metric / Category | Count | Status | Recommendation |"))
+        #expect(table.contains("Pending TODO / FIXME Comments"))
+        #expect(table.contains("Untested Source Files"))
+    }
+
+    @Test @MainActor func testGitOperationsLogAndBranchMarkdown() async throws {
+        let orch = AgentOrchestrator()
+        let tool = GitOperationsTool(orchestrator: orch)
+
+        let branchResult = try await tool.call(arguments: GitOperationsTool.Arguments(action: "branch"))
+        #expect(branchResult.contains("### 🌿 Git Branches") || branchResult.contains("ERROR"))
+
+        let logResult = try await tool.call(arguments: GitOperationsTool.Arguments(action: "log"))
+        #expect(logResult.contains("### 📜 Git Commit History") || logResult.contains("ERROR"))
+    }
+
+    @Test func testSecurityAuditorExportSecurityPolicyMarkdown() {
+        let policy = SecurityAuditor.exportSecurityPolicyMarkdown()
+
+        #expect(policy.contains("### 🛡️ ApexAgent Security & Host Sandbox Enforcement Policy"))
+        #expect(policy.contains("| Security Domain | Protected Scope | Enforcement Mechanism |"))
+        #expect(policy.contains("Credential Vault"))
+        #expect(policy.contains("Shell & Secrets"))
+        #expect(policy.contains("OS System Trees"))
+    }
+
+    @Test func testSpotlightRetrievalIndexResultsTableMarkdown() {
+        let items = [
+            RetrievalItem(id: "doc1", title: "Architecture Guide", content: "ApexAgent strictly isolates tools.", url: URL(fileURLWithPath: "/docs/arch.md")),
+            RetrievalItem(id: "doc2", title: "Security Specification", content: "Path traversal and symlink guards enforced.", url: URL(fileURLWithPath: "/docs/sec.md"))
+        ]
+
+        let table = SpotlightRetrievalIndex.formatResultsTable(items)
+        #expect(table.contains("### 🔍 Spotlight RAG Retrieved Documents (2 matches)"))
+        #expect(table.contains("| Document Title | File Path | Preview Content |"))
+        #expect(table.contains("Architecture Guide"))
+        #expect(table.contains("Security Specification"))
+
+        let emptyTable = SpotlightRetrievalIndex.formatResultsTable([])
+        #expect(emptyTable.contains("No local items matched"))
+    }
+
+    @Test @MainActor func testPTYSessionStatusMarkdown() async throws {
+        let orch = AgentOrchestrator()
+        let pty = try await PTYSession(workspacePath: "/tmp", orchestrator: orch)
+        let status = pty.formatSessionStatusMarkdown()
+
+        #expect(status.contains("### 💻 PTY Shell Terminal Session Status"))
+        #expect(status.contains("| Parameter | Value |"))
+        #expect(status.contains("| Child Process ID (PID) |"))
+        #expect(status.contains("| Master File Descriptor |"))
+        pty.cleanup()
+    }
+
+    @Test func testBenchmarkEvaluationPipelineComparison() {
+        let task1 = BenchmarkResult(taskId: "task-1", taskTitle: "Build Check", isPassed: true, duration: 1.2)
+        let task2 = BenchmarkResult(taskId: "task-2", taskTitle: "Lint Check", isPassed: false, duration: 0.8)
+
+        let baseline = BenchmarkEvaluationSummary(results: [task1, task2])
+        let improvedCurrent = BenchmarkEvaluationSummary(results: [
+            task1,
+            BenchmarkResult(taskId: "task-2", taskTitle: "Lint Check", isPassed: true, duration: 0.5)
+        ])
+
+        let deltaMd = BenchmarkEvaluationPipeline.compareRuns(baseline: baseline, current: improvedCurrent)
+        #expect(deltaMd.contains("### 📊 Benchmark Suite Comparison & Regression Matrix"))
+        #expect(deltaMd.contains("| Metric | Baseline | Current | Delta | Status |"))
+        #expect(deltaMd.contains("🟢 Improved"))
+        #expect(deltaMd.contains("🟢 Faster"))
+    }
+
+    @Test func testContextCompactorCompactionResultMarkdown() {
+        let compactor = ContextCompactor.shared
+        let result = CompactionResult(
+            compactedMessages: [("user", "Hello")],
+            summarizedTurnCount: 12,
+            approximateTokensSaved: 3400,
+            summary: "- Previous conversation established design goals."
+        )
+
+        let summaryMd = compactor.formatCompactionResultMarkdown(result)
+        #expect(summaryMd.contains("### 🗜️ Context Compaction Performance Summary"))
+        #expect(summaryMd.contains("| Metric | Value |"))
+        #expect(summaryMd.contains("`12`"))
+        #expect(summaryMd.contains("`3400`"))
+        #expect(summaryMd.contains("Previous conversation established design goals."))
+    }
+
 }

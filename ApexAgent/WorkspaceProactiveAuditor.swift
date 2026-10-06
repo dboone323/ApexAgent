@@ -200,4 +200,49 @@ public actor WorkspaceProactiveAuditor {
         let skips = Set(["build", ".build", ".git", "node_modules", "Packages", "DerivedData", "xcuserdata"])
         return !skips.isDisjoint(with: components)
     }
+
+    /// Returns a structured high-density Markdown summary table of proactive audit findings.
+    public func formatAuditSummaryTable() async -> String {
+        let todoItems = await findTodos()
+        let testGapFiles = await findTestGaps()
+
+        var md = "### 📊 Workspace Proactive Audit Summary\n\n"
+        md += "| Metric / Category | Count | Status | Recommendation |\n"
+        md += "|---|---|---|---|\n"
+
+        let todoStatus = todoItems.isEmpty ? "🟢 Clean" : (todoItems.count > 10 ? "⚠️ Backlog" : "ℹ️ Normal")
+        let todoRec = todoItems.isEmpty ? "None" : "Review and resolve active code comments"
+        md += "| Pending TODO / FIXME Comments | `\(todoItems.count)` | \(todoStatus) | \(todoRec) |\n"
+
+        let gapStatus = testGapFiles.isEmpty ? "🟢 Full Coverage" : (testGapFiles.count > 5 ? "⚠️ Gaps Detected" : "ℹ️ Minor Gaps")
+        let gapRec = testGapFiles.isEmpty ? "None" : "Generate unit tests for uncovered components"
+        md += "| Untested Source Files | `\(testGapFiles.count)` | \(gapStatus) | \(gapRec) |\n\n"
+
+        if !todoItems.isEmpty {
+            md += "#### 📋 Top Pending Items\n\n"
+            md += "| Source File | Line | Snippet |\n"
+            md += "|---|---|---|\n"
+            for (file, line, text) in todoItems.prefix(5) {
+                let filename = URL(fileURLWithPath: file).lastPathComponent.replacingOccurrences(of: "|", with: "\\|")
+                let safeText = text.replacingOccurrences(of: "|", with: "\\|")
+                md += "| `\(filename)` | `\(line)` | `\(safeText)` |\n"
+            }
+            md += "\n"
+        }
+
+        if !testGapFiles.isEmpty {
+            md += "#### 🧪 Test Coverage Action Items\n\n"
+            md += "| Untested Component | Proposed Test Suite |\n"
+            md += "|---|---|\n"
+            for gap in testGapFiles.prefix(5) {
+                let filename = URL(fileURLWithPath: gap).lastPathComponent.replacingOccurrences(of: "|", with: "\\|")
+                let testName = filename.replacingOccurrences(of: ".swift", with: "Tests.swift")
+                md += "| `\(filename)` | `\(testName)` |\n"
+            }
+            md += "\n"
+        }
+
+        return md
+    }
+
 }

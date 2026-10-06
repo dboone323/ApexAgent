@@ -117,10 +117,36 @@ struct GitOperationsTool: Tool {
                 return diffOut.isEmpty ? "Clean: no unstaged changes." : diffOut
 
             case "log":
-                return try runGit(repoDir: repoDir, args: ["log", "-n", "10", "--oneline", "--graph"])
+                let logOut = try runGit(repoDir: repoDir, args: ["log", "-n", "10", "--pretty=format:%h|%an|%s"])
+                let lines = logOut.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                guard !lines.isEmpty else { return "No commit history found in repository." }
+                var md = "### 📜 Git Commit History (Recent \(lines.count))\n\n"
+                md += "| Commit | Author | Message |\n"
+                md += "|---|---|---|\n"
+                for line in lines {
+                    let parts = line.components(separatedBy: "|")
+                    let hash = parts.count > 0 ? parts[0] : ""
+                    let author = parts.count > 1 ? parts[1] : ""
+                    let message = parts.count > 2 ? parts.dropFirst(2).joined(separator: "|") : ""
+                    md += "| `\(hash)` | \(author) | \(message.replacingOccurrences(of: "|", with: "\\|")) |\n"
+                }
+                return md
 
             case "branch":
-                return try runGit(repoDir: repoDir, args: ["branch", "-a"])
+                let branchOut = try runGit(repoDir: repoDir, args: ["branch", "-a"])
+                let lines = branchOut.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                guard !lines.isEmpty else { return "No branches found." }
+                var md = "### 🌿 Git Branches\n\n"
+                md += "| Branch Name | Current | Scope |\n"
+                md += "|---|---|---|\n"
+                for line in lines {
+                    let isCurrent = line.hasPrefix("*")
+                    let clean = line.replacingOccurrences(of: "*", with: "").trimmingCharacters(in: .whitespaces)
+                    let scope = clean.hasPrefix("remotes/") ? "🌐 Remote" : "💻 Local"
+                    let badge = isCurrent ? "⭐️ Active" : "⚪️"
+                    md += "| `\(clean)` | \(badge) | \(scope) |\n"
+                }
+                return md
 
             case "add":
                 guard let paths = arguments.paths, !paths.isEmpty else {

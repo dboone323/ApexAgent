@@ -284,4 +284,22 @@ final class SecurityAuditor {
 
         return sanitized
     }
+
+    // MARK: - Security Policy Markdown Export
+
+    nonisolated public static func exportSecurityPolicyMarkdown() -> String {
+        var md = "### 🛡️ ApexAgent Security & Host Sandbox Enforcement Policy\n\n"
+        md += "| Security Domain | Protected Scope | Enforcement Mechanism |\n"
+        md += "|---|---|---|\n"
+        md += "| Credential Vault | `~/.ssh`, `~/.aws`, `~/.gnupg` | Hard Deny (Path Violation) |\n"
+        md += "| Shell & Secrets | `~/.bash_history`, `~/.zsh_history`, `~/.netrc` | Hard Deny (Path Violation) |\n"
+        md += "| User Config | `~/.config` | Hard Deny (Path Violation) |\n"
+        md += "| OS System Trees | `/System`, `/Library`, `/etc`, `/usr`, `/bin` | Hard Deny (System Restriction) |\n"
+        md += "| Root Filesystem | `/` | Hard Deny (System Restriction) |\n"
+        md += "| User Media Dirs | `~/Desktop`, `~/Documents`, `~/Downloads` | Permission-gated via AppPermissions |\n"
+        md += "| Symlink Traversal | Symlinks resolving outside workspace/tmp | Hard Deny (Symlink Traversal Trap) |\n"
+        md += "| Data Leak Prevention | Bearer tokens, OpenAI keys, Gemini keys, PEM | Dynamic Regular Expression Sanitization |\n"
+        return md
+    }
+
 }

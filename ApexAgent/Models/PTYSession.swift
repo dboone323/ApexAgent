@@ -510,4 +510,20 @@ class PTYSession: @unchecked Sendable {
     deinit {
         cleanup()
     }
+
+    // MARK: - Markdown Session Status
+
+    public func formatSessionStatusMarkdown() -> String {
+        var md = "### 💻 PTY Shell Terminal Session Status\n\n"
+        md += "| Parameter | Value |\n"
+        md += "|---|---|\n"
+        md += "| Child Process ID (PID) | `\(childPid)` |\n"
+        md += "| Master File Descriptor | `\(masterFd)` |\n"
+        let isoBadge = isContainerMode ? "🐳 Apple Container Sandbox" : "🖥️ Host Process"
+        md += "| Execution Sandbox | \(isoBadge) |\n"
+        let activeStatus = childPid > 0 ? "🟢 Running" : "⚪️ Terminated / Idle"
+        md += "| Process Lifecycle | \(activeStatus) |\n"
+        return md
+    }
+
 }
