@@ -1627,6 +1627,22 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         pending.continuation?.resume(returning: approved)
         pendingConfirmation = nil
     }
+
+    // MARK: - Markdown Runtime Summary
+
+    public func exportOrchestratorSummaryMarkdown() -> String {
+        var md = "### 🎛️ Agent Orchestrator Runtime Telemetry\n\n"
+        md += "| Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Execution State | \(isGenerating ? "⚡️ Generating" : "💤 Idle") | Current task processing state |\n"
+        md += "| Active Plan Steps | `\(activePlan.count)` | Decomposition tasks in queue |\n"
+        let gov = activeGovernanceProfile?.id ?? "Standard SecurityAuditor"
+        md += "| Governance Profile | `\(gov)` | Active security sandboxing profile |\n"
+        md += "| Multi-Agent Swarm | \(multiAgentModeEnabled ? "🟢 Enabled" : "⚪️ Disabled") | Inter-bot coordination mode |\n"
+        md += "| Traces Recorded | `\(coordinationTraces.count)` | Agent coordination spans |\n"
+        md += "| Reasoning Logs | `\(reasoningLogs.count)` | Monologue reflection steps |\n"
+        return md
+    }
 }
 
 // MARK: - Apex Agent Dynamic Profile

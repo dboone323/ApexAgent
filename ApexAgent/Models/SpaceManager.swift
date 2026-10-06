@@ -1249,4 +1249,27 @@ public final class SpaceManager {
         guard let context = modelContext else { return }
         try? context.save()
     }
+
+    // MARK: - Markdown Workspaces Roster
+
+    public func exportSpacesRosterMarkdown() -> String {
+        guard !spaces.isEmpty else {
+            return "No shared workspaces registered in SpaceManager."
+        }
+
+        var md = "### 🌌 Shared Workspaces Roster (\(spaces.count) active)\n\n"
+        md += "| Workspace Name | Orchestration Mode | Channels | Participants | Pages |\n"
+        md += "|---|---|---|---|---|\n"
+
+        for space in spaces {
+            let mode = space.orchestrationMode.displayName
+            let chCount = space.channels.count
+            let pCount = space.participants.count
+            let pgCount = space.pages.count
+            let safeName = space.name.replacingOccurrences(of: "|", with: "\\|")
+            md += "| **\(safeName)** | `\(mode)` | `\(chCount)` | `\(pCount)` | `\(pgCount)` |\n"
+        }
+        return md
+    }
+
 }

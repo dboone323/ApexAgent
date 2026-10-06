@@ -152,4 +152,22 @@ public final class TurnWatchdog: @unchecked Sendable {
             options.onStall(turn)
         }
     }
+
+    // MARK: - Markdown Diagnostics
+
+    public func formatWatchdogDiagnosticsMarkdown() -> String {
+        lock.lock()
+        defer { lock.unlock() }
+
+        var md = "### ⏱️ Turn Stall Watchdog Diagnostics\n\n"
+        md += "| Metric / Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Monitored Turns | `\(turns.count)` | Currently active tracked turns |\n"
+        let humanCount = turns.values.filter(\.waitingOnHuman).count
+        md += "| Human-Gated Turns | `\(humanCount)` | Exempt turns paused on approvals |\n"
+        md += "| Stall Threshold | `\(Int(options.stallMs / 1000))s` | Heartbeat silence timeout |\n"
+        md += "| Check Interval | `\(Int(options.checkMs / 1000))s` | Sweep timer frequency |\n"
+        return md
+    }
+
 }

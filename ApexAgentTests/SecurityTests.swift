@@ -1217,4 +1217,118 @@ struct SecurityTests {
         #expect(md.contains("Chief of Staff"))
     }
 
+
+    // MARK: - Batch 9 Self-Hardening Tests
+
+    @Test @MainActor func testEphemeralCapabilityManagerMarkdown() {
+        let mgr = EphemeralCapabilityManager.shared
+        mgr.revokeAll(for: "test_tool")
+        _ = mgr.issueToken(for: "test_tool", botName: "test-bot", ttlSeconds: 300)
+
+        let md = mgr.exportActiveTokensMarkdown()
+        #expect(md.contains("### 🔑 Active Ephemeral Capability Grants"))
+        #expect(md.contains("| Token ID | Scoped Tool | Target Bot | Expiration | Status |"))
+        #expect(md.contains("test_tool"))
+        #expect(md.contains("test-bot"))
+    }
+
+    @Test @MainActor func testSpaceManagerSpacesRosterMarkdown() {
+        let sm = SpaceManager()
+        let emptyMd = sm.exportSpacesRosterMarkdown()
+        #expect(emptyMd.contains("No shared workspaces registered in SpaceManager."))
+
+        let space = SpaceModel(name: "Engineering Core", summary: "Main dev space")
+        sm.spaces.append(space)
+
+        let rosterMd = sm.exportSpacesRosterMarkdown()
+        #expect(rosterMd.contains("### 🌌 Shared Workspaces Roster (1 active)"))
+        #expect(rosterMd.contains("| Workspace Name | Orchestration Mode | Channels | Participants | Pages |"))
+        #expect(rosterMd.contains("Engineering Core"))
+    }
+
+    @Test @MainActor func testScreenStreamerStatusMarkdown() {
+        let streamer = ScreenStreamer.shared
+        let md = streamer.formatStreamerStatusMarkdown()
+        #expect(md.contains("### 🖥️ ScreenStreamer Capture Diagnostics"))
+        #expect(md.contains("| Parameter | Value | Description |"))
+        #expect(md.contains("Capture Stream"))
+        #expect(md.contains("Buffer Frames"))
+    }
+
+    @Test func testTraceBusTracesMarkdown() {
+        let bus = TraceBus(maxEvents: 50)
+        let emptyMd = bus.exportTracesMarkdown()
+        #expect(emptyMd.contains("No distributed telemetry traces captured on TraceBus."))
+
+        bus.append(TraceEvent(source: "SecurityAuditor", operation: "scan_token", detail: "Validated safe tool invocation"))
+        let md = bus.exportTracesMarkdown()
+        #expect(md.contains("### 🛰️ TraceBus Distributed Telemetry Traces (1 recent)"))
+        #expect(md.contains("| Source | Operation | Detail | Timestamp |"))
+        #expect(md.contains("SecurityAuditor"))
+        #expect(md.contains("scan_token"))
+    }
+
+    @Test @MainActor func testStateGraphSummaryMarkdown() {
+        let graph = StateGraph(name: "PipelineWorkflow")
+        graph.entryNode = "start"
+        graph.addNode(name: "start") { state in
+            .success(output: "init", nextState: state)
+        }
+        let md = graph.formatGraphSummaryMarkdown()
+        #expect(md.contains("### 🕸️ Directed State Graph: PipelineWorkflow"))
+        #expect(md.contains("| Component | Count / Status | Details |"))
+        #expect(md.contains("start"))
+    }
+
+    @Test @MainActor func testBotSessionDiagnosticsMarkdown() {
+        let orch = AgentOrchestrator()
+        let profile = BotProfile(name: "ArchBot", title: "Lead Architect")
+        let session = BotSession(bot: profile, orchestrator: orch)
+        let md = session.formatSessionDiagnosticsMarkdown()
+        #expect(md.contains("### 🤖 BotSession Runtime Diagnostics: ArchBot"))
+        #expect(md.contains("| Metric / Property | Value | Description |"))
+        #expect(md.contains("ArchBot"))
+        #expect(md.contains("Effective Tools"))
+    }
+
+    @Test func testTurnWatchdogDiagnosticsMarkdown() {
+        let wd = TurnWatchdog(options: .init(stallMs: 5000, checkMs: 1000, onStall: { _ in }))
+        wd.watch(threadId: "th-123", botId: "bot-1")
+        wd.setWaitingOnHuman(threadId: "th-123", waiting: true)
+
+        let md = wd.formatWatchdogDiagnosticsMarkdown()
+        #expect(md.contains("### ⏱️ Turn Stall Watchdog Diagnostics"))
+        #expect(md.contains("| Metric / Parameter | Value | Description |"))
+        #expect(md.contains("Monitored Turns"))
+        #expect(md.contains("Human-Gated Turns"))
+    }
+
+    @Test func testWebhookEndpointsMarkdown() {
+        let mgr = WebhookManager()
+        let emptyMd = mgr.formatWebhookEndpointsMarkdown()
+        #expect(emptyMd.contains("No inbound webhook ingress endpoints registered."))
+
+        _ = mgr.addEndpoint(targetRoutineName: "DailyBuildRoutine")
+        let md = mgr.formatWebhookEndpointsMarkdown()
+        #expect(md.contains("### 🪝 Inbound Webhook Ingress Endpoints (1 configured)"))
+        #expect(md.contains("| Endpoint ID | Target Routine | Status | Secret Redacted |"))
+        #expect(md.contains("DailyBuildRoutine"))
+    }
+
+    @Test @MainActor func testVirtualDisplayManagerStatusMarkdown() {
+        let vdm = VirtualDisplayManager.shared
+        let md = vdm.formatDisplayStatusMarkdown()
+        #expect(md.contains("### 🖥️ Virtual Display & Off-Screen Window Subsystem"))
+        #expect(md.contains("| Display ID | Primary | Resolution (Bounds) | Backing Scale |"))
+    }
+
+    @Test @MainActor func testAgentOrchestratorSummaryMarkdown() {
+        let orch = AgentOrchestrator()
+        let md = orch.exportOrchestratorSummaryMarkdown()
+        #expect(md.contains("### 🎛️ Agent Orchestrator Runtime Telemetry"))
+        #expect(md.contains("| Parameter | Value | Description |"))
+        #expect(md.contains("Execution State"))
+        #expect(md.contains("Governance Profile"))
+    }
+
 }

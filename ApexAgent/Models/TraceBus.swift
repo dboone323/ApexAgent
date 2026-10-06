@@ -74,4 +74,29 @@ final class TraceBus: @unchecked Sendable {
             self?.events.removeAll()
         }
     }
+
+    // MARK: - Markdown Telemetry
+
+    func exportTracesMarkdown(limit: Int = 30) -> String {
+        let events = recentEvents(limit: limit)
+        guard !events.isEmpty else {
+            return "No distributed telemetry traces captured on TraceBus."
+        }
+
+        var md = "### 🛰️ TraceBus Distributed Telemetry Traces (\(events.count) recent)\n\n"
+        md += "| Source | Operation | Detail | Timestamp |\n"
+        md += "|---|---|---|---|\n"
+
+        let iso = ISO8601DateFormatter()
+        for ev in events {
+            let safeSource = ev.source.replacingOccurrences(of: "|", with: "\\|")
+            let safeOp = ev.operation.replacingOccurrences(of: "|", with: "\\|")
+            let safeDetail = ev.detail.replacingOccurrences(of: "|", with: "\\|").replacingOccurrences(of: "\n", with: " ")
+            let truncated = safeDetail.count > 60 ? String(safeDetail.prefix(57)) + "..." : safeDetail
+            let timeStr = iso.string(from: ev.timestamp)
+            md += "| `\(safeSource)` | `\(safeOp)` | \(truncated) | `\(timeStr)` |\n"
+        }
+        return md
+    }
+
 }

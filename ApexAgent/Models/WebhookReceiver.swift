@@ -286,4 +286,29 @@ enum WebhookRouter {
         }
         return request.secretHeader?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
+
+
+}
+
+extension WebhookManager {
+    // MARK: - Markdown Endpoints Export
+
+    func formatWebhookEndpointsMarkdown() -> String {
+        let eps = allEndpoints
+        guard !eps.isEmpty else {
+            return "No inbound webhook ingress endpoints registered."
+        }
+
+        var md = "### 🪝 Inbound Webhook Ingress Endpoints (\(eps.count) configured)\n\n"
+        md += "| Endpoint ID | Target Routine | Status | Secret Redacted |\n"
+        md += "|---|---|---|---|\n"
+
+        for ep in eps {
+            let status = ep.enabled ? "🟢 Enabled" : "⚪️ Disabled"
+            let redacted = String(ep.secret.prefix(4)) + "••••••••"
+            let safeTarget = ep.targetRoutineName.replacingOccurrences(of: "|", with: "\\|")
+            md += "| `\(ep.id)` | `\(safeTarget)` | \(status) | `\(redacted)` |\n"
+        }
+        return md
+    }
 }

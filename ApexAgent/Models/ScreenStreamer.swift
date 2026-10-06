@@ -111,4 +111,18 @@ class ScreenStreamer: NSObject, SCStreamDelegate, SCStreamOutput {
             ScreenStreamer.shared.stream = nil
         }
     }
+
+    // MARK: - Markdown Diagnostics
+
+    func formatStreamerStatusMarkdown() -> String {
+        var md = "### 🖥️ ScreenStreamer Capture Diagnostics\n\n"
+        md += "| Parameter | Value | Description |\n"
+        md += "|---|---|---|\n"
+        md += "| Capture Stream | \(stream != nil ? "🟢 Active" : "⚪️ Inactive") | ScreenCaptureKit session |\n"
+        md += "| Idle State | \(isIdle ? "💤 Idle (>30s)" : "⚡️ Active (<30s)") | Consumer access frequency |\n"
+        md += "| Buffer Frames | `\(circularBuffer.count)` / `\(maxBufferCount)` | Retained visual frames |\n"
+        md += "| Frame Resolution | `1024x768` | Capture dimensions |\n"
+        return md
+    }
+
 }
