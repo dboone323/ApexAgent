@@ -1431,3 +1431,23 @@ struct SecurityTests {
     }
 
 }
+
+// MARK: - Capability token guards
+
+@Suite("EphemeralCapabilityGuardsTests")
+struct EphemeralCapabilityGuardsTests {
+    @Test @MainActor func capabilityGuards() {
+        #expect(EphemeralCapabilityManager.ttlError(-5) != nil)
+        #expect(EphemeralCapabilityManager.ttlError(0) != nil)
+        #expect(EphemeralCapabilityManager.ttlError(60) == nil)
+        #expect(EphemeralCapabilityManager.ttlError(7200) != nil)
+        #expect(EphemeralCapabilityManager.requiresToken(toolName: "delete_file"))
+        #expect(!EphemeralCapabilityManager.requiresToken(toolName: "web_search"))
+        let tok = EphemeralCapabilityManager.shared.issueToken(for: "delete_file", botName: nil, ttlSeconds: 60)
+        #expect(tok.remainingLifetime > 0 && tok.remainingLifetime <= 60)
+        let md = tok.formatAsMarkdown()
+        #expect(md.contains("delete_file"))
+        #expect(!md.contains(tok.hmac))
+        EphemeralCapabilityManager.shared.revokeAll(for: "delete_file")
+    }
+}

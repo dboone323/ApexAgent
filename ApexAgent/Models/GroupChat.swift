@@ -521,3 +521,27 @@ final class GroupChatManager {
         activeGroupId = nil
     }
 }
+
+extension GroupToolPermission {
+    public var badge: String {
+        switch self {
+        case .allowed: return "🟢 Allowed"
+        case .needsApproval: return "🟡 Needs Approval"
+        case .denied: return "🔴 Denied"
+        }
+    }
+
+    public var isActionable: Bool {
+        switch self {
+        case .allowed, .needsApproval: return true
+        case .denied: return false
+        }
+    }
+}
+
+extension DefaultGroupToolAllowlist {
+    /// Allowlist membership probe without exposing the set for mutation.
+    public static func isAllowed(_ tool: String) -> Bool {
+        set.contains(tool)
+    }
+}

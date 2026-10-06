@@ -154,3 +154,30 @@ struct DiagnosticManager {
         CGPreflightScreenCaptureAccess()
     }
 }
+
+extension DiagnosticStatus {
+    public var badge: String {
+        switch self {
+        case .pass: return "✅ Pass"
+        case .warning: return "⚠️ Warning"
+        case .fail: return "❌ Fail"
+        }
+    }
+}
+
+extension DiagnosticItem {
+    public func formatAsMarkdown() -> String {
+        "| **\(name)** | `\(category)` | \(status.badge) | \(message.prefix(200)) |"
+    }
+
+    public static func summarizeAsMarkdown(_ items: [DiagnosticItem]) -> String {
+        guard !items.isEmpty else { return "No diagnostic results recorded." }
+        let fails = items.filter { $0.status == .fail }.count
+        let warns = items.filter { $0.status == .warning }.count
+        var md = "### 🩺 Diagnostics Summary: \(items.count) checks (\(fails) failing, \(warns) warnings)\n\n"
+        md += "| Check | Category | Status | Message |\n"
+        md += "|---|---|---|---|\n"
+        for item in items { md += item.formatAsMarkdown() + "\n" }
+        return md
+    }
+}
