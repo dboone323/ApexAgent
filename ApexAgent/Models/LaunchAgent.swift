@@ -3,7 +3,7 @@ import Synchronization
 
 // MARK: - WS3: LaunchAgent supervision so bots keep working with the app closed
 //
-// Grok Bot's defining capability is 24/7 bots. ApexAgent's equivalent is the
+// A defining capability is 24/7 bots. ApexAgent's equivalent is the
 // `--daemon` mode (gateway + bots + routines + webhook receiver) supervised by
 // a per-user launchd agent: it starts at login, restarts on crash, and keeps
 // scheduled/webhook routines alive when the GUI is not running.
@@ -175,5 +175,32 @@ final class LaunchAgentController {
         } catch {
             return false
         }
+    }
+}
+
+extension LaunchAgentConfig {
+    public func validationError() -> String? {
+        let trimmedLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedLabel.isEmpty { return "Label must not be empty." }
+        let parts = trimmedLabel.split(separator: ".")
+        if parts.count < 2 { return "Label should be reverse-DNS (e.g. com.apexagent.daemon)." }
+        if programPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "programPath must not be empty."
+        }
+        return nil
+    }
+
+    public var isValid: Bool { validationError() == nil }
+
+    public func formatAsMarkdown() -> String {
+        var md = "### 🚀 LaunchAgent: `\(label)`\n\n"
+        md += "| Field | Value |\n"
+        md += "|---|---|\n"
+        md += "| Program | `\(programPath)` |\n"
+        md += "| Arguments | `\(arguments.joined(separator: " "))` |\n"
+        md += "| RunAtLoad | \(runAtLoad ? "✅" : "⚪️") |\n"
+        md += "| KeepAlive | \(keepAlive ? "✅" : "⚪️") |\n"
+        md += "| Valid | \(isValid ? "✅" : "❌ \(validationError() ?? "")") |\n"
+        return md
     }
 }

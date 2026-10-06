@@ -105,3 +105,33 @@ extension DiffHelper {
         return header + lines.joined(separator: "\n")
     }
 }
+
+extension DiffStats {
+    public var badge: String {
+        if additions == 0 && deletions == 0 { return "⚪️ No Changes" }
+        if deletions == 0 { return "🟢 Additions Only" }
+        if additions == 0 { return "🟠 Deletions Only" }
+        return "🔵 Mixed Changes"
+    }
+
+    public func formatAsMarkdownRow(filePath: String) -> String {
+        "| `\(filePath)` | `+\(additions)` | `-\(deletions)` | \(badge) | `\(summary())` |"
+    }
+}
+
+extension DiffLine.Kind {
+    public var prefix: String {
+        switch self {
+        case .unchanged: return " "
+        case .added: return "+"
+        case .deleted: return "-"
+        }
+    }
+}
+
+extension DiffLine {
+    public func formatTruncated(maxWidth: Int = 160) -> String {
+        let text = text.count > maxWidth ? String(text.prefix(maxWidth)) + "…" : text
+        return "\(kind.prefix)\(text)"
+    }
+}

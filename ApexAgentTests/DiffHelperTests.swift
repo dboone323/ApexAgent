@@ -2,9 +2,11 @@ import Testing
 import Foundation
 @testable import ApexAgentCore
 
-@Suite("HardeningLoopBatch19Tests")
-struct HardeningLoopBatch19Tests {
-    @Test func testDiffStatsBadge() {
+// MARK: - Diff badges, line formatting & unified diff output
+
+@Suite("DiffHelperTests")
+struct DiffHelperTests {
+    @Test func diffStatsBadge() {
         #expect(DiffStats(additions: 0, deletions: 0, unchanged: 5).badge.contains("No Changes"))
         #expect(DiffStats(additions: 3, deletions: 0, unchanged: 1).badge.contains("Additions"))
         #expect(DiffStats(additions: 0, deletions: 2, unchanged: 1).badge.contains("Deletions"))
@@ -13,7 +15,7 @@ struct HardeningLoopBatch19Tests {
         #expect(row.contains("a.swift"))
     }
 
-    @Test func testDiffLineFormat() {
+    @Test func diffLineFormat() {
         let long = String(repeating: "x", count: 300)
         let line = DiffLine(kind: .added, text: long, lineNumber: nil)
         #expect(line.formatTruncated().count <= 162)
@@ -22,16 +24,7 @@ struct HardeningLoopBatch19Tests {
         #expect(del.formatTruncated().hasPrefix("-"))
     }
 
-    @Test func testLaunchAgentValidation() {
-        let ok = LaunchAgentConfig(label: "com.apexagent.daemon", programPath: "/usr/local/bin/apex", arguments: ["--daemon"])
-        #expect(ok.isValid)
-        #expect(ok.formatAsMarkdown().contains("apexagent"))
-        let bad = LaunchAgentConfig(label: "notadns", programPath: "", arguments: [])
-        #expect(!bad.isValid)
-        #expect(bad.validationError() != nil)
-    }
-
-    @Test func testUnifiedDiff() {
+    @Test func unifiedDiff() {
         let diff = DiffHelper.computeDiff(oldText: "a\nb", newText: "a\nc")
         let stats = DiffHelper.computeStats(diff: diff)
         #expect(stats.additions == 1 && stats.deletions == 1)

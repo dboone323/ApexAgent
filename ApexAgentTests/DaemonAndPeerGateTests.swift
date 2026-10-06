@@ -62,6 +62,15 @@ struct LaunchAgentTests {
         try controller.uninstall()
         #expect(controller.isInstalled == false)
     }
+
+    @Test func launchAgentValidation() {
+        let ok = LaunchAgentConfig(label: "com.apexagent.daemon", programPath: "/usr/local/bin/apex", arguments: ["--daemon"])
+        #expect(ok.isValid)
+        #expect(ok.formatAsMarkdown().contains("apexagent"))
+        let bad = LaunchAgentConfig(label: "notadns", programPath: "", arguments: [])
+        #expect(!bad.isValid)
+        #expect(bad.validationError() != nil)
+    }
 }
 
 // MARK: - O9 wiring: peer-approval gate for bot-initiated messages
