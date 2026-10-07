@@ -243,6 +243,17 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .showDiagnosticsSheet)) { _ in
             showDiagnostics = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .showSettingsSheet)) { _ in
+            showSettings = true
+        }
+        .onChange(of: DeepLinkNavigationState.shared.activeChatId) { _, newChatId in
+            guard let newChatId else { return }
+            if let match = conversations.first(where: { $0.id.uuidString == newChatId }) {
+                botManager.activeBotId = nil
+                spaceManager.activeSpaceId = nil
+                orchestrator.loadConversation(match)
+            }
+        }
     }
     
     private func deleteSavedConversations(at offsets: IndexSet) {

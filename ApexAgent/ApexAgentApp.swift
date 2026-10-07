@@ -56,6 +56,9 @@ public struct ApexAgentApp: App {
                 .onAppear {
                     GlobalCommandPaletteController.shared.registerHotKey()
                 }
+                .onOpenURL { url in
+                    _ = DeepLinkNavigationState.shared.handle(url)
+                }
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
