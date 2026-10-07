@@ -35,7 +35,7 @@ public final class A2APeerDiscovery {
                 case .ready:
                     self?.isBrowsing = true
                 case .failed(let error):
-                    print("Browser failed with \(error)")
+                    AppLog.error(.a2a, "Browser failed with \(error)")
                     self?.isBrowsing = false
                 case .cancelled:
                     self?.isBrowsing = false
@@ -81,7 +81,7 @@ public final class A2APeerDiscovery {
                     case .ready:
                         self?.isAdvertising = true
                     case .failed(let error):
-                        print("Advertiser failed with \(error)")
+                        AppLog.error(.a2a, "Advertiser failed with \(error)")
                         self?.isAdvertising = false
                     case .cancelled:
                         self?.isAdvertising = false

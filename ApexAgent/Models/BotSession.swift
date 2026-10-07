@@ -457,7 +457,7 @@ final class BotSession {
                 try? context.save()
             }
         } catch {
-            print("⚠️ [BotSession] Context compaction skipped: \(error.localizedDescription)")
+            AppLog.error(.bot, "⚠️ Context compaction skipped: \(error.localizedDescription)")
         }
     }
 

@@ -60,7 +60,7 @@ class DynamicToolbox {
         loadMCPToolsTask?.cancel()
         loadMCPToolsTask = nil
         if ProcessInfo.processInfo.environment["APEX_DISABLE_DYNAMIC_TOOLS"] == "1" {
-            print("Dynamic tool loading is disabled for this process.")
+            AppLog.notice(.toolbox, "Dynamic tool loading is disabled for this process.")
             return
         }
 
@@ -142,7 +142,7 @@ class DynamicToolbox {
                 mcpServerId: nil
             )
             dynamicTools[name] = entry
-            print("Loaded dynamic script tool: \(name) -> \(scriptPath)")
+            AppLog.info(.toolbox, "Loaded dynamic script tool: \(name) -> \(scriptPath)")
         }
     }
 
@@ -187,10 +187,10 @@ class DynamicToolbox {
                         mcpServerId: config.id
                     )
                     dynamicTools[tool.name] = entry
-                    print("Loaded MCP tool: \(tool.name) from server \(config.name)")
+                    AppLog.info(.toolbox, "Loaded MCP tool: \(tool.name) from server \(config.name)")
                 }
             } catch {
-                print("Failed to load tools from MCP server \(config.name): \(error)")
+                AppLog.error(.toolbox, "Failed to load tools from MCP server \(config.name): \(error)")
             }
         }
     }
@@ -216,7 +216,7 @@ class DynamicToolbox {
 
         source.setEventHandler { [weak self] in
             guard let self = self else { return }
-            print("Dynamic tool directory changed; reloading dynamic tools.")
+            AppLog.info(.toolbox, "Dynamic tool directory changed; reloading dynamic tools.")
             self.loadTools()
         }
 

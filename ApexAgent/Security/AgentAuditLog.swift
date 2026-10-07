@@ -124,7 +124,7 @@ actor AgentAuditLog {
             }
         } catch {
             // Audit persistence must never crash or block the agent loop.
-            print("[AgentAuditLog] persist failed: \(error.localizedDescription)")
+            AppLog.error(.audit, "persist failed: \(error.localizedDescription)")
         }
     }
 }

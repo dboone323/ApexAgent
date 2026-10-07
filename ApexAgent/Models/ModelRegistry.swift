@@ -139,7 +139,7 @@ public struct ModelRegistry: Sendable {
 
         if let oldKey = KeychainManager.get(key: "apex.geminiKey"), !oldKey.isEmpty {
             guard KeychainManager.save(key: "geminiAPIKey", value: oldKey) else {
-                print("Gemini API key migration from Keychain failed; legacy entry was retained.")
+                AppLog.error(.registry, "Gemini API key migration from Keychain failed; legacy entry was retained.")
                 return
             }
             _ = KeychainManager.delete(key: "apex.geminiKey")
@@ -152,7 +152,7 @@ public struct ModelRegistry: Sendable {
             .compactMap({ defaults.string(forKey: $0) })
             .first(where: { !$0.isEmpty }) {
             guard KeychainManager.save(key: "geminiAPIKey", value: legacyKey) else {
-                print("Gemini API key migration from UserDefaults failed; legacy entry was retained.")
+                AppLog.error(.registry, "Gemini API key migration from UserDefaults failed; legacy entry was retained.")
                 return
             }
             for key in legacyDefaultsKeys { defaults.removeObject(forKey: key) }
@@ -161,7 +161,7 @@ public struct ModelRegistry: Sendable {
         }
 
         guard KeychainManager.migrateLegacyFile(at: legacyFile, toKey: "geminiAPIKey") else {
-            print("Gemini API key migration from ~/.apex/gemini_key failed; legacy file was retained.")
+            AppLog.error(.registry, "Gemini API key migration from ~/.apex/gemini_key failed; legacy file was retained.")
             return
         }
     }()
@@ -171,7 +171,7 @@ public struct ModelRegistry: Sendable {
         do {
             try FileManager.default.removeItem(at: url)
         } catch {
-            print("Could not remove legacy Gemini key file: \(error.localizedDescription)")
+            AppLog.error(.registry, "Could not remove legacy Gemini key file: \(error.localizedDescription)")
         }
     }
 
@@ -261,7 +261,7 @@ public struct ModelRegistry: Sendable {
         _ = migrateLegacyGeminiCredentials
         let succeeded = KeychainManager.save(key: "geminiAPIKey", value: key)
         guard succeeded else {
-            print("Gemini API key was not saved to Keychain.")
+            AppLog.info(.registry, "Gemini API key was not saved to Keychain.")
             return false
         }
         let defaults = UserDefaults.standard

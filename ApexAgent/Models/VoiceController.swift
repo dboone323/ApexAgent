@@ -47,7 +47,7 @@ final class VoiceController: NSObject, SFSpeechRecognizerDelegate, AVSpeechSynth
                     DispatchQueue.main.async {
                         let granted = authStatus == .authorized && audioGranted
                         if !granted {
-                            print("[VoiceController] Permission denied — speech= \(authStatus), audio= \(audioGranted)")
+                            AppLog.info(.voice, "Permission denied — speech= \(authStatus), audio= \(audioGranted)")
                         }
                         if self.permissionGranted != granted {
                             self.permissionGranted = granted
@@ -128,7 +128,7 @@ final class VoiceController: NSObject, SFSpeechRecognizerDelegate, AVSpeechSynth
         if !isRecording {
             isRecording = true
         }
-        print("Speech recognition started.")
+        AppLog.info(.voice, "Speech recognition started.")
     }
     
     func stopRecording() {
@@ -139,7 +139,7 @@ final class VoiceController: NSObject, SFSpeechRecognizerDelegate, AVSpeechSynth
         if isRecording {
             isRecording = false
         }
-        print("Speech recognition stopped.")
+        AppLog.notice(.voice, "Speech recognition stopped.")
     }
     
     func speak(_ text: String) {
@@ -194,11 +194,11 @@ final class VoiceController: NSObject, SFSpeechRecognizerDelegate, AVSpeechSynth
                     self.audioPlayer?.delegate = self
                     self.audioPlayer?.play()
                 } else {
-                    print("[VoiceController] ElevenLabs HTTP Error. Falling back to system TTS.")
+                    AppLog.error(.voice, "ElevenLabs HTTP Error. Falling back to system TTS.")
                     self.speakWithSystem(text: text)
                 }
             } catch {
-                print("[VoiceController] ElevenLabs Network Error: \(error). Falling back to system TTS.")
+                AppLog.error(.voice, "ElevenLabs Network Error: \(error). Falling back to system TTS.")
                 self.speakWithSystem(text: text)
             }
         }

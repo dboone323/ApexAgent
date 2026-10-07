@@ -71,7 +71,7 @@ struct KeychainManager {
             try FileManager.default.removeItem(at: url)
             return true
         } catch {
-            print("Keychain migration failed for legacy file \(url.lastPathComponent): \(error.localizedDescription)")
+            AppLog.error(.security, "Keychain migration failed for legacy file \(url.lastPathComponent): \(error.localizedDescription)")
             return false
         }
     }

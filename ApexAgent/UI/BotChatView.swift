@@ -82,7 +82,7 @@ struct BotChatView: View {
             } catch is CancellationError {
                 // The view leaving the hierarchy cancels the expiry poll.
             } catch {
-                print("Peer approval expiry poll stopped: \(error.localizedDescription)")
+                AppLog.error(.ui, "Peer approval expiry poll stopped: \(error.localizedDescription)")
             }
         }
         .onAppear {

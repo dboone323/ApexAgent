@@ -39,7 +39,7 @@ enum SpotlightIndexer {
 
         index.indexSearchableItems([item]) { error in
             if let error {
-                print("[SpotlightIndexer] index failed for \(id): \(error.localizedDescription)")
+                AppLog.error(.spotlight, "[SpotlightIndexer] index failed for \(id): \(error.localizedDescription)")
             }
         }
     }
@@ -48,7 +48,7 @@ enum SpotlightIndexer {
     static func removeConversation(id: UUID) {
         index.deleteSearchableItems(withIdentifiers: [id.uuidString]) { error in
             if let error {
-                print("[SpotlightIndexer] delete failed for \(id): \(error.localizedDescription)")
+                AppLog.error(.spotlight, "[SpotlightIndexer] delete failed for \(id): \(error.localizedDescription)")
             }
         }
     }
@@ -57,7 +57,7 @@ enum SpotlightIndexer {
     static func removeAllSessions() {
         index.deleteSearchableItems(withDomainIdentifiers: [domainIdentifier]) { error in
             if let error {
-                print("[SpotlightIndexer] purge failed: \(error.localizedDescription)")
+                AppLog.error(.spotlight, "[SpotlightIndexer] purge failed: \(error.localizedDescription)")
             }
         }
     }
@@ -81,7 +81,7 @@ enum SpotlightIndexer {
 
         index.indexSearchableItems([item]) { error in
             if let error {
-                print("[SpotlightIndexer] index space failed for \(id): \(error.localizedDescription)")
+                AppLog.error(.spotlight, "[SpotlightIndexer] index space failed for \(id): \(error.localizedDescription)")
             }
         }
     }
@@ -90,7 +90,7 @@ enum SpotlightIndexer {
     static func removeSpace(id: UUID) {
         index.deleteSearchableItems(withIdentifiers: ["space-\(id.uuidString)"]) { error in
             if let error {
-                print("[SpotlightIndexer] delete space failed for \(id): \(error.localizedDescription)")
+                AppLog.error(.spotlight, "[SpotlightIndexer] delete space failed for \(id): \(error.localizedDescription)")
             }
         }
     }
@@ -111,7 +111,7 @@ enum SpotlightIndexer {
 
         index.indexSearchableItems([item]) { error in
             if let error {
-                print("[SpotlightIndexer] index bot failed for \(id): \(error.localizedDescription)")
+                AppLog.error(.spotlight, "[SpotlightIndexer] index bot failed for \(id): \(error.localizedDescription)")
             }
         }
     }
@@ -120,7 +120,7 @@ enum SpotlightIndexer {
     static func removeBot(id: UUID) {
         index.deleteSearchableItems(withIdentifiers: ["bot-\(id.uuidString)"]) { error in
             if let error {
-                print("[SpotlightIndexer] delete bot failed for \(id): \(error.localizedDescription)")
+                AppLog.error(.spotlight, "[SpotlightIndexer] delete bot failed for \(id): \(error.localizedDescription)")
             }
         }
     }

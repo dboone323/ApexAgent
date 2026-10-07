@@ -592,7 +592,7 @@ final class PlaybookRunner: Identifiable {
                 "timeoutSeconds": String(Int(approvalTimeout))
             ]
         )
-        print("⚠️ [PlaybookRunner] Approval gate '\(card.stageTitle)' auto-rejected after \(Int(approvalTimeout))s with no response.")
+        AppLog.error(.playbook, "⚠️ [PlaybookRunner] Approval gate '\(card.stageTitle)' auto-rejected after \(Int(approvalTimeout))s with no response.")
 
         continuation.resume(returning: .timedOut)
     }

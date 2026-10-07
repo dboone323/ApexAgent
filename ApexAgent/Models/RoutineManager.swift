@@ -48,7 +48,7 @@ final class RoutineManager: Observable {
             let decoded = try JSONDecoder().decode([RoutineRun].self, from: data)
             recentRuns = decoded
         } catch {
-            print("⚠️ [RoutineManager] Failed to load routine runs: \(error)")
+            AppLog.error(.routine, "⚠️ Failed to load routine runs: \(error)")
         }
     }
 
@@ -60,7 +60,7 @@ final class RoutineManager: Observable {
             let data = try JSONEncoder().encode(recentRuns)
             try data.write(to: file, options: [.atomic])
         } catch {
-            print("⚠️ [RoutineManager] Failed to save routine runs: \(error)")
+            AppLog.error(.routine, "⚠️ Failed to save routine runs: \(error)")
         }
     }
 
@@ -105,7 +105,7 @@ final class RoutineManager: Observable {
         do {
             routines = try context.fetch(descriptor)
         } catch {
-            print("⚠️ [RoutineManager] Failed to load routines: \(error.localizedDescription)")
+            AppLog.error(.routine, "⚠️ Failed to load routines: \(error.localizedDescription)")
             routines = []
         }
     }
@@ -143,7 +143,7 @@ final class RoutineManager: Observable {
     /// - Returns: the assistant's response text, or `nil` if execution failed.
     func execute(_ routine: Routine) async -> String? {
         guard let botManager = botManager else {
-            print("⚠️ [RoutineManager] No BotManager — cannot execute routine '\(routine.name)'")
+            AppLog.error(.routine, "⚠️ No BotManager — cannot execute routine '\(routine.name)'")
             let failedRun = RoutineRun(
                 routineId: routine.stableUUID,
                 routineName: routine.name,
@@ -319,7 +319,7 @@ final class RoutineManager: Observable {
         guard let routine = routines.first(where: {
             $0.enabled && $0.trigger == .webhook && $0.name == routineName
         }) else {
-            print("⚠️ [RoutineManager] No enabled .webhook routine named '\(routineName)'")
+            AppLog.error(.routine, "⚠️ No enabled .webhook routine named '\(routineName)'")
             return nil
         }
         return await execute(routine)

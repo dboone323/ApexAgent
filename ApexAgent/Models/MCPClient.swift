@@ -347,7 +347,7 @@ actor MCPClient {
             guard let self else { return }
             for await line in stderrLines {
                 guard !line.isEmpty else { continue }
-                print("📡 [MCP Server - \(serverNameForLogs) Stderr]: \(line)")
+                AppLog.info(.mcp, "📡 [MCP Server - \(serverNameForLogs) Stderr]: \(line)")
                 // The filesystem MCP server prints "running on stdio" once its
                 // JSON-RPC transport is attached. Mark readiness so initialize
                 // doesn't race a cold start.

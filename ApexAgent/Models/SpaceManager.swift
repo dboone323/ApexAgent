@@ -153,7 +153,7 @@ public final class SpaceManager {
         do {
             spaces = try context.fetch(descriptor)
         } catch {
-            print("⚠️ Failed to fetch Spaces from SwiftData: \(error)")
+            AppLog.error(.space, "⚠️ Failed to fetch Spaces from SwiftData: \(error)")
             spaces = []
         }
 

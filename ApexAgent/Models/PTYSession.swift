@@ -189,7 +189,7 @@ class PTYSession: @unchecked Sendable {
                 // terminal UI); strict isolation forbids the host fallback
                 // entirely and rethrows instead of executing unconfined.
                 let strictMode = await (ContainerBridge.shared as? ContainerManager)?.isolationLevel == .strict
-                print("🚨 [PTYSession] SECURITY: Apple Container sandbox failed to start (\(failureReason)). " +
+                AppLog.error(.terminal, "🚨 [PTYSession] SECURITY: Apple Container sandbox failed to start (\(failureReason)). " +
                       (strictMode
                         ? "Strict isolation forbids falling back to a host PTY — refusing to start."
                         : "Falling back to a HOST PTY: commands will run WITHOUT container isolation."))

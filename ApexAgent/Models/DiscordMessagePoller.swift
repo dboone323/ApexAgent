@@ -41,7 +41,7 @@ final class DiscordMessagePoller {
         pollingTask = Task { @MainActor [weak self] in
             await self?.pollLoop()
         }
-        print("[DiscordMessagePoller] Started. Channel: \(coordinationChannelId)")
+        AppLog.info(.discord, "Started. Channel: \(coordinationChannelId)")
     }
 
     /// Stop the polling loop.
@@ -50,7 +50,7 @@ final class DiscordMessagePoller {
         defer { lock.unlock() }
         pollingTask?.cancel()
         isRunning = false
-        print("[DiscordMessagePoller] Stopped.")
+        AppLog.notice(.discord, "Stopped.")
     }
 
     /// Poll interval in seconds. Default 15, configurable via UserDefaults.
@@ -64,7 +64,7 @@ final class DiscordMessagePoller {
             do {
                 try await pollOnce()
             } catch {
-                print("[DiscordMessagePoller] Poll error: \(error.localizedDescription)")
+                AppLog.error(.discord, "Poll error: \(error.localizedDescription)")
             }
             try? await Task.sleep(for: .seconds(pollInterval))
         }
@@ -73,11 +73,11 @@ final class DiscordMessagePoller {
     /// Single poll: fetch messages, detect new ones, feed to orchestrator.
     private func pollOnce() async throws {
         guard let token = getBotToken(), !token.isEmpty else {
-            print("[DiscordMessagePoller] No bot token — skipping poll")
+            AppLog.notice(.discord, "No bot token — skipping poll")
             return
         }
         guard !coordinationChannelId.isEmpty else {
-            print("[DiscordMessagePoller] No channel ID — skipping poll")
+            AppLog.notice(.discord, "No channel ID — skipping poll")
             return
         }
 
@@ -161,7 +161,7 @@ final class DiscordMessagePoller {
         // Feed into orchestrator — the orchestrator's parser decides whether this is
         // agent-directed and routes accordingly (delegate to a named sub-agent, or
         // surface through sendMessage for the supervisor to handle).
-        print("[DiscordMessagePoller] New message: \(text)")
+        AppLog.info(.discord, "New message: \(text)")
         await feedToOrchestrator(raw: msg)
     }
 
@@ -170,7 +170,7 @@ final class DiscordMessagePoller {
         // The parser detects agent-directed intent and classifies message type.
         if let parsed = DiscordMessageParser.parse(raw) {
             if parsed.messageType == DiscordMessageType.agentDirected || parsed.messageType == DiscordMessageType.agentStatus {
-                print("[DiscordMessagePoller] Agent-directed/\(parsed.messageType) -> \(parsed.mentionedAgents.first ?? "bot")")
+                AppLog.info(.discord, "Agent-directed/\(parsed.messageType) -> \(parsed.mentionedAgents.first ?? "bot")")
             }
         }
     }

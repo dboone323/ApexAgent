@@ -18,7 +18,7 @@ class ScreenStreamer: NSObject, SCStreamDelegate, SCStreamOutput {
         guard stream == nil else { return }
         
         if NSClassFromString("XCTest") != nil || ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" {
-            print("ScreenStreamer: startCapture bypassed in test mode.")
+            AppLog.notice(.screen, "ScreenStreamer: startCapture bypassed in test mode.")
             return
         }
         
@@ -37,7 +37,7 @@ class ScreenStreamer: NSObject, SCStreamDelegate, SCStreamOutput {
             do {
                 _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
             } catch {
-                print("ScreenStreamer: Screen Recording permission not granted — cannot start capture: \(error.localizedDescription)")
+                AppLog.error(.screen, "ScreenStreamer: Screen Recording permission not granted — cannot start capture: \(error.localizedDescription)")
                 self.lastError = error
                 return
             }
@@ -48,9 +48,9 @@ class ScreenStreamer: NSObject, SCStreamDelegate, SCStreamOutput {
             
             try await activeStream.startCapture()
             self.stream = activeStream
-            print("ScreenCaptureKit streaming started.")
+            AppLog.info(.screen, "ScreenCaptureKit streaming started.")
         } catch {
-            print("Failed to start ScreenCaptureKit stream: \(error.localizedDescription)")
+            AppLog.error(.screen, "Failed to start ScreenCaptureKit stream: \(error.localizedDescription)")
         }
     }
     
@@ -58,7 +58,7 @@ class ScreenStreamer: NSObject, SCStreamDelegate, SCStreamOutput {
         guard let activeStream = stream else { return }
         activeStream.stopCapture { _ in }
         stream = nil
-        print("ScreenCaptureKit streaming stopped.")
+        AppLog.notice(.screen, "ScreenCaptureKit streaming stopped.")
     }
     
     private(set) var lastAccessTimestamp: Date = Date()
@@ -106,7 +106,7 @@ class ScreenStreamer: NSObject, SCStreamDelegate, SCStreamOutput {
     // MARK: - SCStreamDelegate
     
     nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
-        print("ScreenCaptureKit stream stopped with error: \(error.localizedDescription)")
+        AppLog.error(.screen, "ScreenCaptureKit stream stopped with error: \(error.localizedDescription)")
         Task { @MainActor in
             ScreenStreamer.shared.stream = nil
         }

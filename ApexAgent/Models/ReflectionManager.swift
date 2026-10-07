@@ -115,7 +115,7 @@ final class ReflectionManager {
         resolution: String,
         orchestrator: AgentOrchestrator
     ) async {
-        print("🧠 [ReflectionManager]: Traced error resolution! Generating procedural skill...")
+        AppLog.error(.reflection, "🧠 Traced error resolution! Generating procedural skill...")
 
         let model = await MainActor.run { orchestrator.createModelInstance() }
         let systemPrompt = """
@@ -184,7 +184,7 @@ final class ReflectionManager {
                   let skillDesc = skillDict["skillDescription"] as? String,
                   let triggerPatterns = skillDict["triggerPatterns"] as? [String],
                   let resolutionSteps = skillDict["resolutionSteps"] as? String else {
-                print("🧠 [ReflectionManager]: Failed to parse reflection JSON: \(responseText)")
+                AppLog.error(.reflection, "🧠 Failed to parse reflection JSON: \(responseText)")
                 return
             }
 
@@ -205,7 +205,7 @@ final class ReflectionManager {
 
             if let manifestData = try? JSONSerialization.data(withJSONObject: manifest, options: .prettyPrinted) {
                 try? manifestData.write(to: jsonPath, options: .atomic)
-                print("🧠 [ReflectionManager]: Saved procedural skill to: \(jsonPath.path)")
+                AppLog.info(.reflection, "🧠 Saved procedural skill to: \(jsonPath.path)")
             }
 
             // Save to SwiftData long-term AgentMemory so it gets hydrated into RAG
@@ -233,11 +233,11 @@ final class ReflectionManager {
                 }
 
                 try? context.save()
-                print("🧠 [ReflectionManager]: Injected procedural skill memory into SwiftData database.")
+                AppLog.info(.reflection, "🧠 Injected procedural skill memory into SwiftData database.")
             }
 
         } catch {
-            print("🧠 [ReflectionManager]: Failed to generate skill reflection: \(error)")
+            AppLog.error(.reflection, "🧠 Failed to generate skill reflection: \(error)")
         }
     }
 
