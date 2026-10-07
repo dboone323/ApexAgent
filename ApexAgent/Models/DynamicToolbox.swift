@@ -47,9 +47,81 @@ class DynamicToolbox {
         let scriptPath: String? // nil for MCP tools
         let schema: [String: Any]
         let mcpServerId: UUID? // nil for script-based tools
+        let annotations: MCPToolAnnotations?
+
+        init(
+            name: String,
+            description: String,
+            scriptPath: String?,
+            schema: [String: Any],
+            mcpServerId: UUID?,
+            annotations: MCPToolAnnotations? = nil
+        ) {
+            self.name = name
+            self.description = description
+            self.scriptPath = scriptPath
+            self.schema = schema
+            self.mcpServerId = mcpServerId
+            self.annotations = annotations
+        }
     }
 
     private(set) var dynamicTools: [String: DynamicToolEntry] = [:]
+
+    func toolAnnotations(for name: String) -> MCPToolAnnotations? {
+        dynamicTools[name]?.annotations
+    }
+
+    func requiresConfirmation(for name: String) -> Bool {
+        guard let annotations = dynamicTools[name]?.annotations else { return false }
+        if annotations.isDestructive { return true }
+        if annotations.isReadOnly { return false }
+        return false
+    }
+
+    @discardableResult
+    func registerMCPTool(_ tool: MCPToolDefinition, serverId: UUID, serverName: String = "MCP") -> DynamicToolEntry {
+        var properties: [String: Any] = [:]
+        if let props = tool.inputSchema.properties {
+            for (k, v) in props {
+                properties[k] = [
+                    "type": v.type,
+                    "description": v.description ?? ""
+                ]
+            }
+        }
+
+        var schema: [String: Any] = [
+            "name": tool.name,
+            "description": tool.description ?? "",
+            "parameters": [
+                "type": "object",
+                "properties": properties,
+                "required": tool.inputSchema.required ?? []
+            ]
+        ]
+        if let annotations = tool.annotations {
+            schema["annotations"] = [
+                "title": annotations.title as Any,
+                "readOnlyHint": annotations.readOnlyHint as Any,
+                "destructiveHint": annotations.destructiveHint as Any,
+                "idempotentHint": annotations.idempotentHint as Any,
+                "openWorldHint": annotations.openWorldHint as Any
+            ]
+        }
+
+        let entry = DynamicToolEntry(
+            name: tool.name,
+            description: tool.description ?? "",
+            scriptPath: nil,
+            schema: schema,
+            mcpServerId: serverId,
+            annotations: tool.annotations
+        )
+        dynamicTools[tool.name] = entry
+        AppLog.info(.toolbox, "Loaded MCP tool: \(tool.name) from server \(serverName)")
+        return entry
+    }
 
     private var dirDescriptor: Int32 = -1
     private var watcherSource: DispatchSourceFileSystemObject?
@@ -159,35 +231,7 @@ class DynamicToolbox {
                 let toolsList = try await client.listTools()
                 if Task.isCancelled { return }
                 for tool in toolsList {
-                    var properties: [String: Any] = [:]
-                    if let props = tool.inputSchema.properties {
-                        for (k, v) in props {
-                            properties[k] = [
-                                "type": v.type,
-                                "description": v.description ?? ""
-                            ]
-                        }
-                    }
-
-                    let schema: [String: Any] = [
-                        "name": tool.name,
-                        "description": tool.description ?? "",
-                        "parameters": [
-                            "type": "object",
-                            "properties": properties,
-                            "required": tool.inputSchema.required ?? []
-                        ]
-                    ]
-
-                    let entry = DynamicToolEntry(
-                        name: tool.name,
-                        description: tool.description ?? "",
-                        scriptPath: nil,
-                        schema: schema,
-                        mcpServerId: config.id
-                    )
-                    dynamicTools[tool.name] = entry
-                    AppLog.info(.toolbox, "Loaded MCP tool: \(tool.name) from server \(config.name)")
+                    registerMCPTool(tool, serverId: config.id, serverName: config.name)
                 }
             } catch {
                 AppLog.error(.toolbox, "Failed to load tools from MCP server \(config.name): \(error)")
