@@ -71,14 +71,45 @@ public struct ApexAgentApp: App {
                 Button("New Conversation") {
                     botManager.activeBotId = nil
                     spaceManager.activeSpaceId = nil
-                    orchestrator.startNewConversation()
-                    NotificationCenter.default.post(name: NSNotification.Name("ApexAgent.focusChatInput"), object: nil)
+                    ShortcutRegistry.shared.dispatch(.newChat, orchestrator: orchestrator)
                 }
                 .keyboardShortcut("n", modifiers: .command)
             }
 
+            CommandGroup(after: .toolbar) {
+                Button("Command Palette…") {
+                    ShortcutRegistry.shared.dispatch(.commandPalette, orchestrator: orchestrator)
+                }
+                .keyboardShortcut("k", modifiers: .command)
+
+                Button("System Diagnostics…") {
+                    ShortcutRegistry.shared.dispatch(.showDiagnostics, orchestrator: orchestrator)
+                }
+                .keyboardShortcut("d", modifiers: [.command, .shift])
+            }
+
+            CommandMenu("Go") {
+                Button("Routines") {
+                    ShortcutRegistry.shared.dispatch(.goRoutines, orchestrator: orchestrator)
+                }
+                .keyboardShortcut("1", modifiers: .command)
+
+                Button("Skills") {
+                    ShortcutRegistry.shared.dispatch(.goSkills, orchestrator: orchestrator)
+                }
+                .keyboardShortcut("2", modifiers: .command)
+
+                Divider()
+
+                Button("Settings…") {
+                    ShortcutRegistry.shared.dispatch(.goSettings, orchestrator: orchestrator)
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
+                    ShortcutRegistry.shared.dispatch(.goSettings, orchestrator: orchestrator)
                     if #available(macOS 14.0, *) {
                         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
                     } else {
@@ -95,11 +126,7 @@ public struct ApexAgentApp: App {
                     }
                 }
                 .keyboardShortcut("/", modifiers: [.command, .shift])
-                Button("Apex Agent Documentation & Guide") {
-                    if let url = URL(string: "https://github.com/dboone323/ApexAgent#readme") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
+
                 Button("Report an Issue…") {
                     if let url = URL(string: "https://github.com/dboone323/ApexAgent/issues") {
                         NSWorkspace.shared.open(url)

@@ -14,7 +14,12 @@ public final class GlobalCommandPaletteController {
     private var eventHandler: EventHandlerRef?
     public var isVisible: Bool = false
     
-    public func registerHotKey(keyCode: UInt32 = 49, modifiers: UInt32 = UInt32(optionKey)) {
+    public func registerHotKey(from registry: ShortcutRegistry = .shared) {
+        let binding = registry.binding(for: .globalPaletteHotKey)
+        registerHotKey(keyCode: binding.carbonKeyCode, modifiers: binding.carbonModifierFlags)
+    }
+
+    public func registerHotKey(keyCode: UInt32, modifiers: UInt32) {
         guard eventHandler == nil else { return }
         var hotKeyID = EventHotKeyID()
         hotKeyID.signature = OSType(0x41505852) // 'APXR'
