@@ -297,6 +297,8 @@ struct ChatInputBar: View {
                                     }
                                     .buttonStyle(.plain)
                                     .help("Remove from queue")
+                                    .accessibilityIdentifier("removeQueuedPromptButton_\(index)")
+                                    .accessibilityLabel("Remove queued prompt \(index + 1)")
                                 }
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
@@ -327,6 +329,7 @@ struct ChatInputBar: View {
                                         RoundedRectangle(cornerRadius: 8)
                                             .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
                                     )
+                                    .accessibilityLabel("Attached image \(idx + 1)")
                                 
                                 Button {
                                     orchestrator.pendingAttachments.remove(at: idx)
@@ -337,6 +340,8 @@ struct ChatInputBar: View {
                                 }
                                 .buttonStyle(.plain)
                                 .offset(x: 5, y: -5)
+                                .accessibilityIdentifier("removeAttachmentButton_\(idx)")
+                                .accessibilityLabel("Remove attachment \(idx + 1)")
                             }
                             .padding(.top, 5)
                             .padding(.trailing, 5)
@@ -407,6 +412,7 @@ struct ChatInputBar: View {
                             .padding(.horizontal, 4)
                             .padding(.vertical, 8)
                             .allowsHitTesting(false)
+                            .accessibilityHidden(true)
                     }
 
                     TextEditor(text: $inputText)
@@ -416,6 +422,8 @@ struct ChatInputBar: View {
                         .scrollContentBackground(.hidden)
                         .focused($isInputFocused)
                         .accessibilityIdentifier("chatInputField")
+                        .accessibilityLabel("Message input")
+                        .accessibilityHint("Type a message or slash command and press Return to send")
                         .onKeyPress(.return) {
                             if NSEvent.modifierFlags.contains(.shift) {
                                 Task { @MainActor in

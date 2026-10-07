@@ -3,11 +3,31 @@ import SwiftUI
 // MARK: - VoiceOrbHUDView
 
 public struct VoiceOrbHUDView: View {
+    @Environment(\.accessibilityReduceMotion) private var accessibilityReduceMotion
     @ObservedObject var voiceSession: FullDuplexVoiceSession
+    private let reduceMotionOverride: Bool?
     @State private var wavePhase: Double = 0.0
 
-    public init(voiceSession: FullDuplexVoiceSession = .shared) {
+    public init(voiceSession: FullDuplexVoiceSession = .shared, reduceMotion: Bool? = nil) {
         self.voiceSession = voiceSession
+        self.reduceMotionOverride = reduceMotion
+    }
+
+    public var effectiveReduceMotion: Bool {
+        reduceMotionOverride ?? accessibilityReduceMotion
+    }
+
+    public static func orbScale(isSessionActive: Bool, normalizedPower: Float, reduceMotion: Bool) -> CGFloat {
+        guard isSessionActive, !reduceMotion else { return 1.0 }
+        return 1.0 + CGFloat(normalizedPower) * 0.4
+    }
+
+    public var orbAccessibilityLabel: String {
+        "Voice status: \(statusTitle)"
+    }
+
+    public var toggleButtonAccessibilityLabel: String {
+        voiceSession.isSessionActive ? "Stop full-duplex voice session" : "Start full-duplex voice session"
     }
 
     public var body: some View {
@@ -17,8 +37,17 @@ public struct VoiceOrbHUDView: View {
                 Circle()
                     .fill(orbColor.opacity(0.2))
                     .frame(width: 32, height: 32)
-                    .scaleEffect(voiceSession.isSessionActive ? (1.0 + CGFloat(normalizedPower) * 0.4) : 1.0)
-                    .animation(.easeInOut(duration: 0.15), value: voiceSession.currentDecibels)
+                    .scaleEffect(
+                        Self.orbScale(
+                            isSessionActive: voiceSession.isSessionActive,
+                            normalizedPower: normalizedPower,
+                            reduceMotion: effectiveReduceMotion
+                        )
+                    )
+                    .animation(
+                        effectiveReduceMotion ? nil : .easeInOut(duration: 0.15),
+                        value: voiceSession.currentDecibels
+                    )
 
                 Circle()
                     .fill(orbColor)
@@ -28,6 +57,9 @@ public struct VoiceOrbHUDView: View {
                             .stroke(Color.white.opacity(0.8), lineWidth: 1.5)
                     )
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityIdentifier("voiceOrbIndicator")
+            .accessibilityLabel(orbAccessibilityLabel)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(statusTitle)
@@ -64,6 +96,9 @@ public struct VoiceOrbHUDView: View {
                     .clipShape(Circle())
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("voiceOrbToggleButton")
+            .accessibilityLabel(toggleButtonAccessibilityLabel)
+            .accessibilityHint("Toggles continuous full-duplex voice conversation")
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
@@ -76,6 +111,7 @@ public struct VoiceOrbHUDView: View {
             RoundedRectangle(cornerRadius: 20)
                 .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
         )
+        .accessibilityIdentifier("voiceOrbHUD")
     }
 
     private var normalizedPower: Float {

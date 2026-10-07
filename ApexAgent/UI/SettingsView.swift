@@ -6,14 +6,22 @@ struct VoicePermissionStatus: View {
     @State private var status: SFSpeechRecognizerAuthorizationStatus = .notDetermined
     @State private var checked = false
 
+    var accessibilityLabelText: String {
+        "Speech recognition permission: \(label)"
+    }
+
     var body: some View {
         HStack(spacing: 4) {
             Circle()
                 .fill(color)
                 .frame(width: 8, height: 8)
+                .accessibilityHidden(true)
             Text(label)
                 .font(.system(size: 11))
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("voicePermissionStatus")
+        .accessibilityLabel(accessibilityLabelText)
         .task {
             status = SFSpeechRecognizer.authorizationStatus()
             checked = true

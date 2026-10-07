@@ -54,10 +54,19 @@ struct ConversationRow: View {
     let conversation: Conversation
     let isSelected: Bool
 
+    var accessibilityLabelText: String {
+        conversation.title.isEmpty ? "New Conversation" : conversation.title
+    }
+
+    var accessibilityValueText: String {
+        isSelected ? "Selected" : ""
+    }
+
     var body: some View {
+        let titleText = accessibilityLabelText
         HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(conversation.title.isEmpty ? "New Conversation" : conversation.title)
+                Text(titleText)
                     .font(AppTheme.Font.headline(isSelected ? 13 : 12, weight: isSelected ? .semibold : .regular))
                     .lineLimit(1)
                 Text(conversation.updatedAt.formatted(date: .abbreviated, time: .shortened))
@@ -70,9 +79,16 @@ struct ConversationRow: View {
                 Circle()
                     .fill(AppTheme.Palette.accent)
                     .frame(width: 6, height: 6)
+                    .accessibilityHidden(true)
             }
         }
         .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
         .accessibilityIdentifier("conversationRow")
+        .accessibilityLabel(titleText)
+        .accessibilityValue(accessibilityValueText)
+        .accessibilityHint("Double-tap or press Return to open conversation")
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : [.isButton])
     }
 }
+

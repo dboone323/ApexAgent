@@ -158,6 +158,7 @@
 		5A5A844DC5312C4A4B0CF0C5 /* BenchmarkPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA03C855AB52ADD679AC5FCA /* BenchmarkPipelineTests.swift */; };
 		5AD658859C98BDB47E5B22AC /* RunWorkflowTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F636A0FC658F1E3467177536 /* RunWorkflowTool.swift */; };
 		5B2317BAA1BD853A241B6B32 /* Milestone1ChallengerConcurrencyStressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6587FCF91D705F6A54315 /* Milestone1ChallengerConcurrencyStressTests.swift */; };
+		5C6174D3AE206647683C50C0 /* AccessibilityPassTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AE66F50CD907013FA9CC17D /* AccessibilityPassTests.swift */; };
 		5C694E10382CFBE430A2D905 /* WeatherTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40945B2C5DC7F6F18644CCB7 /* WeatherTool.swift */; };
 		5CD43FC4C686E5694BB81AD9 /* CognitiveMemoryEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51B98606B9A9E8579CDBF301 /* CognitiveMemoryEngine.swift */; };
 		5D7B6959811F9DDC71220917 /* ApexGatewayServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5C56D68129B871DE2B9A38F /* ApexGatewayServer.swift */; };
@@ -670,6 +671,7 @@
 		195629AFA6E5EA5BA76B6876 /* WebhookReceiverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebhookReceiverTests.swift; sourceTree = "<group>"; };
 		19627F34476962E41468F7D2 /* ShortcutRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRegistry.swift; sourceTree = "<group>"; };
 		1ACE03336D4D24B3D016DB63 /* MCPServerListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerListener.swift; sourceTree = "<group>"; };
+		1AE66F50CD907013FA9CC17D /* AccessibilityPassTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPassTests.swift; sourceTree = "<group>"; };
 		1BA900B1A83021B966585BC4 /* PowerSessionPhase1Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerSessionPhase1Tests.swift; sourceTree = "<group>"; };
 		1C76440A35838941EFC30E32 /* ApexAgentApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexAgentApp.swift; sourceTree = "<group>"; };
 		1C7E69FB4A4DC6743A895DFD /* CreateSkillSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSkillSheet.swift; sourceTree = "<group>"; };
@@ -1657,6 +1659,7 @@
 			isa = PBXGroup;
 			children = (
 				E1AC59673F796997416BB805 /* A2AProtocolTests.swift */,
+				1AE66F50CD907013FA9CC17D /* AccessibilityPassTests.swift */,
 				23B43BB2E4549DFD6CADFD8C /* AgentAuditLoggerTests.swift */,
 				B6E1971E2444723B2A736760 /* AgentDecisionLogTests.swift */,
 				7868F437087C7B22AB969C42 /* AgentEvaluationRatingTests.swift */,
@@ -2489,6 +2492,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				38D5400FE5D6B2E979B49B84 /* A2AProtocolTests.swift in Sources */,
+				5C6174D3AE206647683C50C0 /* AccessibilityPassTests.swift in Sources */,
 				C7AF449E49406FD406FAB73E /* AgentAuditLoggerTests.swift in Sources */,
 				EE3937B98595FE1FBD010EFC /* AgentDecisionLogTests.swift in Sources */,
 				CCD0687C04A0B8230F897903 /* AgentEvaluationRatingTests.swift in Sources */,
