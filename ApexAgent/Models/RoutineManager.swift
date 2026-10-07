@@ -239,14 +239,20 @@ final class RoutineManager: Observable {
             }
         }
         
-        cronHeartbeatTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
+        TickerScheduler.shared.register(
+            id: "RoutineManager.heartbeat",
+            policy: PollPolicy(baseInterval: 60.0, minInterval: 60.0, maxInterval: 120.0)
+        ) { [weak self] in
             Task { @MainActor in
                 self?.evaluateHeartbeat()
             }
+            return true
         }
+        TickerScheduler.shared.start(checkIntervalSeconds: 5.0)
     }
 
     func stopScheduledRoutines() {
+        TickerScheduler.shared.unregister(id: "RoutineManager.heartbeat")
         cronHeartbeatTimer?.invalidate()
         cronHeartbeatTimer = nil
         scheduledRoutines = []

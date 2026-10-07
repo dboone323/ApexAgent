@@ -77,15 +77,29 @@ public final class ProactiveScheduler {
         guard !isRunning else { return }
         isRunning = true
 
-        heartbeatTimer = Timer.scheduledTimer(withTimeInterval: checkIntervalSeconds, repeats: true) { [weak self] _ in
+        TickerScheduler.shared.register(
+            id: "ProactiveScheduler.heartbeat",
+            policy: PollPolicy(
+                baseInterval: checkIntervalSeconds,
+                minInterval: checkIntervalSeconds,
+                maxInterval: checkIntervalSeconds * 4.0
+            )
+        ) { [weak self] in
             Task { @MainActor [weak self] in
-                _ = await self?.evaluateNow()
+                guard let self else { return }
+                let findings = await self.evaluateNow()
+                if !findings.isEmpty {
+                    TickerScheduler.shared.recordActivity(id: "ProactiveScheduler.heartbeat")
+                }
             }
+            return false
         }
+        TickerScheduler.shared.start(checkIntervalSeconds: 5.0)
     }
 
     public func stop() {
         isRunning = false
+        TickerScheduler.shared.unregister(id: "ProactiveScheduler.heartbeat")
         heartbeatTimer?.invalidate()
         heartbeatTimer = nil
     }

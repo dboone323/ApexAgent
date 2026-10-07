@@ -58,34 +58,46 @@ final class DiscordMessagePoller {
         UserDefaults.standard.double(forKey: Self.pollIntervalKey).nonzero ?? 15.0
     }
 
-    /// Main polling loop. Runs until cancelled.
+    private var consecutiveIdlePolls: Int = 0
+
+    /// Main polling loop. Runs until cancelled, scaling sleep interval via `PollPolicy` on idle streaks.
     private func pollLoop() async {
         while !Task.isCancelled && isRunning {
+            var hadActivity = false
             do {
-                try await pollOnce()
+                hadActivity = try await pollOnce()
             } catch {
                 AppLog.error(.discord, "Poll error: \(error.localizedDescription)")
             }
-            try? await Task.sleep(for: .seconds(pollInterval))
+            if hadActivity {
+                consecutiveIdlePolls = 0
+            } else {
+                consecutiveIdlePolls += 1
+            }
+            let base = pollInterval
+            let policy = PollPolicy(baseInterval: base, minInterval: base, maxInterval: max(base * 4.0, 60.0))
+            let nextSleep = policy.nextInterval(consecutiveIdlePolls: consecutiveIdlePolls, hasRecentActivity: hadActivity)
+            try? await Task.sleep(for: .seconds(nextSleep))
         }
     }
 
-    /// Single poll: fetch messages, detect new ones, feed to orchestrator.
-    private func pollOnce() async throws {
+    /// Single poll: fetch messages, detect new ones, feed to orchestrator. Returns `true` if new messages arrived.
+    @discardableResult
+    private func pollOnce() async throws -> Bool {
         guard let token = getBotToken(), !token.isEmpty else {
             AppLog.notice(.discord, "No bot token — skipping poll")
-            return
+            return false
         }
         guard !coordinationChannelId.isEmpty else {
             AppLog.notice(.discord, "No channel ID — skipping poll")
-            return
+            return false
         }
 
         let lastId = lastMessageId()
         let newMessages = try await fetchMessages(after: lastId)
 
         if newMessages.isEmpty {
-            return
+            return false
         }
 
         // Update last-seen ID (most recent message)
@@ -97,6 +109,7 @@ final class DiscordMessagePoller {
         for msg in newMessages.reversed() {
             await handleMessage(msg)
         }
+        return true
     }
 
     /// Fetch messages after a given ID (empty string = fetch latest).
