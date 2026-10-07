@@ -10,7 +10,7 @@ struct DiagnosticItem: Identifiable, Codable {
     let message: String
 }
 
-enum DiagnosticStatus: String, Codable {
+public enum DiagnosticStatus: String, Codable, Sendable {
     case pass = "Pass"
     case warning = "Warning"
     case fail = "Fail"

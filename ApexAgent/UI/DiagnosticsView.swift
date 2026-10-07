@@ -32,9 +32,34 @@ final class RecentLogsModel: ObservableObject {
     }
 }
 
+/// Observes `MetricDiagnosticsCenter` for the Diagnostics "Field Diagnostics" section.
+final class FieldDiagnosticsModel: ObservableObject {
+    @Published private(set) var summary: FieldHealthSummary
+    @Published private(set) var recent: [MetricDiagnosticPayload] = []
+
+    private let center: MetricDiagnosticsCenter
+
+    init(center: MetricDiagnosticsCenter = .shared) {
+        self.center = center
+        self.summary = center.summary()
+        self.recent = center.recentPayloads(limit: 20)
+    }
+
+    func refresh(limit: Int = 20) {
+        summary = center.summary()
+        recent = center.recentPayloads(limit: limit)
+    }
+
+    func clear() {
+        center.clear()
+        refresh()
+    }
+}
+
 struct DiagnosticsView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var recentLogs = RecentLogsModel()
+    @StateObject private var fieldDiagnostics = FieldDiagnosticsModel()
     @State private var results: [DiagnosticItem] = []
     @State private var isRunning = false
     @State private var startedAt: Date?
@@ -84,6 +109,8 @@ struct DiagnosticsView: View {
                     }
                 }
 
+                Divider()
+                fieldDiagnosticsSection
                 Divider()
                 recentLogsSection
                     .frame(maxHeight: 240)
@@ -145,6 +172,40 @@ struct DiagnosticsView: View {
             }
         }
         .frame(maxHeight: .infinity)
+    }
+
+    /// Field diagnostics summary captured from MetricKit (`MetricDiagnosticsCenter`).
+    private var fieldDiagnosticsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "waveform.path.ecg")
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+                Text("Field Diagnostics")
+                    .font(AppTheme.Font.caption(12))
+                    .foregroundStyle(AppTheme.Palette.textPrimary)
+                Text(fieldDiagnostics.summary.headline)
+                    .font(AppTheme.Font.caption(10))
+                    .foregroundStyle(AppTheme.Palette.textTertiary)
+                Spacer()
+                Button("Clear") { fieldDiagnostics.clear() }
+                    .accessibilityIdentifier("clearFieldDiagnosticsButton")
+            }
+            if !fieldDiagnostics.recent.isEmpty {
+                HStack(spacing: 12) {
+                    Text("Crashes: \(fieldDiagnostics.summary.crashCount)")
+                    Text("Hangs: \(fieldDiagnostics.summary.hangCount)")
+                    Text("CPU: \(fieldDiagnostics.summary.cpuExceptionCount)")
+                    Text("Disk: \(fieldDiagnostics.summary.diskWriteExceptionCount)")
+                    Text("Daily: \(fieldDiagnostics.summary.dailyMetricCount)")
+                }
+                .font(AppTheme.Font.caption(10))
+                .foregroundStyle(AppTheme.Palette.textSecondary)
+            }
+        }
+        .padding(.horizontal, AppTheme.Spacing.md)
+        .padding(.vertical, 8)
+        .accessibilityIdentifier("fieldDiagnosticsSection")
+        .onAppear { fieldDiagnostics.refresh() }
     }
 
     /// Recent structured log entries from `AppLog`'s in-memory ring buffer.

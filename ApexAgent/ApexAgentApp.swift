@@ -158,6 +158,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
     private var webhookServer: WebhookServer?
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
+        MetricDiagnosticsCenter.shared.start()
         setupStatusItem()
         setupGlobalHotkey()
         setupShortcuts()
