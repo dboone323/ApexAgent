@@ -300,6 +300,24 @@ public final class DemoRecorder {
         return md
     }
 
+    // MARK: - Resilient JSON Persistence
+
+    public func saveActions(to url: URL) throws {
+        try ResilientJSONStore.shared.save(recordedActions, to: url)
+    }
+
+    @discardableResult
+    public func loadActions(from url: URL) -> [RecordedAction] {
+        let loaded = ResilientJSONStore.shared.load(
+            [RecordedAction].self,
+            from: url,
+            subsystem: "DemoRecorder",
+            default: []
+        )
+        self.recordedActions = loaded
+        return loaded
+    }
+
 }
 
 extension DemoRecorder.ActionKind {

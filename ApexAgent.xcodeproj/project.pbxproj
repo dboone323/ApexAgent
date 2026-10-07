@@ -85,6 +85,7 @@
 		2D3186492581119B7BF91EBF /* ProviderFallbackExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81BC29C5044A80EF656E2425 /* ProviderFallbackExecutor.swift */; };
 		2D6E731080CC761BABEBC9BA /* NativeToolsP0Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF09B13707FBA1B8A16A88B /* NativeToolsP0Tests.swift */; };
 		2D83D18ECF411807188495D2 /* IntentToolSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27416A7D6D7178263246418 /* IntentToolSelectorTests.swift */; };
+		2DE2EA9639EE1F8AFECAB2B1 /* ResilientJSONStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC5AA0AF4AEAC87616E6142 /* ResilientJSONStore.swift */; };
 		2E022D5939C264AA895968A9 /* RoutineRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2839819F835E6B5DAB51A8CA /* RoutineRecorder.swift */; };
 		3079879C43DE85BBF013429D /* DurableAutomationReceiptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F45650A19B4D58517B1E5D0A /* DurableAutomationReceiptTests.swift */; };
 		32A8413C79A55EDDBA5196F6 /* ANSIColorParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89FB6833BB17F9CF840D12D3 /* ANSIColorParser.swift */; };
@@ -123,6 +124,7 @@
 		409D8956AD7617A10AD14D56 /* TeamPlaybookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7B056D8B3C53F610E89AF18 /* TeamPlaybookTests.swift */; };
 		410C948C8EEF39378FE972C7 /* SpaceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8CBDDD8539C304129ACCA2A /* SpaceModels.swift */; };
 		41AC7DA38810DC69D3ADF0C9 /* BotSecurityRBACPermissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4A4E1752AB10B822ECA961 /* BotSecurityRBACPermissionTests.swift */; };
+		41B24D72179D5C3488DBC9A9 /* ResilientJSONStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C5B806F807932CD76502A9C /* ResilientJSONStoreTests.swift */; };
 		41DC723F26F11802E58DEDBB /* WeeklyReflection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC816014A875377AB08C6513 /* WeeklyReflection.swift */; };
 		424832240A3119CE7A32C28A /* AgentProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 925A92C3B22F0B3846FAD195 /* AgentProfileTests.swift */; };
 		42F00DF1A93D9DCCFFFD25F3 /* DynamicToolRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167A0B5084A0E6678EF5C2C /* DynamicToolRouting.swift */; };
@@ -884,6 +886,7 @@
 		99E4A23ED3265964EE228824 /* CompanionMainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionMainView.swift; sourceTree = "<group>"; };
 		9A131F909A44858DAE6CCE10 /* ApexAgentIntents.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = ApexAgentIntents.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9B13DBA979D085D47B5CB8AC /* SandboxTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxTests.swift; sourceTree = "<group>"; };
+		9C5B806F807932CD76502A9C /* ResilientJSONStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResilientJSONStoreTests.swift; sourceTree = "<group>"; };
 		9CDAF9C16F93B862FF4A577B /* AgentEvaluationRatingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentEvaluationRatingEngine.swift; sourceTree = "<group>"; };
 		9D5F6E49D6D5A006AE01BFBF /* LocalMLXLanguageModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalMLXLanguageModel.swift; sourceTree = "<group>"; };
 		9D62C6D2EBD44EE1369EC3FF /* SpotlightIndexer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightIndexer.swift; sourceTree = "<group>"; };
@@ -903,6 +906,7 @@
 		AB5B854D574C87899115615D /* EmptyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyState.swift; sourceTree = "<group>"; };
 		AB9EDD6FFF0BF06243F2DCCF /* RoutineRecordingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineRecordingSheet.swift; sourceTree = "<group>"; };
 		ABA3F3C0A6C1C53A4AC18150 /* WebhookServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebhookServer.swift; sourceTree = "<group>"; };
+		ABC5AA0AF4AEAC87616E6142 /* ResilientJSONStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResilientJSONStore.swift; sourceTree = "<group>"; };
 		ACA20C2A176DB00AD435BCD7 /* MCPKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MCPKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACCCB1308EA171EF16B9F04C /* LocalRetrievalIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRetrievalIndex.swift; sourceTree = "<group>"; };
 		AD4AE05D0A840978A90B36C4 /* ComputerUseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComputerUseTests.swift; sourceTree = "<group>"; };
@@ -1497,6 +1501,7 @@
 				982BA13520392C15847BFA33 /* ReflectionManager.swift */,
 				B72FCC9EDA1A9A90367AAF7E /* RemoteCompanionGateway.swift */,
 				67DC13F56D7B73401BA68A8D /* RepeatDetector.swift */,
+				ABC5AA0AF4AEAC87616E6142 /* ResilientJSONStore.swift */,
 				4C942056B3C16BC7C0420BFD /* Routine.swift */,
 				DB78074E8943E1B4B9CBFFA3 /* RoutineManager.swift */,
 				2839819F835E6B5DAB51A8CA /* RoutineRecorder.swift */,
@@ -1750,6 +1755,7 @@
 				475AA27E9CD4482A51D18B19 /* ReflectionManagerTests.swift */,
 				F064D929D23188DD1C6571B5 /* RemoteCompanionTests.swift */,
 				539E51BD875085EF52BE41C8 /* RepeatDetectorTests.swift */,
+				9C5B806F807932CD76502A9C /* ResilientJSONStoreTests.swift */,
 				183F7E48970071163B09035D /* RoadmapHardeningTests.swift */,
 				1DD878E655BCB9B2D4C9DA50 /* RoutineCronModelTests.swift */,
 				E055ED608B882477C3D5A57D /* RoutineRecorderTests.swift */,
@@ -2316,6 +2322,7 @@
 				D53FCFAD7E947C41BFF0BBA1 /* ReminderTool.swift in Sources */,
 				BE49594832EA0DC4A90865A7 /* RemoteCompanionGateway.swift in Sources */,
 				88E788FEC0E187CA785A5756 /* RepeatDetector.swift in Sources */,
+				2DE2EA9639EE1F8AFECAB2B1 /* ResilientJSONStore.swift in Sources */,
 				98DAF81A8EFA135BC00C2BB6 /* Routine.swift in Sources */,
 				7BD56A3BFD7C69A552A7E4CA /* RoutineManager.swift in Sources */,
 				2E022D5939C264AA895968A9 /* RoutineRecorder.swift in Sources */,
@@ -2584,6 +2591,7 @@
 				A95F8B3029A159BEFC419B17 /* ReflectionManagerTests.swift in Sources */,
 				91D7398E489833978B07D683 /* RemoteCompanionTests.swift in Sources */,
 				4C2E2E0327B4937B1EBAE9D8 /* RepeatDetectorTests.swift in Sources */,
+				41B24D72179D5C3488DBC9A9 /* ResilientJSONStoreTests.swift in Sources */,
 				06BED51BD86F31DC120E2F4E /* RoadmapHardeningTests.swift in Sources */,
 				DF367FD47B641F65F75F8406 /* RoutineCronModelTests.swift in Sources */,
 				BD930005D57663AB053CD1A0 /* RoutineRecorderTests.swift in Sources */,

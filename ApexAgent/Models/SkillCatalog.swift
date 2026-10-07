@@ -85,24 +85,41 @@ enum SkillCatalog {
     }
 
     /// Load every valid skill directory under `root`; invalid folders are
-    /// isolated (skipped) instead of taking down the bot turn.
+    /// isolated (skipped) and corrupt `manifest.json` files are moved aside
+    /// to `manifest.json.corrupt-<ts>` via ``ResilientJSONStore``.
     static func loadSkills(root: URL) -> [(manifest: SkillManifest, instructions: String)] {
         let fileManager = FileManager.default
         guard let names = try? fileManager.contentsOfDirectory(atPath: root.path) else { return [] }
         var skills: [(SkillManifest, String)] = []
         for name in names.sorted() {
             let dir = root.appendingPathComponent(name, isDirectory: true)
-            guard fileManager.fileExists(atPath: dir.appendingPathComponent("SKILL.md").path) else { continue }
             let manifestUrl = dir.appendingPathComponent("manifest.json")
-            guard let data = try? Data(contentsOf: manifestUrl),
-                  let json = try? JSONSerialization.jsonObject(with: data) else { continue }
-            guard let manifest = try? parseManifest(json, directoryName: name) else { continue }
+            guard fileManager.fileExists(atPath: manifestUrl.path) else { continue }
+            guard let json = ResilientJSONStore.shared.loadJSONObject(from: manifestUrl, subsystem: "SkillCatalog") else {
+                continue
+            }
+            let manifest: SkillManifest
+            do {
+                manifest = try parseManifest(json, directoryName: name)
+            } catch {
+                ResilientJSONStore.shared.quarantineCorruptFile(
+                    at: manifestUrl,
+                    subsystem: "SkillCatalog",
+                    errorDescription: String(describing: error)
+                )
+                continue
+            }
+            guard fileManager.fileExists(atPath: dir.appendingPathComponent("SKILL.md").path) else { continue }
             let instructions = (try? String(contentsOf: dir.appendingPathComponent("SKILL.md"), encoding: .utf8))?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             guard !instructions.isEmpty else { continue }
             skills.append((manifest, instructions))
         }
         return skills
+    }
+
+    static func saveManifest(_ manifest: SkillManifest, to url: URL) throws {
+        try ResilientJSONStore.shared.save(manifest, to: url, prettyPrinted: true)
     }
 
     /// The enabled skills whose trigger terms appear in the prompt.
