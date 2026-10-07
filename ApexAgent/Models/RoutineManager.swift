@@ -114,13 +114,21 @@ final class RoutineManager: Observable {
         guard let context = modelContext else { return }
         context.insert(routine)
         try? context.save()
+        SpotlightIndexer.indexRoutine(
+            id: routine.stableUUID.uuidString,
+            name: routine.name,
+            descriptionText: routine.descriptionText,
+            trigger: routine.trigger.rawValue
+        )
         loadRoutines()
     }
 
     func delete(_ routine: Routine) {
         guard let context = modelContext else { return }
+        let routineId = routine.stableUUID.uuidString
         context.delete(routine)
         try? context.save()
+        SpotlightIndexer.removeRoutine(id: routineId)
         loadRoutines()
     }
 

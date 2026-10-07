@@ -59,6 +59,11 @@ public struct ApexAgentApp: App {
                 .onOpenURL { url in
                     _ = DeepLinkNavigationState.shared.handle(url)
                 }
+                .onContinueUserActivity(CSSearchableItemActionType) { userActivity in
+                    if let uniqueIdentifier = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String {
+                        _ = SpotlightIndexer.handleSpotlightActivation(uniqueIdentifier: uniqueIdentifier)
+                    }
+                }
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
