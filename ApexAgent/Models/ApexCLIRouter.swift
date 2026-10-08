@@ -398,6 +398,19 @@ public enum ApexCLIRouter {
             )
         )
 
+        // 8. Workspace-wide Required-Reason API & PrivacyInfo.xcprivacy drift
+        let privacyDrift = PrivacyManifestDriftAuditor.auditWorkspace(at: repoRoot)
+        checks.append(
+            DoctorCheckItem(
+                id: "privacy_manifest_drift",
+                title: "Required-Reason API & Privacy Drift",
+                passed: privacyDrift.passed,
+                detail: privacyDrift.passed
+                    ? "\(privacyDrift.scannedFileCount) Swift files scanned, \(privacyDrift.detectedCategories.count) API categories covered"
+                    : "\(privacyDrift.missingCategories.count) missing categories, \(privacyDrift.invalidReasonCodes.count) invalid reason codes"
+            )
+        )
+
         let overall = checks.allSatisfy { $0.passed }
         return DoctorReport(version: appVersion, overallPassed: overall, checks: checks)
     }
