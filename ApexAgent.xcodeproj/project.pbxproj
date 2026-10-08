@@ -95,6 +95,7 @@
 		2D83D18ECF411807188495D2 /* IntentToolSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27416A7D6D7178263246418 /* IntentToolSelectorTests.swift */; };
 		2DE2EA9639EE1F8AFECAB2B1 /* ResilientJSONStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC5AA0AF4AEAC87616E6142 /* ResilientJSONStore.swift */; };
 		2E022D5939C264AA895968A9 /* RoutineRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2839819F835E6B5DAB51A8CA /* RoutineRecorder.swift */; };
+		304CAF764123657BB333A8D7 /* ArtifactSizeBudgetGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01677869C536A1E8041FE4D0 /* ArtifactSizeBudgetGateTests.swift */; };
 		3079879C43DE85BBF013429D /* DurableAutomationReceiptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F45650A19B4D58517B1E5D0A /* DurableAutomationReceiptTests.swift */; };
 		32A8413C79A55EDDBA5196F6 /* ANSIColorParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89FB6833BB17F9CF840D12D3 /* ANSIColorParser.swift */; };
 		335271F96C231C6E46E09F75 /* SkillManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1029F45266243C1D9237A2C /* SkillManager.swift */; };
@@ -154,6 +155,7 @@
 		4C2E2E0327B4937B1EBAE9D8 /* RepeatDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 539E51BD875085EF52BE41C8 /* RepeatDetectorTests.swift */; };
 		4C53588811C2444789FD193F /* ModelRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FB30C6E4BE23626036F532 /* ModelRegistry.swift */; };
 		4CCA3B01AF2BF8D70D7439B1 /* MCPServerDashboardViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459D8A8654311E24BE33569A /* MCPServerDashboardViews.swift */; };
+		4CD835B5868DD20FF63A1ABB /* ArtifactSizeBudgetGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9C01012993395E8D6B9E686 /* ArtifactSizeBudgetGate.swift */; };
 		4CFAC88ACAF9C5EFC9C7E5E9 /* ApprovalPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BCE3C022848208862879AA6 /* ApprovalPolicy.swift */; };
 		4D76B1EE78497D8CB7D412E7 /* MCPManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCFB51AE0DEA35770B157534 /* MCPManager.swift */; };
 		4D8668A2B63D24A4A698ABDD /* WebSearchTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C7C320DE2DD5CA46182330 /* WebSearchTool.swift */; };
@@ -678,6 +680,7 @@
 /* Begin PBXFileReference section */
 		00C1D19CCF1A38E3D1CF08C8 /* ScreenPerceptionTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenPerceptionTool.swift; sourceTree = "<group>"; };
 		0159C6A22D24E1F1A6B4D1C4 /* GhostCursorOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostCursorOverlay.swift; sourceTree = "<group>"; };
+		01677869C536A1E8041FE4D0 /* ArtifactSizeBudgetGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtifactSizeBudgetGateTests.swift; sourceTree = "<group>"; };
 		01BFA76F66D31A401D1FEB86 /* DiscordMessagePoller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscordMessagePoller.swift; sourceTree = "<group>"; };
 		01D36BE270D67C0F522A0602 /* AgentAuditLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentAuditLog.swift; sourceTree = "<group>"; };
 		023985A14D3E0159D50EFF7D /* AutomationWorkflows+16to20.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+16to20.swift"; sourceTree = "<group>"; };
@@ -1083,6 +1086,7 @@
 		E94BE12E3CCD68A483A7AEDF /* AutomationWorkflows+4to7.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+4to7.swift"; sourceTree = "<group>"; };
 		E96F71F584B17B7CACC9093B /* WebSearchHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchHelper.swift; sourceTree = "<group>"; };
 		E9A50D602B1E92B88411EE7F /* AutomationWorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationWorkflowTests.swift; sourceTree = "<group>"; };
+		E9C01012993395E8D6B9E686 /* ArtifactSizeBudgetGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtifactSizeBudgetGate.swift; sourceTree = "<group>"; };
 		E9FEC6CC55B91A30F4873DF8 /* VoiceOrbHUDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOrbHUDView.swift; sourceTree = "<group>"; };
 		EB444CB55101CE2B631AF69F /* SpacesViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesViews.swift; sourceTree = "<group>"; };
 		EB46EF2F8A2A2739DAAE4022 /* GlobalCommandPaletteHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalCommandPaletteHUD.swift; sourceTree = "<group>"; };
@@ -1523,6 +1527,7 @@
 				E07DD0FD9023AAEF95AFCBDE /* ApexGatewayClient.swift */,
 				A5C56D68129B871DE2B9A38F /* ApexGatewayServer.swift */,
 				CFFB0BDDB798A848472C6015 /* AppLogger.swift */,
+				E9C01012993395E8D6B9E686 /* ArtifactSizeBudgetGate.swift */,
 				DAE3DE8836902FA21FC0278D /* AutomationWorkflowEngines.swift */,
 				08ABC70EBEA2A9EC1D0DBE44 /* AutomationWorkflowEngines2.swift */,
 				733F3E47FEB39C118326CA51 /* AutomationWorkflows.swift */,
@@ -1773,6 +1778,7 @@
 				1DC8606413DFBC7FBA7868BD /* AppIntentsTests.swift */,
 				C48569E5C970D8F839A572F6 /* AppLogTests.swift */,
 				3411229BCFE6CB8EF616EA44 /* ApprovalPolicyTests.swift */,
+				01677869C536A1E8041FE4D0 /* ArtifactSizeBudgetGateTests.swift */,
 				E9A50D602B1E92B88411EE7F /* AutomationWorkflowTests.swift */,
 				200A57D45454655715897D6D /* BackendServiceTests.swift */,
 				AA03C855AB52ADD679AC5FCA /* BenchmarkPipelineTests.swift */,
@@ -2307,6 +2313,7 @@
 				F977B6858E075894C6F9A886 /* AppleShortcutsTool.swift in Sources */,
 				DD6E4638C28D42C0F02AC548 /* ApplicationControlTool.swift in Sources */,
 				4CFAC88ACAF9C5EFC9C7E5E9 /* ApprovalPolicy.swift in Sources */,
+				4CD835B5868DD20FF63A1ABB /* ArtifactSizeBudgetGate.swift in Sources */,
 				FA006B50608F7F6CE5D1B582 /* AskApexAgentIntent.swift in Sources */,
 				EBB9D399EDF73A273780C6A9 /* AskBotTool.swift in Sources */,
 				F2161D6FB3475060F4EAD9A6 /* AutomationWorkflowEngines.swift in Sources */,
@@ -2646,6 +2653,7 @@
 				C08859B139F56AEEB74F4F45 /* AppIntentsTests.swift in Sources */,
 				DAAEA444B41CDE6A1F4A22F6 /* AppLogTests.swift in Sources */,
 				D4133F505587710A0020C4B1 /* ApprovalPolicyTests.swift in Sources */,
+				304CAF764123657BB333A8D7 /* ArtifactSizeBudgetGateTests.swift in Sources */,
 				BC914A081C1CDD07F7EFD59C /* AutomationWorkflowTests.swift in Sources */,
 				70A58544394C6AEB3CBC52F6 /* BackendServiceTests.swift in Sources */,
 				5A5A844DC5312C4A4B0CF0C5 /* BenchmarkPipelineTests.swift in Sources */,
