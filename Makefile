@@ -4,7 +4,7 @@ SWIFT       ?= xcrun swift
 BUILD_FLAGS := -c release
 TEST_FLAGS  := --parallel --enable-code-coverage
 
-.PHONY: build test coverage ci clean test-deep test-ui xcresult-summary hygiene lint syntax-check format pre-push full audit-deps sbom changelog release-check provenance install-hooks
+.PHONY: build test coverage ci clean test-deep test-ui xcresult-summary hygiene lint syntax-check format pre-push full audit-deps sbom changelog release-check provenance sarif install-hooks
 hygiene:
 	@chmod +x ./Tools/scripts/pre-push-hygiene.sh
 	@./Tools/scripts/pre-push-hygiene.sh
@@ -22,6 +22,9 @@ release-check:
 
 provenance:
 	@$(SWIFT) run ApexAgent provenance --json
+
+sarif:
+	@$(SWIFT) run ApexAgent sarif --json
 
 install-hooks:
 	@chmod +x ./Tools/scripts/pre-commit.sh ./Tools/scripts/commit-msg.sh ./Tools/scripts/pre-push-hygiene.sh ./Tools/scripts/lint-changed-swift.sh

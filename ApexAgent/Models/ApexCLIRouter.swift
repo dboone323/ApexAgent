@@ -42,6 +42,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case changelog(jsonOutput: Bool)
     case releaseCheck(jsonOutput: Bool)
     case provenance(jsonOutput: Bool)
+    case sarif(jsonOutput: Bool)
     case daemon
     case spaceCLI(subcommandArgs: [String])
     case prompt(text: String, allowTools: Bool)
@@ -258,6 +259,9 @@ public enum ApexCLIRouter {
         case "provenance", "--provenance":
             return ParsedCLIInvocation(command: .provenance(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
+        case "sarif", "--sarif":
+            return ParsedCLIInvocation(command: .sarif(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
         default:
             throw ApexCLIError.unknownSubcommand(first)
         }
@@ -297,6 +301,7 @@ public enum ApexCLIRouter {
           changelog               Generate categorized Conventional Changelog & next SemVer recommendation
           release-check           Audit Info.plist / project.yml version parity and release readiness
           provenance              Generate SLSA v1.0 build provenance attestation & SHA-256 digests
+          sarif                   Export OASIS SARIF v2.1.0 security & static analysis report
           completions [shell]     Generate shell tab-completion script (zsh, bash, fish)
           man                     Generate troff man(1) manual page for ApexAgent(1)
           routines list           List registered automation routines
@@ -567,6 +572,12 @@ public enum ApexCLIRouter {
             let attestation = ReleaseProvenanceGenerator.generateRepositoryProvenance(atRepoRoot: repoRoot)
             let output = jsonOutput ? attestation.toSLSAJSON() : attestation.toMarkdown()
             return (output, attestation.notarizationReport.passed ? 0 : 1)
+
+        case .sarif(let jsonOutput):
+            let repoRoot = resolveRepositoryRoot()
+            let sarifBundle = SARIFReportExporter.exportRepositorySARIF(atRepoRoot: repoRoot)
+            let output = jsonOutput ? sarifBundle.toSARIFJSON() : sarifBundle.toMarkdown()
+            return (output, sarifBundle.passed ? 0 : 1)
 
         default:
             return nil
