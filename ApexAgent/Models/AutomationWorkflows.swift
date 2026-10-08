@@ -113,7 +113,12 @@ public enum ApexWorkflows {
             WorkflowDescriptor(id: 22, name: "Privacy manifest & Required-Reason API drift audit", subsystems: "PrivacyManifestDriftAuditor, PrivacyInfo.xcprivacy"),
             WorkflowDescriptor(id: 23, name: "Conventional Changelog & SemVer bump calculator", subsystems: "ReleaseChangelogEngine, SemanticVersion"),
             WorkflowDescriptor(id: 24, name: "Release version parity & readiness gate", subsystems: "ReleaseChangelogEngine, Info.plist, project.yml"),
-            WorkflowDescriptor(id: 25, name: "SLSA v1.0 build provenance & notarization verification", subsystems: "ReleaseProvenanceGenerator, CryptoKit SHA-256")
+            WorkflowDescriptor(id: 25, name: "SLSA v1.0 build provenance & notarization verification", subsystems: "ReleaseProvenanceGenerator, CryptoKit SHA-256"),
+            WorkflowDescriptor(id: 26, name: "SARIF v2.1.0 security & static analysis report export", subsystems: "SARIFReportExporter, RepoHygieneAuditor"),
+            WorkflowDescriptor(id: 27, name: "Xcode .xctestplan timeout & coverage target audit", subsystems: "TestPlanIntegrityAuditor, xctestplan"),
+            WorkflowDescriptor(id: 28, name: "Workspace source complexity & asset footprint gate", subsystems: "ArtifactSizeBudgetGate, Resources"),
+            WorkflowDescriptor(id: 29, name: "CLI subcommand contract & JSON smoke-test matrix", subsystems: "CLISmokeTestHarness, ApexCLIRouter"),
+            WorkflowDescriptor(id: 30, name: "Full 9-check ApexAgent Doctor subsystem verification", subsystems: "ApexCLIRouter.runDoctor, DoctorReport")
         ]
     }
 
@@ -144,6 +149,11 @@ public enum ApexWorkflows {
             (23, "Conventional Changelog & SemVer bump calculator", workflow23),
             (24, "Release version parity & readiness gate", workflow24),
             (25, "SLSA v1.0 build provenance & notarization verification", workflow25),
+            (26, "SARIF v2.1.0 security & static analysis report export", workflow26),
+            (27, "Xcode .xctestplan timeout & coverage target audit", workflow27),
+            (28, "Workspace source complexity & asset footprint gate", workflow28),
+            (29, "CLI subcommand contract & JSON smoke-test matrix", workflow29),
+            (30, "Full 9-check ApexAgent Doctor subsystem verification", workflow30),
         ]
         var results: [WorkflowResult] = []
         for (id, _, body) in all where ids.isEmpty || ids.contains(id) {
