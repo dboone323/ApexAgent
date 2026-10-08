@@ -39,6 +39,8 @@ public enum ApexCLICommand: Sendable, Equatable {
     case man
     case audit(jsonOutput: Bool)
     case sbom(jsonOutput: Bool)
+    case changelog(jsonOutput: Bool)
+    case releaseCheck(jsonOutput: Bool)
     case daemon
     case spaceCLI(subcommandArgs: [String])
     case prompt(text: String, allowTools: Bool)
@@ -246,6 +248,12 @@ public enum ApexCLIRouter {
         case "sbom", "--sbom":
             return ParsedCLIInvocation(command: .sbom(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
+        case "changelog", "--changelog":
+            return ParsedCLIInvocation(command: .changelog(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
+        case "release-check", "--release-check":
+            return ParsedCLIInvocation(command: .releaseCheck(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
         default:
             throw ApexCLIError.unknownSubcommand(first)
         }
@@ -282,6 +290,8 @@ public enum ApexCLIRouter {
           diagnostics             Dump structured recent logs, MetricKit field health, and storage recovery events
           audit                   Run repository hygiene and supply-chain dependency lock audit
           sbom                    Export Software Bill of Materials (Markdown or --json CycloneDX 1.5)
+          changelog               Generate categorized Conventional Changelog & next SemVer recommendation
+          release-check           Audit Info.plist / project.yml version parity and release readiness
           completions [shell]     Generate shell tab-completion script (zsh, bash, fish)
           man                     Generate troff man(1) manual page for ApexAgent(1)
           routines list           List registered automation routines
@@ -518,6 +528,34 @@ public enum ApexCLIRouter {
             let deps = DependencyLockAuditor.auditRepository(atRepoRoot: repoRoot)
             let output = jsonOutput ? deps.exportCycloneDXJSON() : deps.exportSBOMMarkdown()
             return (output, deps.passed ? 0 : 1)
+
+        case .changelog(let jsonOutput):
+            let repoRoot = resolveRepositoryRoot()
+            let commits = ReleaseChangelogEngine.loadRecentGitCommits(atRepoRoot: repoRoot, limit: 25)
+            let baseVer = SemanticVersion(parsing: appVersion) ?? SemanticVersion(major: 2026, minor: 10, patch: 0)
+            let (nextVer, bump) = ReleaseChangelogEngine.calculateNextVersion(from: baseVer, commits: commits)
+            if jsonOutput {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                let data = (try? encoder.encode(commits)) ?? Data()
+                return (String(data: data, encoding: .utf8) ?? "[]", 0)
+            }
+            let markdown = ReleaseChangelogEngine.renderReleaseNotes(
+                version: "\(nextVer.description) (\(bump.rawValue))",
+                commits: commits
+            )
+            return (markdown, 0)
+
+        case .releaseCheck(let jsonOutput):
+            let repoRoot = resolveRepositoryRoot()
+            let report = ReleaseChangelogEngine.auditReleaseReadiness(atRepoRoot: repoRoot)
+            if jsonOutput {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                let data = (try? encoder.encode(report)) ?? Data()
+                return (String(data: data, encoding: .utf8) ?? "{}", report.passed ? 0 : 1)
+            }
+            return (report.toMarkdown(), report.passed ? 0 : 1)
 
         default:
             return nil
