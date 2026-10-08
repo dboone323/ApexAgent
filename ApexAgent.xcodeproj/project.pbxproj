@@ -179,6 +179,7 @@
 		64DFDB7579F91DD243C68945 /* AutomationWorkflows+1to3.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC6DB015FFE58935502E7FF5 /* AutomationWorkflows+1to3.swift */; };
 		657894613E7EC550EDCF98F9 /* A2APeerDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B6BC0389A658C66CFE36DC7 /* A2APeerDiscovery.swift */; };
 		65DC66C1BE0800B9A225696A /* ChiefOfStaff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2961B4C4738E77BCEF8FAE0A /* ChiefOfStaff.swift */; };
+		66BDED758A00C481F54692AB /* RepoHygieneAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B2A8F9FF577C3ADD5BCC1D8 /* RepoHygieneAuditor.swift */; };
 		676F8DB33FDDF163DB2062E1 /* UITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1C04DA82D92BFFD8F70417 /* UITests.swift */; };
 		68C13A46F80C9C4E0F3F9C44 /* OrchestratorProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22C56DD46ADBA07AD7080570 /* OrchestratorProvider.swift */; };
 		68E0D0EBBF87EB2D2A53EE7F /* Logging in Frameworks */ = {isa = PBXBuildFile; productRef = 2DFCDCE30F5EDBC8DDF0AD14 /* Logging */; };
@@ -297,6 +298,7 @@
 		B119A8FCACA3F29DD39A00C3 /* AgentAuditLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01D36BE270D67C0F522A0602 /* AgentAuditLog.swift */; };
 		B20FAA8C2A1E758451726A09 /* OllamaAgentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A44BA8A4BE5198E5CAE1691 /* OllamaAgentEngine.swift */; };
 		B2451B9596B89C8333F816E5 /* DetectImageTextTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFB12B5D9E38A45F5C8CEB2B /* DetectImageTextTool.swift */; };
+		B293F9228504210DCB7E506E /* RepoHygieneAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E84F471ACD5BE056A7769F72 /* RepoHygieneAuditorTests.swift */; };
 		B310BADA56FF18F47217ABA4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F89795B5349F400EF42BD8D7 /* Assets.xcassets */; };
 		B35B942F1D3291961DABE3E5 /* PlaybookRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68D016D7149D71694D33F5F5 /* PlaybookRunner.swift */; };
 		B3E1B6B5AB58F4E593EFB168 /* MCPServerDashboardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1E54B01D0CEEB92A6038E92 /* MCPServerDashboardTests.swift */; };
@@ -759,6 +761,7 @@
 		48BA507C8A2B80CAD84EE00F /* PrivacyManifestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyManifestTests.swift; sourceTree = "<group>"; };
 		49F5C18134545FE61524E0FF /* MCPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPClient.swift; sourceTree = "<group>"; };
 		4AA991F35EA79B75FF0D3008 /* CollaborativeServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollaborativeServer.swift; sourceTree = "<group>"; };
+		4B2A8F9FF577C3ADD5BCC1D8 /* RepoHygieneAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepoHygieneAuditor.swift; sourceTree = "<group>"; };
 		4B6CC19C5CABD635F5F257C7 /* MessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageBubble.swift; sourceTree = "<group>"; };
 		4C942056B3C16BC7C0420BFD /* Routine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Routine.swift; sourceTree = "<group>"; };
 		4D1F7E72D40053469FE8B8F4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -1017,6 +1020,7 @@
 		E6E862FC7A7EB6367D85FAAF /* SharedLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedLogger.swift; sourceTree = "<group>"; };
 		E7D2D0D85063D0D8705E2834 /* VoiceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceController.swift; sourceTree = "<group>"; };
 		E8455F1C1BB32624DCA4DDA5 /* BenchmarkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkTests.swift; sourceTree = "<group>"; };
+		E84F471ACD5BE056A7769F72 /* RepoHygieneAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepoHygieneAuditorTests.swift; sourceTree = "<group>"; };
 		E93C7C4890D9B65AAF91D2C7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		E94BE12E3CCD68A483A7AEDF /* AutomationWorkflows+4to7.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+4to7.swift"; sourceTree = "<group>"; };
 		E96F71F584B17B7CACC9093B /* WebSearchHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebSearchHelper.swift; sourceTree = "<group>"; };
@@ -1387,6 +1391,7 @@
 				553432FE28D5E5F4B2CF6BD2 /* EphemeralCapabilityManager.swift */,
 				6B723BCFF1F5A2C1A66E09B2 /* FileRollback.swift */,
 				BD82451CB46E062606319742 /* PrivacyManifestInspector.swift */,
+				4B2A8F9FF577C3ADD5BCC1D8 /* RepoHygieneAuditor.swift */,
 				E35BF4D3CB3E7992123AD18C /* SecretRedactor.swift */,
 				E538597D4C821CC359930D8B /* SecurityAuditor.swift */,
 				2D721ADBD02CBB80273EB777 /* SecurityGovernanceProfile.swift */,
@@ -1762,6 +1767,7 @@
 				475AA27E9CD4482A51D18B19 /* ReflectionManagerTests.swift */,
 				F064D929D23188DD1C6571B5 /* RemoteCompanionTests.swift */,
 				539E51BD875085EF52BE41C8 /* RepeatDetectorTests.swift */,
+				E84F471ACD5BE056A7769F72 /* RepoHygieneAuditorTests.swift */,
 				9C5B806F807932CD76502A9C /* ResilientJSONStoreTests.swift */,
 				183F7E48970071163B09035D /* RoadmapHardeningTests.swift */,
 				1DD878E655BCB9B2D4C9DA50 /* RoutineCronModelTests.swift */,
@@ -2331,6 +2337,7 @@
 				D53FCFAD7E947C41BFF0BBA1 /* ReminderTool.swift in Sources */,
 				BE49594832EA0DC4A90865A7 /* RemoteCompanionGateway.swift in Sources */,
 				88E788FEC0E187CA785A5756 /* RepeatDetector.swift in Sources */,
+				66BDED758A00C481F54692AB /* RepoHygieneAuditor.swift in Sources */,
 				2DE2EA9639EE1F8AFECAB2B1 /* ResilientJSONStore.swift in Sources */,
 				98DAF81A8EFA135BC00C2BB6 /* Routine.swift in Sources */,
 				7BD56A3BFD7C69A552A7E4CA /* RoutineManager.swift in Sources */,
@@ -2601,6 +2608,7 @@
 				A95F8B3029A159BEFC419B17 /* ReflectionManagerTests.swift in Sources */,
 				91D7398E489833978B07D683 /* RemoteCompanionTests.swift in Sources */,
 				4C2E2E0327B4937B1EBAE9D8 /* RepeatDetectorTests.swift in Sources */,
+				B293F9228504210DCB7E506E /* RepoHygieneAuditorTests.swift in Sources */,
 				41B24D72179D5C3488DBC9A9 /* ResilientJSONStoreTests.swift in Sources */,
 				06BED51BD86F31DC120E2F4E /* RoadmapHardeningTests.swift in Sources */,
 				DF367FD47B641F65F75F8406 /* RoutineCronModelTests.swift in Sources */,

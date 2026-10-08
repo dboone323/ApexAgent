@@ -4,7 +4,13 @@ SWIFT       ?= xcrun swift
 BUILD_FLAGS := -c release
 TEST_FLAGS  := --parallel --enable-code-coverage
 
-.PHONY: build test coverage ci clean test-deep test-ui xcresult-summary
+.PHONY: build test coverage ci clean test-deep test-ui xcresult-summary hygiene pre-push
+hygiene:
+	@chmod +x ./Tools/scripts/pre-push-hygiene.sh
+	@./Tools/scripts/pre-push-hygiene.sh
+
+pre-push: hygiene build
+
 build:
 	$(SWIFT) build $(BUILD_FLAGS)
 
@@ -14,7 +20,7 @@ test:
 coverage:
 	$(SWIFT) test $(TEST_FLAGS)
 
-ci: build test
+ci: hygiene build test
 
 clean:
 	$(SWIFT) package clean
