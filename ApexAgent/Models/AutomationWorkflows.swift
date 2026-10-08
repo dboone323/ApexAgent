@@ -12,7 +12,7 @@ import SharedKit
 // Run them with:  swift run apexflow            (all)
 //                 swift run apexflow 3 7        (selected)
 
-public struct WorkflowResult: Sendable {
+public struct WorkflowResult: Codable, Sendable, Equatable {
     public let id: Int
     public let name: String
     public let passed: Bool
@@ -27,6 +27,18 @@ public struct WorkflowResult: Sendable {
 
     public var line: String {
         "\(passed ? "PASS" : "FAIL") [\(id)] \(name) — \(evidence)"
+    }
+}
+
+public struct WorkflowDescriptor: Codable, Sendable, Equatable {
+    public let id: Int
+    public let name: String
+    public let subsystems: String
+
+    public init(id: Int, name: String, subsystems: String) {
+        self.id = id
+        self.name = name
+        self.subsystems = subsystems
     }
 }
 
@@ -75,6 +87,26 @@ public enum ApexWorkflows {
         return dir
     }
 
+    public static func allDescriptors() -> [WorkflowDescriptor] {
+        [
+            WorkflowDescriptor(id: 1, name: "AI Code Review findings", subsystems: "CodeReviewPersistenceTools, ProjectAuditor"),
+            WorkflowDescriptor(id: 2, name: "NL query over project store", subsystems: "SwiftData ModelContext, ProjectModel"),
+            WorkflowDescriptor(id: 3, name: "Test generation & repair", subsystems: "RunSomeTests, DiffHelper"),
+            WorkflowDescriptor(id: 4, name: "Documentation pipeline", subsystems: "FileSystemTools, Markdown Generator"),
+            WorkflowDescriptor(id: 5, name: "CI/CD failure triage", subsystems: "Terminal/PTY, OSLog Diagnostics"),
+            WorkflowDescriptor(id: 6, name: "Multi-agent orchestration", subsystems: "StateGraph, BotSession swarm"),
+            WorkflowDescriptor(id: 7, name: "Pipeline & schema-drift monitor", subsystems: "ContainerManager, DiagnosticManager"),
+            WorkflowDescriptor(id: 8, name: "Ticket triage & routing", subsystems: "AgentRegistry, DynamicToolbox"),
+            WorkflowDescriptor(id: 9, name: "Legacy refactor sweep", subsystems: "DiffStats, WorkspaceProactiveAuditor"),
+            WorkflowDescriptor(id: 10, name: "Personal productivity agent", subsystems: "DailyBriefing, RoutineManager"),
+            WorkflowDescriptor(id: 11, name: "Pre-push security & hygiene self-audit", subsystems: "RepoHygieneAuditor, SwiftSyntaxLintGate"),
+            WorkflowDescriptor(id: 12, name: "Persistence corruption quarantine & recovery", subsystems: "ResilientJSONStore, TraceBus"),
+            WorkflowDescriptor(id: 13, name: "MCP 2026-07-28 negotiation & W3C traceparent", subsystems: "MCPProtocolVersion, MCPToolAnnotations, W3CTraceContext"),
+            WorkflowDescriptor(id: 14, name: "Deep-link routing + Spotlight handoff", subsystems: "DeepLinkRouter, SpotlightIndexer"),
+            WorkflowDescriptor(id: 15, name: "TickerScheduler coalescing & doctor health check", subsystems: "TickerScheduler, PollPolicy, ApexCLIRouter")
+        ]
+    }
+
     public static func run(ids: Set<Int>) async -> [WorkflowResult] {
         let all: [(Int, String, () async -> WorkflowResult)] = [
             (1, "AI-assisted code review + persisted findings", workflow1),
@@ -87,6 +119,11 @@ public enum ApexWorkflows {
             (8, "Ticket triage + routing", workflow8),
             (9, "Legacy refactor modernization sweep", workflow9),
             (10, "Personal productivity agent (briefing + standup)", workflow10),
+            (11, "Pre-push security & hygiene self-audit", workflow11),
+            (12, "Persistence corruption quarantine & recovery", workflow12),
+            (13, "MCP 2026-07-28 negotiation & W3C traceparent", workflow13),
+            (14, "Deep-link routing + Spotlight handoff", workflow14),
+            (15, "TickerScheduler coalescing & doctor health check", workflow15),
         ]
         var results: [WorkflowResult] = []
         for (id, _, body) in all where ids.isEmpty || ids.contains(id) {
@@ -95,30 +132,29 @@ public enum ApexWorkflows {
         return results
     }
 
+    public static func formatJSON(_ results: [WorkflowResult]) -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        guard let data = try? encoder.encode(results),
+              let string = String(data: data, encoding: .utf8) else {
+            return "[]"
+        }
+        return string
+    }
+
     // MARK: - Markdown Catalog Export
 
     public static func exportWorkflowsCatalogMarkdown() -> String {
-        let workflows: [(Int, String, String)] = [
-            (1, "AI Code Review findings", "CodeReviewPersistenceTools, ProjectAuditor"),
-            (2, "NL query over project store", "SwiftData ModelContext, ProjectModel"),
-            (3, "Test generation & repair", "RunSomeTests, DiffHelper"),
-            (4, "Documentation pipeline", "FileSystemTools, Markdown Generator"),
-            (5, "CI/CD failure triage", "Terminal/PTY, OSLog Diagnostics"),
-            (6, "Multi-agent orchestration", "StateGraph, BotSession swarm"),
-            (7, "Pipeline & schema-drift monitor", "ContainerManager, DiagnosticManager"),
-            (8, "Ticket triage & routing", "AgentRegistry, DynamicToolbox"),
-            (9, "Legacy refactor sweep", "DiffStats, WorkspaceProactiveAuditor"),
-            (10, "Personal productivity agent", "DailyBriefing, RoutineManager"),
-        ]
+        let workflows = allDescriptors()
 
-        var md = "### ⚙️ Autonomous Local Workflows Catalog (10 workflows)\n\n"
+        var md = "### ⚙️ Autonomous Local Workflows Catalog (\(workflows.count) workflows)\n\n"
         md += "| ID | Workflow Name | Target Subsystems | Engine |\n"
         md += "|---|---|---|---|\n"
 
         for wf in workflows {
-            let safeName = wf.1.replacingOccurrences(of: "|", with: "\\|")
-            let safeSub = wf.2.replacingOccurrences(of: "|", with: "\\|")
-            md += "| `\(wf.0)` | **\(safeName)** | \(safeSub) | Native Swift 6.4 |\n"
+            let safeName = wf.name.replacingOccurrences(of: "|", with: "\\|")
+            let safeSub = wf.subsystems.replacingOccurrences(of: "|", with: "\\|")
+            md += "| `\(wf.id)` | **\(safeName)** | \(safeSub) | Native Swift 6.4 |\n"
         }
         return md
     }
