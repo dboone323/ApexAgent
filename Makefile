@@ -43,7 +43,8 @@ test:
 	$(SWIFT) test $(TEST_FLAGS)
 
 coverage:
-	$(SWIFT) test $(TEST_FLAGS)
+	@chmod +x ./Tools/scripts/coverage-gate.sh
+	@./Tools/scripts/coverage-gate.sh
 
 ci: hygiene lint build test
 
