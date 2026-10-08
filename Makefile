@@ -4,10 +4,15 @@ SWIFT       ?= xcrun swift
 BUILD_FLAGS := -c release
 TEST_FLAGS  := --parallel --enable-code-coverage
 
-.PHONY: build test coverage ci clean test-deep test-ui xcresult-summary hygiene lint syntax-check format pre-push full
+.PHONY: build test coverage ci clean test-deep test-ui xcresult-summary hygiene lint syntax-check format pre-push full audit-deps sbom
 hygiene:
 	@chmod +x ./Tools/scripts/pre-push-hygiene.sh
 	@./Tools/scripts/pre-push-hygiene.sh
+
+audit-deps: hygiene
+
+sbom:
+	@$(SWIFT) run ApexAgent sbom
 
 lint:
 	@chmod +x ./Tools/scripts/lint-changed-swift.sh
