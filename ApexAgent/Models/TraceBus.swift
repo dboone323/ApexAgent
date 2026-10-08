@@ -99,4 +99,25 @@ final class TraceBus: @unchecked Sendable {
         return md
     }
 
+    // MARK: - Resilient JSON Snapshot Persistence
+
+    public func saveSnapshot(to url: URL) throws {
+        let snapshot = recentEvents(limit: maxEvents)
+        try ResilientJSONStore.shared.save(snapshot, to: url)
+    }
+
+    @discardableResult
+    public func loadSnapshot(from url: URL) -> [TraceEvent] {
+        let loaded = ResilientJSONStore.shared.load(
+            [TraceEvent].self,
+            from: url,
+            subsystem: "TraceBus",
+            default: []
+        )
+        queue.sync(flags: .barrier) {
+            self.events = Array(loaded.suffix(self.maxEvents))
+        }
+        return loaded
+    }
+
 }

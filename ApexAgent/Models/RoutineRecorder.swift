@@ -203,4 +203,48 @@ final class RoutineRecorder {
         }
         return Routine(name: name, descriptionText: prompt, trigger: .manual, scheduledMinutes: 0, enabled: true)
     }
+
+    // MARK: - Resilient JSON Persistence
+
+    struct PersistedStep: Codable, Equatable, Sendable {
+        let action: String
+        let detail: String
+        let occurredAt: Date
+        let windowTitle: String?
+        let ocrSummary: String?
+    }
+
+    func saveSteps(to url: URL) throws {
+        let payload = steps.map {
+            PersistedStep(
+                action: $0.action,
+                detail: $0.detail,
+                occurredAt: $0.occurredAt,
+                windowTitle: $0.windowTitle,
+                ocrSummary: $0.ocrSummary
+            )
+        }
+        try ResilientJSONStore.shared.save(payload, to: url)
+    }
+
+    @discardableResult
+    func loadSteps(from url: URL) -> [RecordedStep] {
+        let persisted = ResilientJSONStore.shared.load(
+            [PersistedStep].self,
+            from: url,
+            subsystem: "RoutineRecorder",
+            default: []
+        )
+        self.steps = persisted.map {
+            RecordedStep(
+                action: $0.action,
+                detail: $0.detail,
+                occurredAt: $0.occurredAt,
+                windowTitle: $0.windowTitle,
+                ocrSummary: $0.ocrSummary
+            )
+        }
+        return self.steps
+    }
 }
+

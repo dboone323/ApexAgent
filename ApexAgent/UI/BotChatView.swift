@@ -82,7 +82,7 @@ struct BotChatView: View {
             } catch is CancellationError {
                 // The view leaving the hierarchy cancels the expiry poll.
             } catch {
-                print("Peer approval expiry poll stopped: \(error.localizedDescription)")
+                AppLog.error(.ui, "Peer approval expiry poll stopped: \(error.localizedDescription)")
             }
         }
         .onAppear {
@@ -277,6 +277,8 @@ struct BotChatHeaderBar: View {
             }
             .menuStyle(.borderlessButton)
             .help("Run Collaboration Playbook")
+            .accessibilityIdentifier("botPlaybookMenu")
+            .accessibilityLabel("Run collaboration playbook")
 
             // Clear history button
             Button {
@@ -288,6 +290,8 @@ struct BotChatHeaderBar: View {
             }
             .buttonStyle(.plain)
             .help("Clear chat history")
+            .accessibilityIdentifier("botClearHistoryButton")
+            .accessibilityLabel("Clear chat history")
         }
     }
 }
@@ -593,6 +597,8 @@ struct BotChatInputBar: View {
                                 }
                                 .buttonStyle(.plain)
                                 .offset(x: 4, y: -4)
+                                .accessibilityIdentifier("botRemoveAttachmentButton_\(idx)")
+                                .accessibilityLabel("Remove attachment \(idx + 1)")
                             }
                             .padding(.top, 4)
                             .padding(.trailing, 4)
@@ -612,6 +618,8 @@ struct BotChatInputBar: View {
                 }
                 .buttonStyle(.plain)
                 .help("Attach Image")
+                .accessibilityIdentifier("botAttachImageButton")
+                .accessibilityLabel("Attach image")
                 
                 // Screenshot button
                 Button {
@@ -625,6 +633,8 @@ struct BotChatInputBar: View {
                 }
                 .buttonStyle(.plain)
                 .help("Take Screenshot")
+                .accessibilityIdentifier("botAttachScreenshotButton")
+                .accessibilityLabel("Attach screenshot")
                 
                 // Voice button
                 Button {
@@ -644,6 +654,8 @@ struct BotChatInputBar: View {
                 }
                 .buttonStyle(.plain)
                 .help(voiceController.isRecording ? "Stop Recording" : "Voice Input")
+                .accessibilityIdentifier("botVoiceRecordButton")
+                .accessibilityLabel(voiceController.isRecording ? "Stop recording" : "Start voice recording")
 
                 // Text field
                 TextField(session.isGenerating ? "Queue next prompt..." : "Message \(session.bot.name)... (type / for commands)", text: $inputText, axis: .vertical)
@@ -651,6 +663,8 @@ struct BotChatInputBar: View {
                     .font(.system(size: 13))
                     .focused($isInputFocused)
                     .accessibilityIdentifier("botChatInputField")
+                    .accessibilityLabel("Message \(session.bot.name)")
+                    .accessibilityHint("Type a message or slash command and press Return to send")
                     .lineLimit(1...5)
                     .onSubmit {
                         send()
@@ -694,6 +708,8 @@ struct BotChatInputBar: View {
                     }
                     .buttonStyle(.plain)
                     .help("Stop generation")
+                    .accessibilityIdentifier("botStopGenerationButton")
+                    .accessibilityLabel("Stop generation")
                 } else {
                     // Send button
                     Button(action: send) {
@@ -704,6 +720,7 @@ struct BotChatInputBar: View {
                     .buttonStyle(.plain)
                     .disabled(!hasInputContent)
                     .accessibilityIdentifier("botSendButton")
+                    .accessibilityLabel("Send message")
                     .keyboardShortcut(.return, modifiers: [])
                 }
             }

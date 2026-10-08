@@ -51,7 +51,7 @@ public final class ApexGatewayServer {
             print("📡 [ApexGatewayServer] First launch: generated a new gateway token (stored in Keychain). New clients must present it to connect:")
             print("   \(fresh)")
         } else {
-            print("⚠️ [ApexGatewayServer] Keychain unavailable; gateway token is in-memory only for this session.")
+            AppLog.error(.gateway, "⚠️ Keychain unavailable; gateway token is in-memory only for this session.")
         }
         return fresh
     }
@@ -83,10 +83,10 @@ public final class ApexGatewayServer {
         listener.stateUpdateHandler = { [weak self] state in
             switch state {
             case .ready:
-                print("📡 [ApexGatewayServer] Daemon ready and listening on port \(self?.port ?? 0)")
+                AppLog.info(.gateway, "📡 Daemon ready and listening on port \(self?.port ?? 0)")
                 started.signal()
             case .failed(let error):
-                print("⚠️ [ApexGatewayServer] Listener failed: \(error)")
+                AppLog.error(.gateway, "⚠️ Listener failed: \(error)")
                 startError = error
                 started.signal()
             default:
@@ -115,7 +115,7 @@ public final class ApexGatewayServer {
                 }
             }
             guard isLoopback else {
-                print("📡 [ApexGatewayServer] Rejected non-loopback connection: \(String(describing: localEndpoint)) host=\(hostString)")
+                AppLog.error(.gateway, "📡 Rejected non-loopback connection: \(String(describing: localEndpoint)) host=\(hostString)")
                 connection.cancel()
                 return
             }
@@ -146,25 +146,25 @@ public final class ApexGatewayServer {
         }
         connections.removeAll()
         SessionLifecycleManager.shared.cancelAll()
-        print("📡 [ApexGatewayServer] Daemon stopped.")
+        AppLog.notice(.gateway, "📡 Daemon stopped.")
     }
     
     private func registerConnection(_ connection: NWConnection) {
         let id = UUID()
         connections[id] = connection
-        print("📡 [ApexGatewayServer] Client connected: \(id)")
+        AppLog.info(.gateway, "📡 Client connected: \(id)")
         
         connection.stateUpdateHandler = { [weak self] state in
             switch state {
             case .failed(let error):
-                print("📡 [ApexGatewayServer] Connection \(id) failed: \(error)")
+                AppLog.error(.gateway, "📡 Connection \(id) failed: \(error)")
                 Task { @MainActor [weak self] in
                     self?.connections.removeValue(forKey: id)
                     self?.authenticatedConnections.remove(id)
                     SessionLifecycleManager.shared.cancelSession(id: id)
                 }
             case .cancelled:
-                print("📡 [ApexGatewayServer] Connection \(id) cancelled")
+                AppLog.info(.gateway, "📡 Connection \(id) cancelled")
                 Task { @MainActor [weak self] in
                     self?.connections.removeValue(forKey: id)
                     self?.authenticatedConnections.remove(id)
@@ -185,7 +185,7 @@ public final class ApexGatewayServer {
         // Read prefix length (4 bytes UInt32 big-endian)
         connection.receive(minimumIncompleteLength: 4, maximumLength: 4) { [weak self] content, _, isComplete, error in
             if let error {
-                print("📡 [ApexGatewayServer] Receive error: \(error)")
+                AppLog.error(.gateway, "📡 Receive error: \(error)")
                 return
             }
             guard let content, content.count == 4 else {
@@ -198,7 +198,7 @@ public final class ApexGatewayServer {
             // C2: cap the frame length — an unbounded UInt32 lets a client
             // force a multi-GB allocation (DoS).
             guard length <= Self.maxFrameBytes else {
-                print("📡 [ApexGatewayServer] Client \(id) sent oversize frame (\(length) bytes); closing connection.")
+                AppLog.error(.gateway, "📡 Client \(id) sent oversize frame (\(length) bytes); closing connection.")
                 connection.cancel()
                 return
             }
@@ -206,7 +206,7 @@ public final class ApexGatewayServer {
             // Read body payload
             connection.receive(minimumIncompleteLength: Int(length), maximumLength: Int(length)) { [weak self] bodyContent, _, bodyComplete, bodyError in
                 if let bodyError {
-                    print("📡 [ApexGatewayServer] Body receive error: \(bodyError)")
+                    AppLog.error(.gateway, "📡 Body receive error: \(bodyError)")
                     return
                 }
                 guard let bodyContent, bodyContent.count == Int(length) else {
@@ -230,11 +230,11 @@ public final class ApexGatewayServer {
         if case .authenticate(let token) = action {
             if !token.isEmpty, token == authenticationToken {
                 authenticatedConnections.insert(connectionId)
-                print("📡 [ApexGatewayServer] Client \(connectionId) authenticated.")
+                AppLog.info(.gateway, "📡 Client \(connectionId) authenticated.")
                 // Send initial state only to the newly authenticated client, not all.
                 broadcastState()
             } else {
-                print("⚠️ [ApexGatewayServer] Client \(connectionId) failed gateway authentication; closing connection.")
+                AppLog.error(.gateway, "⚠️ Client \(connectionId) failed gateway authentication; closing connection.")
                 connections[connectionId]?.cancel()
             }
             return
@@ -356,7 +356,7 @@ public final class ApexGatewayServer {
         for (id, conn) in connections where authenticatedConnections.contains(id) {
             conn.send(content: fullPacket, completion: .contentProcessed { error in
                 if let error {
-                    print("⚠️ [ApexGatewayServer] Broadcast failed: \(error)")
+                    AppLog.error(.gateway, "⚠️ Broadcast failed: \(error)")
                 }
             })
         }

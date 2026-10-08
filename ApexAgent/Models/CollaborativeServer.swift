@@ -103,7 +103,7 @@ class CollaborativeServer: NSObject, ObservableObject {
                             self.port = bound
                         }
                     case .failed(let error):
-                        print("⚠️ Collaborative server failed: \(error)")
+                        AppLog.error(.collaboration, "⚠️ Collaborative server failed: \(error)")
                         self.stop()
                     default:
                         break
@@ -120,7 +120,7 @@ class CollaborativeServer: NSObject, ObservableObject {
 
             listener.start(queue: queue)
         } catch {
-            print("⚠️ Failed to start NWListener: \(error)")
+            AppLog.error(.collaboration, "⚠️ Failed to start NWListener: \(error)")
         }
     }
 
@@ -128,7 +128,7 @@ class CollaborativeServer: NSObject, ObservableObject {
         listener?.cancel()
         listener = nil
         isRunning = false
-        print("🛑 Collaborative server stopped")
+        AppLog.notice(.collaboration, "🛑 Collaborative server stopped")
     }
 
     private func handleConnection(_ connection: NWConnection) {
@@ -141,7 +141,7 @@ class CollaborativeServer: NSObject, ObservableObject {
             guard let self = self else { return }
             Task { @MainActor in
                 if let error = error {
-                    print("Connection read error: \(error)")
+                    AppLog.error(.collaboration, "Connection read error: \(error)")
                     connection.cancel()
                     return
                 }
@@ -456,7 +456,7 @@ class CollaborativeServer: NSObject, ObservableObject {
 
         connection.send(content: responseData, contentContext: .defaultMessage, isComplete: true, completion: .contentProcessed { error in
             if let error = error {
-                print("Send error: \(error)")
+                AppLog.error(.collaboration, "Send error: \(error)")
             }
             // Defer cancellation slightly to prevent connection reset on client
             DispatchQueue.global().asyncAfter(deadline: .now() + 0.05) {

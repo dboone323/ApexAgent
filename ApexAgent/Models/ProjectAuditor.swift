@@ -99,7 +99,7 @@ class ProjectAuditor {
             self.cachedReports = reports
             return reports
         } catch {
-            print("Workspace audit failed/timed out: \(error)")
+            AppLog.error(.project, "Workspace audit failed/timed out: \(error)")
             return []
         }
     }

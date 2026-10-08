@@ -443,7 +443,7 @@ final class BotManager {
                 }
             }
         } catch {
-            print("⚠️ Failed to load Bots from SwiftData: \(error)")
+            AppLog.error(.bot, "⚠️ Failed to load Bots from SwiftData: \(error)")
             bots = []
         }
 

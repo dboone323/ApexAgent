@@ -201,6 +201,7 @@ public struct MCPServerDashboardView: View {
                     // Metrics row
                     HStack(spacing: 20) {
                         metricPill(title: "Transport", value: server.transport.uppercased())
+                        metricPill(title: "Protocol", value: health?.protocolVersion ?? MCPProtocolVersion.latestSupported)
                         metricPill(title: "Latency", value: latency != nil ? "\(String(format: "%.1f", latency!)) ms" : "Unmeasured")
                         metricPill(title: "Failures", value: "\(health?.failureCount ?? 0)")
                         metricPill(title: "Restarts", value: "\(health?.restartCountInWindow ?? 0)")
@@ -286,13 +287,34 @@ public struct MCPServerDashboardView: View {
     private func toolCard(_ tool: MCPToolDefinition) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(tool.name)
+                Text(tool.annotations?.title ?? tool.name)
                     .font(.subheadline)
                     .fontWeight(.semibold)
+                if tool.annotations?.title != nil {
+                    Text("(\(tool.name))")
+                        .font(AppTheme.Font.mono(10))
+                        .foregroundStyle(AppTheme.Palette.textTertiary)
+                }
                 Spacer()
-                Text("Dynamic Tool")
-                    .font(.caption2)
-                    .foregroundStyle(AppTheme.Palette.accent)
+                if let annotations = tool.annotations {
+                    Text(annotations.policyBadgeText)
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            (annotations.isDestructive ? Color.red : (annotations.isReadOnly ? Color.green : AppTheme.Palette.accent))
+                                .opacity(0.15)
+                        )
+                        .foregroundStyle(
+                            annotations.isDestructive ? Color.red : (annotations.isReadOnly ? Color.green : AppTheme.Palette.accent)
+                        )
+                        .clipShape(Capsule())
+                } else {
+                    Text("Dynamic Tool")
+                        .font(.caption2)
+                        .foregroundStyle(AppTheme.Palette.accent)
+                }
             }
 
             if let desc = tool.description, !desc.isEmpty {

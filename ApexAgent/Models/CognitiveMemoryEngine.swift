@@ -661,13 +661,24 @@ public final class CognitiveMemoryEngine {
     
     // MARK: - Helper
     private func loadJSON<T: Decodable>(from url: URL) throws -> T {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw CocoaError(.fileReadNoSuchFile)
+        }
         let data = try Data(contentsOf: url)
-        return try JSONDecoder().decode(T.self, from: data)
+        do {
+            return try JSONDecoder().decode(T.self, from: data)
+        } catch {
+            ResilientJSONStore.shared.quarantineCorruptFile(
+                at: url,
+                subsystem: "CognitiveMemoryEngine",
+                errorDescription: String(describing: error)
+            )
+            throw error
+        }
     }
     
     private func saveJSON<T: Encodable>(_ object: T, to url: URL) throws {
-        let data = try JSONEncoder().encode(object)
-        try data.write(to: url, options: .atomic)
+        try ResilientJSONStore.shared.save(object, to: url)
     }
 
     // MARK: - Markdown Summaries & Memory Management

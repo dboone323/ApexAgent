@@ -115,9 +115,9 @@ public final class A2AServer {
                 switch state {
                 case .ready:
                     self?.isRunning = true
-                    print("A2AServer running on port \(self?.port ?? 1338)")
+                    AppLog.info(.a2a, "A2AServer running on port \(self?.port ?? 1338)")
                 case .failed(let error):
-                    print("A2AServer failed with error: \(error)")
+                    AppLog.error(.a2a, "A2AServer failed with error: \(error)")
                     self?.isRunning = false
                 case .cancelled:
                     self?.isRunning = false
@@ -181,7 +181,7 @@ public final class A2AServer {
         @Sendable func readLoop(buffer: Data) {
             connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, isComplete, error in
                 if let error = error {
-                    print("A2AServer read error: \(error)")
+                    AppLog.error(.a2a, "A2AServer read error: \(error)")
                     connection.cancel()
                     return
                 }

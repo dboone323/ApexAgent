@@ -219,7 +219,7 @@ final class OllamaAgentEngine: AgentEngine {
                 let rawArgs = (try? JSONSerialization.data(withJSONObject: args)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
 
                 if ProcessInfo.processInfo.arguments.contains("--cli") {
-                    print("\n⚙️ [Tool Call]: \(name)(\(rawArgs))")
+                    AppLog.info(.engine, "\n⚙️ [Tool Call]: \(name)(\(rawArgs))")
                 }
 
                 let toolOutput: String
@@ -235,7 +235,7 @@ final class OllamaAgentEngine: AgentEngine {
                 }
 
                 if ProcessInfo.processInfo.arguments.contains("--cli") {
-                    print("✅ [Tool Output]: \(toolOutput.prefix(300))\n")
+                    AppLog.info(.engine, "✅ [Tool Output]: \(toolOutput.prefix(300))\n")
                 }
 
                 lastToolOutput = toolOutput

@@ -38,14 +38,20 @@ struct RoutinesSection: View {
                 Button("Add Routine") {
                     isAddingRoutine = true
                 }
+                .accessibilityIdentifier("addRoutineButton")
+                .accessibilityHint("Opens the sheet to create a new routine")
                 
                 Button("Teach a Bot (Record Routine)") {
                     isRecordingRoutine = true
                 }
+                .accessibilityIdentifier("recordRoutineButton")
+                .accessibilityHint("Opens the routine recorder to teach a bot by demonstration")
 
                 Button("Execution History (\(routineManager.recentRuns.count))") {
                     isShowingRunHistory = true
                 }
+                .accessibilityIdentifier("routineExecutionHistoryButton")
+                .accessibilityLabel("Execution history, \(routineManager.recentRuns.count) runs")
             }
         }
         .confirmationDialog(
@@ -82,6 +88,10 @@ struct RoutinesSection: View {
 struct RoutineRow: View {
     let routine: Routine
     let onDelete: () -> Void
+
+    var toggleAccessibilityLabel: String {
+        "Enable routine \(routine.name)"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -123,9 +133,13 @@ struct RoutineRow: View {
                     EmptyView()
                 }
                 .labelsHidden()
+                .accessibilityIdentifier("routineToggle_\(routine.name)")
+                .accessibilityLabel(toggleAccessibilityLabel)
+                .accessibilityHint("Toggles whether \(routine.name) runs on schedule")
             }
         }
         .padding(.vertical, 2)
+        .accessibilityIdentifier("routineRow_\(routine.name)")
         .contextMenu {
             Button("Run Now") {
                 Task { @MainActor in

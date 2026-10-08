@@ -437,7 +437,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 self.permissions = newPerms
             }
         } catch {
-            print("⚠️ Failed to load or create AppPermissions: \(error)")
+            AppLog.error(.orchestrator, "⚠️ Failed to load or create AppPermissions: \(error)")
         }
     }
 
@@ -518,22 +518,22 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     // MARK: - Semantic RAG Context Hydration
 
     func getSemanticContext(for prompt: String) -> String {
-        print("🔍 RAG: Starting semantic search for '\(prompt)'")
+        AppLog.info(.orchestrator, "🔍 RAG: Starting semantic search for '\(prompt)'")
         guard let context = modelContext else {
-            print("🔍 RAG: modelContext is nil")
+            AppLog.info(.orchestrator, "🔍 RAG: modelContext is nil")
             return ""
         }
         guard let queryVector = EmbeddingHelper.getVector(for: prompt) else {
-            print("🔍 RAG: Failed to generate query vector")
+            AppLog.error(.orchestrator, "🔍 RAG: Failed to generate query vector")
             return ""
         }
 
         let descriptor = FetchDescriptor<AgentMemory>()
         guard let allMemories = try? context.fetch(descriptor) else {
-            print("🔍 RAG: Failed to fetch memories")
+            AppLog.error(.orchestrator, "🔍 RAG: Failed to fetch memories")
             return ""
         }
-        print("🔍 RAG: Found \(allMemories.count) total memories in database")
+        AppLog.info(.orchestrator, "🔍 RAG: Found \(allMemories.count) total memories in database")
         if allMemories.isEmpty {
             return ""
         }
@@ -542,11 +542,11 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         for memory in allMemories {
             guard let data = memory.embeddingData,
                   let vector = EmbeddingHelper.deserialize(data) else {
-                print("🔍 RAG: Memory '\(memory.key)' has no embeddingData or deserialization failed")
+                AppLog.error(.orchestrator, "🔍 RAG: Memory '\(memory.key)' has no embeddingData or deserialization failed")
                 continue
             }
             let score = EmbeddingHelper.cosineSimilarity(v1: queryVector, v2: vector)
-            print("🔍 RAG: Candidate '\(memory.key)' score: \(score)")
+            AppLog.info(.orchestrator, "🔍 RAG: Candidate '\(memory.key)' score: \(score)")
             if score > AgentOrchestrator.ragSimilarityThreshold {
                 scoredMemories.append((memory, score))
             }
@@ -731,7 +731,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     func logReasoning(_ thought: String) {
         let timestamped = "[\(Self.iso8601Formatter.string(from: Date()))] \(thought)"
         reasoningLogs.append(timestamped)
-        print("[Reasoning] \(thought)")
+        AppLog.info(.orchestrator, "[Reasoning] \(thought)")
     }
 
     func updateInstructions(_ newInstructions: String) {
@@ -909,7 +909,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         guard totalChars > AgentOrchestrator.contextCompactionThreshold else { return }
         guard messages.count > 5 || totalChars > 20000 else { return }
 
-        print("[DIAG] compactContextIfNeeded start; totalChars=\(totalChars) count=\(messages.count)")
+        AppLog.info(.orchestrator, "[DIAG] compactContextIfNeeded start; totalChars=\(totalChars) count=\(messages.count)")
 
         let targetBotId = currentConversation?.botProfileId ?? UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
 
@@ -958,11 +958,11 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 saveContext(context)
             }
 
-            print("Context compacted successfully via CognitiveMemoryEngine! Reduced message history size; archived \(archivedCount) turns.")
+            AppLog.info(.orchestrator, "Context compacted successfully via CognitiveMemoryEngine! Reduced message history size; archived \(archivedCount) turns.")
         } catch {
-            print("[DIAG] compactContextIfNeeded error: \(error)")
+            AppLog.error(.orchestrator, "[DIAG] compactContextIfNeeded error: \(error)")
         }
-        print("[DIAG] compactContextIfNeeded complete")
+        AppLog.info(.orchestrator, "[DIAG] compactContextIfNeeded complete")
     }
 
     /// Returns true when the prompt is a pure conversational greeting or courtesy
@@ -1252,7 +1252,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         do {
             try context.save()
         } catch {
-            print("⚠️ SwiftData context save failed: \(error.localizedDescription)")
+            AppLog.error(.orchestrator, "⚠️ SwiftData context save failed: \(error.localizedDescription)")
         }
     }
 
@@ -1273,7 +1273,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             }
             return session
         } catch {
-            print("Failed to initialize PTY session: \(error)")
+            AppLog.error(.orchestrator, "Failed to initialize PTY session: \(error)")
             let workspacePath = await MainActor.run { self.currentWorkspacePath }
             do {
                 let fallback = try await PTYSession(workspacePath: workspacePath, orchestrator: self)
@@ -1316,7 +1316,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 }
             }
         } catch {
-            print("Failed to capture screenshot: \(error)")
+            AppLog.error(.orchestrator, "Failed to capture screenshot: \(error)")
         }
     }
 
@@ -1456,7 +1456,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         self.messages.append(chatMsg)
 
         let finalState = try await graph.execute(initialState: StateGraphState()) { nodeName in
-            print("StateGraph Transitioning to node: \(nodeName)")
+            AppLog.info(.orchestrator, "StateGraph Transitioning to node: \(nodeName)")
         }
 
         let finalLogs = finalState.values["logs"] as? String ?? "No logs generated."

@@ -56,6 +56,14 @@ public struct ApexAgentApp: App {
                 .onAppear {
                     GlobalCommandPaletteController.shared.registerHotKey()
                 }
+                .onOpenURL { url in
+                    _ = DeepLinkNavigationState.shared.handle(url)
+                }
+                .onContinueUserActivity(CSSearchableItemActionType) { userActivity in
+                    if let uniqueIdentifier = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String {
+                        _ = SpotlightIndexer.handleSpotlightActivation(uniqueIdentifier: uniqueIdentifier)
+                    }
+                }
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
@@ -68,14 +76,45 @@ public struct ApexAgentApp: App {
                 Button("New Conversation") {
                     botManager.activeBotId = nil
                     spaceManager.activeSpaceId = nil
-                    orchestrator.startNewConversation()
-                    NotificationCenter.default.post(name: NSNotification.Name("ApexAgent.focusChatInput"), object: nil)
+                    ShortcutRegistry.shared.dispatch(.newChat, orchestrator: orchestrator)
                 }
                 .keyboardShortcut("n", modifiers: .command)
             }
 
+            CommandGroup(after: .toolbar) {
+                Button("Command Palette…") {
+                    ShortcutRegistry.shared.dispatch(.commandPalette, orchestrator: orchestrator)
+                }
+                .keyboardShortcut("k", modifiers: .command)
+
+                Button("System Diagnostics…") {
+                    ShortcutRegistry.shared.dispatch(.showDiagnostics, orchestrator: orchestrator)
+                }
+                .keyboardShortcut("d", modifiers: [.command, .shift])
+            }
+
+            CommandMenu("Go") {
+                Button("Routines") {
+                    ShortcutRegistry.shared.dispatch(.goRoutines, orchestrator: orchestrator)
+                }
+                .keyboardShortcut("1", modifiers: .command)
+
+                Button("Skills") {
+                    ShortcutRegistry.shared.dispatch(.goSkills, orchestrator: orchestrator)
+                }
+                .keyboardShortcut("2", modifiers: .command)
+
+                Divider()
+
+                Button("Settings…") {
+                    ShortcutRegistry.shared.dispatch(.goSettings, orchestrator: orchestrator)
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
+                    ShortcutRegistry.shared.dispatch(.goSettings, orchestrator: orchestrator)
                     if #available(macOS 14.0, *) {
                         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
                     } else {
@@ -92,11 +131,7 @@ public struct ApexAgentApp: App {
                     }
                 }
                 .keyboardShortcut("/", modifiers: [.command, .shift])
-                Button("Apex Agent Documentation & Guide") {
-                    if let url = URL(string: "https://github.com/dboone323/ApexAgent#readme") {
-                        NSWorkspace.shared.open(url)
-                    }
-                }
+
                 Button("Report an Issue…") {
                     if let url = URL(string: "https://github.com/dboone323/ApexAgent/issues") {
                         NSWorkspace.shared.open(url)
@@ -158,6 +193,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
     private var webhookServer: WebhookServer?
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
+        MetricDiagnosticsCenter.shared.start()
         setupStatusItem()
         setupGlobalHotkey()
         setupShortcuts()
@@ -177,7 +213,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
             try server.start(preferredPort: 1338)
             self.webhookServer = server
         } catch {
-            print("WebhookServer: port 1338 unavailable (daemon may be running): \(error)")
+            AppLog.error(.app, "WebhookServer: port 1338 unavailable (daemon may be running): \(error)")
         }
     }
 
@@ -241,8 +277,8 @@ extension AppDelegate {
     public static func runCLIMode(prompt: String, allowTools: Bool = false) async {
         setbuf(stdout, nil)
         setbuf(stderr, nil)
-        print("=== RUNNING CLI TEST ===")
-        print("Prompt: \(prompt)")
+        AppLog.info(.app, "=== RUNNING CLI TEST ===")
+        AppLog.info(.app, "Prompt: \(prompt)")
 
         let orchestrator = AgentOrchestrator()
         let computer = Computer()
@@ -265,42 +301,42 @@ extension AppDelegate {
             botManager.modelContext = mainContext
             botManager.loadBotsFromDisk()
             if let url = container.configurations.first?.url {
-                print("🧠 SwiftData Store URL: \(url.path)")
+                AppLog.info(.app, "🧠 SwiftData Store URL: \(url.path)")
             }
         } catch {
-            print("⚠️ Failed to initialize SwiftData model context: \(error)")
+            AppLog.error(.app, "⚠️ Failed to initialize SwiftData model context: \(error)")
         }
 
         try? await Task.sleep(for: .seconds(1))
 
         await orchestrator.sendMessageAndWait(prompt)
 
-        print("\n=== TOOL EVENTS ===")
+        AppLog.info(.app, "\n=== TOOL EVENTS ===")
         if orchestrator.toolEvents.isEmpty {
-            print("No tools called.")
+            AppLog.info(.app, "No tools called.")
         } else {
             for event in orchestrator.toolEvents.reversed() {
-                print("Tool: \(event.toolName)")
-                print("Args: \(event.arguments)")
-                print("Result: \(event.result ?? "nil")")
-                print("Status: \(event.status)")
-                print("-------------------")
+                AppLog.info(.app, "Tool: \(event.toolName)")
+                AppLog.info(.app, "Args: \(event.arguments)")
+                AppLog.info(.app, "Result: \(event.result ?? "nil")")
+                AppLog.info(.app, "Status: \(event.status)")
+                AppLog.info(.app, "-------------------")
             }
         }
 
-        print("\n=== FINAL RESPONSE ===")
+        AppLog.info(.app, "\n=== FINAL RESPONSE ===")
         if let lastMessage = orchestrator.messages.last(where: { $0.role == .assistant }) {
-            print(lastMessage.content)
+            AppLog.info(.app, lastMessage.content)
         } else {
-            print("No response received")
+            AppLog.info(.app, "No response received")
         }
-        print("=======================")
+        AppLog.info(.app, "=======================")
     }
 }
 
 @MainActor
 public func runDaemonMode() async {
-    print("=== RUNNING DAEMON MODE ===")
+    AppLog.info(.app, "=== RUNNING DAEMON MODE ===")
     let orchestrator = AgentOrchestrator()
     do {
         let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self)
@@ -316,29 +352,29 @@ public func runDaemonMode() async {
         RoutineManager.shared.loadRoutines()
         RoutineManager.shared.startScheduledRoutines()
         if let url = container.configurations.first?.url {
-            print("🧠 SwiftData Store URL: \(url.path)")
+            AppLog.info(.app, "🧠 SwiftData Store URL: \(url.path)")
         }
     } catch {
-        print("⚠️ Failed to initialize SwiftData model context: \(error)")
+        AppLog.error(.app, "⚠️ Failed to initialize SwiftData model context: \(error)")
     }
 
     let server = ApexGatewayServer(port: 1337, orchestrator: orchestrator)
     do {
         try server.start()
-        print("🚀 ApexGatewayServer started on port 1337")
+        AppLog.info(.app, "🚀 ApexGatewayServer started on port 1337")
         try? await Task.sleep(for: .seconds(1))
         while true {
             try? await Task.sleep(for: .seconds(3600))
         }
     } catch {
-        print("⚠️ Failed to start daemon server: \(error)")
+        AppLog.error(.app, "⚠️ Failed to start daemon server: \(error)")
         exit(1)
     }
 }
 
 @MainActor
 public func runSpaceCLIMode(subcommandArgs: [String]) async {
-    print("=== RUNNING SPACE CLI MODE ===")
+    AppLog.info(.app, "=== RUNNING SPACE CLI MODE ===")
     let orchestrator = AgentOrchestrator()
     do {
         let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self)
@@ -354,13 +390,13 @@ public func runSpaceCLIMode(subcommandArgs: [String]) async {
         SpaceManager.shared.botManager = botManager
         SpaceManager.shared.loadSpacesFromDisk()
     } catch {
-        print("⚠️ Failed to initialize SwiftData model context: \(error)")
+        AppLog.error(.app, "⚠️ Failed to initialize SwiftData model context: \(error)")
     }
 
     if subcommandArgs.isEmpty || subcommandArgs.contains("list") {
-        print("Spaces (\(SpaceManager.shared.spaces.count)):")
+        AppLog.info(.app, "Spaces (\(SpaceManager.shared.spaces.count)):")
         for space in SpaceManager.shared.spaces {
-            print("- \(space.name) (ID: \(space.id), Channels: \(space.channels.count), Humans: \(space.humanParticipants.count), Bots: \(space.agentParticipants.count))")
+            AppLog.info(.app, "- \(space.name) (ID: \(space.id), Channels: \(space.channels.count), Humans: \(space.humanParticipants.count), Bots: \(space.agentParticipants.count))")
         }
     } else if let postIdx = subcommandArgs.firstIndex(of: "post"), postIdx + 2 < subcommandArgs.count {
         let channelName = subcommandArgs[postIdx + 1]
@@ -368,7 +404,7 @@ public func runSpaceCLIMode(subcommandArgs: [String]) async {
         if let space = SpaceManager.shared.spaces.first,
            let channel = space.channels.first(where: { $0.name == channelName }) ?? space.channels.first {
             _ = SpaceManager.shared.postHumanMessage(messageText, in: channel)
-            print("Posted message to #\(channel.name): \(messageText)")
+            AppLog.info(.app, "Posted message to #\(channel.name): \(messageText)")
             try? await Task.sleep(for: .seconds(2))
         }
     }

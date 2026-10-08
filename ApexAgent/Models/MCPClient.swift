@@ -36,51 +36,138 @@ struct MCPClientConfig: Codable, Sendable, Equatable {
     )
 }
 
+public enum MCPProtocolVersion {
+    public static let v2026_07_28 = "2026-07-28"
+    public static let v2025_03_26 = "2025-03-26"
+    public static let v2024_11_05 = "2024-11-05"
+
+    public static let supportedVersions: [String] = [
+        v2026_07_28,
+        v2025_03_26,
+        v2024_11_05
+    ]
+
+    public static let latestSupported: String = v2026_07_28
+    public static let legacyFallback: String = v2024_11_05
+
+    /// Resolves the active MCP protocol version from the client's advertised version
+    /// and the server's `initialize` response version, falling back to `2024-11-05`
+    /// when a legacy server returns an unrecognized or empty version string.
+    public static func resolveNegotiatedVersion(
+        advertised: String = latestSupported,
+        serverResponseVersion: String?
+    ) -> String {
+        guard let raw = serverResponseVersion?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty else {
+            return legacyFallback
+        }
+        if supportedVersions.contains(raw) {
+            return raw
+        }
+        return legacyFallback
+    }
+}
+
+public struct MCPToolAnnotations: Codable, Sendable, Equatable {
+    public let title: String?
+    public let readOnlyHint: Bool?
+    public let destructiveHint: Bool?
+    public let idempotentHint: Bool?
+    public let openWorldHint: Bool?
+
+    public init(
+        title: String? = nil,
+        readOnlyHint: Bool? = nil,
+        destructiveHint: Bool? = nil,
+        idempotentHint: Bool? = nil,
+        openWorldHint: Bool? = nil
+    ) {
+        self.title = title
+        self.readOnlyHint = readOnlyHint
+        self.destructiveHint = destructiveHint
+        self.idempotentHint = idempotentHint
+        self.openWorldHint = openWorldHint
+    }
+
+    public var isReadOnly: Bool {
+        readOnlyHint == true && destructiveHint != true
+    }
+
+    public var isDestructive: Bool {
+        if let destructiveHint {
+            return destructiveHint
+        }
+        return false
+    }
+
+    public var policyBadgeText: String {
+        if isDestructive { return "Destructive" }
+        if isReadOnly { return "Read-Only" }
+        return "Standard"
+    }
+}
+
 struct MCPClientHealth: Codable, Sendable, Equatable {
     let serverName: String
     let isRunning: Bool
     let circuitOpen: Bool
     let failureCount: Int
     let restartCountInWindow: Int
+    let protocolVersion: String
 
     init(
         serverName: String,
         isRunning: Bool = false,
         circuitOpen: Bool = false,
         failureCount: Int = 0,
-        restartCountInWindow: Int = 0
+        restartCountInWindow: Int = 0,
+        protocolVersion: String = MCPProtocolVersion.latestSupported
     ) {
         self.serverName = serverName
         self.isRunning = isRunning
         self.circuitOpen = circuitOpen
         self.failureCount = failureCount
         self.restartCountInWindow = restartCountInWindow
+        self.protocolVersion = protocolVersion
     }
 }
 
-struct MCPToolDefinition: Codable {
+struct MCPToolDefinition: Codable, Equatable {
     let name: String
     let description: String?
     let inputSchema: MCPInputSchema
+    let annotations: MCPToolAnnotations?
+
+    init(
+        name: String,
+        description: String? = nil,
+        inputSchema: MCPInputSchema,
+        annotations: MCPToolAnnotations? = nil
+    ) {
+        self.name = name
+        self.description = description
+        self.inputSchema = inputSchema
+        self.annotations = annotations
+    }
 }
 
-struct MCPInputSchema: Codable {
+struct MCPInputSchema: Codable, Equatable {
     let type: String
     let properties: [String: MCPProperty]?
     let required: [String]?
 }
 
-struct MCPProperty: Codable {
+struct MCPProperty: Codable, Equatable {
     let type: String?
     let description: String?
 }
 
-struct MCPToolCallResult: Codable {
+struct MCPToolCallResult: Codable, Equatable {
     let content: [MCPContentBlock]
     let isError: Bool?
 }
 
-struct MCPContentBlock: Codable {
+struct MCPContentBlock: Codable, Equatable {
     let type: String
     let text: String?
 }
@@ -347,7 +434,7 @@ actor MCPClient {
             guard let self else { return }
             for await line in stderrLines {
                 guard !line.isEmpty else { continue }
-                print("📡 [MCP Server - \(serverNameForLogs) Stderr]: \(line)")
+                AppLog.info(.mcp, "📡 [MCP Server - \(serverNameForLogs) Stderr]: \(line)")
                 // The filesystem MCP server prints "running on stdio" once its
                 // JSON-RPC transport is attached. Mark readiness so initialize
                 // doesn't race a cold start.
@@ -364,43 +451,104 @@ actor MCPClient {
         try await performInitializeHandshake()
     }
     
-    private struct InitializeClientInfo: Codable {
+    private(set) var negotiatedProtocolVersion: String = MCPProtocolVersion.latestSupported
+
+    func currentProtocolVersion() -> String {
+        negotiatedProtocolVersion
+    }
+
+    struct InitializeClientInfo: Codable, Equatable {
         let name: String
         let version: String
     }
-    private struct InitializeCapabilities: Codable {
+
+    struct InitializeCapabilities: Codable {
         var sampling: [String: AnyCodable]?
         var roots: [String: AnyCodable]?
     }
-    private struct InitializeParams: Codable {
+
+    struct InitializeParams: Codable {
         let protocolVersion: String
         let capabilities: InitializeCapabilities
         let clientInfo: InitializeClientInfo
+        let _meta: [String: String]?
+
+        init(
+            protocolVersion: String = MCPProtocolVersion.latestSupported,
+            capabilities: InitializeCapabilities = InitializeCapabilities(),
+            clientInfo: InitializeClientInfo = InitializeClientInfo(name: "ApexAgent", version: "1.0.0"),
+            _meta: [String: String]? = nil
+        ) {
+            self.protocolVersion = protocolVersion
+            self.capabilities = capabilities
+            self.clientInfo = clientInfo
+            self._meta = _meta
+        }
     }
-    
-    private struct InitializeResult: Codable {
+
+    struct InitializeResult: Codable {
         let protocolVersion: String
         let capabilities: [String: AnyCodable]
         let serverInfo: [String: AnyCodable]
     }
-    
+
     private func performInitializeHandshake() async throws {
-        let params = InitializeParams(
-            protocolVersion: "2024-11-05",
+        let trace = W3CTraceContext.generate()
+        let latestParams = InitializeParams(
+            protocolVersion: MCPProtocolVersion.latestSupported,
             capabilities: InitializeCapabilities(),
-            clientInfo: InitializeClientInfo(name: "ApexAgent", version: "1.0.0")
+            clientInfo: InitializeClientInfo(name: "ApexAgent", version: "1.0.0"),
+            _meta: trace.metaDictionary
         )
 
-        // The server may still be warming its transport even after the 2s
+        // The server may still be warming its transport even after the
         // readiness warmup (e.g. under CPU contention when multiple servers
-        // start at once). Retry `initialize` with short backoff so a slow cold
-        // start degrades to a few seconds rather than a single 60s timeout.
+        // start at once). Retry `initialize` with short backoff, and if a
+        // legacy stdio server rejects `2026-07-28` with a protocol error,
+        // gracefully fall back to `2024-11-05`.
         var lastError: Error?
+        var initResult: InitializeResult?
+        var advertisedVersion = MCPProtocolVersion.latestSupported
+
         for attempt in 0..<3 {
             do {
-                let _: InitializeResult = try await sendRequestInternal(method: "initialize", params: params)
+                let result: InitializeResult = try await sendRequestInternal(
+                    method: "initialize",
+                    params: latestParams,
+                    traceContext: trace
+                )
+                initResult = result
                 lastError = nil
                 break
+            } catch let error as MCPError {
+                if case .protocolError = error {
+                    // Legacy server rejected 2026-07-28; fall back to 2024-11-05 immediately
+                    let fallbackTrace = W3CTraceContext.generate()
+                    let fallbackParams = InitializeParams(
+                        protocolVersion: MCPProtocolVersion.legacyFallback,
+                        capabilities: InitializeCapabilities(),
+                        clientInfo: InitializeClientInfo(name: "ApexAgent", version: "1.0.0"),
+                        _meta: fallbackTrace.metaDictionary
+                    )
+                    do {
+                        let fallbackResult: InitializeResult = try await sendRequestInternal(
+                            method: "initialize",
+                            params: fallbackParams,
+                            traceContext: fallbackTrace
+                        )
+                        advertisedVersion = MCPProtocolVersion.legacyFallback
+                        initResult = fallbackResult
+                        lastError = nil
+                        break
+                    } catch {
+                        lastError = error
+                    }
+                } else {
+                    lastError = error
+                }
+                if attempt < 2 {
+                    try? await Task.sleep(for: .seconds(1))
+                }
             } catch {
                 lastError = error
                 if attempt < 2 {
@@ -410,6 +558,15 @@ actor MCPClient {
         }
         if let lastError {
             throw lastError
+        }
+
+        if let initResult {
+            negotiatedProtocolVersion = MCPProtocolVersion.resolveNegotiatedVersion(
+                advertised: advertisedVersion,
+                serverResponseVersion: initResult.protocolVersion
+            )
+        } else {
+            negotiatedProtocolVersion = advertisedVersion
         }
 
         let notification = JSONRPCNotification(method: "notifications/initialized")
@@ -513,7 +670,8 @@ actor MCPClient {
             isRunning: isRunning(),
             circuitOpen: circuitOpen,
             failureCount: failureCount,
-            restartCountInWindow: restartCountInWindow
+            restartCountInWindow: restartCountInWindow,
+            protocolVersion: negotiatedProtocolVersion
         )
     }
 
@@ -628,7 +786,11 @@ actor MCPClient {
         }
     }
 
-    func sendRequest<Params: Codable, Result: Codable>(method: String, params: Params) async throws -> Result {
+    func sendRequest<Params: Codable, Result: Codable>(
+        method: String,
+        params: Params,
+        traceContext: W3CTraceContext? = nil
+    ) async throws -> Result {
         if circuitOpen {
             throw MCPError.circuitOpen
         }
@@ -638,7 +800,11 @@ actor MCPClient {
         }
 
         do {
-            let result: Result = try await sendRequestInternal(method: method, params: params)
+            let result: Result = try await sendRequestInternal(
+                method: method,
+                params: params,
+                traceContext: traceContext
+            )
             failureCount = 0
             return result
         } catch {
@@ -650,10 +816,15 @@ actor MCPClient {
         }
     }
 
-    private func sendRequestInternal<Params: Codable, Result: Codable>(method: String, params: Params) async throws -> Result {
+    private func sendRequestInternal<Params: Codable, Result: Codable>(
+        method: String,
+        params: Params,
+        traceContext: W3CTraceContext? = nil
+    ) async throws -> Result {
         let id = nextRequestId
         nextRequestId += 1
 
+        let activeTrace = traceContext ?? W3CTraceContext.generate()
         let request = JSONRPCRequest(id: id, method: method, params: params)
         let encoder = JSONEncoder()
         let requestData = try encoder.encode(request)
@@ -667,7 +838,15 @@ actor MCPClient {
         let dataToShare = fullData
         let stdinToShare = stdin
         let timeoutSec = self.config.requestTimeout
-        let responseData: Data = try await Tracing.span("mcp.request", source: "MCPClient", metadata: ["method": method]) {
+        let protoVersion = self.negotiatedProtocolVersion
+        let spanMetadata: [String: String] = [
+            "method": method,
+            "traceparent": activeTrace.traceparent,
+            "trace_id": activeTrace.traceId,
+            "span_id": activeTrace.spanId,
+            "protocol_version": protoVersion
+        ]
+        let responseData: Data = try await Tracing.span("mcp.request", source: "MCPClient", metadata: spanMetadata) {
             try await withThrowingTaskGroup(of: Data.self) { group in
                 group.addTask { [id, dataToShare, stdinToShare] in
                     try await self.registerAndWrite(id: id, data: dataToShare, stdin: stdinToShare)
@@ -754,11 +933,35 @@ actor MCPClient {
     struct CallToolParams: Codable {
         let name: String
         let arguments: [String: AnyCodable]
+        let _meta: [String: String]?
+
+        init(
+            name: String,
+            arguments: [String: AnyCodable],
+            _meta: [String: String]? = nil
+        ) {
+            self.name = name
+            self.arguments = arguments
+            self._meta = _meta
+        }
     }
 
-    func callTool(name: String, arguments: [String: AnyCodable]) async throws -> MCPToolCallResult {
-        let params = CallToolParams(name: name, arguments: arguments)
-        let result: MCPToolCallResult = try await sendRequest(method: "tools/call", params: params)
+    func callTool(
+        name: String,
+        arguments: [String: AnyCodable],
+        traceContext: W3CTraceContext? = nil
+    ) async throws -> MCPToolCallResult {
+        let activeTrace = traceContext ?? W3CTraceContext.generate()
+        let params = CallToolParams(
+            name: name,
+            arguments: arguments,
+            _meta: activeTrace.metaDictionary
+        )
+        let result: MCPToolCallResult = try await sendRequest(
+            method: "tools/call",
+            params: params,
+            traceContext: activeTrace
+        )
         return result
     }
 

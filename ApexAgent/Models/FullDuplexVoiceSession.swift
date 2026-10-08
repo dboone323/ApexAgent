@@ -150,14 +150,14 @@ public final class FullDuplexVoiceSession: NSObject, ObservableObject, AVAudioPl
                 }
             }
         } catch {
-            print("Failed to install audio tap: \(error)")
+            AppLog.error(.voice, "Failed to install audio tap: \(error)")
         }
         
         do {
             audioEngine.prepare()
             try audioEngine.start()
         } catch {
-            print("Failed to start engine: \(error)")
+            AppLog.error(.voice, "Failed to start engine: \(error)")
             return
         }
         
