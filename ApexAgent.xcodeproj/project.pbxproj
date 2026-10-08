@@ -219,6 +219,7 @@
 		848F50877814F00E3806AACD /* StateGraphTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FDF7A3F1ABAE91D2C04E5E4 /* StateGraphTests.swift */; };
 		858877614A6B2235468A0AC7 /* TraceBusEventStreamTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47774CBBD2EE0A1C7038EFC /* TraceBusEventStreamTests.swift */; };
 		85A9398E0D08012CC1CF84B1 /* BotLayerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DEDDBD7431861E10DF03751 /* BotLayerTests.swift */; };
+		85FE176D6BD3E4CB9C84A96A /* ApexCLIRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED6FBB2219D0DD0F92D9E8A4 /* ApexCLIRouter.swift */; };
 		86412444E87D9788ACE92CCB /* BotManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 841BF98525C48FBFF94FC600 /* BotManager.swift */; };
 		872B5AEB64877E43F388F42D /* NetworkDiagnosticsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBAAB188A7C66445669B5F3A /* NetworkDiagnosticsTool.swift */; };
 		87CF9ABA8109264E8A411ED3 /* RoutineRecorderVisionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61D91B61983A2299518F08FB /* RoutineRecorderVisionTests.swift */; };
@@ -366,6 +367,7 @@
 		D50120F1A6A3B5070E8621FA /* AutomationWorkflows+8to10.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7F940F079E9274310BE5610 /* AutomationWorkflows+8to10.swift */; };
 		D53FCFAD7E947C41BFF0BBA1 /* ReminderTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 997A86D1BE9862F16EB4D24F /* ReminderTool.swift */; };
 		D67753F5B458705BD67E76E9 /* MessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B6CC19C5CABD635F5F257C7 /* MessageBubble.swift */; };
+		D71F13544C5689BD6AAC9A0C /* ApexCLIRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6DA119E9AA14FA498904C9 /* ApexCLIRouterTests.swift */; };
 		D7941E8064198417A9ACA35F /* MCPKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA20C2A176DB00AD435BCD7 /* MCPKit.framework */; };
 		D7FC3506D4B023DB1283980A /* AccessibilityOmniTargeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DC6AFC4828D4E3E9A0643C7 /* AccessibilityOmniTargeter.swift */; };
 		D9C41173B853FC277273505D /* DynamicToolboxManagerSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484D3337A879FB654CB4F1E4 /* DynamicToolboxManagerSection.swift */; };
@@ -806,6 +808,7 @@
 		694736B63E8080A09030C984 /* SharedLogging.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SharedLogging.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		6B723BCFF1F5A2C1A66E09B2 /* FileRollback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileRollback.swift; sourceTree = "<group>"; };
 		6D648D8D3B5F38B743D1FC79 /* AnalyzeImageTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyzeImageTool.swift; sourceTree = "<group>"; };
+		6D6DA119E9AA14FA498904C9 /* ApexCLIRouterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexCLIRouterTests.swift; sourceTree = "<group>"; };
 		6DBE3D471AD6F71EF20F7CB4 /* MCPProtocolModernizationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPProtocolModernizationTests.swift; sourceTree = "<group>"; };
 		6EE5EE4657B4668F8D665984 /* CompanionVoiceOrbView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionVoiceOrbView.swift; sourceTree = "<group>"; };
 		704DE64FDF600BD3FB4108CF /* DeepLinkTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkTool.swift; sourceTree = "<group>"; };
@@ -1034,6 +1037,7 @@
 		EC199E307BD6D61342D60EC8 /* ModelCapacityRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCapacityRoutingTests.swift; sourceTree = "<group>"; };
 		EC6DB015FFE58935502E7FF5 /* AutomationWorkflows+1to3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+1to3.swift"; sourceTree = "<group>"; };
 		EC6F91C40428542C96214A99 /* sandboxctl */ = {isa = PBXFileReference; includeInIndex = 0; path = sandboxctl; sourceTree = BUILT_PRODUCTS_DIR; };
+		ED6FBB2219D0DD0F92D9E8A4 /* ApexCLIRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexCLIRouter.swift; sourceTree = "<group>"; };
 		ED747E3CBF4111855553A91F /* WatchPathsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchPathsTool.swift; sourceTree = "<group>"; };
 		EE028F6E31492ECDF4117C22 /* AgentPrecedenceResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPrecedenceResolver.swift; sourceTree = "<group>"; };
 		EF3EBC6C7029E08C8ED7200C /* BotManagerDuplicateModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotManagerDuplicateModelTests.swift; sourceTree = "<group>"; };
@@ -1454,6 +1458,7 @@
 				2296A3DD3E845C0DA38F9106 /* AgentRegistryModel.swift */,
 				20A5CFA74AD14376E46D0926 /* AgentSignposts.swift */,
 				0E9A6662B136F6C287C7DD40 /* ApexAgentPersonalContext.swift */,
+				ED6FBB2219D0DD0F92D9E8A4 /* ApexCLIRouter.swift */,
 				E07DD0FD9023AAEF95AFCBDE /* ApexGatewayClient.swift */,
 				A5C56D68129B871DE2B9A38F /* ApexGatewayServer.swift */,
 				CFFB0BDDB798A848472C6015 /* AppLogger.swift */,
@@ -1689,6 +1694,7 @@
 				7868F437087C7B22AB969C42 /* AgentEvaluationRatingTests.swift */,
 				BB8480BA47D6667188C87338 /* AgentRegistryTests.swift */,
 				3CA7F601E86FD17476FCD003 /* ApexAgentTests.swift */,
+				6D6DA119E9AA14FA498904C9 /* ApexCLIRouterTests.swift */,
 				55BA5085CF2D6C1E59916D61 /* ApexCompanionAppTests.swift */,
 				385313E98181D152D76E2164 /* ApexGatewayClientTests.swift */,
 				4055FADE6D6667211786A437 /* ApexGatewayServerTests.swift */,
@@ -2207,6 +2213,7 @@
 				0721D76EA357B86ADF1EFC5D /* AnalyzeImageTool.swift in Sources */,
 				142343E83DEBF4BB4502D187 /* ApexAgentApp.swift in Sources */,
 				1795691F53BD7C89AF018818 /* ApexAgentPersonalContext.swift in Sources */,
+				85FE176D6BD3E4CB9C84A96A /* ApexCLIRouter.swift in Sources */,
 				BDC8D48503CA372F0E96DF86 /* ApexGatewayClient.swift in Sources */,
 				5D7B6959811F9DDC71220917 /* ApexGatewayServer.swift in Sources */,
 				E6293617096EB82046D583DC /* AppCard.swift in Sources */,
@@ -2532,6 +2539,7 @@
 				CCD0687C04A0B8230F897903 /* AgentEvaluationRatingTests.swift in Sources */,
 				406814A2ABAD8BB5F4544BB7 /* AgentRegistryTests.swift in Sources */,
 				9B62C3A139076FC6BA0E0F58 /* ApexAgentTests.swift in Sources */,
+				D71F13544C5689BD6AAC9A0C /* ApexCLIRouterTests.swift in Sources */,
 				BCD0090BC7F4C2C3F60D3347 /* ApexCompanionAppTests.swift in Sources */,
 				3EAA55A2DE50E67ED99B9C90 /* ApexGatewayClientTests.swift in Sources */,
 				26046515DD4B085F6E6981B5 /* ApexGatewayServerTests.swift in Sources */,
