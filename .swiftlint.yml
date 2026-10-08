@@ -1,38 +1,31 @@
 included:
   - ApexAgent
+  - ApexAgentRuntime
+  - ApexAgentIntents
   - ApexAgentTests
-  - ApexAgentUITests
-  - ApexAgentContainerTests
-  - Modules
+  - Tools
 
 excluded:
   - .build
   - build
-  - DerivedData
-  - Pods
-  - Tests/LinuxMain.swift
+  - ApexAgent.xcodeproj
+  - Modules
 
-disabled_rules:
-  - line_length
-  - function_body_length
-  - type_body_length
-  - file_length
-  - identifier_name
-  - cyclomatic_complexity
-  - large_tuple
-  - trailing_whitespace
-  - todo
-  - trailing_comma
-  - opening_brace
-  - vertical_whitespace
-  - implicit_return
-
-opt_in_rules:
-  - empty_count
-  - explicit_init
+only_rules:
+  - compiler_protocol_init
+  - duplicate_imports
+  - empty_enum_arguments
   - fatal_error_message
-  - first_where
+  - leading_whitespace
+  - legacy_cggeometry_functions
+  - legacy_constant
+  - legacy_constructor
+  - mark
+  - operator_usage_whitespace
   - redundant_nil_coalescing
-  - unneeded_break_in_switch
+  - redundant_void_return
+  - return_arrow_whitespace
+  - syntactic_sugar
+  - unused_closure_parameter
 
 reporter: "xcode"

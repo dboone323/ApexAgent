@@ -4,7 +4,25 @@ SWIFT       ?= xcrun swift
 BUILD_FLAGS := -c release
 TEST_FLAGS  := --parallel --enable-code-coverage
 
-.PHONY: build test coverage ci clean test-deep test-ui xcresult-summary
+.PHONY: build test coverage ci clean test-deep test-ui xcresult-summary hygiene lint syntax-check format pre-push full
+hygiene:
+	@chmod +x ./Tools/scripts/pre-push-hygiene.sh
+	@./Tools/scripts/pre-push-hygiene.sh
+
+lint:
+	@chmod +x ./Tools/scripts/lint-changed-swift.sh
+	@./Tools/scripts/lint-changed-swift.sh
+
+syntax-check: lint
+
+format:
+	@git diff --name-only --diff-filter=ACMRTUXB origin/main...HEAD -- '*.swift' | xargs -r xcrun swift format format --in-place --configuration .swift-format
+
+pre-push: hygiene lint
+	@xcodebuild build -project ApexAgent.xcodeproj -scheme ApexAgent -destination "platform=macOS" -derivedDataPath /tmp/dd_clean -quiet
+
+full: hygiene lint test-deep
+
 build:
 	$(SWIFT) build $(BUILD_FLAGS)
 
@@ -14,7 +32,7 @@ test:
 coverage:
 	$(SWIFT) test $(TEST_FLAGS)
 
-ci: build test
+ci: hygiene lint build test
 
 clean:
 	$(SWIFT) package clean

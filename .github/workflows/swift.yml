@@ -37,8 +37,16 @@ jobs:
       - name: Toolchain info
         run: xcodebuild -version && swift --version
 
-      - name: Build (release)
-        run: swift build -c release
+      - name: Pre-Push Hygiene & Security Gate
+        run: make hygiene
+
+      - name: Diff-Scoped Swift Syntax & Lint Gate
+        run: make lint
+
+      - name: Build (release) & Verify ApexFlow Catalog
+        run: |
+          swift build -c release
+          swift run apexflow --list
 
       - name: Run Test Plan & Generate xcresult
         run: |
