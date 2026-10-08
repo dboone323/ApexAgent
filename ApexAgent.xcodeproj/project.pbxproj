@@ -124,6 +124,7 @@
 		3FD557F17A99B82B3E3B3DEE /* MLXAgentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20FF00E342751CE33CDFBDC /* MLXAgentEngine.swift */; };
 		406814A2ABAD8BB5F4544BB7 /* AgentRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB8480BA47D6667188C87338 /* AgentRegistryTests.swift */; };
 		409D8956AD7617A10AD14D56 /* TeamPlaybookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7B056D8B3C53F610E89AF18 /* TeamPlaybookTests.swift */; };
+		40B3328EFB511FAFF2CF69AE /* SwiftSyntaxLintGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F861E6CEDA3A9E1132C9D09A /* SwiftSyntaxLintGateTests.swift */; };
 		410C948C8EEF39378FE972C7 /* SpaceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8CBDDD8539C304129ACCA2A /* SpaceModels.swift */; };
 		41AC7DA38810DC69D3ADF0C9 /* BotSecurityRBACPermissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C4A4E1752AB10B822ECA961 /* BotSecurityRBACPermissionTests.swift */; };
 		41B24D72179D5C3488DBC9A9 /* ResilientJSONStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C5B806F807932CD76502A9C /* ResilientJSONStoreTests.swift */; };
@@ -279,6 +280,7 @@
 		A57B72C9F0FBA34BF87BDDD4 /* AgentEvaluationRatingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CDAF9C16F93B862FF4A577B /* AgentEvaluationRatingEngine.swift */; };
 		A70AE07D38670C18F0212675 /* SharedLogging.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 694736B63E8080A09030C984 /* SharedLogging.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A7AD22CF8CBB9EED53EC8210 /* Enums.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEBDD2E1BE7227175F6E00F9 /* Enums.swift */; };
+		A8D59C36AE4D44EB8E8929F6 /* SwiftSyntaxLintGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C316E8F6E1A7060059F0BA31 /* SwiftSyntaxLintGate.swift */; };
 		A907901AC2FBE09D3FB58EA3 /* TracingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F0624D77303AF383DE8AF0 /* TracingTests.swift */; };
 		A9249DBFEA92A09DF690FB74 /* LogicGapFillTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57E6A9A66CF3C285CD98595E /* LogicGapFillTests.swift */; };
 		A95F8B3029A159BEFC419B17 /* ReflectionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 475AA27E9CD4482A51D18B19 /* ReflectionManagerTests.swift */; };
@@ -968,6 +970,7 @@
 		C27748CB407EBA5F59F72068 /* RoutineWebhookAndRunTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineWebhookAndRunTests.swift; sourceTree = "<group>"; };
 		C28FE6E5B75AC0891D6F2179 /* AppCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCard.swift; sourceTree = "<group>"; };
 		C2F37D805F4C0B38D081292B /* PeerApproval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeerApproval.swift; sourceTree = "<group>"; };
+		C316E8F6E1A7060059F0BA31 /* SwiftSyntaxLintGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftSyntaxLintGate.swift; sourceTree = "<group>"; };
 		C48569E5C970D8F839A572F6 /* AppLogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogTests.swift; sourceTree = "<group>"; };
 		C4C7FD24B4097437D2259894 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		C53BA04059A1E9C891D2D868 /* ConfirmCompletionToolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmCompletionToolTests.swift; sourceTree = "<group>"; };
@@ -1045,6 +1048,7 @@
 		F49308EB721317B242E0C24C /* AskApexAgentIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskApexAgentIntent.swift; sourceTree = "<group>"; };
 		F636A0FC658F1E3467177536 /* RunWorkflowTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunWorkflowTool.swift; sourceTree = "<group>"; };
 		F77ED7BAD97CEC1EEF7FD3E5 /* BotSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotSession.swift; sourceTree = "<group>"; };
+		F861E6CEDA3A9E1132C9D09A /* SwiftSyntaxLintGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftSyntaxLintGateTests.swift; sourceTree = "<group>"; };
 		F89482D462F6253015846657 /* TraceEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraceEvent.swift; sourceTree = "<group>"; };
 		F89795B5349F400EF42BD8D7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F8A198C9570501E3AD96FCEE /* ViewHostingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewHostingTests.swift; sourceTree = "<group>"; };
@@ -1528,6 +1532,7 @@
 				B88A707090E123FFF55771AD /* SpeculativeToolExecutor.swift */,
 				9D62C6D2EBD44EE1369EC3FF /* SpotlightIndexer.swift */,
 				705720CD0FBDCE38AA83CDA7 /* StateGraph.swift */,
+				C316E8F6E1A7060059F0BA31 /* SwiftSyntaxLintGate.swift */,
 				40F98B9AC9559F0CA668F7F5 /* TeamPlaybook.swift */,
 				2ED5DD2104326A302B1FFA8B /* TickerScheduler.swift */,
 				35740767AABB37D5B4FD7D8C /* ToolActor.swift */,
@@ -1789,6 +1794,7 @@
 				8FDF7A3F1ABAE91D2C04E5E4 /* StateGraphTests.swift */,
 				956392F1A536FFADFB510CAB /* SwiftDataPersistenceTests.swift */,
 				B4F34BBF01D73522C4A836C1 /* SwiftDataStressVerificationTests.swift */,
+				F861E6CEDA3A9E1132C9D09A /* SwiftSyntaxLintGateTests.swift */,
 				2FA7E397A7B6A3180EA5ABD8 /* SystemToolsTests.swift */,
 				B7B056D8B3C53F610E89AF18 /* TeamPlaybookTests.swift */,
 				3882037970AB767099F4AACB /* TestActivityHelper.swift */,
@@ -2372,6 +2378,7 @@
 				98D0CA9D47D32DC2AD95EEDD /* SpotlightIndexer.swift in Sources */,
 				1FB2CC43D0977E973E7CF013 /* SpotlightSearchTool.swift in Sources */,
 				F403C4FE08C9F2F4B3B6EF5E /* StateGraph.swift in Sources */,
+				A8D59C36AE4D44EB8E8929F6 /* SwiftSyntaxLintGate.swift in Sources */,
 				93E62A6E487F23B5C5E8B5EB /* SystemInfoTool.swift in Sources */,
 				E45C5C886DBA1EB70E91E7AA /* TeamPlaybook.swift in Sources */,
 				C132647E03BE31A9422783FD /* TerminalStateView.swift in Sources */,
@@ -2630,6 +2637,7 @@
 				848F50877814F00E3806AACD /* StateGraphTests.swift in Sources */,
 				C1B4D5263D0532F2FA39F6B7 /* SwiftDataPersistenceTests.swift in Sources */,
 				B408DCA5911B60F0A31A15FF /* SwiftDataStressVerificationTests.swift in Sources */,
+				40B3328EFB511FAFF2CF69AE /* SwiftSyntaxLintGateTests.swift in Sources */,
 				DA7847C8C8446912656B914E /* SystemToolsTests.swift in Sources */,
 				409D8956AD7617A10AD14D56 /* TeamPlaybookTests.swift in Sources */,
 				6FBF6C27A0DE03E27650AA0E /* TestActivityHelper.swift in Sources */,
