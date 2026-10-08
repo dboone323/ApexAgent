@@ -103,7 +103,12 @@ public enum ApexWorkflows {
             WorkflowDescriptor(id: 12, name: "Persistence corruption quarantine & recovery", subsystems: "ResilientJSONStore, TraceBus"),
             WorkflowDescriptor(id: 13, name: "MCP 2026-07-28 negotiation & W3C traceparent", subsystems: "MCPProtocolVersion, MCPToolAnnotations, W3CTraceContext"),
             WorkflowDescriptor(id: 14, name: "Deep-link routing + Spotlight handoff", subsystems: "DeepLinkRouter, SpotlightIndexer"),
-            WorkflowDescriptor(id: 15, name: "TickerScheduler coalescing & doctor health check", subsystems: "TickerScheduler, PollPolicy, ApexCLIRouter")
+            WorkflowDescriptor(id: 15, name: "TickerScheduler coalescing & doctor health check", subsystems: "TickerScheduler, PollPolicy, ApexCLIRouter"),
+            WorkflowDescriptor(id: 16, name: "Supply-chain dependency lock & SBOM audit", subsystems: "DependencyLockAuditor, CycloneDX SBOM"),
+            WorkflowDescriptor(id: 17, name: "Git pre-commit & Conventional Commit gate", subsystems: "GitHookGate, RepoHygieneAuditor"),
+            WorkflowDescriptor(id: 18, name: "CLI shell completions & man(1) generator", subsystems: "CLICompletionGenerator, ApexCLIRouter"),
+            WorkflowDescriptor(id: 19, name: "Bundle entitlements & build-graph parity", subsystems: "BundleIntegrityVerifier, DeepLinkRouter"),
+            WorkflowDescriptor(id: 20, name: "CI pipeline sync & xcresult trend gate", subsystems: "CIPipelineValidator, XCResultTrendAnalyzer")
         ]
     }
 
@@ -124,6 +129,11 @@ public enum ApexWorkflows {
             (13, "MCP 2026-07-28 negotiation & W3C traceparent", workflow13),
             (14, "Deep-link routing + Spotlight handoff", workflow14),
             (15, "TickerScheduler coalescing & doctor health check", workflow15),
+            (16, "Supply-chain dependency lock & SBOM audit", workflow16),
+            (17, "Git pre-commit & Conventional Commit gate", workflow17),
+            (18, "CLI shell completions & man(1) generator", workflow18),
+            (19, "Bundle entitlements & build-graph parity", workflow19),
+            (20, "CI pipeline sync & xcresult trend gate", workflow20),
         ]
         var results: [WorkflowResult] = []
         for (id, _, body) in all where ids.isEmpty || ids.contains(id) {

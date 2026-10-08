@@ -1338,7 +1338,7 @@ struct SecurityTests {
 
     @Test @MainActor func testAutomationWorkflowsCatalogMarkdown() {
         let md = ApexWorkflows.exportWorkflowsCatalogMarkdown()
-        #expect(md.contains("### ⚙️ Autonomous Local Workflows Catalog (15 workflows)"))
+        #expect(md.contains("### ⚙️ Autonomous Local Workflows Catalog (20 workflows)"))
         #expect(md.contains("| ID | Workflow Name | Target Subsystems | Engine |"))
         #expect(md.contains("CI/CD failure triage"))
         #expect(md.contains("Multi-agent orchestration"))

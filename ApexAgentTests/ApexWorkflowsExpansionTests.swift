@@ -33,14 +33,14 @@ struct ApexWorkflowsExpansionTests {
         #expect(decoded.allSatisfy { $0.passed })
     }
 
-    @Test("Workflow catalog descriptors and Markdown export cover all 15 workflows")
+    @Test("Workflow catalog descriptors and Markdown export cover all 20 workflows")
     func catalogAndMarkdownExportCover15Workflows() {
         let descriptors = ApexWorkflows.allDescriptors()
-        #expect(descriptors.count == 15)
-        #expect(descriptors.map(\.id) == Array(1...15))
+        #expect(descriptors.count == 20)
+        #expect(descriptors.map(\.id) == Array(1...20))
 
         let markdown = ApexWorkflows.exportWorkflowsCatalogMarkdown()
-        #expect(markdown.contains("### ⚙️ Autonomous Local Workflows Catalog (15 workflows)"))
+        #expect(markdown.contains("### ⚙️ Autonomous Local Workflows Catalog (20 workflows)"))
         #expect(markdown.contains("Pre-push security & hygiene self-audit"))
         #expect(markdown.contains("Persistence corruption quarantine & recovery"))
         #expect(markdown.contains("MCP 2026-07-28 negotiation & W3C traceparent"))
