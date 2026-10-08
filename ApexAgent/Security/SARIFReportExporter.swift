@@ -156,7 +156,7 @@ public enum SARIFReportExporter {
         SARIFRuleDescriptor(
             id: "APEX-HYGIENE-PRINT",
             name: "RawPrintInProductionTarget",
-            shortDescription: "Requires structured AppLog instead of raw print() calls in shipping targets."
+            shortDescription: "Requires structured AppLog instead of raw standard-output logging calls in shipping targets."
         ),
         SARIFRuleDescriptor(
             id: "APEX-LINT-SYNTAX",

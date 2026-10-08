@@ -431,6 +431,19 @@ public enum ApexCLIRouter {
             )
         )
 
+        // 9. Xcode .xctestplan parity, timeouts, and coverage targets
+        let testPlanReport = TestPlanIntegrityAuditor.auditRepositoryTestPlans(atRepoRoot: repoRoot)
+        checks.append(
+            DoctorCheckItem(
+                id: "test_plan_integrity",
+                title: "Xcode Test Plan Integrity",
+                passed: testPlanReport.passed,
+                detail: testPlanReport.passed
+                    ? "\(testPlanReport.plans.count) test plans verified (timeouts enabled, APEX_TEST_MODE=1)"
+                    : "\(testPlanReport.findings.count) test plan finding(s)"
+            )
+        )
+
         let overall = checks.allSatisfy { $0.passed }
         return DoctorReport(version: appVersion, overallPassed: overall, checks: checks)
     }
