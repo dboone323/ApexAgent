@@ -371,7 +371,34 @@ public enum ApexCLIRouter {
             )
         )
 
-        let overall = checks.allSatisfy(\.passed)
+        // 6. Supply-chain dependency lock & manifest parity
+        let repoRoot = resolveRepositoryRoot()
+        let depReport = DependencyLockAuditor.auditRepository(atRepoRoot: repoRoot)
+        checks.append(
+            DoctorCheckItem(
+                id: "dependency_lock",
+                title: "Supply-Chain Dependency Lock",
+                passed: depReport.passed,
+                detail: depReport.passed
+                    ? "\(depReport.pins.count) locked packages verified, 0 supply-chain violations"
+                    : "\(depReport.violations.count) supply-chain violation(s) found"
+            )
+        )
+
+        // 7. Bundle entitlements, Info.plist URL schemes, and build-graph weak-link parity
+        let bundleReport = BundleIntegrityVerifier.verifyRepositoryBundleIntegrity(atRepoRoot: repoRoot)
+        checks.append(
+            DoctorCheckItem(
+                id: "bundle_integrity",
+                title: "Bundle & Entitlements Integrity",
+                passed: bundleReport.passed,
+                detail: bundleReport.passed
+                    ? "Entitlements, apexagent:// scheme, and weak-linked frameworks verified"
+                    : "\(bundleReport.issues.count) bundle integrity issue(s) found"
+            )
+        )
+
+        let overall = checks.allSatisfy { $0.passed }
         return DoctorReport(version: appVersion, overallPassed: overall, checks: checks)
     }
 
