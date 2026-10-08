@@ -108,7 +108,12 @@ public enum ApexWorkflows {
             WorkflowDescriptor(id: 17, name: "Git pre-commit & Conventional Commit gate", subsystems: "GitHookGate, RepoHygieneAuditor"),
             WorkflowDescriptor(id: 18, name: "CLI shell completions & man(1) generator", subsystems: "CLICompletionGenerator, ApexCLIRouter"),
             WorkflowDescriptor(id: 19, name: "Bundle entitlements & build-graph parity", subsystems: "BundleIntegrityVerifier, DeepLinkRouter"),
-            WorkflowDescriptor(id: 20, name: "CI pipeline sync & xcresult trend gate", subsystems: "CIPipelineValidator, XCResultTrendAnalyzer")
+            WorkflowDescriptor(id: 20, name: "CI pipeline sync & xcresult trend gate", subsystems: "CIPipelineValidator, XCResultTrendAnalyzer"),
+            WorkflowDescriptor(id: 21, name: "Code coverage threshold & changed-file diff gate", subsystems: "CodeCoverageGate, llvm-cov, xccov"),
+            WorkflowDescriptor(id: 22, name: "Privacy manifest & Required-Reason API drift audit", subsystems: "PrivacyManifestDriftAuditor, PrivacyInfo.xcprivacy"),
+            WorkflowDescriptor(id: 23, name: "Conventional Changelog & SemVer bump calculator", subsystems: "ReleaseChangelogEngine, SemanticVersion"),
+            WorkflowDescriptor(id: 24, name: "Release version parity & readiness gate", subsystems: "ReleaseChangelogEngine, Info.plist, project.yml"),
+            WorkflowDescriptor(id: 25, name: "SLSA v1.0 build provenance & notarization verification", subsystems: "ReleaseProvenanceGenerator, CryptoKit SHA-256")
         ]
     }
 
@@ -134,6 +139,11 @@ public enum ApexWorkflows {
             (18, "CLI shell completions & man(1) generator", workflow18),
             (19, "Bundle entitlements & build-graph parity", workflow19),
             (20, "CI pipeline sync & xcresult trend gate", workflow20),
+            (21, "Code coverage threshold & changed-file diff gate", workflow21),
+            (22, "Privacy manifest & Required-Reason API drift audit", workflow22),
+            (23, "Conventional Changelog & SemVer bump calculator", workflow23),
+            (24, "Release version parity & readiness gate", workflow24),
+            (25, "SLSA v1.0 build provenance & notarization verification", workflow25),
         ]
         var results: [WorkflowResult] = []
         for (id, _, body) in all where ids.isEmpty || ids.contains(id) {

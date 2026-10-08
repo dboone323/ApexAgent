@@ -4,7 +4,7 @@ SWIFT       ?= xcrun swift
 BUILD_FLAGS := -c release
 TEST_FLAGS  := --parallel --enable-code-coverage
 
-.PHONY: build test coverage ci clean test-deep test-ui xcresult-summary hygiene lint syntax-check format pre-push full audit-deps sbom install-hooks
+.PHONY: build test coverage ci clean test-deep test-ui xcresult-summary hygiene lint syntax-check format pre-push full audit-deps sbom changelog release-check provenance install-hooks
 hygiene:
 	@chmod +x ./Tools/scripts/pre-push-hygiene.sh
 	@./Tools/scripts/pre-push-hygiene.sh
@@ -13,6 +13,15 @@ audit-deps: hygiene
 
 sbom:
 	@$(SWIFT) run ApexAgent sbom
+
+changelog:
+	@$(SWIFT) run ApexAgent changelog
+
+release-check:
+	@$(SWIFT) run ApexAgent release-check
+
+provenance:
+	@$(SWIFT) run ApexAgent provenance --json
 
 install-hooks:
 	@chmod +x ./Tools/scripts/pre-commit.sh ./Tools/scripts/commit-msg.sh ./Tools/scripts/pre-push-hygiene.sh ./Tools/scripts/lint-changed-swift.sh
@@ -43,7 +52,8 @@ test:
 	$(SWIFT) test $(TEST_FLAGS)
 
 coverage:
-	$(SWIFT) test $(TEST_FLAGS)
+	@chmod +x ./Tools/scripts/coverage-gate.sh
+	@./Tools/scripts/coverage-gate.sh
 
 ci: hygiene lint build test
 
