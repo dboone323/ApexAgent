@@ -240,6 +240,7 @@
 		6E3209021EBF3CD329D945DC /* FilePatchTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D962AB21A303CE7B3D0D76B /* FilePatchTool.swift */; };
 		6E86A382A5704429F4705B50 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A1C990DF038A9F0B843D01 /* main.swift */; };
 		6ED3A0191CCE489985E5FC9B /* ViewHostingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8A198C9570501E3AD96FCEE /* ViewHostingTests.swift */; };
+		6F0A537A99838BA3E37F9380 /* AutomationWorkflows+51to60.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27BB48A7B1F8A25F5707958C /* AutomationWorkflows+51to60.swift */; };
 		6F1118C9A95A4B4700174391 /* AutomationWorkflows+11to15.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BA1CE7605C0374BE46496C4 /* AutomationWorkflows+11to15.swift */; };
 		6FBF6C27A0DE03E27650AA0E /* TestActivityHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3882037970AB767099F4AACB /* TestActivityHelper.swift */; };
 		6FD431CC8DE978FAECBAAF6B /* SwiftDataStoreIntegrityGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F1418D4187BE8D6678C076 /* SwiftDataStoreIntegrityGate.swift */; };
@@ -833,6 +834,7 @@
 		25818F45580683370B5C057C /* CryptographicAuditChain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptographicAuditChain.swift; sourceTree = "<group>"; };
 		25DB416322844D409684968E /* MailAutomationTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailAutomationTool.swift; sourceTree = "<group>"; };
 		25F6338F9532A472CABA7B65 /* AutomationWorkflows+41to50.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+41to50.swift"; sourceTree = "<group>"; };
+		27BB48A7B1F8A25F5707958C /* AutomationWorkflows+51to60.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+51to60.swift"; sourceTree = "<group>"; };
 		27F1418D4187BE8D6678C076 /* SwiftDataStoreIntegrityGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataStoreIntegrityGate.swift; sourceTree = "<group>"; };
 		283522708C14485797415040 /* ScreenHighlightOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenHighlightOverlay.swift; sourceTree = "<group>"; };
 		2839819F835E6B5DAB51A8CA /* RoutineRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineRecorder.swift; sourceTree = "<group>"; };
@@ -1708,6 +1710,7 @@
 				ADE274281728FA11AF57772A /* AutomationWorkflows+26to30.swift */,
 				47661CE2C39E2F01AF30A9AF /* AutomationWorkflows+31to40.swift */,
 				25F6338F9532A472CABA7B65 /* AutomationWorkflows+41to50.swift */,
+				27BB48A7B1F8A25F5707958C /* AutomationWorkflows+51to60.swift */,
 				D5B638C992A9831210C08E52 /* BenchmarkEvaluationPipeline.swift */,
 				841BF98525C48FBFF94FC600 /* BotManager.swift */,
 				938D73C7540BD48B4FF78EB3 /* BotMessageSender.swift */,
@@ -2553,6 +2556,7 @@
 				5FD8B30AD981607A38B7BA61 /* AutomationWorkflows+31to40.swift in Sources */,
 				19D43DC10316B8D51BAFC898 /* AutomationWorkflows+41to50.swift in Sources */,
 				002FFD5E910F431AA50C85D7 /* AutomationWorkflows+4to7.swift in Sources */,
+				6F0A537A99838BA3E37F9380 /* AutomationWorkflows+51to60.swift in Sources */,
 				D50120F1A6A3B5070E8621FA /* AutomationWorkflows+8to10.swift in Sources */,
 				E27953A958417F0A07299EE3 /* AutomationWorkflows.swift in Sources */,
 				06467C7AFCF73380043F7CA7 /* BenchmarkEvaluationPipeline.swift in Sources */,

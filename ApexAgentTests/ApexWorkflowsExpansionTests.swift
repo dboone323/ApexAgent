@@ -6,13 +6,13 @@ import Foundation
 @Suite("ApexWorkflowsExpansionTests")
 struct ApexWorkflowsExpansionTests {
 
-    @Test("Workflows 11 through 50 execute real subsystems and pass")
-    func workflows11Through50Pass() async {
-        let ids: Set<Int> = Set(11...50)
+    @Test("Workflows 11 through 60 execute real subsystems and pass")
+    func workflows11Through60Pass() async {
+        let ids: Set<Int> = Set(11...60)
         let results = await ApexWorkflows.run(ids: ids)
-        #expect(results.count == 40)
+        #expect(results.count == 50)
 
-        for id in 11...50 {
+        for id in 11...60 {
             guard let result = results.first(where: { $0.id == id }) else {
                 Issue.record("Missing workflow result for ID \(id)")
                 continue
@@ -25,7 +25,7 @@ struct ApexWorkflowsExpansionTests {
 
     @Test("formatJSON serializes and round-trips WorkflowResult array")
     func formatJSONRoundTripsWorkflowResults() async throws {
-        let results = await ApexWorkflows.run(ids: [11, 21, 26, 30, 31, 35, 40, 45, 50])
+        let results = await ApexWorkflows.run(ids: [11, 21, 26, 30, 31, 35, 40, 45, 50, 55, 60])
         let jsonString = ApexWorkflows.formatJSON(results)
         let data = try #require(jsonString.data(using: .utf8))
         let decoded = try JSONDecoder().decode([WorkflowResult].self, from: data)
@@ -33,14 +33,14 @@ struct ApexWorkflowsExpansionTests {
         #expect(decoded.allSatisfy { $0.passed })
     }
 
-    @Test("Workflow catalog descriptors and Markdown export cover all 50 workflows")
-    func catalogAndMarkdownExportCoverAll50Workflows() {
+    @Test("Workflow catalog descriptors and Markdown export cover all 60 workflows")
+    func catalogAndMarkdownExportCoverAll60Workflows() {
         let descriptors = ApexWorkflows.allDescriptors()
-        #expect(descriptors.count == 50)
-        #expect(descriptors.map(\.id) == Array(1...50))
+        #expect(descriptors.count == 60)
+        #expect(descriptors.map(\.id) == Array(1...60))
 
         let markdown = ApexWorkflows.exportWorkflowsCatalogMarkdown()
-        #expect(markdown.contains("### ⚙️ Autonomous Local Workflows Catalog (50 workflows)"))
+        #expect(markdown.contains("### ⚙️ Autonomous Local Workflows Catalog (60 workflows)"))
         #expect(markdown.contains("Pre-push security & hygiene self-audit"))
         #expect(markdown.contains("SARIF v2.1.0 security & static analysis report export"))
         #expect(markdown.contains("Xcode .xctestplan timeout & coverage target audit"))
@@ -66,5 +66,15 @@ struct ApexWorkflowsExpansionTests {
         #expect(markdown.contains("SwiftData SQLite store header magic bytes, permission & checksum audit"))
         #expect(markdown.contains("Network diagnostics host reachability & SSRF metadata protection gate"))
         #expect(markdown.contains("Multi-subsystem security policy audit & sandbox compliance verification"))
+        #expect(markdown.contains("MCPKit wire protocol framing & message integrity gate"))
+        #expect(markdown.contains("SharedContainer cross-process task queue state machine gate"))
+        #expect(markdown.contains("On-device MLX & local LLM memory pressure & sampling gate"))
+        #expect(markdown.contains("Local retrieval index vector parity, norms & chunking gate"))
+        #expect(markdown.contains("Multi-agent playbook execution graph, cycles & rollback gate"))
+        #expect(markdown.contains("Ghost cursor & screen highlight overlay geometry clamp gate"))
+        #expect(markdown.contains("File patch tool fuzzy chunk & CRLF newline gate"))
+        #expect(markdown.contains("Application control tool PID liveness & AppleScript gate"))
+        #expect(markdown.contains("System diagnostics OSLog query predicate & masking gate"))
+        #expect(markdown.contains("Autonomous workflow milestone 60 & complete hardening loop 11 audit"))
     }
 }
