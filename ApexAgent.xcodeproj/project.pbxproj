@@ -138,6 +138,7 @@
 		3C00DB60D335E5540A1DC63A /* ContainerIsolationSecurityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ED071BB876A942F642164ED /* ContainerIsolationSecurityTests.swift */; };
 		3C421EA0BD041F565C8CD004 /* SARIFReportExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6354CF55663795B4B1B4833D /* SARIFReportExporter.swift */; };
 		3C8478483A972ABF559A7F5A /* DiscordWebhookTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96CF88178F9AC96C21C0685B /* DiscordWebhookTool.swift */; };
+		3E90EF4D681A672A3BE0C25B /* RoutineReplayAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E5EB5CBFBE87D2B9DDE4876 /* RoutineReplayAuditor.swift */; };
 		3EAA55A2DE50E67ED99B9C90 /* ApexGatewayClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 385313E98181D152D76E2164 /* ApexGatewayClientTests.swift */; };
 		3F33BAE753973438137CEA09 /* ApexAgentCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF959C9824A399A7C6398153 /* ApexAgentCore.framework */; };
 		3F3F6695AB48FC66D09EEFD0 /* ApexAgentCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF959C9824A399A7C6398153 /* ApexAgentCore.framework */; };
@@ -187,6 +188,7 @@
 		559CB4058AAE74355FC9973D /* WritingToolsSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D7D801623249430B3C9F13E /* WritingToolsSupportTests.swift */; };
 		5710F44123EE4E49334D5E43 /* DeepLinkRouteGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B199E3E46B524F119DC824 /* DeepLinkRouteGate.swift */; };
 		5845682383FB74B82A919423 /* SharedKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 837ED69F7602C780E28AB52F /* SharedKit.framework */; };
+		5860B949511D500C87435D04 /* RoutineReplayAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48A3E3BBF50F34BE93E678D /* RoutineReplayAuditorTests.swift */; };
 		589A9AC7203280CC26A20BB4 /* PrivacyManifestDriftAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06DC124CCDB5C4805C53E825 /* PrivacyManifestDriftAuditorTests.swift */; };
 		5958EABB0BFE621F7688BF1C /* AgentPrecedenceResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE028F6E31492ECDF4117C22 /* AgentPrecedenceResolver.swift */; };
 		597150F519DE2139B6FA6E3C /* ConversationModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3173C3B0CAA96DF6A7E27FD5 /* ConversationModel.swift */; };
@@ -872,6 +874,7 @@
 		4D1F7E72D40053469FE8B8F4 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		4D571CF7D494D423A2BDC79D /* AccessibilityControlTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityControlTool.swift; sourceTree = "<group>"; };
 		4DA4D3CCCC0EB9B6B3EB7202 /* AppIntentsContractAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntentsContractAuditor.swift; sourceTree = "<group>"; };
+		4E5EB5CBFBE87D2B9DDE4876 /* RoutineReplayAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineReplayAuditor.swift; sourceTree = "<group>"; };
 		509E9AED7547A2311C8495D3 /* SpaceSecurityAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceSecurityAuditor.swift; sourceTree = "<group>"; };
 		514DADE990F05C6E631E1E85 /* SARIFReportExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SARIFReportExporterTests.swift; sourceTree = "<group>"; };
 		51B98606B9A9E8579CDBF301 /* CognitiveMemoryEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CognitiveMemoryEngine.swift; sourceTree = "<group>"; };
@@ -1064,6 +1067,7 @@
 		B2E0C936522E18C8FD525736 /* ConcurrencyIsolationStressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcurrencyIsolationStressTests.swift; sourceTree = "<group>"; };
 		B3392AB14663E775130453CB /* PerBotModelProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerBotModelProviderTests.swift; sourceTree = "<group>"; };
 		B47774CBBD2EE0A1C7038EFC /* TraceBusEventStreamTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraceBusEventStreamTests.swift; sourceTree = "<group>"; };
+		B48A3E3BBF50F34BE93E678D /* RoutineReplayAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineReplayAuditorTests.swift; sourceTree = "<group>"; };
 		B4F34BBF01D73522C4A836C1 /* SwiftDataStressVerificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataStressVerificationTests.swift; sourceTree = "<group>"; };
 		B502A61599F0EF4D8C016B44 /* DiscordWebhookSecurityAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscordWebhookSecurityAuditorTests.swift; sourceTree = "<group>"; };
 		B560FDCD0605103F5B9AB03A /* DemoRecorderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoRecorderTests.swift; sourceTree = "<group>"; };
@@ -1711,6 +1715,7 @@
 				4C942056B3C16BC7C0420BFD /* Routine.swift */,
 				DB78074E8943E1B4B9CBFFA3 /* RoutineManager.swift */,
 				2839819F835E6B5DAB51A8CA /* RoutineRecorder.swift */,
+				4E5EB5CBFBE87D2B9DDE4876 /* RoutineReplayAuditor.swift */,
 				AE7442F4F365046F261DD206 /* RoutineRun.swift */,
 				35B9B1990E7D6E813F478C48 /* ScreenStreamer.swift */,
 				92FD5D9CAEAE94E7CD483478 /* SecuritySandboxError.swift */,
@@ -2003,6 +2008,7 @@
 				1DD878E655BCB9B2D4C9DA50 /* RoutineCronModelTests.swift */,
 				E055ED608B882477C3D5A57D /* RoutineRecorderTests.swift */,
 				61D91B61983A2299518F08FB /* RoutineRecorderVisionTests.swift */,
+				B48A3E3BBF50F34BE93E678D /* RoutineReplayAuditorTests.swift */,
 				D6049722417408EC2DBEC890 /* RoutineTests.swift */,
 				C27748CB407EBA5F59F72068 /* RoutineWebhookAndRunTests.swift */,
 				9B13DBA979D085D47B5CB8AC /* SandboxTests.swift */,
@@ -2616,6 +2622,7 @@
 				7BD56A3BFD7C69A552A7E4CA /* RoutineManager.swift in Sources */,
 				2E022D5939C264AA895968A9 /* RoutineRecorder.swift in Sources */,
 				F9878DC27AC59BE916EA881D /* RoutineRecordingSheet.swift in Sources */,
+				3E90EF4D681A672A3BE0C25B /* RoutineReplayAuditor.swift in Sources */,
 				6348986C871FD2B2B6E11D04 /* RoutineRun.swift in Sources */,
 				107210C8307B8B52632701E7 /* RoutinesSection.swift in Sources */,
 				5AD658859C98BDB47E5B22AC /* RunWorkflowTool.swift in Sources */,
@@ -2925,6 +2932,7 @@
 				DF367FD47B641F65F75F8406 /* RoutineCronModelTests.swift in Sources */,
 				BD930005D57663AB053CD1A0 /* RoutineRecorderTests.swift in Sources */,
 				87CF9ABA8109264E8A411ED3 /* RoutineRecorderVisionTests.swift in Sources */,
+				5860B949511D500C87435D04 /* RoutineReplayAuditorTests.swift in Sources */,
 				6FF331B55FCC8363DA1DB6F0 /* RoutineTests.swift in Sources */,
 				90F4A95681A4533D0DAFCBAF /* RoutineWebhookAndRunTests.swift in Sources */,
 				D6140FE2BE082E40D64AEF69 /* SARIFReportExporterTests.swift in Sources */,
