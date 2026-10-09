@@ -191,6 +191,7 @@
 		5DC292ECC70329965B06B002 /* AgentRuntimeContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17ED7C321076A96FDDE9E40B /* AgentRuntimeContract.swift */; };
 		5E7356ED389CB99EFE88F6A7 /* ModelRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B397AA6FA96151353991CC4 /* ModelRegistryTests.swift */; };
 		5EE819D3D20980174115F79B /* AgentSignposts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A5CFA74AD14376E46D0926 /* AgentSignposts.swift */; };
+		5FD8B30AD981607A38B7BA61 /* AutomationWorkflows+31to40.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47661CE2C39E2F01AF30A9AF /* AutomationWorkflows+31to40.swift */; };
 		6054424FF43D6480DFA80231 /* DependencyLockAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FF70F92B8036BC071520FE /* DependencyLockAuditor.swift */; };
 		61B98B24A2CAC006C89592BE /* GroupChatActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1774EC7A702FA33FDB2D32FE /* GroupChatActionTests.swift */; };
 		622FA1AE19BD5DB47FCBCF0C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 8A76A2E2D0A9A5E1EC31FDEB /* README.md */; };
@@ -825,6 +826,7 @@
 		465C6251D7D476CFDA934C67 /* LiveAgentTriageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveAgentTriageTests.swift; sourceTree = "<group>"; };
 		46EDB87E5A7F79D41A1238B5 /* GroupChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupChat.swift; sourceTree = "<group>"; };
 		475AA27E9CD4482A51D18B19 /* ReflectionManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionManagerTests.swift; sourceTree = "<group>"; };
+		47661CE2C39E2F01AF30A9AF /* AutomationWorkflows+31to40.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+31to40.swift"; sourceTree = "<group>"; };
 		4840ED594629D532C80ABDAE /* DynamicToolCallTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicToolCallTool.swift; sourceTree = "<group>"; };
 		484D3337A879FB654CB4F1E4 /* DynamicToolboxManagerSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicToolboxManagerSection.swift; sourceTree = "<group>"; };
 		48BA507C8A2B80CAD84EE00F /* PrivacyManifestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyManifestTests.swift; sourceTree = "<group>"; };
@@ -1579,6 +1581,7 @@
 				023985A14D3E0159D50EFF7D /* AutomationWorkflows+16to20.swift */,
 				1233EC62413B6A996299C27E /* AutomationWorkflows+21to25.swift */,
 				ADE274281728FA11AF57772A /* AutomationWorkflows+26to30.swift */,
+				47661CE2C39E2F01AF30A9AF /* AutomationWorkflows+31to40.swift */,
 				D5B638C992A9831210C08E52 /* BenchmarkEvaluationPipeline.swift */,
 				841BF98525C48FBFF94FC600 /* BotManager.swift */,
 				938D73C7540BD48B4FF78EB3 /* BotMessageSender.swift */,
@@ -2380,6 +2383,7 @@
 				64DFDB7579F91DD243C68945 /* AutomationWorkflows+1to3.swift in Sources */,
 				09E78AB1A85C8DEF96A43ED4 /* AutomationWorkflows+21to25.swift in Sources */,
 				1091F35AC9BAACC52F6B399B /* AutomationWorkflows+26to30.swift in Sources */,
+				5FD8B30AD981607A38B7BA61 /* AutomationWorkflows+31to40.swift in Sources */,
 				002FFD5E910F431AA50C85D7 /* AutomationWorkflows+4to7.swift in Sources */,
 				D50120F1A6A3B5070E8621FA /* AutomationWorkflows+8to10.swift in Sources */,
 				E27953A958417F0A07299EE3 /* AutomationWorkflows.swift in Sources */,
