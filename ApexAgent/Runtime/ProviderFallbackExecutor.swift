@@ -32,14 +32,15 @@ public final class ProviderFallbackExecutor {
         onEvent: (@Sendable (RuntimeEvent) -> Void)? = nil,
         onUpdate: (@Sendable (String) -> Void)? = nil
     ) async -> RuntimeTerminalState {
-        guard !candidates.isEmpty else {
+        let activeCandidates = ModelCircuitBreaker.shared.filterAvailableCandidates(candidates: candidates)
+        guard !activeCandidates.isEmpty else {
             return .fallbackExhausted(errors: ["No provider candidates available"])
         }
 
         var attemptedErrors: [String] = []
         var previousProvider: ModelProvider?
 
-        for (index, candidate) in candidates.enumerated() {
+        for (index, candidate) in activeCandidates.enumerated() {
             // Check cancellation before each attempt
             if Task.isCancelled {
                 return .cancelled(reason: "Task was cancelled before invoking \(candidate.provider.displayName)")
@@ -73,7 +74,7 @@ public final class ProviderFallbackExecutor {
                     toolCallingMode: toolCallingMode,
                     onUpdate: { partial in
                         accumulatedText = partial
-                        if !partial.hasPrefix("⚠️ The on-device model returned no output") || index == candidates.count - 1 {
+                        if !partial.hasPrefix("⚠️ The on-device model returned no output") || index == activeCandidates.count - 1 {
                             onUpdate?(partial)
                             onEvent?(.streamingDelta(requestId: requestId, delta: partial))
                         }
@@ -82,6 +83,7 @@ public final class ProviderFallbackExecutor {
 
                 let trimmed = accumulatedText.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty && !trimmed.hasPrefix("⚠️ The on-device model returned no output") {
+                    ModelCircuitBreaker.shared.recordSuccess(for: candidate.provider)
                     Self.logger.info(
                         "Provider attempt succeeded: \(candidate.provider.displayName, privacy: .public) in \(self.elapsedMilliseconds(since: attemptStartedAt), format: .fixed(precision: 1)) ms"
                     )
@@ -90,6 +92,7 @@ public final class ProviderFallbackExecutor {
                     return finalState
                 } else {
                     let emptyErr = "\(candidate.provider.displayName) produced an empty response."
+                    ModelCircuitBreaker.shared.recordFailure(for: candidate.provider, errorMessage: emptyErr)
                     attemptedErrors.append(emptyErr)
                     Self.logger.warning(
                         "Provider attempt returned empty output: \(candidate.provider.displayName, privacy: .public) after \(self.elapsedMilliseconds(since: attemptStartedAt), format: .fixed(precision: 1)) ms"
@@ -97,6 +100,7 @@ public final class ProviderFallbackExecutor {
                 }
             } catch {
                 let errorMsg = "\(candidate.provider.displayName) error: \(error.localizedDescription)"
+                ModelCircuitBreaker.shared.recordFailure(for: candidate.provider, errorMessage: errorMsg)
                 attemptedErrors.append(errorMsg)
                 Self.logger.warning(
                     "Provider attempt failed: \(candidate.provider.displayName, privacy: .public) after \(self.elapsedMilliseconds(since: attemptStartedAt), format: .fixed(precision: 1)) ms"

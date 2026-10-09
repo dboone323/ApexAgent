@@ -19,13 +19,14 @@ struct CLICompletionGeneratorTests {
         #expect(zsh.contains("'sarif:Export OASIS SARIF v2.1.0 security and static analysis report'"))
         #expect(zsh.contains("'self-test:Run end-to-end CLI subcommand smoke-test contract matrix'"))
         #expect(zsh.contains("'traces:Export recent OpenTelemetry W3C distributed trace spans'"))
-        #expect(zsh.contains("36 37 38 39 40"))
+        #expect(zsh.contains("'policy:Audit MCP, container, mesh, and tool execution security policies'"))
+        #expect(zsh.contains("46 47 48 49 50"))
 
         let bash = CLICompletionGenerator.generateCompletionScript(for: .bash)
         #expect(bash.contains("complete -F _apexagent_completions ApexAgent"))
         #expect(bash.contains("complete -F _apexflow_completions apexflow"))
         #expect(bash.contains("ollama gemini mlx foundation"))
-        #expect(bash.contains("36 37 38 39 40"))
+        #expect(bash.contains("46 47 48 49 50"))
 
         let fish = CLICompletionGenerator.generateCompletionScript(for: .fish)
         #expect(fish.contains("complete -c ApexAgent -f -n '__fish_use_subcommand' -a 'doctor'"))
@@ -34,6 +35,7 @@ struct CLICompletionGeneratorTests {
         #expect(fish.contains("complete -c ApexAgent -f -n '__fish_use_subcommand' -a 'sarif'"))
         #expect(fish.contains("complete -c ApexAgent -f -n '__fish_use_subcommand' -a 'self-test'"))
         #expect(fish.contains("complete -c ApexAgent -f -n '__fish_use_subcommand' -a 'traces'"))
+        #expect(fish.contains("complete -c ApexAgent -f -n '__fish_use_subcommand' -a 'policy'"))
         #expect(fish.contains("complete -c apexflow -l list"))
     }
 
@@ -54,6 +56,7 @@ struct CLICompletionGeneratorTests {
         #expect(man.contains(".B sarif"))
         #expect(man.contains(".B self-test"))
         #expect(man.contains(".B traces"))
+        #expect(man.contains(".B policy"))
     }
 
     @Test("ApexCLIRouter parses and renders completions, man, audit, and sbom subcommands")

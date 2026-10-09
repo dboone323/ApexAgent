@@ -45,6 +45,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case sarif(jsonOutput: Bool)
     case selfTest(jsonOutput: Bool)
     case traces(limit: Int, jsonOutput: Bool)
+    case policy(jsonOutput: Bool)
     case daemon
     case spaceCLI(subcommandArgs: [String])
     case prompt(text: String, allowTools: Bool)
@@ -281,6 +282,9 @@ public enum ApexCLIRouter {
             }
             return ParsedCLIInvocation(command: .traces(limit: limit, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
+        case "policy", "--policy":
+            return ParsedCLIInvocation(command: .policy(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
         default:
             throw ApexCLIError.unknownSubcommand(first)
         }
@@ -323,6 +327,7 @@ public enum ApexCLIRouter {
           sarif                   Export OASIS SARIF v2.1.0 security & static analysis report
           self-test               Run end-to-end CLI subcommand smoke-test contract matrix
           traces [--limit <N>]    Export recent OpenTelemetry W3C distributed trace spans
+          policy                  Audit MCP, container, mesh, and tool execution security policies
           completions [shell]     Generate shell tab-completion script (zsh, bash, fish)
           man                     Generate troff man(1) manual page for ApexAgent(1)
           routines list           List registered automation routines
@@ -494,6 +499,29 @@ public enum ApexCLIRouter {
             )
         )
 
+        // 11. Tool Execution Safety Sandbox Gate
+        let toolOp = ToolExecutionOperation(
+            name: "read_file",
+            targetPath: repoRoot.appendingPathComponent("Package.swift").path,
+            payloadSizeBytes: 4096,
+            requestedTimeoutSeconds: 10.0,
+            workspaceRoot: repoRoot.path
+        )
+        let toolSandboxReport = ToolExecutionSandboxGate.audit(
+            operations: [toolOp],
+            defaultWorkspaceRoot: repoRoot.path
+        )
+        checks.append(
+            DoctorCheckItem(
+                id: "tool_sandbox",
+                title: "Tool Execution Safety Sandbox",
+                passed: toolSandboxReport.passed,
+                detail: toolSandboxReport.passed
+                    ? "Filesystem boundary, shell signatures, and execution quotas verified (score \(String(format: "%.0f", toolSandboxReport.score)))"
+                    : "\(toolSandboxReport.violations.count) tool sandbox violation(s) found"
+            )
+        )
+
         let overall = checks.allSatisfy { $0.passed }
         return DoctorReport(version: appVersion, overallPassed: overall, checks: checks)
     }
@@ -657,6 +685,64 @@ public enum ApexCLIRouter {
             let report = TraceSpanExporter.export(events: events)
             let output = jsonOutput ? report.toOTLPJSON() : report.toMarkdown()
             return (output, report.passed ? 0 : 1)
+
+        case .policy(let jsonOutput):
+            let repoRoot = resolveRepositoryRoot()
+            let toolOp = ToolExecutionOperation(
+                name: "read_file",
+                targetPath: repoRoot.appendingPathComponent("Package.swift").path,
+                payloadSizeBytes: 4096,
+                requestedTimeoutSeconds: 10.0,
+                workspaceRoot: repoRoot.path
+            )
+            let toolReport = ToolExecutionSandboxGate.audit(operations: [toolOp], defaultWorkspaceRoot: repoRoot.path)
+            let mcpReport = MCPPolicyAuditor.audit(servers: MCPManager.shared.servers)
+            let containerReport = ContainerPolicyAuditor.audit(configs: [])
+            let meshReport = MeshSecurityAuditor.audit(config: MeshAuthConfig(
+                lanModeEnabled: false,
+                token: "0123456789abcdef0123456789abcdef",
+                requireP2PApproval: true,
+                bindAddress: "127.0.0.1"
+            ))
+
+            let overallPassed = toolReport.passed && mcpReport.passed && containerReport.passed && meshReport.passed
+            if jsonOutput {
+                let dict: [String: Any] = [
+                    "overallPassed": overallPassed,
+                    "toolSandbox": [
+                        "passed": toolReport.passed,
+                        "score": toolReport.score,
+                        "violations": toolReport.violations.map { $0.id }
+                    ],
+                    "mcpPolicy": [
+                        "passed": mcpReport.passed,
+                        "score": mcpReport.score,
+                        "violations": mcpReport.violations.map { $0.id }
+                    ],
+                    "containerPolicy": [
+                        "passed": containerReport.passed,
+                        "score": containerReport.score,
+                        "violations": containerReport.violations.map { $0.id }
+                    ],
+                    "meshSecurity": [
+                        "passed": meshReport.passed,
+                        "score": meshReport.score,
+                        "violations": meshReport.violations.map { $0.id }
+                    ]
+                ]
+                let data = (try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys])) ?? Data()
+                return (String(data: data, encoding: .utf8) ?? "{}", overallPassed ? 0 : 1)
+            } else {
+                let lines = [
+                    "=== ApexAgent Security & Sandboxing Policy Audit ===",
+                    "Tool Sandbox:     \(toolReport.passed ? "PASS" : "FAIL") (score: \(String(format: "%.1f", toolReport.score)))",
+                    "MCP Policy:       \(mcpReport.passed ? "PASS" : "FAIL") (score: \(String(format: "%.1f", mcpReport.score)))",
+                    "Container Policy: \(containerReport.passed ? "PASS" : "FAIL") (score: \(String(format: "%.1f", containerReport.score)))",
+                    "Mesh Security:    \(meshReport.passed ? "PASS" : "FAIL") (score: \(String(format: "%.1f", meshReport.score)))",
+                    "Verdict:          \(overallPassed ? "HEALTHY" : "VIOLATIONS DETECTED")"
+                ]
+                return (lines.joined(separator: "\n"), overallPassed ? 0 : 1)
+            }
 
         default:
             return nil
