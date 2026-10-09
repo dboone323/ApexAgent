@@ -138,7 +138,17 @@ public enum ApexWorkflows {
             WorkflowDescriptor(id: 47, name: "SwiftData SQLite store header magic bytes, permission & checksum audit", subsystems: "SwiftDataStoreIntegrityGate, SwiftDataStoreMetadata"),
             WorkflowDescriptor(id: 48, name: "Network diagnostics host reachability & SSRF metadata protection gate", subsystems: "NetworkResilienceAuditor, NetworkProbeSpec"),
             WorkflowDescriptor(id: 49, name: "Eleven-check unified subsystem doctor diagnostic verification", subsystems: "ApexCLIRouter.runDoctor, DoctorReport"),
-            WorkflowDescriptor(id: 50, name: "Multi-subsystem security policy audit & sandbox compliance verification", subsystems: "ApexCLIRouter.renderImmediateSubcommand, ApexPolicyAuditReport")
+            WorkflowDescriptor(id: 50, name: "Multi-subsystem security policy audit & sandbox compliance verification", subsystems: "ApexCLIRouter.renderImmediateSubcommand, ApexPolicyAuditReport"),
+            WorkflowDescriptor(id: 51, name: "MCPKit wire protocol framing & message integrity gate", subsystems: "MCPWireProtocolAuditor, FrameBuffer"),
+            WorkflowDescriptor(id: 52, name: "SharedContainer cross-process task queue state machine gate", subsystems: "SharedContainerIntegrityAuditor, SharedTaskQueue"),
+            WorkflowDescriptor(id: 53, name: "On-device MLX & local LLM memory pressure & sampling gate", subsystems: "MLXRuntimeMemoryAuditor, KVCacheBudget"),
+            WorkflowDescriptor(id: 54, name: "Local retrieval index vector parity, norms & chunking gate", subsystems: "RetrievalIndexIntegrityAuditor, VectorClustering"),
+            WorkflowDescriptor(id: 55, name: "Multi-agent playbook execution graph, cycles & rollback gate", subsystems: "PlaybookExecutionAuditor, PlaybookDAG"),
+            WorkflowDescriptor(id: 56, name: "Ghost cursor & screen highlight overlay geometry clamp gate", subsystems: "OverlayGeometryAuditor, MultiDisplayBounds"),
+            WorkflowDescriptor(id: 57, name: "File patch tool fuzzy chunk & CRLF newline gate", subsystems: "FilePatchResilienceAuditor, DiffHunkMatcher"),
+            WorkflowDescriptor(id: 58, name: "Application control tool PID liveness & AppleScript gate", subsystems: "ApplicationControlSecurityAuditor, BundleAllowlist"),
+            WorkflowDescriptor(id: 59, name: "System diagnostics OSLog query predicate & masking gate", subsystems: "DiagnosticQuerySecurityAuditor, SecretRedactor"),
+            WorkflowDescriptor(id: 60, name: "Autonomous workflow milestone 60 & complete hardening loop 11 audit", subsystems: "Loop11MilestoneMatrix, 10SubsystemAudit")
         ]
     }
 
@@ -194,6 +204,16 @@ public enum ApexWorkflows {
             (48, "Network diagnostics host reachability & SSRF metadata protection gate", workflow48),
             (49, "Eleven-check unified subsystem doctor diagnostic verification", workflow49),
             (50, "Multi-subsystem security policy audit & sandbox compliance verification", workflow50),
+            (51, "MCPKit wire protocol framing & message integrity gate", workflow51),
+            (52, "SharedContainer cross-process task queue state machine gate", workflow52),
+            (53, "On-device MLX & local LLM memory pressure & sampling gate", workflow53),
+            (54, "Local retrieval index vector parity, norms & chunking gate", workflow54),
+            (55, "Multi-agent playbook execution graph, cycles & rollback gate", workflow55),
+            (56, "Ghost cursor & screen highlight overlay geometry clamp gate", workflow56),
+            (57, "File patch tool fuzzy chunk & CRLF newline gate", workflow57),
+            (58, "Application control tool PID liveness & AppleScript gate", workflow58),
+            (59, "System diagnostics OSLog query predicate & masking gate", workflow59),
+            (60, "Autonomous workflow milestone 60 & complete hardening loop 11 audit", workflow60),
         ]
         var results: [WorkflowResult] = []
         for (id, _, body) in all where ids.isEmpty || ids.contains(id) {
