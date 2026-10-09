@@ -1,15 +1,15 @@
 import Foundation
 
-struct TraceEvent: Codable, Sendable, Identifiable {
-    let id: UUID
-    let timestamp: Date
-    let source: String
-    let operation: String
-    let detail: String
-    let durationMs: TimeInterval?
-    let metadata: [String: String]?
+public struct TraceEvent: Codable, Sendable, Identifiable {
+    public let id: UUID
+    public let timestamp: Date
+    public let source: String
+    public let operation: String
+    public let detail: String
+    public let durationMs: TimeInterval?
+    public let metadata: [String: String]?
 
-    init(
+    public init(
         id: UUID = UUID(),
         timestamp: Date = Date(),
         source: String,
@@ -27,8 +27,8 @@ struct TraceEvent: Codable, Sendable, Identifiable {
         self.metadata = metadata
     }
 
-    var category: String { source }
-    var message: String { detail }
+    public var category: String { source }
+    public var message: String { detail }
 }
 
 extension TraceEvent {
