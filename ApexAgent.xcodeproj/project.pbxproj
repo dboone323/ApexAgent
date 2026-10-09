@@ -428,6 +428,7 @@
 		DA0754CC874FECA3DE75B511 /* AutomationWorkflowEngines2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08ABC70EBEA2A9EC1D0DBE44 /* AutomationWorkflowEngines2.swift */; };
 		DA7847C8C8446912656B914E /* SystemToolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FA7E397A7B6A3180EA5ABD8 /* SystemToolsTests.swift */; };
 		DAAEA444B41CDE6A1F4A22F6 /* AppLogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C48569E5C970D8F839A572F6 /* AppLogTests.swift */; };
+		DAB88DE31FE526F73B4DCB09 /* SessionCoordinationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA2713EA3FCA2EFE8C123A44 /* SessionCoordinationAuditorTests.swift */; };
 		DAD6D0CC070BAB3CB03D809D /* DiffHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F0EBFE29B453DE2F1CD7BE6 /* DiffHelper.swift */; };
 		DCB0DC9F5962F95805933EDA /* ToolGovernanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C0127117740E3D285F5C3CD /* ToolGovernanceTests.swift */; };
 		DD319C30E2AEB91BFAC36A9F /* SectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4028BA3775B96134B2FDDCF7 /* SectionHeader.swift */; };
@@ -453,6 +454,7 @@
 		E5D74F4441F2FDE556F67D0B /* DiagnosticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C39349BAD0F487E6B5B07E /* DiagnosticsTests.swift */; };
 		E6293617096EB82046D583DC /* AppCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C28FE6E5B75AC0891D6F2179 /* AppCard.swift */; };
 		E6588C2695BD05649340E2E8 /* ChiefOfStaffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6906ABEDBEEA5DEF3BA1FD16 /* ChiefOfStaffTests.swift */; };
+		E77D0FD753BAC151270B8EF7 /* SessionCoordinationAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06950E4CE98C8653D460DE63 /* SessionCoordinationAuditor.swift */; };
 		E7DD945AA6E74AA17BB79DF2 /* BotChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 912802BE945CEE3BA6BC7BF3 /* BotChatView.swift */; };
 		E886A65290F3847967541A8E /* ConfirmationOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32D587EE7A234A23FC67769E /* ConfirmationOverlay.swift */; };
 		E8B5AE8AD74EFB0778796A68 /* ShortcutRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C02D211273AA535A3E03156C /* ShortcutRegistryTests.swift */; };
@@ -715,6 +717,7 @@
 		023985A14D3E0159D50EFF7D /* AutomationWorkflows+16to20.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+16to20.swift"; sourceTree = "<group>"; };
 		045F5E80CCCC1E1E88D3EE9D /* TestPlanIntegrityAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestPlanIntegrityAuditorTests.swift; sourceTree = "<group>"; };
 		05754A6B56C3AD22D94415F4 /* TraceBusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraceBusTests.swift; sourceTree = "<group>"; };
+		06950E4CE98C8653D460DE63 /* SessionCoordinationAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCoordinationAuditor.swift; sourceTree = "<group>"; };
 		06953BB9CC2902177FFC6550 /* NativeToolsP1Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeToolsP1Tests.swift; sourceTree = "<group>"; };
 		06B199E3E46B524F119DC824 /* DeepLinkRouteGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkRouteGate.swift; sourceTree = "<group>"; };
 		06DC124CCDB5C4805C53E825 /* PrivacyManifestDriftAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyManifestDriftAuditorTests.swift; sourceTree = "<group>"; };
@@ -1052,6 +1055,7 @@
 		B893BFE62F99598A74867F59 /* ApexAgentTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ApexAgentTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		B912F4246AE0A1B3A85BF2C8 /* CollaborationPlaybook.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollaborationPlaybook.swift; sourceTree = "<group>"; };
 		B9EE53D2F3A00D9A47D6628E /* ApexAgentModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexAgentModelTests.swift; sourceTree = "<group>"; };
+		BA2713EA3FCA2EFE8C123A44 /* SessionCoordinationAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionCoordinationAuditorTests.swift; sourceTree = "<group>"; };
 		BB08FB6B01A5EF21819F07F8 /* ContainerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerManager.swift; sourceTree = "<group>"; };
 		BB0934366B621AFB1BC59FE9 /* MCPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPClient.swift; sourceTree = "<group>"; };
 		BB8480BA47D6667188C87338 /* AgentRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentRegistryTests.swift; sourceTree = "<group>"; };
@@ -1818,6 +1822,7 @@
 			children = (
 				AE35948C77F3720F3C623A33 /* AgentSessionCoordinator.swift */,
 				838FA594F9669AEF5184D8FA /* IntentToolSelector.swift */,
+				06950E4CE98C8653D460DE63 /* SessionCoordinationAuditor.swift */,
 				38A409930FA42BE4BC08C61D /* ToolDispatchEngine.swift */,
 			);
 			path = Coordinators;
@@ -1960,6 +1965,7 @@
 				30D42FF1852354B25ADFA0BB /* SecurityGovernanceTests.swift */,
 				2018A7EA41B141C39D3F91A3 /* SecuritySandboxErrorTests.swift */,
 				FE26C15832A4BFACD5769FAF /* SecurityTests.swift */,
+				BA2713EA3FCA2EFE8C123A44 /* SessionCoordinationAuditorTests.swift */,
 				C02D211273AA535A3E03156C /* ShortcutRegistryTests.swift */,
 				571C65734C866241FE54474B /* SkillCatalogTests.swift */,
 				85B52F6C3959978D838C4B01 /* SkillManagerTests.swift */,
@@ -2568,6 +2574,7 @@
 				ED1BE18E30AA3B9E8C4C205E /* SecurityAuditor.swift in Sources */,
 				A9F8EDCC8B3C86899C7F7718 /* SecurityGovernanceProfile.swift in Sources */,
 				83CD4B930DA4449BE8C92FBA /* SecuritySandboxError.swift in Sources */,
+				E77D0FD753BAC151270B8EF7 /* SessionCoordinationAuditor.swift in Sources */,
 				109479E5D3AAB0CF8F281F01 /* SessionLifecycleManager.swift in Sources */,
 				91E30C716C4F19F221D5680E /* SettingsView.swift in Sources */,
 				ECB19C12379F3F6E5FF5DEE9 /* ShellTool.swift in Sources */,
@@ -2863,6 +2870,7 @@
 				12BFCF23A966D482E85B95E1 /* SecurityGovernanceTests.swift in Sources */,
 				A131EDDC5255E880CBC741BB /* SecuritySandboxErrorTests.swift in Sources */,
 				549F3BA9085BF5E876BC3972 /* SecurityTests.swift in Sources */,
+				DAB88DE31FE526F73B4DCB09 /* SessionCoordinationAuditorTests.swift in Sources */,
 				E8B5AE8AD74EFB0778796A68 /* ShortcutRegistryTests.swift in Sources */,
 				E067D25BBA484B541AB97BA3 /* SkillCatalogTests.swift in Sources */,
 				7FC084A981E0F645B4E15810 /* SkillManagerTests.swift in Sources */,
