@@ -308,6 +308,7 @@
 		98D0CA9D47D32DC2AD95EEDD /* SpotlightIndexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D62C6D2EBD44EE1369EC3FF /* SpotlightIndexer.swift */; };
 		98DAF81A8EFA135BC00C2BB6 /* Routine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C942056B3C16BC7C0420BFD /* Routine.swift */; };
 		9AFD84109FEF8910BB7E7B30 /* TraceSpanExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9937A31F0090A25A173C2944 /* TraceSpanExporterTests.swift */; };
+		9B1DDB66711F254A82F2BCF9 /* TerminalSecurityGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA656489C535BB5491488CD4 /* TerminalSecurityGate.swift */; };
 		9B62C3A139076FC6BA0E0F58 /* ApexAgentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CA7F601E86FD17476FCD003 /* ApexAgentTests.swift */; };
 		9C9B9019D1F07D2A231D1D9E /* DaemonAndPeerGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D37200B382453196FCE2722 /* DaemonAndPeerGateTests.swift */; };
 		9C9D6D083A29DF2E5AB5B46E /* PlanTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F846649CFDC6FA77C1BFF6 /* PlanTools.swift */; };
@@ -502,6 +503,7 @@
 		F6C78DA52AA10F77CB3C487A /* ApexAgentIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A131F909A44858DAE6CCE10 /* ApexAgentIntents.framework */; };
 		F76F25E0610A78EBE3D9233D /* PeerApproval.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2F37D805F4C0B38D081292B /* PeerApproval.swift */; };
 		F9330F635FA53BE61F425841 /* PlanStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B6ED6D2C1DF9945362BD977 /* PlanStep.swift */; };
+		F93C02ECA3B940FE0A4A9835 /* TerminalSecurityGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D992B064ABC5910045A9BF /* TerminalSecurityGateTests.swift */; };
 		F977B6858E075894C6F9A886 /* AppleShortcutsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0F9C95A07AECB12ECA120E /* AppleShortcutsTool.swift */; };
 		F9878DC27AC59BE916EA881D /* RoutineRecordingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB9EDD6FFF0BF06243F2DCCF /* RoutineRecordingSheet.swift */; };
 		F9CBC10C6413D0DD9594C9BA /* PowerSessionPhase2Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5363A3E4B7275BBB5AEA13 /* PowerSessionPhase2Tests.swift */; };
@@ -1113,6 +1115,7 @@
 		C8F0624D77303AF383DE8AF0 /* TracingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TracingTests.swift; sourceTree = "<group>"; };
 		C969C3513ACFED675B536F24 /* TerminalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalView.swift; sourceTree = "<group>"; };
 		C9D40FF04EA3A19023FC3726 /* ApexAgentUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexAgentUITests.swift; sourceTree = "<group>"; };
+		C9D992B064ABC5910045A9BF /* TerminalSecurityGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSecurityGateTests.swift; sourceTree = "<group>"; };
 		CA2A493A982F6E90B478B411 /* CanonicalDirectMentionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanonicalDirectMentionTests.swift; sourceTree = "<group>"; };
 		CA2E94027EFCA228615D6E42 /* ApexAgentUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ApexAgentUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA5363A3E4B7275BBB5AEA13 /* PowerSessionPhase2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerSessionPhase2Tests.swift; sourceTree = "<group>"; };
@@ -1169,6 +1172,7 @@
 		E9A50D602B1E92B88411EE7F /* AutomationWorkflowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationWorkflowTests.swift; sourceTree = "<group>"; };
 		E9C01012993395E8D6B9E686 /* ArtifactSizeBudgetGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtifactSizeBudgetGate.swift; sourceTree = "<group>"; };
 		E9FEC6CC55B91A30F4873DF8 /* VoiceOrbHUDView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOrbHUDView.swift; sourceTree = "<group>"; };
+		EA656489C535BB5491488CD4 /* TerminalSecurityGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSecurityGate.swift; sourceTree = "<group>"; };
 		EB444CB55101CE2B631AF69F /* SpacesViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesViews.swift; sourceTree = "<group>"; };
 		EB46EF2F8A2A2739DAAE4022 /* GlobalCommandPaletteHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalCommandPaletteHUD.swift; sourceTree = "<group>"; };
 		EB7AFC7AB5F65C32B71A79A9 /* VoiceSessionAudioAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSessionAudioAuditor.swift; sourceTree = "<group>"; };
@@ -1562,6 +1566,7 @@
 				E35BF4D3CB3E7992123AD18C /* SecretRedactor.swift */,
 				E538597D4C821CC359930D8B /* SecurityAuditor.swift */,
 				2D721ADBD02CBB80273EB777 /* SecurityGovernanceProfile.swift */,
+				EA656489C535BB5491488CD4 /* TerminalSecurityGate.swift */,
 				FD371C030992F63AB3E35686 /* ToolExecutionSandboxGate.swift */,
 				7FBEFE7364B6ACD19758B667 /* ToolPolicy.swift */,
 				A2E71805DAE4F1BF815E362E /* VirtualizationMicroVMSandbox.swift */,
@@ -2017,6 +2022,7 @@
 				F861E6CEDA3A9E1132C9D09A /* SwiftSyntaxLintGateTests.swift */,
 				2FA7E397A7B6A3180EA5ABD8 /* SystemToolsTests.swift */,
 				B7B056D8B3C53F610E89AF18 /* TeamPlaybookTests.swift */,
+				C9D992B064ABC5910045A9BF /* TerminalSecurityGateTests.swift */,
 				3882037970AB767099F4AACB /* TestActivityHelper.swift */,
 				045F5E80CCCC1E1E88D3EE9D /* TestPlanIntegrityAuditorTests.swift */,
 				2BD5ACF224DD24A4D9FA04BA /* TickerSchedulerTests.swift */,
@@ -2641,6 +2647,7 @@
 				A8D59C36AE4D44EB8E8929F6 /* SwiftSyntaxLintGate.swift in Sources */,
 				93E62A6E487F23B5C5E8B5EB /* SystemInfoTool.swift in Sources */,
 				E45C5C886DBA1EB70E91E7AA /* TeamPlaybook.swift in Sources */,
+				9B1DDB66711F254A82F2BCF9 /* TerminalSecurityGate.swift in Sources */,
 				C132647E03BE31A9422783FD /* TerminalStateView.swift in Sources */,
 				9D306D5EB228F1B13F385A70 /* TerminalToolbar.swift in Sources */,
 				CA698A9E77AA22866CC8F113 /* TerminalView.swift in Sources */,
@@ -2935,6 +2942,7 @@
 				40B3328EFB511FAFF2CF69AE /* SwiftSyntaxLintGateTests.swift in Sources */,
 				DA7847C8C8446912656B914E /* SystemToolsTests.swift in Sources */,
 				409D8956AD7617A10AD14D56 /* TeamPlaybookTests.swift in Sources */,
+				F93C02ECA3B940FE0A4A9835 /* TerminalSecurityGateTests.swift in Sources */,
 				6FBF6C27A0DE03E27650AA0E /* TestActivityHelper.swift in Sources */,
 				CC8751D2CA723C746E639639 /* TestPlanIntegrityAuditorTests.swift in Sources */,
 				2A4674B04A254135DC71FCD0 /* TickerSchedulerTests.swift in Sources */,
