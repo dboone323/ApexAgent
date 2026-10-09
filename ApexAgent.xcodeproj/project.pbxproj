@@ -83,6 +83,7 @@
 		2310E4A50359E755CDB0F9DB /* ApplicationControlSecurityAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01BDBBE1CA1510F06B24B632 /* ApplicationControlSecurityAuditorTests.swift */; };
 		232250210200209052A9070C /* CompanionSensorConsentGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 339BDB40BF0023CA16612BE0 /* CompanionSensorConsentGateTests.swift */; };
 		23FAFF6C267E5C9EE5923F91 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE8992734C7E9BF8AFAFA586 /* ChatView.swift */; };
+		251E8477AE7B48D1B433396B /* DiagnosticQuerySecurityAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55BFF8A7AF610EF83C0567B4 /* DiagnosticQuerySecurityAuditor.swift */; };
 		26046515DD4B085F6E6981B5 /* ApexGatewayServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4055FADE6D6667211786A437 /* ApexGatewayServerTests.swift */; };
 		266B7CE4EDCEF52F380436E5 /* DependencyLockAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE35AAF4587FFAF6F0E0447D /* DependencyLockAuditorTests.swift */; };
 		271541B5EDEC835BF5076747 /* BotSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7061C466A2034BE751B9FAB5 /* BotSheets.swift */; };
@@ -369,6 +370,7 @@
 		AE5A3BF4C86369D53416BD25 /* ContainerizationArchive in Frameworks */ = {isa = PBXBuildFile; productRef = 5B249060B9FE7884390C10CE /* ContainerizationArchive */; };
 		AEAC43E5925CDF2ACEA6E66A /* OSLogQueryTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB99CA7CFACAB86CCC063E03 /* OSLogQueryTool.swift */; };
 		AEC7693D71D8213D96C70149 /* SpeculativeToolExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B88A707090E123FFF55771AD /* SpeculativeToolExecutor.swift */; };
+		B0C5FDD258ED646F1B0650FE /* DiagnosticQuerySecurityAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BE4D69859E750AC4D9258DC /* DiagnosticQuerySecurityAuditorTests.swift */; };
 		B119A8FCACA3F29DD39A00C3 /* AgentAuditLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01D36BE270D67C0F522A0602 /* AgentAuditLog.swift */; };
 		B15293A4CAF3E3C85967BB61 /* SpotlightContractAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75BFD972A5DC0BE6D97B86D /* SpotlightContractAuditorTests.swift */; };
 		B20FAA8C2A1E758451726A09 /* OllamaAgentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A44BA8A4BE5198E5CAE1691 /* OllamaAgentEngine.swift */; };
@@ -843,6 +845,7 @@
 		2A92F5162C8780BEFB5CB9E9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		2BA40A47DD2DFCE5FAAB4979 /* SimctlTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimctlTool.swift; sourceTree = "<group>"; };
 		2BD5ACF224DD24A4D9FA04BA /* TickerSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TickerSchedulerTests.swift; sourceTree = "<group>"; };
+		2BE4D69859E750AC4D9258DC /* DiagnosticQuerySecurityAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticQuerySecurityAuditorTests.swift; sourceTree = "<group>"; };
 		2C1D4A4BD44B5370EF991FEB /* ApexAgent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ApexAgent.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2C279F605CD0DFF5A66226DF /* ContainerPolicyAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerPolicyAuditor.swift; sourceTree = "<group>"; };
 		2D37200B382453196FCE2722 /* DaemonAndPeerGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaemonAndPeerGateTests.swift; sourceTree = "<group>"; };
@@ -918,6 +921,7 @@
 		5431374CE9023D403C22BFF0 /* ReleaseChangelogEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseChangelogEngineTests.swift; sourceTree = "<group>"; };
 		553432FE28D5E5F4B2CF6BD2 /* EphemeralCapabilityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EphemeralCapabilityManager.swift; sourceTree = "<group>"; };
 		55BA5085CF2D6C1E59916D61 /* ApexCompanionAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexCompanionAppTests.swift; sourceTree = "<group>"; };
+		55BFF8A7AF610EF83C0567B4 /* DiagnosticQuerySecurityAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticQuerySecurityAuditor.swift; sourceTree = "<group>"; };
 		5638C1E659D0F686B42AC53E /* AppleScriptTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptTool.swift; sourceTree = "<group>"; };
 		566CEADE79DE03597312F69A /* ScreenPerceptionContractAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenPerceptionContractAuditorTests.swift; sourceTree = "<group>"; };
 		569D5F33DFA1968F20C976C7 /* CreationSheetsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreationSheetsTests.swift; sourceTree = "<group>"; };
@@ -1467,6 +1471,7 @@
 				704DE64FDF600BD3FB4108CF /* DeepLinkTool.swift */,
 				574DC27832C1565197903328 /* DelegateTaskTool.swift */,
 				BFB12B5D9E38A45F5C8CEB2B /* DetectImageTextTool.swift */,
+				55BFF8A7AF610EF83C0567B4 /* DiagnosticQuerySecurityAuditor.swift */,
 				764931B33734D6FD77036F50 /* DifferentialScreenPerception.swift */,
 				DDAC038EC7583710C624A8C4 /* DirectionsTool.swift */,
 				862AB6FC514E56FD8B4B3B21 /* DiscordBotTool.swift */,
@@ -2005,6 +2010,7 @@
 				A9DE9C18B4FF0BFDF31D3D71 /* DeepLinkRouterTests.swift */,
 				B560FDCD0605103F5B9AB03A /* DemoRecorderTests.swift */,
 				EE35AAF4587FFAF6F0E0447D /* DependencyLockAuditorTests.swift */,
+				2BE4D69859E750AC4D9258DC /* DiagnosticQuerySecurityAuditorTests.swift */,
 				86C39349BAD0F487E6B5B07E /* DiagnosticsTests.swift */,
 				A0EE72FA0F75A3276A5A9511 /* DiffHelperTests.swift */,
 				3EEF6F62F954A7DB43C31D14 /* DirectMentionTests.swift */,
@@ -2608,6 +2614,7 @@
 				6054424FF43D6480DFA80231 /* DependencyLockAuditor.swift in Sources */,
 				B2451B9596B89C8333F816E5 /* DetectImageTextTool.swift in Sources */,
 				38295CFEB5AF612936B998C4 /* DiagnosticManager.swift in Sources */,
+				251E8477AE7B48D1B433396B /* DiagnosticQuerySecurityAuditor.swift in Sources */,
 				46EAB24998DD5F982139E964 /* DiagnosticsView.swift in Sources */,
 				DAD6D0CC070BAB3CB03D809D /* DiffHelper.swift in Sources */,
 				B413CFDD49AFBB0DE7CCCE1E /* DiffView.swift in Sources */,
@@ -2953,6 +2960,7 @@
 				D4C113986562A172237F7AD1 /* DeepLinkRouterTests.swift in Sources */,
 				C8789CB336ED4A5F348159A1 /* DemoRecorderTests.swift in Sources */,
 				266B7CE4EDCEF52F380436E5 /* DependencyLockAuditorTests.swift in Sources */,
+				B0C5FDD258ED646F1B0650FE /* DiagnosticQuerySecurityAuditorTests.swift in Sources */,
 				E5D74F4441F2FDE556F67D0B /* DiagnosticsTests.swift in Sources */,
 				1A9733D8E9EAA108D70671B6 /* DiffHelperTests.swift in Sources */,
 				6938BC4D1E8018DAC9ADFD72 /* DirectMentionTests.swift in Sources */,
