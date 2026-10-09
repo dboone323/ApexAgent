@@ -12,17 +12,31 @@ import Synchronization
 // injectable directory (defaults to ~/Library/LaunchAgents) and shell out to
 // `launchctl bootout/bootstrap` only through explicit calls.
 
-struct LaunchAgentConfig {
+public struct LaunchAgentConfig: Sendable, Codable, Equatable {
     /// Reverse-DNS label, e.g. "com.apexagent.daemon".
-    let label: String
-    let programPath: String
-    let arguments: [String]
-    var runAtLoad: Bool = true
-    var keepAlive: Bool = true
+    public let label: String
+    public let programPath: String
+    public let arguments: [String]
+    public var runAtLoad: Bool
+    public var keepAlive: Bool
+
+    public init(
+        label: String,
+        programPath: String,
+        arguments: [String],
+        runAtLoad: Bool = true,
+        keepAlive: Bool = true
+    ) {
+        self.label = label
+        self.programPath = programPath
+        self.arguments = arguments
+        self.runAtLoad = runAtLoad
+        self.keepAlive = keepAlive
+    }
 }
 
-enum LaunchAgentPlist {
-    static func xml(for config: LaunchAgentConfig) -> String {
+public enum LaunchAgentPlist {
+    public static func xml(for config: LaunchAgentConfig) -> String {
         let args = ([config.programPath] + config.arguments)
             .map { "<string>\(escaped($0))</string>" }
             .joined(separator: "\n        ")
@@ -52,11 +66,11 @@ enum LaunchAgentPlist {
         """
     }
 
-    static func stdoutPath(for config: LaunchAgentConfig) -> String {
+    public static func stdoutPath(for config: LaunchAgentConfig) -> String {
         "\(NSHomeDirectory())/Library/Logs/\(config.label).out.log"
     }
 
-    static func stderrPath(for config: LaunchAgentConfig) -> String {
+    public static func stderrPath(for config: LaunchAgentConfig) -> String {
         "\(NSHomeDirectory())/Library/Logs/\(config.label).err.log"
     }
 

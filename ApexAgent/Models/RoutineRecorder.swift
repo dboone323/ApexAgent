@@ -10,17 +10,17 @@ import Vision
 /// of step (`open_app`, `shell`, `applescript`, `note`), `detail` is the payload
 /// (app name, command, script text, or a free-form note), and `occurredAt`
 /// lets the recorder preserve ordering even across rapid captures.
-struct RecordedStep: Identifiable, Equatable, Sendable {
-    let id: UUID = UUID()
-    let action: String
-    let detail: String
-    let occurredAt: Date
+public struct RecordedStep: Identifiable, Equatable, Sendable {
+    public let id: UUID = UUID()
+    public let action: String
+    public let detail: String
+    public let occurredAt: Date
 
-    var windowTitle: String?
-    var ocrSummary: String?
-    var screenshotImage: NSImage?
+    public var windowTitle: String?
+    public var ocrSummary: String?
+    public var screenshotImage: NSImage?
 
-    init(action: String, detail: String, occurredAt: Date = Date(), windowTitle: String? = nil, ocrSummary: String? = nil, screenshotImage: NSImage? = nil) {
+    public init(action: String, detail: String, occurredAt: Date = Date(), windowTitle: String? = nil, ocrSummary: String? = nil, screenshotImage: NSImage? = nil) {
         self.action = action
         self.detail = detail
         self.occurredAt = occurredAt
