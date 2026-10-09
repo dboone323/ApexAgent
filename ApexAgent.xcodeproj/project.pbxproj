@@ -23,6 +23,7 @@
 		06467C7AFCF73380043F7CA7 /* BenchmarkEvaluationPipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5B638C992A9831210C08E52 /* BenchmarkEvaluationPipeline.swift */; };
 		06BED51BD86F31DC120E2F4E /* RoadmapHardeningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 183F7E48970071163B09035D /* RoadmapHardeningTests.swift */; };
 		06E9BE572C4558C09CE431CC /* GitHookGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81879F8AF9B14A9243A53B8D /* GitHookGateTests.swift */; };
+		06EEA3A93FA63617E45CA5D6 /* MeshSecurityAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3680423044E98907CCBB2F0 /* MeshSecurityAuditor.swift */; };
 		070407B3360CDC04300FA589 /* FileSystemTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B6ED36B2AEE27DBB2AF17ED /* FileSystemTools.swift */; };
 		0721D76EA357B86ADF1EFC5D /* AnalyzeImageTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D648D8D3B5F38B743D1FC79 /* AnalyzeImageTool.swift */; };
 		0727500C6F30D5CB0FD78DBD /* ScreenshotTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E675D2E8EF03FD61A52FB7A /* ScreenshotTool.swift */; };
@@ -403,6 +404,7 @@
 		D53FCFAD7E947C41BFF0BBA1 /* ReminderTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 997A86D1BE9862F16EB4D24F /* ReminderTool.swift */; };
 		D6140FE2BE082E40D64AEF69 /* SARIFReportExporterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 514DADE990F05C6E631E1E85 /* SARIFReportExporterTests.swift */; };
 		D67753F5B458705BD67E76E9 /* MessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B6CC19C5CABD635F5F257C7 /* MessageBubble.swift */; };
+		D6834A7643C7A4A3814A4463 /* MeshSecurityAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 094BA649AB8B5B27684A3EBA /* MeshSecurityAuditorTests.swift */; };
 		D71F13544C5689BD6AAC9A0C /* ApexCLIRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D6DA119E9AA14FA498904C9 /* ApexCLIRouterTests.swift */; };
 		D7941E8064198417A9ACA35F /* MCPKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA20C2A176DB00AD435BCD7 /* MCPKit.framework */; };
 		D7FC3506D4B023DB1283980A /* AccessibilityOmniTargeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DC6AFC4828D4E3E9A0643C7 /* AccessibilityOmniTargeter.swift */; };
@@ -700,6 +702,7 @@
 		06F717E916D61D3337102975 /* CreateSkillTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSkillTool.swift; sourceTree = "<group>"; };
 		08ABC70EBEA2A9EC1D0DBE44 /* AutomationWorkflowEngines2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutomationWorkflowEngines2.swift; sourceTree = "<group>"; };
 		093B0E7433BF91D55EB95A4F /* LiveMCPSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveMCPSupport.swift; sourceTree = "<group>"; };
+		094BA649AB8B5B27684A3EBA /* MeshSecurityAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshSecurityAuditorTests.swift; sourceTree = "<group>"; };
 		0A4535D3D95978CBA3D2F288 /* ComputerUseTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComputerUseTool.swift; sourceTree = "<group>"; };
 		0C0127117740E3D285F5C3CD /* ToolGovernanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolGovernanceTests.swift; sourceTree = "<group>"; };
 		0D4EADB099DC18CACAB23D08 /* TerminalToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalToolbar.swift; sourceTree = "<group>"; };
@@ -1070,6 +1073,7 @@
 		D1844C7164F6C29E259C41A2 /* WritingToolsSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WritingToolsSupport.swift; sourceTree = "<group>"; };
 		D1E54B01D0CEEB92A6038E92 /* MCPServerDashboardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerDashboardTests.swift; sourceTree = "<group>"; };
 		D326AF58C2BEFC04CC7F728A /* MapSearchTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapSearchTool.swift; sourceTree = "<group>"; };
+		D3680423044E98907CCBB2F0 /* MeshSecurityAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshSecurityAuditor.swift; sourceTree = "<group>"; };
 		D3C0392E1D6F6CA4B11C6DF5 /* AgentSessionEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSessionEntity.swift; sourceTree = "<group>"; };
 		D3D6924D7807351B7AE11F6F /* DailyBriefingTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyBriefingTool.swift; sourceTree = "<group>"; };
 		D5B638C992A9831210C08E52 /* BenchmarkEvaluationPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkEvaluationPipeline.swift; sourceTree = "<group>"; };
@@ -1480,6 +1484,7 @@
 				553432FE28D5E5F4B2CF6BD2 /* EphemeralCapabilityManager.swift */,
 				6B723BCFF1F5A2C1A66E09B2 /* FileRollback.swift */,
 				2A0EA06727C72EFC42384D30 /* MCPPolicyAuditor.swift */,
+				D3680423044E98907CCBB2F0 /* MeshSecurityAuditor.swift */,
 				832E1C05E7B5D0DA2C0278A1 /* PrivacyManifestDriftAuditor.swift */,
 				BD82451CB46E062606319742 /* PrivacyManifestInspector.swift */,
 				F7C4B2419D12E15EFA230147 /* ReleaseProvenanceGenerator.swift */,
@@ -1863,6 +1868,7 @@
 				6DBE3D471AD6F71EF20F7CB4 /* MCPProtocolModernizationTests.swift */,
 				114077595910764FA106DE3F /* MCPResilienceTests.swift */,
 				D1E54B01D0CEEB92A6038E92 /* MCPServerDashboardTests.swift */,
+				094BA649AB8B5B27684A3EBA /* MeshSecurityAuditorTests.swift */,
 				A244C9F8D510950BFC5886A6 /* MetricDiagnosticsCenterTests.swift */,
 				5CF6587FCF91D705F6A54315 /* Milestone1ChallengerConcurrencyStressTests.swift */,
 				62A2308E0746DCE04D1BAF1A /* Milestone1EmpiricalChallengeTests.swift */,
@@ -2455,6 +2461,7 @@
 				BC24A76E9840F4295925183A /* MailAutomationTool.swift in Sources */,
 				AAE2322C586056DF514D8886 /* MapSearchTool.swift in Sources */,
 				03C8C51E0A8357346CC352D5 /* MemoryTools.swift in Sources */,
+				06EEA3A93FA63617E45CA5D6 /* MeshSecurityAuditor.swift in Sources */,
 				D67753F5B458705BD67E76E9 /* MessageBubble.swift in Sources */,
 				DEE93E7F4D4292F6F5BF641D /* MessageCompressionHelper.swift in Sources */,
 				79704786564728966441543D /* MetricDiagnosticsCenter.swift in Sources */,
@@ -2747,6 +2754,7 @@
 				4FDD1576E8DF47241492B95C /* MCPProtocolModernizationTests.swift in Sources */,
 				54555F8F16D560142FD7E80F /* MCPResilienceTests.swift in Sources */,
 				B3E1B6B5AB58F4E593EFB168 /* MCPServerDashboardTests.swift in Sources */,
+				D6834A7643C7A4A3814A4463 /* MeshSecurityAuditorTests.swift in Sources */,
 				94CF622855E8FEA741624D1B /* MetricDiagnosticsCenterTests.swift in Sources */,
 				5B2317BAA1BD853A241B6B32 /* Milestone1ChallengerConcurrencyStressTests.swift in Sources */,
 				3866225DC0FA2F7A0AA51919 /* Milestone1EmpiricalChallengeTests.swift in Sources */,
