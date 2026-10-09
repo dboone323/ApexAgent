@@ -246,7 +246,16 @@ public enum MCPPolicyAuditor {
             }
 
             for prefix in sensitivePathPrefixes {
-                if lower.hasPrefix(prefix.lowercased()) || lower.contains("/" + prefix.trimmingCharacters(in: CharacterSet(charactersIn: "~")).trimmingCharacters(in: CharacterSet(charactersIn: "/"))) {
+                let p = prefix.lowercased()
+                let isMatch: Bool
+                if p.hasPrefix("~") {
+                    let suffix = p.replacingOccurrences(of: "~", with: "")
+                    isMatch = lower.hasPrefix(p) || lower.contains(suffix)
+                } else {
+                    isMatch = lower == p || lower.hasPrefix(p + "/")
+                }
+
+                if isMatch {
                     issues.append(
                         MCPPolicyViolation(
                             serverName: server.name,
