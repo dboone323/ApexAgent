@@ -128,7 +128,17 @@ public enum ApexWorkflows {
             WorkflowDescriptor(id: 37, name: "MetricKit telemetry anonymization & signed crash report packaging", subsystems: "CrashReportPackager, MetricDiagnosticPayload"),
             WorkflowDescriptor(id: 38, name: "Deep-link action dispatcher & URL scheme route gate", subsystems: "DeepLinkRouteGate, DeepLinkRouter"),
             WorkflowDescriptor(id: 39, name: "Eleven-check unified subsystem doctor diagnostic verification", subsystems: "ApexCLIRouter.runDoctor, DoctorReport"),
-            WorkflowDescriptor(id: 40, name: "Full-system multi-subsystem resilience audit", subsystems: "RepoHygiene, DependencyLock, Bundles, CLISmoke")
+            WorkflowDescriptor(id: 40, name: "Full-system multi-subsystem resilience audit", subsystems: "RepoHygiene, DependencyLock, Bundles, CLISmoke"),
+            WorkflowDescriptor(id: 41, name: "Tool execution safety sandbox & workspace containment gate", subsystems: "ToolExecutionSandboxGate, SandboxSecurityConfig"),
+            WorkflowDescriptor(id: 42, name: "Model provider fault-tolerant circuit breaker & failover gate", subsystems: "ModelCircuitBreaker, ProviderFallbackExecutor"),
+            WorkflowDescriptor(id: 43, name: "App Intents schema & Siri Shortcuts parameter sanitization audit", subsystems: "AppIntentsContractAuditor, AppIntentDescriptor"),
+            WorkflowDescriptor(id: 44, name: "Companion camera & sensor privacy consent & coordinate coarsening gate", subsystems: "CompanionSensorConsentGate, CompanionSensorPrivacyConfig"),
+            WorkflowDescriptor(id: 45, name: "Multi-agent session coordination & deadlock cycle detection gate", subsystems: "SessionCoordinationAuditor, AgentSessionNode"),
+            WorkflowDescriptor(id: 46, name: "Accessibility Omni-Targeter & Screen perception coordinate normalization audit", subsystems: "ScreenPerceptionContractAuditor, TargetUIElementSpec"),
+            WorkflowDescriptor(id: 47, name: "SwiftData SQLite store header magic bytes, permission & checksum audit", subsystems: "SwiftDataStoreIntegrityGate, SwiftDataStoreMetadata"),
+            WorkflowDescriptor(id: 48, name: "Network diagnostics host reachability & SSRF metadata protection gate", subsystems: "NetworkResilienceAuditor, NetworkProbeSpec"),
+            WorkflowDescriptor(id: 49, name: "Eleven-check unified subsystem doctor diagnostic verification", subsystems: "ApexCLIRouter.runDoctor, DoctorReport"),
+            WorkflowDescriptor(id: 50, name: "Multi-subsystem security policy audit & sandbox compliance verification", subsystems: "ApexCLIRouter.renderImmediateSubcommand, ApexPolicyAuditReport")
         ]
     }
 
@@ -174,6 +184,16 @@ public enum ApexWorkflows {
             (38, "Deep-link action dispatcher & URL scheme route gate", workflow38),
             (39, "Eleven-check unified subsystem doctor diagnostic verification", workflow39),
             (40, "Full-system multi-subsystem resilience audit", workflow40),
+            (41, "Tool execution safety sandbox & workspace containment gate", workflow41),
+            (42, "Model provider fault-tolerant circuit breaker & failover gate", workflow42),
+            (43, "App Intents schema & Siri Shortcuts parameter sanitization audit", workflow43),
+            (44, "Companion camera & sensor privacy consent & coordinate coarsening gate", workflow44),
+            (45, "Multi-agent session coordination & deadlock cycle detection gate", workflow45),
+            (46, "Accessibility Omni-Targeter & Screen perception coordinate normalization audit", workflow46),
+            (47, "SwiftData SQLite store header magic bytes, permission & checksum audit", workflow47),
+            (48, "Network diagnostics host reachability & SSRF metadata protection gate", workflow48),
+            (49, "Eleven-check unified subsystem doctor diagnostic verification", workflow49),
+            (50, "Multi-subsystem security policy audit & sandbox compliance verification", workflow50),
         ]
         var results: [WorkflowResult] = []
         for (id, _, body) in all where ids.isEmpty || ids.contains(id) {
