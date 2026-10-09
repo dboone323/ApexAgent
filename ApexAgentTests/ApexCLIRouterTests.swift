@@ -59,11 +59,11 @@ struct ApexCLIRouterTests {
         }
     }
 
-    @Test("ApexCLIRouter.runDoctor executes all 11 real subsystem checks and formats text and JSON reports")
+    @Test("ApexCLIRouter.runDoctor executes all 12 real subsystem checks and formats text and JSON reports")
     func doctorRunsSubsystemChecksAndFormatsOutput() throws {
         let report = ApexCLIRouter.runDoctor()
         #expect(report.version == ApexCLIRouter.appVersion)
-        #expect(report.checks.count == 11)
+        #expect(report.checks.count == 12)
         #expect(report.checks.map(\.id) == [
             "privacy_manifest",
             "persistence_store",
@@ -75,14 +75,15 @@ struct ApexCLIRouterTests {
             "privacy_manifest_drift",
             "test_plan_integrity",
             "trace_mesh_integrity",
-            "tool_sandbox"
+            "tool_sandbox",
+            "autonomous_hardening_matrix"
         ])
         #expect(report.overallPassed)
 
         let textOutput = report.formatText()
         #expect(textOutput.contains("ApexAgent Doctor"))
         #expect(textOutput.contains("[PASS] App Privacy Manifest"))
-        #expect(textOutput.contains("11/11 checks passed — HEALTHY"))
+        #expect(textOutput.contains("12/12 checks passed — HEALTHY"))
 
         let jsonString = report.formatJSON()
         let decoded = try JSONDecoder().decode(DoctorReport.self, from: Data(jsonString.utf8))

@@ -148,7 +148,17 @@ public enum ApexWorkflows {
             WorkflowDescriptor(id: 57, name: "File patch tool fuzzy chunk & CRLF newline gate", subsystems: "FilePatchResilienceAuditor, DiffHunkMatcher"),
             WorkflowDescriptor(id: 58, name: "Application control tool PID liveness & AppleScript gate", subsystems: "ApplicationControlSecurityAuditor, BundleAllowlist"),
             WorkflowDescriptor(id: 59, name: "System diagnostics OSLog query predicate & masking gate", subsystems: "DiagnosticQuerySecurityAuditor, SecretRedactor"),
-            WorkflowDescriptor(id: 60, name: "Autonomous workflow milestone 60 & complete hardening loop 11 audit", subsystems: "Loop11MilestoneMatrix, 10SubsystemAudit")
+            WorkflowDescriptor(id: 60, name: "Autonomous workflow milestone 60 & complete hardening loop 11 audit", subsystems: "Loop11MilestoneMatrix, 10SubsystemAudit"),
+            WorkflowDescriptor(id: 61, name: "Headless browser automation URL scheme, domain allowlist & SSRF defense gate", subsystems: "BrowserSecurityAuditor, URLSchemeGate"),
+            WorkflowDescriptor(id: 62, name: "Visual perception dHash difference calculation & dirty rect bounds gate", subsystems: "VisualPerceptionAuditor, PerceptualDiffHash"),
+            WorkflowDescriptor(id: 63, name: "Xcode simulator simctl lifecycle transition & injection defense gate", subsystems: "SimctlSecurityAuditor, SimctlAction"),
+            WorkflowDescriptor(id: 64, name: "AppleScript OSA AST compilation & admin privilege execution gate", subsystems: "AppleScriptSecurityAuditor, NSAppleScript"),
+            WorkflowDescriptor(id: 65, name: "Personal productivity email CRLF injection & calendar bounds gate", subsystems: "ProductivityAutomationAuditor, EventKitSanitizer"),
+            WorkflowDescriptor(id: 66, name: "Companion device mutual TLS & ephemeral PIN pairing gate", subsystems: "CompanionPairingSecurityAuditor, EphemeralPIN"),
+            WorkflowDescriptor(id: 67, name: "Multi-agent swarm worker priority scheduling & concurrency throttling gate", subsystems: "SwarmConcurrencyAuditor, PriorityQueue"),
+            WorkflowDescriptor(id: 68, name: "Agent turn watchdog step-level deadline & runaway loop gate", subsystems: "TurnWatchdogAuditor, StepDeadlineGate"),
+            WorkflowDescriptor(id: 69, name: "Unified 12-check ApexAgent Doctor subsystem health matrix gate", subsystems: "DoctorExpansionAuditor, ApexCLIRouter"),
+            WorkflowDescriptor(id: 70, name: "Centurion Milestone: 100-Batch autonomous hardening loop verification & 70-workflow catalog audit", subsystems: "CenturionMilestoneAuditor, 70WorkflowCatalog")
         ]
     }
 
@@ -214,6 +224,16 @@ public enum ApexWorkflows {
             (58, "Application control tool PID liveness & AppleScript gate", workflow58),
             (59, "System diagnostics OSLog query predicate & masking gate", workflow59),
             (60, "Autonomous workflow milestone 60 & complete hardening loop 11 audit", workflow60),
+            (61, "Headless browser automation URL scheme, domain allowlist & SSRF defense gate", workflow61),
+            (62, "Visual perception dHash difference calculation & dirty rect bounds gate", workflow62),
+            (63, "Xcode simulator simctl lifecycle transition & injection defense gate", workflow63),
+            (64, "AppleScript OSA AST compilation & admin privilege execution gate", workflow64),
+            (65, "Personal productivity email CRLF injection & calendar bounds gate", workflow65),
+            (66, "Companion device mutual TLS & ephemeral PIN pairing gate", workflow66),
+            (67, "Multi-agent swarm worker priority scheduling & concurrency throttling gate", workflow67),
+            (68, "Agent turn watchdog step-level deadline & runaway loop gate", workflow68),
+            (69, "Unified 12-check ApexAgent Doctor subsystem health matrix gate", workflow69),
+            (70, "Centurion Milestone: 100-Batch autonomous hardening loop verification & 70-workflow catalog audit", workflow70),
         ]
         var results: [WorkflowResult] = []
         for (id, _, body) in all where ids.isEmpty || ids.contains(id) {

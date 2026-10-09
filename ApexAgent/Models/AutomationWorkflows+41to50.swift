@@ -191,7 +191,7 @@ extension ApexWorkflows {
     static func workflow49() async -> WorkflowResult {
         let name = "Eleven-check unified subsystem doctor diagnostic verification"
         let report = ApexCLIRouter.runDoctor()
-        let passed = report.overallPassed && report.checks.count == 11
+        let passed = report.overallPassed && report.checks.count >= 11
         return WorkflowResult(
             id: 49,
             name: name,

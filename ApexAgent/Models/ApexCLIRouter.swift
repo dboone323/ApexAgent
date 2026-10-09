@@ -341,7 +341,7 @@ public enum ApexCLIRouter {
         """
     }
 
-    /// Runs all 5 subsystem health checks and returns a ``DoctorReport``.
+    /// Runs all 12 subsystem health checks and returns a ``DoctorReport``.
     public static func runDoctor() -> DoctorReport {
         var checks: [DoctorCheckItem] = []
 
@@ -519,6 +519,19 @@ public enum ApexCLIRouter {
                 detail: toolSandboxReport.passed
                     ? "Filesystem boundary, shell signatures, and execution quotas verified (score \(String(format: "%.0f", toolSandboxReport.score)))"
                     : "\(toolSandboxReport.violations.count) tool sandbox violation(s) found"
+            )
+        )
+
+        // 12. Autonomous Hardening & Runtime Watchdog Matrix Gate
+        let hardeningReport = DoctorExpansionAuditor.auditHardeningSubsystems()
+        checks.append(
+            DoctorCheckItem(
+                id: "autonomous_hardening_matrix",
+                title: "Autonomous Hardening & Runtime Watchdog Matrix",
+                passed: hardeningReport.passed,
+                detail: hardeningReport.passed
+                    ? "12-check matrix complete (\(hardeningReport.activeAuditors.count) hardening gates verified, score \(String(format: "%.0f", hardeningReport.score)))"
+                    : "\(hardeningReport.violations.count) hardening gate violation(s) found"
             )
         )
 
