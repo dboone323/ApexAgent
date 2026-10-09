@@ -44,6 +44,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case provenance(jsonOutput: Bool)
     case sarif(jsonOutput: Bool)
     case selfTest(jsonOutput: Bool)
+    case traces(limit: Int, jsonOutput: Bool)
     case daemon
     case spaceCLI(subcommandArgs: [String])
     case prompt(text: String, allowTools: Bool)
@@ -266,6 +267,20 @@ public enum ApexCLIRouter {
         case "self-test", "--self-test":
             return ParsedCLIInvocation(command: .selfTest(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
+        case "traces", "--traces":
+            var limit = 50
+            var i = 1
+            let remList = Array(remaining)
+            while i < remList.count {
+                if remList[i] == "--limit" && i + 1 < remList.count {
+                    limit = Int(remList[i + 1]) ?? 50
+                    i += 2
+                } else {
+                    i += 1
+                }
+            }
+            return ParsedCLIInvocation(command: .traces(limit: limit, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
         default:
             throw ApexCLIError.unknownSubcommand(first)
         }
@@ -307,6 +322,7 @@ public enum ApexCLIRouter {
           provenance              Generate SLSA v1.0 build provenance attestation & SHA-256 digests
           sarif                   Export OASIS SARIF v2.1.0 security & static analysis report
           self-test               Run end-to-end CLI subcommand smoke-test contract matrix
+          traces [--limit <N>]    Export recent OpenTelemetry W3C distributed trace spans
           completions [shell]     Generate shell tab-completion script (zsh, bash, fish)
           man                     Generate troff man(1) manual page for ApexAgent(1)
           routines list           List registered automation routines
@@ -446,6 +462,35 @@ public enum ApexCLIRouter {
                 detail: testPlanReport.passed
                     ? "\(testPlanReport.plans.count) test plans verified (timeouts enabled, APEX_TEST_MODE=1)"
                     : "\(testPlanReport.findings.count) test plan finding(s)"
+            )
+        )
+
+        // 10. Distributed Tracing & Collaborative Mesh Security Gate
+        let sampleTraceEvent = TraceEvent(
+            source: "Doctor",
+            operation: "trace_mesh_health_check",
+            detail: "Verifying OTel W3C trace context & P2P rate limiter",
+            durationMs: 1.0,
+            metadata: ["traceparent": W3CTraceContext.generate().traceparent]
+        )
+        let traceReport = TraceSpanExporter.export(events: [sampleTraceEvent])
+        let meshReport = MeshSecurityAuditor.audit(
+            config: MeshAuthConfig(
+                lanModeEnabled: false,
+                token: "0123456789abcdef0123456789abcdef",
+                requireP2PApproval: true,
+                bindAddress: "127.0.0.1"
+            )
+        )
+        let traceMeshPassed = traceReport.passed && meshReport.passed
+        checks.append(
+            DoctorCheckItem(
+                id: "trace_mesh_integrity",
+                title: "Distributed Tracing & Mesh Security",
+                passed: traceMeshPassed,
+                detail: traceMeshPassed
+                    ? "OTel export valid (\(traceReport.totalSpans) span), P2P rate limiter healthy (\(meshReport.rateLimitResult.burstAllowed) allowed / \(meshReport.rateLimitResult.burstThrottled) throttled)"
+                    : "Tracing or mesh security audit failure detected"
             )
         )
 
@@ -606,6 +651,12 @@ public enum ApexCLIRouter {
                 return (String(data: data, encoding: .utf8) ?? "{}", report.passed ? 0 : 1)
             }
             return (report.toMarkdown(), report.passed ? 0 : 1)
+
+        case .traces(let limit, let jsonOutput):
+            let events = Tracing.recentTraces(limit: limit)
+            let report = TraceSpanExporter.export(events: events)
+            let output = jsonOutput ? report.toOTLPJSON() : report.toMarkdown()
+            return (output, report.passed ? 0 : 1)
 
         default:
             return nil
