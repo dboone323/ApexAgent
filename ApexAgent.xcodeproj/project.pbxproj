@@ -102,8 +102,10 @@
 		2D83D18ECF411807188495D2 /* IntentToolSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27416A7D6D7178263246418 /* IntentToolSelectorTests.swift */; };
 		2DE2EA9639EE1F8AFECAB2B1 /* ResilientJSONStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC5AA0AF4AEAC87616E6142 /* ResilientJSONStore.swift */; };
 		2E022D5939C264AA895968A9 /* RoutineRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2839819F835E6B5DAB51A8CA /* RoutineRecorder.swift */; };
+		2EC925351B8D4FB5E456FF9D /* ScreenPerceptionContractAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D22EA774422B67EDF3268A5D /* ScreenPerceptionContractAuditor.swift */; };
 		304CAF764123657BB333A8D7 /* ArtifactSizeBudgetGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01677869C536A1E8041FE4D0 /* ArtifactSizeBudgetGateTests.swift */; };
 		3079879C43DE85BBF013429D /* DurableAutomationReceiptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F45650A19B4D58517B1E5D0A /* DurableAutomationReceiptTests.swift */; };
+		30C16922DAA1B9CED8C965A7 /* ScreenPerceptionContractAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566CEADE79DE03597312F69A /* ScreenPerceptionContractAuditorTests.swift */; };
 		32A8413C79A55EDDBA5196F6 /* ANSIColorParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89FB6833BB17F9CF840D12D3 /* ANSIColorParser.swift */; };
 		335271F96C231C6E46E09F75 /* SkillManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1029F45266243C1D9237A2C /* SkillManager.swift */; };
 		335576BD55175117943481DA /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A92F5162C8780BEFB5CB9E9 /* ContentView.swift */; };
@@ -863,6 +865,7 @@
 		553432FE28D5E5F4B2CF6BD2 /* EphemeralCapabilityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EphemeralCapabilityManager.swift; sourceTree = "<group>"; };
 		55BA5085CF2D6C1E59916D61 /* ApexCompanionAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexCompanionAppTests.swift; sourceTree = "<group>"; };
 		5638C1E659D0F686B42AC53E /* AppleScriptTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptTool.swift; sourceTree = "<group>"; };
+		566CEADE79DE03597312F69A /* ScreenPerceptionContractAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenPerceptionContractAuditorTests.swift; sourceTree = "<group>"; };
 		569D5F33DFA1968F20C976C7 /* CreationSheetsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreationSheetsTests.swift; sourceTree = "<group>"; };
 		571C65734C866241FE54474B /* SkillCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillCatalogTests.swift; sourceTree = "<group>"; };
 		574DC27832C1565197903328 /* DelegateTaskTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelegateTaskTool.swift; sourceTree = "<group>"; };
@@ -1105,6 +1108,7 @@
 		D179C4E088707045651E9481 /* AgentOrchestrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentOrchestrator.swift; sourceTree = "<group>"; };
 		D1844C7164F6C29E259C41A2 /* WritingToolsSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WritingToolsSupport.swift; sourceTree = "<group>"; };
 		D1E54B01D0CEEB92A6038E92 /* MCPServerDashboardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerDashboardTests.swift; sourceTree = "<group>"; };
+		D22EA774422B67EDF3268A5D /* ScreenPerceptionContractAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenPerceptionContractAuditor.swift; sourceTree = "<group>"; };
 		D326AF58C2BEFC04CC7F728A /* MapSearchTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapSearchTool.swift; sourceTree = "<group>"; };
 		D3680423044E98907CCBB2F0 /* MeshSecurityAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshSecurityAuditor.swift; sourceTree = "<group>"; };
 		D3C0392E1D6F6CA4B11C6DF5 /* AgentSessionEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSessionEntity.swift; sourceTree = "<group>"; };
@@ -1403,6 +1407,7 @@
 				D9E7CB783A177E2CCB9AB6A3 /* ProjectManagementTools.swift */,
 				997A86D1BE9862F16EB4D24F /* ReminderTool.swift */,
 				F636A0FC658F1E3467177536 /* RunWorkflowTool.swift */,
+				D22EA774422B67EDF3268A5D /* ScreenPerceptionContractAuditor.swift */,
 				00C1D19CCF1A38E3D1CF08C8 /* ScreenPerceptionTool.swift */,
 				2E675D2E8EF03FD61A52FB7A /* ScreenshotTool.swift */,
 				944559FAAD58B407A4886E1A /* ShellTool.swift */,
@@ -1961,6 +1966,7 @@
 				C27748CB407EBA5F59F72068 /* RoutineWebhookAndRunTests.swift */,
 				9B13DBA979D085D47B5CB8AC /* SandboxTests.swift */,
 				514DADE990F05C6E631E1E85 /* SARIFReportExporterTests.swift */,
+				566CEADE79DE03597312F69A /* ScreenPerceptionContractAuditorTests.swift */,
 				7F0C9F71A30FD52873B06B09 /* SecretRedactorTests.swift */,
 				30D42FF1852354B25ADFA0BB /* SecurityGovernanceTests.swift */,
 				2018A7EA41B141C39D3F91A3 /* SecuritySandboxErrorTests.swift */,
@@ -2566,6 +2572,7 @@
 				5AD658859C98BDB47E5B22AC /* RunWorkflowTool.swift in Sources */,
 				3C421EA0BD041F565C8CD004 /* SARIFReportExporter.swift in Sources */,
 				B9E6ADAC582942E2D4A42FB0 /* ScreenHighlightOverlay.swift in Sources */,
+				2EC925351B8D4FB5E456FF9D /* ScreenPerceptionContractAuditor.swift in Sources */,
 				DE87483C10B5F6ED72A1A80E /* ScreenPerceptionTool.swift in Sources */,
 				3551AD2DF8BCEB6C677F6C8B /* ScreenStreamer.swift in Sources */,
 				0727500C6F30D5CB0FD78DBD /* ScreenshotTool.swift in Sources */,
@@ -2866,6 +2873,7 @@
 				90F4A95681A4533D0DAFCBAF /* RoutineWebhookAndRunTests.swift in Sources */,
 				D6140FE2BE082E40D64AEF69 /* SARIFReportExporterTests.swift in Sources */,
 				9D8EF53FDC812E58FBC04C59 /* SandboxTests.swift in Sources */,
+				30C16922DAA1B9CED8C965A7 /* ScreenPerceptionContractAuditorTests.swift in Sources */,
 				8B1345FD2BF7EF74963F0265 /* SecretRedactorTests.swift in Sources */,
 				12BFCF23A966D482E85B95E1 /* SecurityGovernanceTests.swift in Sources */,
 				A131EDDC5255E880CBC741BB /* SecuritySandboxErrorTests.swift in Sources */,
