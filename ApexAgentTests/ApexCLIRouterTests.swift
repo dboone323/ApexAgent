@@ -30,6 +30,10 @@ struct ApexCLIRouterTests {
         #expect(try ApexCLIRouter.parse(arguments: ["ApexAgent", "--json", "skills", "validate"]).command == .skillsValidate(jsonOutput: true))
         #expect(try ApexCLIRouter.parse(arguments: ["ApexAgent", "diagnostics"]).command == .diagnostics(jsonOutput: false))
 
+        // Traces subcommand
+        #expect(try ApexCLIRouter.parse(arguments: ["ApexAgent", "traces"]).command == .traces(limit: 50, jsonOutput: false))
+        #expect(try ApexCLIRouter.parse(arguments: ["ApexAgent", "--json", "traces", "--limit", "100"]).command == .traces(limit: 100, jsonOutput: true))
+
         // Daemon, Space CLI, and Headless Prompt
         #expect(try ApexCLIRouter.parse(arguments: ["ApexAgent", "--daemon"]).command == .daemon)
         #expect(try ApexCLIRouter.parse(arguments: ["ApexAgent", "--space-cli", "list"]).command == .spaceCLI(subcommandArgs: ["list"]))
@@ -51,11 +55,11 @@ struct ApexCLIRouterTests {
         }
     }
 
-    @Test("ApexCLIRouter.runDoctor executes all 9 real subsystem checks and formats text and JSON reports")
+    @Test("ApexCLIRouter.runDoctor executes all 10 real subsystem checks and formats text and JSON reports")
     func doctorRunsSubsystemChecksAndFormatsOutput() throws {
         let report = ApexCLIRouter.runDoctor()
         #expect(report.version == ApexCLIRouter.appVersion)
-        #expect(report.checks.count == 9)
+        #expect(report.checks.count == 10)
         #expect(report.checks.map(\.id) == [
             "privacy_manifest",
             "persistence_store",
@@ -65,21 +69,22 @@ struct ApexCLIRouterTests {
             "dependency_lock",
             "bundle_integrity",
             "privacy_manifest_drift",
-            "test_plan_integrity"
+            "test_plan_integrity",
+            "trace_mesh_integrity"
         ])
         #expect(report.overallPassed)
 
         let textOutput = report.formatText()
         #expect(textOutput.contains("ApexAgent Doctor"))
         #expect(textOutput.contains("[PASS] App Privacy Manifest"))
-        #expect(textOutput.contains("9/9 checks passed — HEALTHY"))
+        #expect(textOutput.contains("10/10 checks passed — HEALTHY"))
 
         let jsonString = report.formatJSON()
         let decoded = try JSONDecoder().decode(DoctorReport.self, from: Data(jsonString.utf8))
         #expect(decoded == report)
     }
 
-    @Test("renderImmediateSubcommand renders help, version, doctor, diagnostics, skills, and routines")
+    @Test("renderImmediateSubcommand renders help, version, doctor, diagnostics, skills, routines, and traces")
     @MainActor
     func renderImmediateSubcommands() throws {
         let help = try #require(ApexCLIRouter.renderImmediateSubcommand(.help))
@@ -102,5 +107,13 @@ struct ApexCLIRouterTests {
         let routinesOut = try #require(ApexCLIRouter.renderImmediateSubcommand(.routinesList(jsonOutput: true)))
         #expect(routinesOut.exitCode == 0)
         #expect(routinesOut.output.hasPrefix("["))
+
+        let tracesMD = try #require(ApexCLIRouter.renderImmediateSubcommand(.traces(limit: 10, jsonOutput: false)))
+        #expect(tracesMD.exitCode == 0)
+        #expect(tracesMD.output.contains("Distributed Trace & OTel Export"))
+
+        let tracesJSON = try #require(ApexCLIRouter.renderImmediateSubcommand(.traces(limit: 10, jsonOutput: true)))
+        #expect(tracesJSON.exitCode == 0)
+        #expect(tracesJSON.output.contains("resourceSpans"))
     }
 }

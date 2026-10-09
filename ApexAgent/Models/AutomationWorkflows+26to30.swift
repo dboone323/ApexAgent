@@ -72,11 +72,11 @@ extension ApexWorkflows {
         )
     }
 
-    // MARK: 30 — Full 9-check ApexAgent Doctor subsystem verification
+    // MARK: 30 — Full 10-check ApexAgent Doctor subsystem verification
     static func workflow30() async -> WorkflowResult {
-        let name = "Full 9-check ApexAgent Doctor subsystem verification"
+        let name = "Full 10-check ApexAgent Doctor subsystem verification"
         let report = ApexCLIRouter.runDoctor()
-        let passed = report.overallPassed && report.checks.count == 9
+        let passed = report.overallPassed && report.checks.count == 10
         return WorkflowResult(
             id: 30,
             name: name,

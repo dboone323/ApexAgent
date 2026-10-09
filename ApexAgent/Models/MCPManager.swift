@@ -3,13 +3,29 @@ import FoundationModels
 import Observation
 import SharedKit
 
-struct MCPServerConfig: Codable, Identifiable, Equatable {
-    var id = UUID()
-    var name: String
-    var command: String
-    var arguments: [String]
-    var transport: String = "stdio"
-    var endpointURL: String?
+public struct MCPServerConfig: Codable, Identifiable, Equatable, Sendable {
+    public var id: UUID
+    public var name: String
+    public var command: String
+    public var arguments: [String]
+    public var transport: String
+    public var endpointURL: String?
+
+    public init(
+        id: UUID = UUID(),
+        name: String,
+        command: String,
+        arguments: [String] = [],
+        transport: String = "stdio",
+        endpointURL: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.command = command
+        self.arguments = arguments
+        self.transport = transport
+        self.endpointURL = endpointURL
+    }
 }
 
 @Observable

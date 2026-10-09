@@ -25,6 +25,7 @@ public enum CLICompletionGenerator {
         ("provenance", "Generate SLSA v1.0 build provenance attestation and SHA-256 digests"),
         ("sarif", "Export OASIS SARIF v2.1.0 security and static analysis report"),
         ("self-test", "Run end-to-end CLI subcommand smoke-test contract matrix"),
+        ("traces", "Export recent OpenTelemetry W3C distributed trace spans"),
         ("completions", "Generate shell tab-completion script (zsh, bash, fish)"),
         ("man", "Generate troff manual page for ApexAgent(1)"),
         ("help", "Show CLI usage information"),
@@ -112,7 +113,7 @@ public enum CLICompletionGenerator {
             '--list[List all automation workflows]' \\
             '--json[Emit JSON workflow results]' \\
             '(-h --help)'{-h,--help}'[Show help message]' \\
-            '*:workflow id:(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30)'
+            '*:workflow id:(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40)'
         }
 
         compdef _apexagent ApexAgent
@@ -159,7 +160,7 @@ public enum CLICompletionGenerator {
 
         _apexflow_completions() {
           local cur="${COMP_WORDS[COMP_CWORD]}"
-          COMPREPLY=( $(compgen -W "--list --json --help 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30" -- "${cur}") )
+          COMPREPLY=( $(compgen -W "--list --json --help 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40" -- "${cur}") )
         }
 
         complete -F _apexagent_completions ApexAgent
