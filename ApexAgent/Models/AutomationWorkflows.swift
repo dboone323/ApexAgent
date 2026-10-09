@@ -118,7 +118,7 @@ public enum ApexWorkflows {
             WorkflowDescriptor(id: 27, name: "Xcode .xctestplan timeout & coverage target audit", subsystems: "TestPlanIntegrityAuditor, xctestplan"),
             WorkflowDescriptor(id: 28, name: "Workspace source complexity & asset footprint gate", subsystems: "ArtifactSizeBudgetGate, Resources"),
             WorkflowDescriptor(id: 29, name: "CLI subcommand contract & JSON smoke-test matrix", subsystems: "CLISmokeTestHarness, ApexCLIRouter"),
-            WorkflowDescriptor(id: 30, name: "Full 10-check ApexAgent Doctor subsystem verification", subsystems: "ApexCLIRouter.runDoctor, DoctorReport"),
+            WorkflowDescriptor(id: 30, name: "Full 11-check ApexAgent Doctor subsystem verification", subsystems: "ApexCLIRouter.runDoctor, DoctorReport"),
             WorkflowDescriptor(id: 31, name: "OpenTelemetry & W3C trace context exporter validation", subsystems: "TraceSpanExporter, W3CTraceContext"),
             WorkflowDescriptor(id: 32, name: "MCP tool permissions & host sandboxing security gate", subsystems: "MCPPolicyAuditor, MCPServerConfig"),
             WorkflowDescriptor(id: 33, name: "Apple Virtualization & OCI container isolation policy auditor", subsystems: "ContainerPolicyAuditor, ContainerSecurityConfig"),
@@ -127,7 +127,7 @@ public enum ApexWorkflows {
             WorkflowDescriptor(id: 36, name: "Spotlight search contract & index attribute integrity auditor", subsystems: "SpotlightContractAuditor, SpotlightIndexer"),
             WorkflowDescriptor(id: 37, name: "MetricKit telemetry anonymization & signed crash report packaging", subsystems: "CrashReportPackager, MetricDiagnosticPayload"),
             WorkflowDescriptor(id: 38, name: "Deep-link action dispatcher & URL scheme route gate", subsystems: "DeepLinkRouteGate, DeepLinkRouter"),
-            WorkflowDescriptor(id: 39, name: "Ten-check unified subsystem doctor diagnostic verification", subsystems: "ApexCLIRouter.runDoctor, DoctorReport"),
+            WorkflowDescriptor(id: 39, name: "Eleven-check unified subsystem doctor diagnostic verification", subsystems: "ApexCLIRouter.runDoctor, DoctorReport"),
             WorkflowDescriptor(id: 40, name: "Full-system multi-subsystem resilience audit", subsystems: "RepoHygiene, DependencyLock, Bundles, CLISmoke")
         ]
     }
@@ -163,7 +163,7 @@ public enum ApexWorkflows {
             (27, "Xcode .xctestplan timeout & coverage target audit", workflow27),
             (28, "Workspace source complexity & asset footprint gate", workflow28),
             (29, "CLI subcommand contract & JSON smoke-test matrix", workflow29),
-            (30, "Full 10-check ApexAgent Doctor subsystem verification", workflow30),
+            (30, "Full 11-check ApexAgent Doctor subsystem verification", workflow30),
             (31, "OpenTelemetry & W3C trace context exporter validation", workflow31),
             (32, "MCP tool permissions & host sandboxing security gate", workflow32),
             (33, "Apple Virtualization & OCI container isolation policy auditor", workflow33),
@@ -172,7 +172,7 @@ public enum ApexWorkflows {
             (36, "Spotlight search contract & index attribute integrity auditor", workflow36),
             (37, "MetricKit telemetry anonymization & signed crash report packaging", workflow37),
             (38, "Deep-link action dispatcher & URL scheme route gate", workflow38),
-            (39, "Ten-check unified subsystem doctor diagnostic verification", workflow39),
+            (39, "Eleven-check unified subsystem doctor diagnostic verification", workflow39),
             (40, "Full-system multi-subsystem resilience audit", workflow40),
         ]
         var results: [WorkflowResult] = []

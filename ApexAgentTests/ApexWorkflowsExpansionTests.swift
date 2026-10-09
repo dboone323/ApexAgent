@@ -46,7 +46,7 @@ struct ApexWorkflowsExpansionTests {
         #expect(markdown.contains("Xcode .xctestplan timeout & coverage target audit"))
         #expect(markdown.contains("Workspace source complexity & asset footprint gate"))
         #expect(markdown.contains("CLI subcommand contract & JSON smoke-test matrix"))
-        #expect(markdown.contains("Full 10-check ApexAgent Doctor subsystem verification"))
+        #expect(markdown.contains("Full 11-check ApexAgent Doctor subsystem verification"))
         #expect(markdown.contains("OpenTelemetry & W3C trace context exporter validation"))
         #expect(markdown.contains("MCP tool permissions & host sandboxing security gate"))
         #expect(markdown.contains("Apple Virtualization & OCI container isolation policy auditor"))
@@ -55,7 +55,7 @@ struct ApexWorkflowsExpansionTests {
         #expect(markdown.contains("Spotlight search contract & index attribute integrity auditor"))
         #expect(markdown.contains("MetricKit telemetry anonymization & signed crash report packaging"))
         #expect(markdown.contains("Deep-link action dispatcher & URL scheme route gate"))
-        #expect(markdown.contains("Ten-check unified subsystem doctor diagnostic verification"))
+        #expect(markdown.contains("Eleven-check unified subsystem doctor diagnostic verification"))
         #expect(markdown.contains("Full-system multi-subsystem resilience audit"))
     }
 }

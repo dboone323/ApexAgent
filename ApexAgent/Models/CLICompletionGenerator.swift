@@ -26,6 +26,7 @@ public enum CLICompletionGenerator {
         ("sarif", "Export OASIS SARIF v2.1.0 security and static analysis report"),
         ("self-test", "Run end-to-end CLI subcommand smoke-test contract matrix"),
         ("traces", "Export recent OpenTelemetry W3C distributed trace spans"),
+        ("policy", "Audit MCP, container, mesh, and tool execution security policies"),
         ("completions", "Generate shell tab-completion script (zsh, bash, fish)"),
         ("man", "Generate troff manual page for ApexAgent(1)"),
         ("help", "Show CLI usage information"),

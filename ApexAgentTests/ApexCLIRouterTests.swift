@@ -34,6 +34,10 @@ struct ApexCLIRouterTests {
         #expect(try ApexCLIRouter.parse(arguments: ["ApexAgent", "traces"]).command == .traces(limit: 50, jsonOutput: false))
         #expect(try ApexCLIRouter.parse(arguments: ["ApexAgent", "--json", "traces", "--limit", "100"]).command == .traces(limit: 100, jsonOutput: true))
 
+        // Policy subcommand
+        #expect(try ApexCLIRouter.parse(arguments: ["ApexAgent", "policy"]).command == .policy(jsonOutput: false))
+        #expect(try ApexCLIRouter.parse(arguments: ["ApexAgent", "--json", "policy"]).command == .policy(jsonOutput: true))
+
         // Daemon, Space CLI, and Headless Prompt
         #expect(try ApexCLIRouter.parse(arguments: ["ApexAgent", "--daemon"]).command == .daemon)
         #expect(try ApexCLIRouter.parse(arguments: ["ApexAgent", "--space-cli", "list"]).command == .spaceCLI(subcommandArgs: ["list"]))
@@ -55,11 +59,11 @@ struct ApexCLIRouterTests {
         }
     }
 
-    @Test("ApexCLIRouter.runDoctor executes all 10 real subsystem checks and formats text and JSON reports")
+    @Test("ApexCLIRouter.runDoctor executes all 11 real subsystem checks and formats text and JSON reports")
     func doctorRunsSubsystemChecksAndFormatsOutput() throws {
         let report = ApexCLIRouter.runDoctor()
         #expect(report.version == ApexCLIRouter.appVersion)
-        #expect(report.checks.count == 10)
+        #expect(report.checks.count == 11)
         #expect(report.checks.map(\.id) == [
             "privacy_manifest",
             "persistence_store",
@@ -70,14 +74,15 @@ struct ApexCLIRouterTests {
             "bundle_integrity",
             "privacy_manifest_drift",
             "test_plan_integrity",
-            "trace_mesh_integrity"
+            "trace_mesh_integrity",
+            "tool_sandbox"
         ])
         #expect(report.overallPassed)
 
         let textOutput = report.formatText()
         #expect(textOutput.contains("ApexAgent Doctor"))
         #expect(textOutput.contains("[PASS] App Privacy Manifest"))
-        #expect(textOutput.contains("10/10 checks passed — HEALTHY"))
+        #expect(textOutput.contains("11/11 checks passed — HEALTHY"))
 
         let jsonString = report.formatJSON()
         let decoded = try JSONDecoder().decode(DoctorReport.self, from: Data(jsonString.utf8))
@@ -115,5 +120,13 @@ struct ApexCLIRouterTests {
         let tracesJSON = try #require(ApexCLIRouter.renderImmediateSubcommand(.traces(limit: 10, jsonOutput: true)))
         #expect(tracesJSON.exitCode == 0)
         #expect(tracesJSON.output.contains("resourceSpans"))
+
+        let policyMD = try #require(ApexCLIRouter.renderImmediateSubcommand(.policy(jsonOutput: false)))
+        #expect(policyMD.exitCode == 0)
+        #expect(policyMD.output.contains("Security & Sandboxing Policy Audit"))
+
+        let policyJSON = try #require(ApexCLIRouter.renderImmediateSubcommand(.policy(jsonOutput: true)))
+        #expect(policyJSON.exitCode == 0)
+        #expect(policyJSON.output.contains("toolSandbox"))
     }
 }

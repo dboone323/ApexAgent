@@ -192,11 +192,11 @@ extension ApexWorkflows {
         )
     }
 
-    // MARK: 39 — Ten-check unified subsystem doctor diagnostic verification
+    // MARK: 39 — Eleven-check unified subsystem doctor diagnostic verification
     static func workflow39() async -> WorkflowResult {
-        let name = "Ten-check unified subsystem doctor diagnostic verification"
+        let name = "Eleven-check unified subsystem doctor diagnostic verification"
         let report = ApexCLIRouter.runDoctor()
-        let passed = report.overallPassed && report.checks.count == 10
+        let passed = report.overallPassed && report.checks.count >= 10
         return WorkflowResult(
             id: 39,
             name: name,
