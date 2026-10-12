@@ -68,6 +68,7 @@
 		1A9733D8E9EAA108D70671B6 /* DiffHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0EE72FA0F75A3276A5A9511 /* DiffHelperTests.swift */; };
 		1AACCB13B7606EB68118E725 /* ApexSuiteSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3189C0C2ACF9DA76539AABBB /* ApexSuiteSchema.swift */; };
 		1B6623B9A14245CFEED4E48B /* CompanionApprovalCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 340A68F208D0CFF1B82BE992 /* CompanionApprovalCardView.swift */; };
+		1B8DE7D0B74A56B5FCE0277B /* WebhookSignatureAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60CB82DE47FCA6D056616043 /* WebhookSignatureAuditor.swift */; };
 		1C72528DE2CF101712C88868 /* SecretRedactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E35BF4D3CB3E7992123AD18C /* SecretRedactor.swift */; };
 		1CA86EFB38E8E138F603F0BF /* FileSearchToolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB49EF6B9F915AB53E7690F6 /* FileSearchToolTests.swift */; };
 		1E4095593E50F7C4E5C7E927 /* AgentProfiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0394B2675C1661BE2AC59D /* AgentProfiles.swift */; };
@@ -170,6 +171,7 @@
 		4797C7D5E49CA4267D9343E4 /* FullDuplexVoiceSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12C08988ADE9622B7FB4F53A /* FullDuplexVoiceSession.swift */; };
 		479DB180739C8B327967A774 /* ConcurrentGroupChatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6458642166A6C815931D3886 /* ConcurrentGroupChatTests.swift */; };
 		48F222CE822CDCB1C02A0334 /* CronParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0DCC1A2314ABCD8D4CE6D1D /* CronParserTests.swift */; };
+		498BAEDD67B16DB783A3F4E1 /* WebhookSignatureAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FDE2847AC5C337B843FFEB7 /* WebhookSignatureAuditorTests.swift */; };
 		4AEE939649EDEB1E384B5A96 /* SwiftDataStoreIntegrityGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84E9D7DF8826115342A0019C /* SwiftDataStoreIntegrityGateTests.swift */; };
 		4B10724F7B2661EAD3980267 /* DiscordMessageParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA267D75AAB3636642A74AD2 /* DiscordMessageParser.swift */; };
 		4B5E7FF6671D4A132828C9BC /* AgentAuditLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E9AD0F69E464E99104813F9 /* AgentAuditLogger.swift */; };
@@ -985,6 +987,7 @@
 		5F195605A8A7C21895B333A7 /* WebhookReceiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebhookReceiver.swift; sourceTree = "<group>"; };
 		60059FF9B1E135BD6AB89148 /* AppGroupDataBus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupDataBus.swift; sourceTree = "<group>"; };
 		603365282256F7994051886D /* CompanionPairingSecurityAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionPairingSecurityAuditorTests.swift; sourceTree = "<group>"; };
+		60CB82DE47FCA6D056616043 /* WebhookSignatureAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebhookSignatureAuditor.swift; sourceTree = "<group>"; };
 		6138B0EF9E0BC7918F7A0ACA /* Computer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Computer.swift; sourceTree = "<group>"; };
 		61D91B61983A2299518F08FB /* RoutineRecorderVisionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineRecorderVisionTests.swift; sourceTree = "<group>"; };
 		62A2308E0746DCE04D1BAF1A /* Milestone1EmpiricalChallengeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Milestone1EmpiricalChallengeTests.swift; sourceTree = "<group>"; };
@@ -1039,6 +1042,7 @@
 		7F0C9F71A30FD52873B06B09 /* SecretRedactorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretRedactorTests.swift; sourceTree = "<group>"; };
 		7F50E93C93C4363129E174D4 /* SpeculativeExecutionAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeculativeExecutionAuditor.swift; sourceTree = "<group>"; };
 		7FBEFE7364B6ACD19758B667 /* ToolPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolPolicy.swift; sourceTree = "<group>"; };
+		7FDE2847AC5C337B843FFEB7 /* WebhookSignatureAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebhookSignatureAuditorTests.swift; sourceTree = "<group>"; };
 		80649EED2030079A9DD7810E /* VoiceTTSProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceTTSProviderTests.swift; sourceTree = "<group>"; };
 		80E964DCC52E0E2231215A33 /* ToolActorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolActorTests.swift; sourceTree = "<group>"; };
 		81879F8AF9B14A9243A53B8D /* GitHookGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHookGateTests.swift; sourceTree = "<group>"; };
@@ -1708,6 +1712,7 @@
 				FD371C030992F63AB3E35686 /* ToolExecutionSandboxGate.swift */,
 				7FBEFE7364B6ACD19758B667 /* ToolPolicy.swift */,
 				A2E71805DAE4F1BF815E362E /* VirtualizationMicroVMSandbox.swift */,
+				60CB82DE47FCA6D056616043 /* WebhookSignatureAuditor.swift */,
 			);
 			path = Security;
 			sourceTree = "<group>";
@@ -2225,6 +2230,7 @@
 				80649EED2030079A9DD7810E /* VoiceTTSProviderTests.swift */,
 				2A24EA6259BDFCEBF67C5D67 /* WebhookIntegrationTests.swift */,
 				195629AFA6E5EA5BA76B6876 /* WebhookReceiverTests.swift */,
+				7FDE2847AC5C337B843FFEB7 /* WebhookSignatureAuditorTests.swift */,
 				C391063E2E55A4F69F3241C7 /* WebReaderToolTests.swift */,
 				E29D3A2DC17366CA6C750FA3 /* WeeklyReflectionToolTests.swift */,
 				9474D458072CA8BE7F37D631 /* WorkspaceProactiveAuditorTests.swift */,
@@ -2892,6 +2898,7 @@
 				4D8668A2B63D24A4A698ABDD /* WebSearchTool.swift in Sources */,
 				299FA80989DEDA2656266136 /* WebhookReceiver.swift in Sources */,
 				E05BDCEFC56350A7BCF6F792 /* WebhookServer.swift in Sources */,
+				1B8DE7D0B74A56B5FCE0277B /* WebhookSignatureAuditor.swift in Sources */,
 				41DC723F26F11802E58DEDBB /* WeeklyReflection.swift in Sources */,
 				A5563BDE3900736E18214475 /* WeeklyReflectionTool.swift in Sources */,
 				C15B5CC5B2DC99D02F46B0C3 /* WorkspaceProactiveAuditor.swift in Sources */,
@@ -3207,6 +3214,7 @@
 				4245EC6180D6ADF8F7AE4F64 /* WebReaderToolTests.swift in Sources */,
 				FAB224533C33E973C2BB339C /* WebhookIntegrationTests.swift in Sources */,
 				F3732F21B9A4C68A7B873756 /* WebhookReceiverTests.swift in Sources */,
+				498BAEDD67B16DB783A3F4E1 /* WebhookSignatureAuditorTests.swift in Sources */,
 				3A4EE3DA57090BD82524EAAF /* WeeklyReflectionToolTests.swift in Sources */,
 				378130D4FA4D67E50E36250F /* WorkspaceProactiveAuditorTests.swift in Sources */,
 				559CB4058AAE74355FC9973D /* WritingToolsSupportTests.swift in Sources */,
