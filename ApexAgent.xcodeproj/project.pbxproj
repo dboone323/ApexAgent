@@ -283,6 +283,7 @@
 		7D22AB2A73F0FC1DA59EFE27 /* GeneratedContent+JSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC0E77C44B399B3BE2F5D4C5 /* GeneratedContent+JSON.swift */; };
 		7E7A80CC0D0C6C9AF33BDE58 /* SharedKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9339DA69FCF40209669906C3 /* SharedKit.swift */; };
 		7FC084A981E0F645B4E15810 /* SkillManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B52F6C3959978D838C4B01 /* SkillManagerTests.swift */; };
+		7FC33531EF40E5243AF9E3B3 /* SlackIntegrationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32350C58C3FA316F5619223A /* SlackIntegrationAuditorTests.swift */; };
 		80F0DBDD796CF1F98FE6A550 /* CollaborationPlaybook.swift in Sources */ = {isa = PBXBuildFile; fileRef = B912F4246AE0A1B3A85BF2C8 /* CollaborationPlaybook.swift */; };
 		8100A821CD21EB84324AE640 /* AutomationWorkflows+61to70.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FF4E0FD9C52DA3DF313884C /* AutomationWorkflows+61to70.swift */; };
 		81D7E9546916079C65339E3C /* AppIntentsContractAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DA4D3CCCC0EB9B6B3EB7202 /* AppIntentsContractAuditor.swift */; };
@@ -312,6 +313,7 @@
 		8C744A27445FDFE3D193A7C5 /* UITestActivityHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 422A4E02DABE81C2148BB63D /* UITestActivityHelper.swift */; };
 		8E1CE53C3F6C1700201E4D3E /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74A9B57C5B769BDD2B74027C /* main.swift */; };
 		8F11CC90D3BF356DB5B1EB33 /* CognitiveMemoryRetrievalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78F990F3123472B6BED6AB34 /* CognitiveMemoryRetrievalTests.swift */; };
+		8F9281D351FCD927451EDFB8 /* SlackIntegrationAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B28FD81AF2A05B8EFFC268E1 /* SlackIntegrationAuditor.swift */; };
 		90EF5FD9A45A83509FA4D342 /* NotificationTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16608A162DA38B28DD3CF9DE /* NotificationTool.swift */; };
 		90F4A95681A4533D0DAFCBAF /* RoutineWebhookAndRunTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27748CB407EBA5F59F72068 /* RoutineWebhookAndRunTests.swift */; };
 		913B6A538F62B4287435CE50 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DACB633859F62C64A5C1E54 /* Models.swift */; };
@@ -889,6 +891,7 @@
 		3173C3B0CAA96DF6A7E27FD5 /* ConversationModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConversationModel.swift; sourceTree = "<group>"; };
 		31835C69D699F33EB80D98DC /* SharedModels.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = SharedModels.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		3189C0C2ACF9DA76539AABBB /* ApexSuiteSchema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexSuiteSchema.swift; sourceTree = "<group>"; };
+		32350C58C3FA316F5619223A /* SlackIntegrationAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlackIntegrationAuditorTests.swift; sourceTree = "<group>"; };
 		325998CA97291543A8FA51BF /* WorkspaceProactiveAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceProactiveAuditor.swift; sourceTree = "<group>"; };
 		32BFC024C7CA5AB30C9D44BA /* CompanionPairingSecurityAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionPairingSecurityAuditor.swift; sourceTree = "<group>"; };
 		32D587EE7A234A23FC67769E /* ConfirmationOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmationOverlay.swift; sourceTree = "<group>"; };
@@ -1151,6 +1154,7 @@
 		B1E7A20DE3A6A676C0D9781D /* ReleaseChangelogEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseChangelogEngine.swift; sourceTree = "<group>"; };
 		B1FB30C6E4BE23626036F532 /* ModelRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRegistry.swift; sourceTree = "<group>"; };
 		B1FC4EE0959C99DE3E87CFCB /* PlanDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDashboardView.swift; sourceTree = "<group>"; };
+		B28FD81AF2A05B8EFFC268E1 /* SlackIntegrationAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlackIntegrationAuditor.swift; sourceTree = "<group>"; };
 		B2E0C936522E18C8FD525736 /* ConcurrencyIsolationStressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConcurrencyIsolationStressTests.swift; sourceTree = "<group>"; };
 		B3392AB14663E775130453CB /* PerBotModelProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerBotModelProviderTests.swift; sourceTree = "<group>"; };
 		B47774CBBD2EE0A1C7038EFC /* TraceBusEventStreamTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraceBusEventStreamTests.swift; sourceTree = "<group>"; };
@@ -1688,6 +1692,7 @@
 				E35BF4D3CB3E7992123AD18C /* SecretRedactor.swift */,
 				E538597D4C821CC359930D8B /* SecurityAuditor.swift */,
 				2D721ADBD02CBB80273EB777 /* SecurityGovernanceProfile.swift */,
+				B28FD81AF2A05B8EFFC268E1 /* SlackIntegrationAuditor.swift */,
 				509E9AED7547A2311C8495D3 /* SpaceSecurityAuditor.swift */,
 				EA656489C535BB5491488CD4 /* TerminalSecurityGate.swift */,
 				FD371C030992F63AB3E35686 /* ToolExecutionSandboxGate.swift */,
@@ -2171,6 +2176,7 @@
 				E1682A6FFC2AC1FE97FC890C /* SimctlSecurityAuditorTests.swift */,
 				571C65734C866241FE54474B /* SkillCatalogTests.swift */,
 				85B52F6C3959978D838C4B01 /* SkillManagerTests.swift */,
+				32350C58C3FA316F5619223A /* SlackIntegrationAuditorTests.swift */,
 				CD71F633296A0B0519110983 /* SpaceManagerTests.swift */,
 				A4318CA99B1B1222A14C3807 /* SpaceRoutingMatrixTests.swift */,
 				921C70B3C81800A1DD827D3B /* SpaceSecurityAuditorTests.swift */,
@@ -2823,6 +2829,7 @@
 				45C5BC37EA11F858E1F12C9B /* SkillCatalog.swift in Sources */,
 				335271F96C231C6E46E09F75 /* SkillManager.swift in Sources */,
 				B8B97E857F6B52A23350E186 /* SkillsSection.swift in Sources */,
+				8F9281D351FCD927451EDFB8 /* SlackIntegrationAuditor.swift in Sources */,
 				A51024D94F74D6C271680186 /* SpaceManager.swift in Sources */,
 				410C948C8EEF39378FE972C7 /* SpaceModels.swift in Sources */,
 				1490F8A98C2A6619962419B3 /* SpaceSecurityAuditor.swift in Sources */,
@@ -3146,6 +3153,7 @@
 				6E5D8841DC934E3A1F6C26A6 /* SimctlSecurityAuditorTests.swift in Sources */,
 				E067D25BBA484B541AB97BA3 /* SkillCatalogTests.swift in Sources */,
 				7FC084A981E0F645B4E15810 /* SkillManagerTests.swift in Sources */,
+				7FC33531EF40E5243AF9E3B3 /* SlackIntegrationAuditorTests.swift in Sources */,
 				AB7EAA722A8D32D66D83EB24 /* SpaceManagerTests.swift in Sources */,
 				950937C5157A97E026DFE654 /* SpaceRoutingMatrixTests.swift in Sources */,
 				C211571FAD50AF2445AE425A /* SpaceSecurityAuditorTests.swift in Sources */,
