@@ -93,12 +93,11 @@ struct Workflows71to80Tests {
         #expect(result.evidence.contains("referencesCount=2"))
     }
 
-    @Test("ApexWorkflows.allDescriptors contains full set of 80 workflows")
+    @Test("ApexWorkflows.allDescriptors contains full set of at least 80 workflows")
     func testWorkflowsCatalogHas80Descriptors() {
         let all = ApexWorkflows.allDescriptors()
-        #expect(all.count == 80)
-        #expect(all.last?.id == 80)
-        #expect(all.last?.name.contains("External Secret Vault") == true)
+        #expect(all.count >= 80)
+        #expect(all.first(where: { $0.id == 80 })?.name.contains("External Secret Vault") == true)
     }
 
     @Test("ApexWorkflows.run(ids:) executes batch 71–80 concurrently and accurately")

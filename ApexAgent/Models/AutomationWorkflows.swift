@@ -168,7 +168,17 @@ public enum ApexWorkflows {
             WorkflowDescriptor(id: 77, name: "Claude Desktop & Cursor MCP Config Importer & Remote SSE Security Gate", subsystems: "MCPConfigImportAuditor"),
             WorkflowDescriptor(id: 78, name: "Multi-Cloud Object Storage Artifact Export & S3 SigV4 Expiration Gate", subsystems: "CloudStorageAuditor, SignedURLVerifier"),
             WorkflowDescriptor(id: 79, name: "OpenTelemetry (OTLP) HTTP Trace Telemetry & Span DLP Scrubbing Gate", subsystems: "OTLPExporterAuditor, OTLPTracePayloadBuilder"),
-            WorkflowDescriptor(id: 80, name: "External Secret Vault & 1Password Reference Security Gate", subsystems: "ExternalSecretVaultAuditor")
+            WorkflowDescriptor(id: 80, name: "External Secret Vault & 1Password Reference Security Gate", subsystems: "ExternalSecretVaultAuditor"),
+            WorkflowDescriptor(id: 81, name: "GitHub REST Issue/PR Comment & Fine-Grained Token Permission Gate", subsystems: "GitHubIntegrationAuditor, GitHubClient"),
+            WorkflowDescriptor(id: 82, name: "Atlassian Jira Cloud Issue Creation & ADF Document Structure Gate", subsystems: "JiraIntegrationAuditor, ADFDocumentBuilder"),
+            WorkflowDescriptor(id: 83, name: "GitLab CI/CD Pipeline Trigger & Job Trace Telemetry Gate", subsystems: "GitLabIntegrationAuditor, GitLabPipelineBuilder"),
+            WorkflowDescriptor(id: 84, name: "Discord Rich Embed Webhook & Ed25519 Cryptographic Interaction Gate", subsystems: "DiscordIntegrationAuditor, Ed25519Verifier"),
+            WorkflowDescriptor(id: 85, name: "Notion Block Schema & Database Page Property Gate", subsystems: "NotionIntegrationAuditor, NotionBlockBuilder"),
+            WorkflowDescriptor(id: 86, name: "Transactional Email RFC 5322 CRLF Sanitization & Resend/Postmark Deliverability Gate", subsystems: "TransactionalEmailAuditor, EmailSanitizer"),
+            WorkflowDescriptor(id: 87, name: "Prometheus/OpenMetrics Exposition & Datadog Metrics Telemetry Gate", subsystems: "MetricsExporterAuditor, OpenMetricsBuilder"),
+            WorkflowDescriptor(id: 88, name: "PagerDuty Events API v2 Escalation & Opsgenie Alert Gate", subsystems: "IncidentManagementAuditor, PagerDutyClient"),
+            WorkflowDescriptor(id: 89, name: "OAuth 2.0 PKCE (RFC 7636) S256 Code Challenge & Token Refresh Gate", subsystems: "OAuthPKCEAuditor, RFC7636ChallengeBuilder"),
+            WorkflowDescriptor(id: 90, name: "Milestone 90: Autonomous Ecosystem Integration Verification & 90-Workflow Catalog Audit", subsystems: "EcosystemHardeningMatrix, 90WorkflowCatalog")
         ]
     }
 
@@ -254,6 +264,16 @@ public enum ApexWorkflows {
             (78, "Multi-Cloud Object Storage Artifact Export & S3 SigV4 Expiration Gate", workflow78),
             (79, "OpenTelemetry (OTLP) HTTP Trace Telemetry & Span DLP Scrubbing Gate", workflow79),
             (80, "External Secret Vault & 1Password Reference Security Gate", workflow80),
+            (81, "GitHub REST Issue/PR Comment & Fine-Grained Token Permission Gate", workflow81),
+            (82, "Atlassian Jira Cloud Issue Creation & ADF Document Structure Gate", workflow82),
+            (83, "GitLab CI/CD Pipeline Trigger & Job Trace Telemetry Gate", workflow83),
+            (84, "Discord Rich Embed Webhook & Ed25519 Cryptographic Interaction Gate", workflow84),
+            (85, "Notion Block Schema & Database Page Property Gate", workflow85),
+            (86, "Transactional Email RFC 5322 CRLF Sanitization & Resend/Postmark Deliverability Gate", workflow86),
+            (87, "Prometheus/OpenMetrics Exposition & Datadog Metrics Telemetry Gate", workflow87),
+            (88, "PagerDuty Events API v2 Escalation & Opsgenie Alert Gate", workflow88),
+            (89, "OAuth 2.0 PKCE (RFC 7636) S256 Code Challenge & Token Refresh Gate", workflow89),
+            (90, "Milestone 90: Autonomous Ecosystem Integration Verification & 90-Workflow Catalog Audit", workflow90),
         ]
         var results: [WorkflowResult] = []
         for (id, _, body) in all where ids.isEmpty || ids.contains(id) {
