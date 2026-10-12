@@ -31,6 +31,7 @@ public enum ModelProvider: String, CaseIterable, Identifiable, Codable, Sendable
     case localOllama = "localOllama"
     case localMLX = "localMLX"
     case fmCLI = "fmCLI"
+    case openAICompatible = "openAICompatible"
 
     public var id: String { rawValue }
 
@@ -43,6 +44,7 @@ public enum ModelProvider: String, CaseIterable, Identifiable, Codable, Sendable
         case .localOllama: return "Local Ollama"
         case .localMLX: return "Local MLX-LM"
         case .fmCLI: return "Apple FoundationModels CLI"
+        case .openAICompatible: return "OpenAI-Compatible REST (OpenAI, Groq, DeepSeek)"
         }
     }
 
@@ -53,6 +55,7 @@ public enum ModelProvider: String, CaseIterable, Identifiable, Codable, Sendable
         if lower.contains("ondevice") || lower.contains("on-device") || lower.contains("system") || (lower.contains("local") && !lower.contains("ollama") && !lower.contains("mlx")) { return .appleOnDevice }
         if lower.contains("pcc") || lower.contains("privatecloud") { return .applePCC }
         if lower.contains("gemini") { return .cloudGemini }
+        if lower.contains("openai") || lower.contains("groq") || lower.contains("deepseek") || lower.contains("openrouter") { return .openAICompatible }
         if lower.contains("ollama") { return .localOllama }
         if lower.contains("mlx") { return .localMLX }
         if lower.contains("cli") { return .fmCLI }
@@ -426,6 +429,8 @@ public struct ModelRegistry: Sendable {
                 let urlStr = UserDefaults.standard.string(forKey: mlxHostKey) ?? "http://localhost:8080"
                 let url = URL(string: urlStr) ?? URL(string: "http://localhost:8080")!
                 return LocalMLXLanguageModel(hostURL: url)
+            case .openAICompatible:
+                return OpenAICompatibleLanguageModel()
             }
         case .automatic:
             let provider = activeProvider()
@@ -536,7 +541,7 @@ public struct ModelRegistry: Sendable {
             return OllamaStreamingEngine(orchestrator: orchestrator, bot: bot, allowedTools: allowedTools)
         case .localMLX:
             return MLXAgentEngine(orchestrator: orchestrator, bot: bot)
-        case .autoPicker:
+        case .openAICompatible, .autoPicker:
             return NativeAppleEngine(orchestrator: orchestrator, customSession: session)
         }
     }
@@ -572,6 +577,7 @@ extension ModelRegistry {
             case .applePCC: privClass = "🛡️ Apple Private Cloud Compute (E2E Encrypted)"
             case .localOllama, .localMLX: privClass = "🏠 Local Self-Hosted Daemon"
             case .cloudGemini: privClass = "☁️ Google Gemini Cloud API"
+            case .openAICompatible: privClass = "🌐 Universal OpenAI-Compatible API"
             case .autoPicker: privClass = "⚡️ Dynamic Balanced Routing"
             }
             md += "| `\(p.rawValue)` | **\(p.displayName)** | \(privClass) |\n"
@@ -601,13 +607,14 @@ extension ModelProvider {
         case .localOllama: return "🦙 Ollama"
         case .localMLX: return "🧠 MLX"
         case .fmCLI: return "⌨️ FM CLI"
+        case .openAICompatible: return "🌐 OpenAI"
         }
     }
 
     public var isLocal: Bool {
         switch self {
         case .appleOnDevice, .localOllama, .localMLX, .fmCLI: return true
-        case .autoPicker, .applePCC, .cloudGemini: return false
+        case .autoPicker, .applePCC, .cloudGemini, .openAICompatible: return false
         }
     }
 
