@@ -2,7 +2,7 @@
 
 > **Authoritative source of truth:** `TASK_MANIFEST.md` (90+ items across 5 tiers, all marked `[x]` done). It supersedes all prior audit reports. This document does NOT modify it.
 > **`IMPLEMENTATION_PLAN.md` is a CANDIDATE backlog only** — not authoritative. Its `[ ]` checkboxes and "Ready for Execution" status are aspirational proposals, not verified facts. Treat its workstreams below as *recommendations to be approved*, pruned against the user's policy.
-> **Policy basis:** strict scope = ApexAgent + Shared-kit only · free-tier-only (no paid plugins/services) · privacy-first / on-device · credentials in Keychain, never on disk.
+> **Policy basis:** strict scope = ApexAgent only · free-tier-only (no paid plugins/services) · privacy-first / on-device · credentials in Keychain, never on disk.
 
 ---
 

@@ -46,7 +46,7 @@ settings:
       SWIFT_OPTIMIZATION_LEVEL: "-O"
 
 targets:
-  # ── Inlined shared-kit modules (frameworks) ──
+  # ── Shared modules (frameworks) ──
   SharedLogging:
     type: framework
     platform: macOS

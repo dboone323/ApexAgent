@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import ApexAgentCore
 
-@Suite("Batch 35 — GitHub Actions CI & xcresult Quality Gate Synchronization Tests")
+@Suite("Batch 35 — CI Pipeline & xcresult Quality Gate Synchronization Tests")
 struct CIPipelineValidatorTests {
 
     private var repoRoot: URL {
@@ -11,7 +11,7 @@ struct CIPipelineValidatorTests {
             .deletingLastPathComponent()
     }
 
-    @Test("Live repository .github/workflows/swift.yml and Makefile pass full CI pipeline synchronization audit")
+    @Test("Live repository CI workflow (.gitlab-ci.yml) and Makefile pass full CI pipeline synchronization audit")
     func liveRepositoryPipelineAuditPasses() {
         let report = CIPipelineValidator.validateRepositoryPipeline(atRepoRoot: repoRoot)
         #expect(report.passed, "\(report.formatSummary())")
@@ -20,7 +20,7 @@ struct CIPipelineValidatorTests {
         #expect(report.formatSummary().hasPrefix("PASS:"))
     }
 
-    @Test("Validator detects missing GitHub Actions workflow steps and missing Makefile targets")
+    @Test("Validator detects missing CI workflow steps and missing Makefile targets")
     func detectsPipelineDrift() {
         let incompleteYAML = """
         name: Swift CI
@@ -29,7 +29,7 @@ struct CIPipelineValidatorTests {
             steps:
               - run: swift build -c release
         """
-        let missingSteps = CIPipelineValidator.validateGitHubWorkflowYAML(incompleteYAML)
+        let missingSteps = CIPipelineValidator.validateCIWorkflowYAML(incompleteYAML)
         #expect(missingSteps.contains("make hygiene"))
         #expect(missingSteps.contains("make lint"))
         #expect(missingSteps.contains("apexflow"))
