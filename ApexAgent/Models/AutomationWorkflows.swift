@@ -158,7 +158,17 @@ public enum ApexWorkflows {
             WorkflowDescriptor(id: 67, name: "Multi-agent swarm worker priority scheduling & concurrency throttling gate", subsystems: "SwarmConcurrencyAuditor, PriorityQueue"),
             WorkflowDescriptor(id: 68, name: "Agent turn watchdog step-level deadline & runaway loop gate", subsystems: "TurnWatchdogAuditor, StepDeadlineGate"),
             WorkflowDescriptor(id: 69, name: "Unified 12-check ApexAgent Doctor subsystem health matrix gate", subsystems: "DoctorExpansionAuditor, ApexCLIRouter"),
-            WorkflowDescriptor(id: 70, name: "Centurion Milestone: 100-Batch autonomous hardening loop verification & 70-workflow catalog audit", subsystems: "CenturionMilestoneAuditor, 70WorkflowCatalog")
+            WorkflowDescriptor(id: 70, name: "Centurion Milestone: 100-Batch autonomous hardening loop verification & 70-workflow catalog audit", subsystems: "CenturionMilestoneAuditor, 70WorkflowCatalog"),
+            WorkflowDescriptor(id: 71, name: "Universal OpenAI-compatible Wire Protocol & SSE Streaming Audit", subsystems: "OpenAICompatibleLanguageModel, OpenAIWireProtocolAuditor"),
+            WorkflowDescriptor(id: 72, name: "Anthropic Claude Messages API Integration & Security Audit", subsystems: "AnthropicLanguageModel, AnthropicWireProtocolAuditor"),
+            WorkflowDescriptor(id: 73, name: "Slack Block Kit Interactive Approval & HMAC-SHA256 Signature Audit", subsystems: "SlackIntegrationAuditor, SlackMessageBuilder"),
+            WorkflowDescriptor(id: 74, name: "Linear GraphQL Project Management & Issue Sync Audit", subsystems: "LinearIntegrationAuditor, LinearGraphQLBuilder"),
+            WorkflowDescriptor(id: 75, name: "Web Content Sanitization, Markdown Extraction & SSRF Perimeter Gate", subsystems: "WebReaderTool, WebContentSanitizer, SSRFGuard"),
+            WorkflowDescriptor(id: 76, name: "Multi-Vendor Inbound Webhook Verification Gate", subsystems: "WebhookSignatureAuditor"),
+            WorkflowDescriptor(id: 77, name: "Claude Desktop & Cursor MCP Config Importer & Remote SSE Security Gate", subsystems: "MCPConfigImportAuditor"),
+            WorkflowDescriptor(id: 78, name: "Multi-Cloud Object Storage Artifact Export & S3 SigV4 Expiration Gate", subsystems: "CloudStorageAuditor, SignedURLVerifier"),
+            WorkflowDescriptor(id: 79, name: "OpenTelemetry (OTLP) HTTP Trace Telemetry & Span DLP Scrubbing Gate", subsystems: "OTLPExporterAuditor, OTLPTracePayloadBuilder"),
+            WorkflowDescriptor(id: 80, name: "External Secret Vault & 1Password Reference Security Gate", subsystems: "ExternalSecretVaultAuditor")
         ]
     }
 
@@ -234,6 +244,16 @@ public enum ApexWorkflows {
             (68, "Agent turn watchdog step-level deadline & runaway loop gate", workflow68),
             (69, "Unified 12-check ApexAgent Doctor subsystem health matrix gate", workflow69),
             (70, "Centurion Milestone: 100-Batch autonomous hardening loop verification & 70-workflow catalog audit", workflow70),
+            (71, "Universal OpenAI-compatible Wire Protocol & SSE Streaming Audit", workflow71),
+            (72, "Anthropic Claude Messages API Integration & Security Audit", workflow72),
+            (73, "Slack Block Kit Interactive Approval & HMAC-SHA256 Signature Audit", workflow73),
+            (74, "Linear GraphQL Project Management & Issue Sync Audit", workflow74),
+            (75, "Web Content Sanitization, Markdown Extraction & SSRF Perimeter Gate", workflow75),
+            (76, "Multi-Vendor Inbound Webhook Verification Gate", workflow76),
+            (77, "Claude Desktop & Cursor MCP Config Importer & Remote SSE Security Gate", workflow77),
+            (78, "Multi-Cloud Object Storage Artifact Export & S3 SigV4 Expiration Gate", workflow78),
+            (79, "OpenTelemetry (OTLP) HTTP Trace Telemetry & Span DLP Scrubbing Gate", workflow79),
+            (80, "External Secret Vault & 1Password Reference Security Gate", workflow80),
         ]
         var results: [WorkflowResult] = []
         for (id, _, body) in all where ids.isEmpty || ids.contains(id) {

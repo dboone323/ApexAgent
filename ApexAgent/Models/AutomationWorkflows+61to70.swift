@@ -201,7 +201,7 @@ extension ApexWorkflows {
         let hardeningMatrix = DoctorExpansionAuditor.auditHardeningSubsystems()
         let catalog = ApexWorkflows.allDescriptors()
 
-        let passed = hardeningMatrix.passed && hardeningMatrix.score == 100.0 && catalog.count == 70
+        let passed = hardeningMatrix.passed && hardeningMatrix.score == 100.0 && catalog.count >= 70
         return WorkflowResult(
             id: 70,
             name: name,
