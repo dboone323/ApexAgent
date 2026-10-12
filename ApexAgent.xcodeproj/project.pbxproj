@@ -211,6 +211,7 @@
 		5A5A844DC5312C4A4B0CF0C5 /* BenchmarkPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA03C855AB52ADD679AC5FCA /* BenchmarkPipelineTests.swift */; };
 		5AD658859C98BDB47E5B22AC /* RunWorkflowTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = F636A0FC658F1E3467177536 /* RunWorkflowTool.swift */; };
 		5B2317BAA1BD853A241B6B32 /* Milestone1ChallengerConcurrencyStressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CF6587FCF91D705F6A54315 /* Milestone1ChallengerConcurrencyStressTests.swift */; };
+		5BBA63DF37AAC949CA1A1C06 /* OTLPExporterAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E1C652C8D86994959C38472 /* OTLPExporterAuditor.swift */; };
 		5C6174D3AE206647683C50C0 /* AccessibilityPassTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AE66F50CD907013FA9CC17D /* AccessibilityPassTests.swift */; };
 		5C694E10382CFBE430A2D905 /* WeatherTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40945B2C5DC7F6F18644CCB7 /* WeatherTool.swift */; };
 		5CD43FC4C686E5694BB81AD9 /* CognitiveMemoryEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51B98606B9A9E8579CDBF301 /* CognitiveMemoryEngine.swift */; };
@@ -226,6 +227,7 @@
 		604024AAA9F20620F0B07EA4 /* AnthropicLanguageModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6994694E8F990C544A512C9 /* AnthropicLanguageModel.swift */; };
 		6054424FF43D6480DFA80231 /* DependencyLockAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FF70F92B8036BC071520FE /* DependencyLockAuditor.swift */; };
 		60DB3A115393421231236601 /* FilePatchResilienceAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7566A84DCC9B49188FD67BAD /* FilePatchResilienceAuditorTests.swift */; };
+		60FCACDDE59D439DDE3D7162 /* OTLPExporterAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AAF848C161EC94FDFDBEFA1 /* OTLPExporterAuditorTests.swift */; };
 		619EC6F7DAC98BEB146F37C5 /* AnthropicLanguageModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D83DBAE17C5F514D3048C7A5 /* AnthropicLanguageModelTests.swift */; };
 		61B98B24A2CAC006C89592BE /* GroupChatActionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1774EC7A702FA33FDB2D32FE /* GroupChatActionTests.swift */; };
 		622FA1AE19BD5DB47FCBCF0C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 8A76A2E2D0A9A5E1EC31FDEB /* README.md */; };
@@ -847,6 +849,7 @@
 		19627F34476962E41468F7D2 /* ShortcutRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRegistry.swift; sourceTree = "<group>"; };
 		19D8D4BF60AD045D87D922EF /* MemoryCompactionAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryCompactionAuditorTests.swift; sourceTree = "<group>"; };
 		1A63E8159CE99644250DA049 /* OpenAICompatibleLanguageModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAICompatibleLanguageModelTests.swift; sourceTree = "<group>"; };
+		1AAF848C161EC94FDFDBEFA1 /* OTLPExporterAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTLPExporterAuditorTests.swift; sourceTree = "<group>"; };
 		1ACE03336D4D24B3D016DB63 /* MCPServerListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerListener.swift; sourceTree = "<group>"; };
 		1AE66F50CD907013FA9CC17D /* AccessibilityPassTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPassTests.swift; sourceTree = "<group>"; };
 		1BA900B1A83021B966585BC4 /* PowerSessionPhase1Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerSessionPhase1Tests.swift; sourceTree = "<group>"; };
@@ -892,6 +895,7 @@
 		2C279F605CD0DFF5A66226DF /* ContainerPolicyAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerPolicyAuditor.swift; sourceTree = "<group>"; };
 		2D37200B382453196FCE2722 /* DaemonAndPeerGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaemonAndPeerGateTests.swift; sourceTree = "<group>"; };
 		2D721ADBD02CBB80273EB777 /* SecurityGovernanceProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityGovernanceProfile.swift; sourceTree = "<group>"; };
+		2E1C652C8D86994959C38472 /* OTLPExporterAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTLPExporterAuditor.swift; sourceTree = "<group>"; };
 		2E675D2E8EF03FD61A52FB7A /* ScreenshotTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotTool.swift; sourceTree = "<group>"; };
 		2ED5DD2104326A302B1FFA8B /* TickerScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TickerScheduler.swift; sourceTree = "<group>"; };
 		2FA7E397A7B6A3180EA5ABD8 /* SystemToolsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemToolsTests.swift; sourceTree = "<group>"; };
@@ -1708,6 +1712,7 @@
 				2A0EA06727C72EFC42384D30 /* MCPPolicyAuditor.swift */,
 				6FC7192FE41377A4E4833739 /* MCPWireProtocolAuditor.swift */,
 				D3680423044E98907CCBB2F0 /* MeshSecurityAuditor.swift */,
+				2E1C652C8D86994959C38472 /* OTLPExporterAuditor.swift */,
 				832E1C05E7B5D0DA2C0278A1 /* PrivacyManifestDriftAuditor.swift */,
 				BD82451CB46E062606319742 /* PrivacyManifestInspector.swift */,
 				F7C4B2419D12E15EFA230147 /* ReleaseProvenanceGenerator.swift */,
@@ -2161,6 +2166,7 @@
 				18BCC47E55D126E1283063EE /* NetworkResilienceAuditorTests.swift */,
 				1A63E8159CE99644250DA049 /* OpenAICompatibleLanguageModelTests.swift */,
 				8E4285C8CF42A0AAE5D09635 /* OSAutomationTests.swift */,
+				1AAF848C161EC94FDFDBEFA1 /* OTLPExporterAuditorTests.swift */,
 				0F90D3619B6C39CBF200A1E7 /* OverlayGeometryAuditorTests.swift */,
 				96A1931CFED536EBE4A21346 /* PeerApprovalTests.swift */,
 				704EA7AD066A3E9438588C27 /* PendingRoadmapItemsTests.swift */,
@@ -2801,6 +2807,7 @@
 				78C0F6E79EF54D1347351F2F /* NetworkResilienceAuditor.swift in Sources */,
 				90EF5FD9A45A83509FA4D342 /* NotificationTool.swift in Sources */,
 				AEAC43E5925CDF2ACEA6E66A /* OSLogQueryTool.swift in Sources */,
+				5BBA63DF37AAC949CA1A1C06 /* OTLPExporterAuditor.swift in Sources */,
 				B20FAA8C2A1E758451726A09 /* OllamaAgentEngine.swift in Sources */,
 				A35958B59497D87145102551 /* OpenAICompatibleLanguageModel.swift in Sources */,
 				68C13A46F80C9C4E0F3F9C44 /* OrchestratorProvider.swift in Sources */,
@@ -3147,6 +3154,7 @@
 				B75564663CF8304666A6449B /* NativeToolsP3Tests.swift in Sources */,
 				83FFB06D8A6DCC2307873B09 /* NetworkResilienceAuditorTests.swift in Sources */,
 				8347B5556A5936854EB81F50 /* OSAutomationTests.swift in Sources */,
+				60FCACDDE59D439DDE3D7162 /* OTLPExporterAuditorTests.swift in Sources */,
 				E6A026B06B5B025FC0151943 /* OpenAICompatibleLanguageModelTests.swift in Sources */,
 				5F8733259A116392403AB283 /* OverlayGeometryAuditorTests.swift in Sources */,
 				28807BBA2ECAE58F92694616 /* PeerApprovalTests.swift in Sources */,
