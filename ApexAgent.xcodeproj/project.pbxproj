@@ -169,6 +169,7 @@
 		41DC723F26F11802E58DEDBB /* WeeklyReflection.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC816014A875377AB08C6513 /* WeeklyReflection.swift */; };
 		4245EC6180D6ADF8F7AE4F64 /* WebReaderToolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C391063E2E55A4F69F3241C7 /* WebReaderToolTests.swift */; };
 		424832240A3119CE7A32C28A /* AgentProfileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 925A92C3B22F0B3846FAD195 /* AgentProfileTests.swift */; };
+		42B6AF3139661FD529172D36 /* NotionIntegrationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7D223E5F695616B00214098 /* NotionIntegrationAuditorTests.swift */; };
 		42F00DF1A93D9DCCFFFD25F3 /* DynamicToolRouting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167A0B5084A0E6678EF5C2C /* DynamicToolRouting.swift */; };
 		4362443F94C3EE8D3E6BA62C /* AgentRegistryModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2296A3DD3E845C0DA38F9106 /* AgentRegistryModel.swift */; };
 		44855F5EFFD4F181C12B81B9 /* PerBotModelProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3392AB14663E775130453CB /* PerBotModelProviderTests.swift */; };
@@ -205,6 +206,7 @@
 		549F3BA9085BF5E876BC3972 /* SecurityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE26C15832A4BFACD5769FAF /* SecurityTests.swift */; };
 		559CB4058AAE74355FC9973D /* WritingToolsSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D7D801623249430B3C9F13E /* WritingToolsSupportTests.swift */; };
 		5710F44123EE4E49334D5E43 /* DeepLinkRouteGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B199E3E46B524F119DC824 /* DeepLinkRouteGate.swift */; };
+		574054715888E4567827ABC1 /* NotionIntegrationAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0217FF7116D7643BAF4B4821 /* NotionIntegrationAuditor.swift */; };
 		5845682383FB74B82A919423 /* SharedKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 837ED69F7602C780E28AB52F /* SharedKit.framework */; };
 		5860B949511D500C87435D04 /* RoutineReplayAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B48A3E3BBF50F34BE93E678D /* RoutineReplayAuditorTests.swift */; };
 		589A9AC7203280CC26A20BB4 /* PrivacyManifestDriftAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06DC124CCDB5C4805C53E825 /* PrivacyManifestDriftAuditorTests.swift */; };
@@ -811,6 +813,7 @@
 		01BFA76F66D31A401D1FEB86 /* DiscordMessagePoller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscordMessagePoller.swift; sourceTree = "<group>"; };
 		01D36BE270D67C0F522A0602 /* AgentAuditLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentAuditLog.swift; sourceTree = "<group>"; };
 		01F6B6D4B696148853346579 /* AppIntentsContractAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppIntentsContractAuditorTests.swift; sourceTree = "<group>"; };
+		0217FF7116D7643BAF4B4821 /* NotionIntegrationAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionIntegrationAuditor.swift; sourceTree = "<group>"; };
 		023985A14D3E0159D50EFF7D /* AutomationWorkflows+16to20.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+16to20.swift"; sourceTree = "<group>"; };
 		025E4460957453D0CD4E0E94 /* RetrievalIndexIntegrityAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrievalIndexIntegrityAuditor.swift; sourceTree = "<group>"; };
 		045F5E80CCCC1E1E88D3EE9D /* TestPlanIntegrityAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestPlanIntegrityAuditorTests.swift; sourceTree = "<group>"; };
@@ -1289,6 +1292,7 @@
 		D5B638C992A9831210C08E52 /* BenchmarkEvaluationPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkEvaluationPipeline.swift; sourceTree = "<group>"; };
 		D6049722417408EC2DBEC890 /* RoutineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineTests.swift; sourceTree = "<group>"; };
 		D7925A2E01333706A532B2FC /* MultimodalCompanionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultimodalCompanionTests.swift; sourceTree = "<group>"; };
+		D7D223E5F695616B00214098 /* NotionIntegrationAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionIntegrationAuditorTests.swift; sourceTree = "<group>"; };
 		D83DBAE17C5F514D3048C7A5 /* AnthropicLanguageModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicLanguageModelTests.swift; sourceTree = "<group>"; };
 		D8CBDDD8539C304129ACCA2A /* SpaceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceModels.swift; sourceTree = "<group>"; };
 		D91C06E7F88679C5C794F2D6 /* BrowserAndDaemonTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserAndDaemonTests.swift; sourceTree = "<group>"; };
@@ -1741,6 +1745,7 @@
 				2A0EA06727C72EFC42384D30 /* MCPPolicyAuditor.swift */,
 				6FC7192FE41377A4E4833739 /* MCPWireProtocolAuditor.swift */,
 				D3680423044E98907CCBB2F0 /* MeshSecurityAuditor.swift */,
+				0217FF7116D7643BAF4B4821 /* NotionIntegrationAuditor.swift */,
 				2E1C652C8D86994959C38472 /* OTLPExporterAuditor.swift */,
 				832E1C05E7B5D0DA2C0278A1 /* PrivacyManifestDriftAuditor.swift */,
 				BD82451CB46E062606319742 /* PrivacyManifestInspector.swift */,
@@ -2199,6 +2204,7 @@
 				759CF2D90E843E4E6DED99EC /* NativeToolsP2Tests.swift */,
 				3548B71CBDAD3A48C11556A7 /* NativeToolsP3Tests.swift */,
 				18BCC47E55D126E1283063EE /* NetworkResilienceAuditorTests.swift */,
+				D7D223E5F695616B00214098 /* NotionIntegrationAuditorTests.swift */,
 				1A63E8159CE99644250DA049 /* OpenAICompatibleLanguageModelTests.swift */,
 				8E4285C8CF42A0AAE5D09635 /* OSAutomationTests.swift */,
 				1AAF848C161EC94FDFDBEFA1 /* OTLPExporterAuditorTests.swift */,
@@ -2848,6 +2854,7 @@
 				872B5AEB64877E43F388F42D /* NetworkDiagnosticsTool.swift in Sources */,
 				78C0F6E79EF54D1347351F2F /* NetworkResilienceAuditor.swift in Sources */,
 				90EF5FD9A45A83509FA4D342 /* NotificationTool.swift in Sources */,
+				574054715888E4567827ABC1 /* NotionIntegrationAuditor.swift in Sources */,
 				AEAC43E5925CDF2ACEA6E66A /* OSLogQueryTool.swift in Sources */,
 				5BBA63DF37AAC949CA1A1C06 /* OTLPExporterAuditor.swift in Sources */,
 				B20FAA8C2A1E758451726A09 /* OllamaAgentEngine.swift in Sources */,
@@ -3200,6 +3207,7 @@
 				FEF25258241FB6989EBBB4FE /* NativeToolsP2Tests.swift in Sources */,
 				B75564663CF8304666A6449B /* NativeToolsP3Tests.swift in Sources */,
 				83FFB06D8A6DCC2307873B09 /* NetworkResilienceAuditorTests.swift in Sources */,
+				42B6AF3139661FD529172D36 /* NotionIntegrationAuditorTests.swift in Sources */,
 				8347B5556A5936854EB81F50 /* OSAutomationTests.swift in Sources */,
 				60FCACDDE59D439DDE3D7162 /* OTLPExporterAuditorTests.swift in Sources */,
 				E6A026B06B5B025FC0151943 /* OpenAICompatibleLanguageModelTests.swift in Sources */,
