@@ -55,6 +55,7 @@
 		129C09CC682BF64BA5009248 /* GitOperationsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86656B960D361A4F8E482E69 /* GitOperationsTool.swift */; };
 		12BFCF23A966D482E85B95E1 /* SecurityGovernanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30D42FF1852354B25ADFA0BB /* SecurityGovernanceTests.swift */; };
 		136EAEAA76FC50E936E7E240 /* EnterpriseSecurityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2957F6490F82EE48FA0EC17B /* EnterpriseSecurityTests.swift */; };
+		13DDA0DCC2A21D1049E3D2C9 /* JiraIntegrationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7FD12D7EFE90E197CF1DD0F /* JiraIntegrationAuditorTests.swift */; };
 		142343E83DEBF4BB4502D187 /* ApexAgentApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C76440A35838941EFC30E32 /* ApexAgentApp.swift */; };
 		14574CEC211E61D1D854E379 /* MemoryCompactionAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD861B0E3F3992AE1CF60CD2 /* MemoryCompactionAuditor.swift */; };
 		1490F8A98C2A6619962419B3 /* SpaceSecurityAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 509E9AED7547A2311C8495D3 /* SpaceSecurityAuditor.swift */; };
@@ -71,6 +72,7 @@
 		1AACCB13B7606EB68118E725 /* ApexSuiteSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3189C0C2ACF9DA76539AABBB /* ApexSuiteSchema.swift */; };
 		1B6623B9A14245CFEED4E48B /* CompanionApprovalCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 340A68F208D0CFF1B82BE992 /* CompanionApprovalCardView.swift */; };
 		1B8DE7D0B74A56B5FCE0277B /* WebhookSignatureAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60CB82DE47FCA6D056616043 /* WebhookSignatureAuditor.swift */; };
+		1BD5ED04395AC69A2A5F07F8 /* JiraIntegrationAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C52EB6969ACEEE06891CBEB /* JiraIntegrationAuditor.swift */; };
 		1C72528DE2CF101712C88868 /* SecretRedactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E35BF4D3CB3E7992123AD18C /* SecretRedactor.swift */; };
 		1CA86EFB38E8E138F603F0BF /* FileSearchToolTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB49EF6B9F915AB53E7690F6 /* FileSearchToolTests.swift */; };
 		1E4095593E50F7C4E5C7E927 /* AgentProfiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD0394B2675C1661BE2AC59D /* AgentProfiles.swift */; };
@@ -859,6 +861,7 @@
 		1ACE03336D4D24B3D016DB63 /* MCPServerListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerListener.swift; sourceTree = "<group>"; };
 		1AE66F50CD907013FA9CC17D /* AccessibilityPassTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityPassTests.swift; sourceTree = "<group>"; };
 		1BA900B1A83021B966585BC4 /* PowerSessionPhase1Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PowerSessionPhase1Tests.swift; sourceTree = "<group>"; };
+		1C52EB6969ACEEE06891CBEB /* JiraIntegrationAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JiraIntegrationAuditor.swift; sourceTree = "<group>"; };
 		1C76440A35838941EFC30E32 /* ApexAgentApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexAgentApp.swift; sourceTree = "<group>"; };
 		1C7E69FB4A4DC6743A895DFD /* CreateSkillSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSkillSheet.swift; sourceTree = "<group>"; };
 		1DB4AE52709A0E0EE2CBBCE7 /* FullDuplexVoiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullDuplexVoiceTests.swift; sourceTree = "<group>"; };
@@ -1349,6 +1352,7 @@
 		F636A0FC658F1E3467177536 /* RunWorkflowTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunWorkflowTool.swift; sourceTree = "<group>"; };
 		F77ED7BAD97CEC1EEF7FD3E5 /* BotSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotSession.swift; sourceTree = "<group>"; };
 		F7C4B2419D12E15EFA230147 /* ReleaseProvenanceGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseProvenanceGenerator.swift; sourceTree = "<group>"; };
+		F7FD12D7EFE90E197CF1DD0F /* JiraIntegrationAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JiraIntegrationAuditorTests.swift; sourceTree = "<group>"; };
 		F861E6CEDA3A9E1132C9D09A /* SwiftSyntaxLintGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftSyntaxLintGateTests.swift; sourceTree = "<group>"; };
 		F89482D462F6253015846657 /* TraceEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraceEvent.swift; sourceTree = "<group>"; };
 		F89795B5349F400EF42BD8D7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -1720,6 +1724,7 @@
 				2AA845373D11701256B50D9B /* ExternalSecretVaultAuditor.swift */,
 				6B723BCFF1F5A2C1A66E09B2 /* FileRollback.swift */,
 				36DE94EE10C59F78A5CD469B /* GitHubIntegrationAuditor.swift */,
+				1C52EB6969ACEEE06891CBEB /* JiraIntegrationAuditor.swift */,
 				89F3FA05DE29FE11B0170D66 /* KeychainIntegrityAuditor.swift */,
 				C35FC783F04D2288B0729846 /* LinearIntegrationAuditor.swift */,
 				E202A95E377CB28DAD9079D3 /* MCPConfigImportAuditor.swift */,
@@ -2153,6 +2158,7 @@
 				3A30810DC3FF5F43D5615E50 /* GroupChatEngineRoutingTests.swift */,
 				C8D91B02E613F6E41B7F5651 /* GroupToolPermissionTests.swift */,
 				C27416A7D6D7178263246418 /* IntentToolSelectorTests.swift */,
+				F7FD12D7EFE90E197CF1DD0F /* JiraIntegrationAuditorTests.swift */,
 				99FBB23EC87992B326472721 /* KeychainIntegrityAuditorTests.swift */,
 				234AB2B0644E92E2547888A1 /* LaunchAgentLifecycleAuditorTests.swift */,
 				842860C5FEF850E6E9D1043A /* LinearIntegrationAuditorTests.swift */,
@@ -2797,6 +2803,7 @@
 				FC4A88A9A121E76D08A3BCEF /* GroupChat.swift in Sources */,
 				F5E35DAFCD16F22E8E44B4E8 /* IntentToolSelector.swift in Sources */,
 				750EE9D2CFB7EF0209C23B74 /* InteractiveAgentIntents.swift in Sources */,
+				1BD5ED04395AC69A2A5F07F8 /* JiraIntegrationAuditor.swift in Sources */,
 				600CCDB2BFD21515635F3CBE /* KeychainIntegrityAuditor.swift in Sources */,
 				AC595BA868B47EA33BA6335F /* KeychainManager.swift in Sources */,
 				B6B0F9530D34906BEB85A4B6 /* LaunchAgent.swift in Sources */,
@@ -3148,6 +3155,7 @@
 				E2FEEE71E5770E14566E6EB8 /* GroupChatEngineRoutingTests.swift in Sources */,
 				370618B3F9583CE9B6D98CDB /* GroupToolPermissionTests.swift in Sources */,
 				2D83D18ECF411807188495D2 /* IntentToolSelectorTests.swift in Sources */,
+				13DDA0DCC2A21D1049E3D2C9 /* JiraIntegrationAuditorTests.swift in Sources */,
 				A94D73C3676E596A2C1CCE50 /* KeychainIntegrityAuditorTests.swift in Sources */,
 				81FBF3E69191CC64B5E89E94 /* LaunchAgentLifecycleAuditorTests.swift in Sources */,
 				C1399E2C68AF825DA3AF5240 /* LinearIntegrationAuditorTests.swift in Sources */,
