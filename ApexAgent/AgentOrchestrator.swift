@@ -266,7 +266,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         if let envRaw = ProcessInfo.processInfo.environment["APEX_MODEL_PROVIDER"],
            let envProvider = ModelProvider.parse(envRaw) {
             switch envProvider {
-            case .autoPicker, .openAICompatible: return .autoPicker
+            case .autoPicker, .openAICompatible, .anthropic: return .autoPicker
             case .appleOnDevice, .fmCLI: return .localSystem
             case .applePCC: return .privateCloud
             case .cloudGemini: return .cloudGemini
