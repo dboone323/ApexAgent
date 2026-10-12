@@ -152,6 +152,7 @@
 		3C00DB60D335E5540A1DC63A /* ContainerIsolationSecurityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ED071BB876A942F642164ED /* ContainerIsolationSecurityTests.swift */; };
 		3C421EA0BD041F565C8CD004 /* SARIFReportExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6354CF55663795B4B1B4833D /* SARIFReportExporter.swift */; };
 		3C8478483A972ABF559A7F5A /* DiscordWebhookTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96CF88178F9AC96C21C0685B /* DiscordWebhookTool.swift */; };
+		3DF123D8F6F60E6E7A409BEC /* OAuthPKCEAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F5DBDE1E4F4DC9FF97C96CC /* OAuthPKCEAuditor.swift */; };
 		3E90EF4D681A672A3BE0C25B /* RoutineReplayAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E5EB5CBFBE87D2B9DDE4876 /* RoutineReplayAuditor.swift */; };
 		3E9C037A51D3F763C035CEB9 /* VisualPerceptionAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDF3EA5EA19B9E8380047A46 /* VisualPerceptionAuditorTests.swift */; };
 		3EAA55A2DE50E67ED99B9C90 /* ApexGatewayClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 385313E98181D152D76E2164 /* ApexGatewayClientTests.swift */; };
@@ -450,6 +451,7 @@
 		BCD0090BC7F4C2C3F60D3347 /* ApexCompanionAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55BA5085CF2D6C1E59916D61 /* ApexCompanionAppTests.swift */; };
 		BD1F7146E2BC1387800AB431 /* ContainerStatusTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F4D879D88273D0BE8B9A94 /* ContainerStatusTool.swift */; };
 		BD60BA843D765B4CE44B6002 /* CreateSkillSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C7E69FB4A4DC6743A895DFD /* CreateSkillSheet.swift */; };
+		BD6CC1B7C21B2A8E547D07D1 /* OAuthPKCEAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AAC78AD13369F9A58A34939 /* OAuthPKCEAuditorTests.swift */; };
 		BD930005D57663AB053CD1A0 /* RoutineRecorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E055ED608B882477C3D5A57D /* RoutineRecorderTests.swift */; };
 		BDC8D48503CA372F0E96DF86 /* ApexGatewayClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E07DD0FD9023AAEF95AFCBDE /* ApexGatewayClient.swift */; };
 		BE24504AE944634736A2E19F /* ToolDispatchEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 38A409930FA42BE4BC08C61D /* ToolDispatchEngine.swift */; };
@@ -834,6 +836,7 @@
 		093B0E7433BF91D55EB95A4F /* LiveMCPSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveMCPSupport.swift; sourceTree = "<group>"; };
 		094BA649AB8B5B27684A3EBA /* MeshSecurityAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshSecurityAuditorTests.swift; sourceTree = "<group>"; };
 		0A4535D3D95978CBA3D2F288 /* ComputerUseTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComputerUseTool.swift; sourceTree = "<group>"; };
+		0AAC78AD13369F9A58A34939 /* OAuthPKCEAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthPKCEAuditorTests.swift; sourceTree = "<group>"; };
 		0B7700FB9D45524A4DE2B253 /* TransactionalEmailAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionalEmailAuditorTests.swift; sourceTree = "<group>"; };
 		0C0127117740E3D285F5C3CD /* ToolGovernanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolGovernanceTests.swift; sourceTree = "<group>"; };
 		0D4EADB099DC18CACAB23D08 /* TerminalToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalToolbar.swift; sourceTree = "<group>"; };
@@ -926,6 +929,7 @@
 		2E1C652C8D86994959C38472 /* OTLPExporterAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OTLPExporterAuditor.swift; sourceTree = "<group>"; };
 		2E675D2E8EF03FD61A52FB7A /* ScreenshotTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotTool.swift; sourceTree = "<group>"; };
 		2ED5DD2104326A302B1FFA8B /* TickerScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TickerScheduler.swift; sourceTree = "<group>"; };
+		2F5DBDE1E4F4DC9FF97C96CC /* OAuthPKCEAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OAuthPKCEAuditor.swift; sourceTree = "<group>"; };
 		2FA7E397A7B6A3180EA5ABD8 /* SystemToolsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemToolsTests.swift; sourceTree = "<group>"; };
 		2FC4D7F8B2ABDC095493EB9E /* CollaborativeServerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollaborativeServerTests.swift; sourceTree = "<group>"; };
 		30496F4EAC20EA39BF7D149E /* ContextCompactorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextCompactorTests.swift; sourceTree = "<group>"; };
@@ -1760,6 +1764,7 @@
 				D3680423044E98907CCBB2F0 /* MeshSecurityAuditor.swift */,
 				5E819DD69810A387ACCD0782 /* MetricsExporterAuditor.swift */,
 				0217FF7116D7643BAF4B4821 /* NotionIntegrationAuditor.swift */,
+				2F5DBDE1E4F4DC9FF97C96CC /* OAuthPKCEAuditor.swift */,
 				2E1C652C8D86994959C38472 /* OTLPExporterAuditor.swift */,
 				832E1C05E7B5D0DA2C0278A1 /* PrivacyManifestDriftAuditor.swift */,
 				BD82451CB46E062606319742 /* PrivacyManifestInspector.swift */,
@@ -2222,6 +2227,7 @@
 				3548B71CBDAD3A48C11556A7 /* NativeToolsP3Tests.swift */,
 				18BCC47E55D126E1283063EE /* NetworkResilienceAuditorTests.swift */,
 				D7D223E5F695616B00214098 /* NotionIntegrationAuditorTests.swift */,
+				0AAC78AD13369F9A58A34939 /* OAuthPKCEAuditorTests.swift */,
 				1A63E8159CE99644250DA049 /* OpenAICompatibleLanguageModelTests.swift */,
 				8E4285C8CF42A0AAE5D09635 /* OSAutomationTests.swift */,
 				1AAF848C161EC94FDFDBEFA1 /* OTLPExporterAuditorTests.swift */,
@@ -2875,6 +2881,7 @@
 				78C0F6E79EF54D1347351F2F /* NetworkResilienceAuditor.swift in Sources */,
 				90EF5FD9A45A83509FA4D342 /* NotificationTool.swift in Sources */,
 				574054715888E4567827ABC1 /* NotionIntegrationAuditor.swift in Sources */,
+				3DF123D8F6F60E6E7A409BEC /* OAuthPKCEAuditor.swift in Sources */,
 				AEAC43E5925CDF2ACEA6E66A /* OSLogQueryTool.swift in Sources */,
 				5BBA63DF37AAC949CA1A1C06 /* OTLPExporterAuditor.swift in Sources */,
 				B20FAA8C2A1E758451726A09 /* OllamaAgentEngine.swift in Sources */,
@@ -3231,6 +3238,7 @@
 				B75564663CF8304666A6449B /* NativeToolsP3Tests.swift in Sources */,
 				83FFB06D8A6DCC2307873B09 /* NetworkResilienceAuditorTests.swift in Sources */,
 				42B6AF3139661FD529172D36 /* NotionIntegrationAuditorTests.swift in Sources */,
+				BD6CC1B7C21B2A8E547D07D1 /* OAuthPKCEAuditorTests.swift in Sources */,
 				8347B5556A5936854EB81F50 /* OSAutomationTests.swift in Sources */,
 				60FCACDDE59D439DDE3D7162 /* OTLPExporterAuditorTests.swift in Sources */,
 				E6A026B06B5B025FC0151943 /* OpenAICompatibleLanguageModelTests.swift in Sources */,
