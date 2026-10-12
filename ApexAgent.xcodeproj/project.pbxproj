@@ -321,6 +321,7 @@
 		8B6118B648EAEB749EE8E56B /* ToolSchemas.json in Resources */ = {isa = PBXBuildFile; fileRef = FE74A72CBB5D7208B59EA5DE /* ToolSchemas.json */; };
 		8B7703E7F9EDF15A68A807A5 /* LocalRetrievalIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACCCB1308EA171EF16B9F04C /* LocalRetrievalIndex.swift */; };
 		8C744A27445FDFE3D193A7C5 /* UITestActivityHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 422A4E02DABE81C2148BB63D /* UITestActivityHelper.swift */; };
+		8DB301830722C2BDBA4347EB /* GitLabIntegrationAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59F4595AF1F7DCD8C7B55CAF /* GitLabIntegrationAuditor.swift */; };
 		8E1CE53C3F6C1700201E4D3E /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74A9B57C5B769BDD2B74027C /* main.swift */; };
 		8E26604746E3EBDCCA572305 /* MCPConfigImportAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDE9616416245E4CD1D50E46 /* MCPConfigImportAuditorTests.swift */; };
 		8F11CC90D3BF356DB5B1EB33 /* CognitiveMemoryRetrievalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78F990F3123472B6BED6AB34 /* CognitiveMemoryRetrievalTests.swift */; };
@@ -405,6 +406,7 @@
 		B0C5FDD258ED646F1B0650FE /* DiagnosticQuerySecurityAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BE4D69859E750AC4D9258DC /* DiagnosticQuerySecurityAuditorTests.swift */; };
 		B119A8FCACA3F29DD39A00C3 /* AgentAuditLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01D36BE270D67C0F522A0602 /* AgentAuditLog.swift */; };
 		B15293A4CAF3E3C85967BB61 /* SpotlightContractAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75BFD972A5DC0BE6D97B86D /* SpotlightContractAuditorTests.swift */; };
+		B201092B663E0713407D938A /* GitLabIntegrationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 172B5574A8440F9239CFEA57 /* GitLabIntegrationAuditorTests.swift */; };
 		B20FAA8C2A1E758451726A09 /* OllamaAgentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A44BA8A4BE5198E5CAE1691 /* OllamaAgentEngine.swift */; };
 		B2451B9596B89C8333F816E5 /* DetectImageTextTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFB12B5D9E38A45F5C8CEB2B /* DetectImageTextTool.swift */; };
 		B293F9228504210DCB7E506E /* RepoHygieneAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E84F471ACD5BE056A7769F72 /* RepoHygieneAuditorTests.swift */; };
@@ -847,6 +849,7 @@
 		16B28413018F6CF1008978A5 /* Tool+Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tool+Logging.swift"; sourceTree = "<group>"; };
 		16CBE90C1CACDB47E322CB38 /* ComprehensiveBotCapabilitiesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComprehensiveBotCapabilitiesTests.swift; sourceTree = "<group>"; };
 		16DB74C91548C4E7579E0B21 /* RoutinesSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutinesSection.swift; sourceTree = "<group>"; };
+		172B5574A8440F9239CFEA57 /* GitLabIntegrationAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitLabIntegrationAuditorTests.swift; sourceTree = "<group>"; };
 		1774EC7A702FA33FDB2D32FE /* GroupChatActionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupChatActionTests.swift; sourceTree = "<group>"; };
 		17ED7C321076A96FDDE9E40B /* AgentRuntimeContract.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentRuntimeContract.swift; sourceTree = "<group>"; };
 		182805337ABFF65328B14B66 /* PlaybookRunnerInjectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybookRunnerInjectionTests.swift; sourceTree = "<group>"; };
@@ -998,6 +1001,7 @@
 		57E6A9A66CF3C285CD98595E /* LogicGapFillTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogicGapFillTests.swift; sourceTree = "<group>"; };
 		58BC788BCBD8ECFF6BE25159 /* RetrievalIndexIntegrityAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrievalIndexIntegrityAuditorTests.swift; sourceTree = "<group>"; };
 		58F12C627A0753D4ECC83630 /* ProductivityAutomationAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductivityAutomationAuditorTests.swift; sourceTree = "<group>"; };
+		59F4595AF1F7DCD8C7B55CAF /* GitLabIntegrationAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitLabIntegrationAuditor.swift; sourceTree = "<group>"; };
 		5A5C6F5419AF23EFAEF97562 /* DispatchSwarmTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DispatchSwarmTool.swift; sourceTree = "<group>"; };
 		5A7C647E49C356E9CA75CF43 /* PlaybooksAndApprovalUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybooksAndApprovalUITests.swift; sourceTree = "<group>"; };
 		5B6BC0389A658C66CFE36DC7 /* A2APeerDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = A2APeerDiscovery.swift; sourceTree = "<group>"; };
@@ -1724,6 +1728,7 @@
 				2AA845373D11701256B50D9B /* ExternalSecretVaultAuditor.swift */,
 				6B723BCFF1F5A2C1A66E09B2 /* FileRollback.swift */,
 				36DE94EE10C59F78A5CD469B /* GitHubIntegrationAuditor.swift */,
+				59F4595AF1F7DCD8C7B55CAF /* GitLabIntegrationAuditor.swift */,
 				1C52EB6969ACEEE06891CBEB /* JiraIntegrationAuditor.swift */,
 				89F3FA05DE29FE11B0170D66 /* KeychainIntegrityAuditor.swift */,
 				C35FC783F04D2288B0729846 /* LinearIntegrationAuditor.swift */,
@@ -2154,6 +2159,7 @@
 				892BE4093C46CC79832CBDF0 /* GatewayModelsTests.swift */,
 				81879F8AF9B14A9243A53B8D /* GitHookGateTests.swift */,
 				44752C1860D5B93EC7CE3A49 /* GitHubIntegrationAuditorTests.swift */,
+				172B5574A8440F9239CFEA57 /* GitLabIntegrationAuditorTests.swift */,
 				1774EC7A702FA33FDB2D32FE /* GroupChatActionTests.swift */,
 				3A30810DC3FF5F43D5615E50 /* GroupChatEngineRoutingTests.swift */,
 				C8D91B02E613F6E41B7F5651 /* GroupToolPermissionTests.swift */,
@@ -2798,6 +2804,7 @@
 				6A0C021BB1BE563B85621EC5 /* GitHookGate.swift in Sources */,
 				3EB9A523F934DA060C472C16 /* GitHubIntegrationAuditor.swift in Sources */,
 				0B8AD7F964D6D49F8437597B /* GitHubTool.swift in Sources */,
+				8DB301830722C2BDBA4347EB /* GitLabIntegrationAuditor.swift in Sources */,
 				129C09CC682BF64BA5009248 /* GitOperationsTool.swift in Sources */,
 				149C2290CA2B070577AE892D /* GlobalCommandPaletteHUD.swift in Sources */,
 				FC4A88A9A121E76D08A3BCEF /* GroupChat.swift in Sources */,
@@ -3151,6 +3158,7 @@
 				F326C05BBA0F63B54D395CE4 /* GatewayModelsTests.swift in Sources */,
 				06E9BE572C4558C09CE431CC /* GitHookGateTests.swift in Sources */,
 				D8DD68ED916D484C832CD003 /* GitHubIntegrationAuditorTests.swift in Sources */,
+				B201092B663E0713407D938A /* GitLabIntegrationAuditorTests.swift in Sources */,
 				61B98B24A2CAC006C89592BE /* GroupChatActionTests.swift in Sources */,
 				E2FEEE71E5770E14566E6EB8 /* GroupChatEngineRoutingTests.swift in Sources */,
 				370618B3F9583CE9B6D98CDB /* GroupToolPermissionTests.swift in Sources */,
