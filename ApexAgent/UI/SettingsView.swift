@@ -64,7 +64,9 @@ struct SettingsView: View {
     @State private var tavilyAPIKey: String = ""
     @State private var geminiAPIKey: String = ""
     @State private var geminiSaveStatus = ""
-    @State private var geminiModel: String = "gemini-3.5-flash"
+    @State private var geminiModel: String = "gemini-3.8-flash"
+    @State private var copilotModel: String = "gpt-4o"
+    @State private var copilotToken: String = ""
     @State private var autoTieringStrategy: AutoTieringStrategy = .balanced
     @State private var ollamaHostURL: String = "http://localhost:11434"
     @State private var ollamaModel: String = "gemma4:12b"
@@ -167,7 +169,9 @@ struct SettingsView: View {
                  tavilyAPIKey = KeychainManager.get(key: "tavilyAPIKey") ?? ""
                  geminiAPIKey = ModelRegistry.geminiAPIKey()
                  autoTieringStrategy = ModelRegistry.activeTieringStrategy()
-                 geminiModel = UserDefaults.standard.string(forKey: "apex.geminiModel") ?? "gemini-3.5-flash"
+                 geminiModel = ModelRegistry.geminiModel()
+                 copilotModel = ModelRegistry.copilotModel()
+                 copilotToken = ModelRegistry.copilotToken()
                  ollamaHostURL = UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434"
                  ollamaModel = UserDefaults.standard.string(forKey: "apex.ollamaModel") ?? "gemma4:12b"
                  localInstructions = orchestrator.agentInstructions
@@ -308,19 +312,46 @@ struct SettingsView: View {
                     .accessibilityIdentifier("geminiKeySaveStatus")
             }
 
-            TextField("Gemini Model Name", text: $geminiModel)
-                .font(AppTheme.Font.mono(13))
-                .autocorrectionDisabled()
-                .accessibilityLabel("Gemini Model Name")
-                .onChange(of: geminiModel) {
-                    UserDefaults.standard.set(geminiModel, forKey: "apex.geminiModel")
+            Picker("Gemini Model", selection: $geminiModel) {
+                ForEach(ModelRegistry.supportedGeminiModels, id: \.self) { model in
+                    Text(model).tag(model)
                 }
+            }
+            .onChange(of: geminiModel) {
+                ModelRegistry.setGeminiModel(geminiModel)
+            }
 
             HStack(spacing: AppTheme.Spacing.sm) {
                 Image(systemName: "info.circle")
                     .font(.system(size: 11))
                     .foregroundStyle(AppTheme.Palette.textTertiary)
-                Text("API keys are stored in the macOS Keychain.")
+                Text("API keys are stored in the macOS Keychain. Supports gemini-3.8-flash and gemini-3.1-pro.")
+                    .font(AppTheme.Font.caption(11))
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+            }
+        }
+
+        Section("🐙 GitHub Copilot") {
+            Picker("Copilot Model", selection: $copilotModel) {
+                ForEach(ModelRegistry.supportedCopilotModels, id: \.self) { model in
+                    Text(model).tag(model)
+                }
+            }
+            .onChange(of: copilotModel) {
+                ModelRegistry.setCopilotModel(copilotModel)
+            }
+
+            SecureField("GitHub Token (optional override)", text: $copilotToken)
+                .font(AppTheme.Font.mono(13))
+                .onChange(of: copilotToken) {
+                    ModelRegistry.setCopilotToken(copilotToken)
+                }
+
+            HStack(spacing: AppTheme.Spacing.sm) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.green)
+                Text("Automatically detects active gh CLI login or GitHub Keychain credentials.")
                     .font(AppTheme.Font.caption(11))
                     .foregroundStyle(AppTheme.Palette.textSecondary)
             }

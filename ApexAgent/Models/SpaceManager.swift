@@ -526,6 +526,65 @@ public final class SpaceManager {
         }
     }
 
+    // MARK: - Space Page Proposal Actions (Approve, Deny, Change)
+
+    public func approveProposal(_ proposal: SpacePageProposal, editorName: String = "User") {
+        guard let space = proposal.space ?? activeSpace else { return }
+        proposal.state = .approved
+        proposal.reviewedAt = Date()
+
+        if let existingPage = space.pages.first(where: { $0.id == proposal.pageId }) {
+            existingPage.markdownBody = proposal.proposedContent
+            existingPage.lastEditedByName = "\(proposal.authorName) (Approved by \(editorName))"
+            existingPage.updatedAt = Date()
+        } else {
+            let newPage = SpacePage(
+                id: proposal.pageId,
+                title: proposal.pageTitle,
+                markdownBody: proposal.proposedContent,
+                lastEditedByName: "\(proposal.authorName) (Approved by \(editorName))"
+            )
+            newPage.space = space
+            space.pages.append(newPage)
+            modelContext?.insert(newPage)
+        }
+        space.updatedAt = Date()
+        saveContext()
+    }
+
+    public func denyProposal(_ proposal: SpacePageProposal, reason: String? = nil) {
+        proposal.state = .denied
+        proposal.reviewedAt = Date()
+        proposal.userFeedback = reason
+        proposal.space?.updatedAt = Date()
+        saveContext()
+    }
+
+    public func modifyAndApproveProposal(_ proposal: SpacePageProposal, modifiedContent: String, editorName: String = "User") {
+        guard let space = proposal.space ?? activeSpace else { return }
+        proposal.state = .modified
+        proposal.proposedContent = modifiedContent
+        proposal.reviewedAt = Date()
+
+        if let existingPage = space.pages.first(where: { $0.id == proposal.pageId }) {
+            existingPage.markdownBody = modifiedContent
+            existingPage.lastEditedByName = "\(editorName) (Modified \(proposal.authorName)'s draft)"
+            existingPage.updatedAt = Date()
+        } else {
+            let newPage = SpacePage(
+                id: proposal.pageId,
+                title: proposal.pageTitle,
+                markdownBody: modifiedContent,
+                lastEditedByName: "\(editorName) (Modified \(proposal.authorName)'s draft)"
+            )
+            newPage.space = space
+            space.pages.append(newPage)
+            modelContext?.insert(newPage)
+        }
+        space.updatedAt = Date()
+        saveContext()
+    }
+
     // MARK: - @Mention Parsing & Smart Multi-Human / Multi-Agent Routing
 
     /// Extracts normalized `@handle` tokens from a message string.

@@ -93,7 +93,10 @@ final class ToolDispatchEngine {
             AnyExecutableTool(MailAutomationTool(orchestrator: orchestrator)),
             AnyExecutableTool(DiscordBotTool(orchestrator: orchestrator)),
             AnyExecutableTool(DiscordWebhookTool(orchestrator: orchestrator)),
-            AnyExecutableTool(DeepLinkTool(orchestrator: orchestrator))
+            AnyExecutableTool(DeepLinkTool(orchestrator: orchestrator)),
+            AnyExecutableTool(SpaceReadPageTool(orchestrator: orchestrator)),
+            AnyExecutableTool(SpaceWritePageTool(orchestrator: orchestrator)),
+            AnyExecutableTool(SpaceProposeDiffTool(orchestrator: orchestrator))
         ]
     }
 

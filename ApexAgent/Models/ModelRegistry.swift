@@ -33,6 +33,7 @@ public enum ModelProvider: String, CaseIterable, Identifiable, Codable, Sendable
     case fmCLI = "fmCLI"
     case openAICompatible = "openAICompatible"
     case anthropic = "anthropic"
+    case gitHubCopilot = "gitHubCopilot"
 
     public var id: String { rawValue }
 
@@ -47,6 +48,7 @@ public enum ModelProvider: String, CaseIterable, Identifiable, Codable, Sendable
         case .fmCLI: return "Apple FoundationModels CLI"
         case .openAICompatible: return "OpenAI-Compatible REST (OpenAI, Groq, DeepSeek)"
         case .anthropic: return "Anthropic Claude API"
+        case .gitHubCopilot: return "GitHub Copilot (GPT-4o, Claude 3.5 Sonnet, o1)"
         }
     }
 
@@ -57,6 +59,7 @@ public enum ModelProvider: String, CaseIterable, Identifiable, Codable, Sendable
         if lower.contains("ondevice") || lower.contains("on-device") || lower.contains("system") || (lower.contains("local") && !lower.contains("ollama") && !lower.contains("mlx")) { return .appleOnDevice }
         if lower.contains("pcc") || lower.contains("privatecloud") { return .applePCC }
         if lower.contains("gemini") { return .cloudGemini }
+        if lower.contains("copilot") || lower.contains("github") { return .gitHubCopilot }
         if lower.contains("openai") || lower.contains("groq") || lower.contains("deepseek") || lower.contains("openrouter") { return .openAICompatible }
         if lower.contains("anthropic") || lower.contains("claude") { return .anthropic }
         if lower.contains("ollama") { return .localOllama }
@@ -126,6 +129,8 @@ public struct ModelRegistry: Sendable {
     public static let providerKey = "apex.model.provider"
     public static let geminiAPIKeyKey = "apex.model.geminiAPIKey"
     public static let geminiModelKey = "apex.model.geminiModel"
+    public static let copilotModelKey = "apex.model.copilotModel"
+    public static let copilotTokenKey = "apex.model.copilotToken"
     public static let ollamaHostKey = "apex.ollamaHostURL"
     public static let ollamaModelKey = "apex.ollamaModel"
     public static let mlxHostKey = "apex.mlxHostURL"
@@ -283,14 +288,40 @@ public struct ModelRegistry: Sendable {
         setGeminiAPIKey(key)
     }
 
+    /// Supported Gemini model identifiers.
+    public static let supportedGeminiModels = ["gemini-3.8-flash", "gemini-3.1-pro", "gemini-2.5-pro", "gemini-2.0-flash"]
+
     /// Returns the configured Gemini model name.
     public static func geminiModel() -> String {
-        UserDefaults.standard.string(forKey: geminiModelKey) ?? "gemini-3.5-flash"
+        UserDefaults.standard.string(forKey: geminiModelKey) ?? "gemini-3.8-flash"
     }
 
     /// Sets the Gemini model name.
     public static func setGeminiModel(_ model: String) {
         UserDefaults.standard.set(model, forKey: geminiModelKey)
+    }
+
+    /// Supported GitHub Copilot model identifiers.
+    public static let supportedCopilotModels = ["gpt-4o", "claude-3.5-sonnet", "o1-preview", "gpt-4o-mini"]
+
+    /// Returns the configured GitHub Copilot model name.
+    public static func copilotModel() -> String {
+        UserDefaults.standard.string(forKey: copilotModelKey) ?? "gpt-4o"
+    }
+
+    /// Sets the GitHub Copilot model name.
+    public static func setCopilotModel(_ model: String) {
+        UserDefaults.standard.set(model, forKey: copilotModelKey)
+    }
+
+    /// Returns the configured GitHub Copilot personal / oauth token.
+    public static func copilotToken() -> String {
+        UserDefaults.standard.string(forKey: copilotTokenKey) ?? ""
+    }
+
+    /// Sets the GitHub Copilot personal / oauth token.
+    public static func setCopilotToken(_ token: String) {
+        UserDefaults.standard.set(token, forKey: copilotTokenKey)
     }
 
     /// Returns the configured Ollama host URL.
@@ -436,6 +467,9 @@ public struct ModelRegistry: Sendable {
                 return OpenAICompatibleLanguageModel()
             case .anthropic:
                 return AnthropicLanguageModel()
+            case .gitHubCopilot:
+                let modelName = copilotModel()
+                return GitHubCopilotLanguageModel(configuration: GitHubCopilotConfiguration(modelName: modelName))
             }
         case .automatic:
             let provider = activeProvider()
@@ -546,7 +580,7 @@ public struct ModelRegistry: Sendable {
             return OllamaStreamingEngine(orchestrator: orchestrator, bot: bot, allowedTools: allowedTools)
         case .localMLX:
             return MLXAgentEngine(orchestrator: orchestrator, bot: bot)
-        case .openAICompatible, .anthropic, .autoPicker:
+        case .openAICompatible, .anthropic, .gitHubCopilot, .autoPicker:
             return NativeAppleEngine(orchestrator: orchestrator, customSession: session)
         }
     }
@@ -584,6 +618,7 @@ extension ModelRegistry {
             case .cloudGemini: privClass = "☁️ Google Gemini Cloud API"
             case .openAICompatible: privClass = "🌐 Universal OpenAI-Compatible API"
             case .anthropic: privClass = "☁️ Anthropic Claude Cloud API"
+            case .gitHubCopilot: privClass = "🐙 GitHub Copilot Cloud API"
             case .autoPicker: privClass = "⚡️ Dynamic Balanced Routing"
             }
             md += "| `\(p.rawValue)` | **\(p.displayName)** | \(privClass) |\n"
@@ -615,13 +650,14 @@ extension ModelProvider {
         case .fmCLI: return "⌨️ FM CLI"
         case .openAICompatible: return "🌐 OpenAI"
         case .anthropic: return "🎭 Claude"
+        case .gitHubCopilot: return "🐙 Copilot"
         }
     }
 
     public var isLocal: Bool {
         switch self {
         case .appleOnDevice, .localOllama, .localMLX, .fmCLI: return true
-        case .autoPicker, .applePCC, .cloudGemini, .openAICompatible, .anthropic: return false
+        case .autoPicker, .applePCC, .cloudGemini, .openAICompatible, .anthropic, .gitHubCopilot: return false
         }
     }
 

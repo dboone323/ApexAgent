@@ -82,6 +82,13 @@ public enum SpaceSenderKind: String, Codable, CaseIterable, Sendable {
     case system = "system"
 }
 
+public enum SpaceProposalState: String, Codable, CaseIterable, Sendable {
+    case pending = "pending"
+    case approved = "approved"
+    case denied = "denied"
+    case modified = "modified"
+}
+
 // MARK: - SwiftData Models
 
 @Model
@@ -105,6 +112,9 @@ public final class SpaceModel {
 
     @Relationship(deleteRule: .cascade, inverse: \SpacePage.space)
     public var pages: [SpacePage] = []
+
+    @Relationship(deleteRule: .cascade, inverse: \SpacePageProposal.space)
+    public var proposals: [SpacePageProposal] = []
 
     public init(
         id: UUID = UUID(),
@@ -151,6 +161,16 @@ public final class SpaceModel {
         participants
             .filter { $0.kind.isAgent }
             .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+    }
+
+    public var pendingProposals: [SpacePageProposal] {
+        proposals
+            .filter { $0.state == .pending }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    public var sortedProposals: [SpacePageProposal] {
+        proposals.sorted { $0.createdAt > $1.createdAt }
     }
 }
 
@@ -365,3 +385,52 @@ public final class SpacePage {
         self.updatedAt = Date()
     }
 }
+
+// MARK: - Space Page Proposal (Human-in-the-Loop Diff Staging)
+
+@Model
+public final class SpacePageProposal {
+    public var id: UUID
+    public var pageId: UUID
+    public var pageTitle: String
+    public var authorBotId: UUID?
+    public var authorName: String
+    public var summary: String
+    public var originalContent: String
+    public var proposedContent: String
+    public var stateRaw: String
+    public var createdAt: Date
+    public var reviewedAt: Date?
+    public var userFeedback: String?
+
+    public var space: SpaceModel?
+
+    public init(
+        id: UUID = UUID(),
+        pageId: UUID,
+        pageTitle: String,
+        authorBotId: UUID? = nil,
+        authorName: String = "Agent",
+        summary: String,
+        originalContent: String,
+        proposedContent: String,
+        state: SpaceProposalState = .pending
+    ) {
+        self.id = id
+        self.pageId = pageId
+        self.pageTitle = pageTitle
+        self.authorBotId = authorBotId
+        self.authorName = authorName
+        self.summary = summary
+        self.originalContent = originalContent
+        self.proposedContent = proposedContent
+        self.stateRaw = state.rawValue
+        self.createdAt = Date()
+    }
+
+    public var state: SpaceProposalState {
+        get { SpaceProposalState(rawValue: stateRaw) ?? .pending }
+        set { stateRaw = newValue.rawValue }
+    }
+}
+

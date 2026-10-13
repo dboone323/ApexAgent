@@ -68,7 +68,7 @@ public struct ApexAgentApp: App {
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
         .modelContainer(
-            for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self],
+            for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self, SpacePageProposal.self],
             inMemory: isTestMode
         )
         .commands {
@@ -150,7 +150,7 @@ public struct ApexAgentApp: App {
                 .environment(skillManager)
                 .environment(routineManager)
                 .modelContainer(
-                    for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self],
+                    for: [Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self, SpacePageProposal.self],
                     inMemory: isTestMode
                 )
         }
@@ -291,7 +291,7 @@ extension AppDelegate {
                 Conversation.self, Message.self, AgentMemory.self, AppPermissions.self,
                 ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self,
                 ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self,
-                SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self
+                SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self, SpacePageProposal.self
             ])
             let isTestMode = ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1"
             let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: isTestMode)
@@ -339,7 +339,7 @@ public func runDaemonMode() async {
     AppLog.info(.app, "=== RUNNING DAEMON MODE ===")
     let orchestrator = AgentOrchestrator()
     do {
-        let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self)
+        let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self, SpacePageProposal.self)
         let mainContext = ModelContext(container)
         orchestrator.modelContext = mainContext
         let computer = Computer()
@@ -377,7 +377,7 @@ public func runSpaceCLIMode(subcommandArgs: [String]) async {
     AppLog.info(.app, "=== RUNNING SPACE CLI MODE ===")
     let orchestrator = AgentOrchestrator()
     do {
-        let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self)
+        let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self, SpacePageProposal.self)
         let mainContext = ModelContext(container)
         orchestrator.modelContext = mainContext
         let computer = Computer()

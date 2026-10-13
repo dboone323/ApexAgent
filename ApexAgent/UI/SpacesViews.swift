@@ -191,6 +191,7 @@ struct SpaceWorkspaceView: View {
     @State private var inspectorTab: SpaceInspectorTab = .roster
     @State private var showAddMemberSheet = false
     @State private var showNewChannelSheet = false
+    @State private var modifyingProposal: SpacePageProposal?
     @FocusState private var isComposerFocused: Bool
 
     enum SpaceInspectorTab: String, CaseIterable, Identifiable {
@@ -232,6 +233,23 @@ struct SpaceWorkspaceView: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 6)
                         .background(AppTheme.Palette.accent.opacity(0.08))
+                    }
+
+                    // Pending Proposals Banner (Approve / Deny / Change)
+                    if !space.pendingProposals.isEmpty {
+                        VStack(spacing: 8) {
+                            ForEach(space.pendingProposals) { proposal in
+                                SpaceProposalReviewCard(
+                                    proposal: proposal,
+                                    spaceManager: spaceManager,
+                                    onModify: {
+                                        modifyingProposal = proposal
+                                    }
+                                )
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
                     }
 
                     // Messages ScrollView
@@ -307,6 +325,9 @@ struct SpaceWorkspaceView: View {
             }
             .sheet(isPresented: $showNewChannelSheet) {
                 CreateSpaceChannelSheet(space: space, spaceManager: spaceManager)
+            }
+            .sheet(item: $modifyingProposal) { proposal in
+                ChangeProposalSheet(proposal: proposal, spaceManager: spaceManager)
             }
         } else {
             ContentUnavailableView(
@@ -1368,5 +1389,147 @@ struct AddSpaceParticipantSheet: View {
         }
         .padding(20)
         .frame(width: 460)
+    }
+}
+
+// MARK: - Space Proposal Review Card (Approve / Deny / Change)
+
+struct SpaceProposalReviewCard: View {
+    let proposal: SpacePageProposal
+    @Bindable var spaceManager: SpaceManager
+    let onModify: () -> Void
+
+    @State private var showDiffPreview = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "pencil.and.outline")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Page Proposal: \(proposal.pageTitle)")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.primary)
+                    Text("By \(proposal.authorName) • \(proposal.summary)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button {
+                    withAnimation { showDiffPreview.toggle() }
+                } label: {
+                    Text(showDiffPreview ? "Hide Preview" : "View Preview")
+                        .font(.system(size: 10, weight: .medium))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+            }
+
+            if showDiffPreview {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Proposed Content:")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.secondary)
+                    ScrollView {
+                        Text(proposal.proposedContent)
+                            .font(.system(size: 11, design: .monospaced))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(8)
+                    }
+                    .frame(maxHeight: 120)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .textBackgroundColor)))
+                }
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    spaceManager.approveProposal(proposal, editorName: spaceManager.activeHumanSender?.displayName ?? "User")
+                } label: {
+                    Label("Approve", systemImage: "checkmark.circle.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+                .controlSize(.small)
+
+                Button {
+                    spaceManager.denyProposal(proposal, reason: "Denied by user")
+                } label: {
+                    Label("Deny", systemImage: "xmark.circle.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .controlSize(.small)
+
+                Button {
+                    onModify()
+                } label: {
+                    Label("Change", systemImage: "pencil")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Spacer()
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.orange.opacity(0.08))
+                .stroke(Color.orange.opacity(0.25), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Change Proposal Sheet
+
+struct ChangeProposalSheet: View {
+    let proposal: SpacePageProposal
+    @Bindable var spaceManager: SpaceManager
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var editedContent: String = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Change & Approve: \(proposal.pageTitle)")
+                        .font(.headline)
+                    Text("Edit the proposed content directly before merging into the space page.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Cancel") { dismiss() }
+            }
+
+            TextEditor(text: $editedContent)
+                .font(.system(size: 12.5, design: .monospaced))
+                .frame(minWidth: 500, minHeight: 350)
+                .padding(6)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .textBackgroundColor)))
+
+            HStack {
+                Spacer()
+                Button("Approve With Changes") {
+                    spaceManager.modifyAndApproveProposal(
+                        proposal,
+                        modifiedContent: editedContent,
+                        editorName: spaceManager.activeHumanSender?.displayName ?? "User"
+                    )
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.green)
+            }
+        }
+        .padding(16)
+        .onAppear {
+            editedContent = proposal.proposedContent
+        }
     }
 }
