@@ -178,11 +178,21 @@ public enum ApexWorkflows {
             WorkflowDescriptor(id: 87, name: "Prometheus/OpenMetrics Exposition & Datadog Metrics Telemetry Gate", subsystems: "MetricsExporterAuditor, OpenMetricsBuilder"),
             WorkflowDescriptor(id: 88, name: "PagerDuty Events API v2 Escalation & Opsgenie Alert Gate", subsystems: "IncidentManagementAuditor, PagerDutyClient"),
             WorkflowDescriptor(id: 89, name: "OAuth 2.0 PKCE (RFC 7636) S256 Code Challenge & Token Refresh Gate", subsystems: "OAuthPKCEAuditor, RFC7636ChallengeBuilder"),
-            WorkflowDescriptor(id: 90, name: "Milestone 90: Autonomous Ecosystem Integration Verification & 90-Workflow Catalog Audit", subsystems: "EcosystemHardeningMatrix, 90WorkflowCatalog")
+            WorkflowDescriptor(id: 90, name: "Milestone 90: Autonomous Ecosystem Integration Verification & 90-Workflow Catalog Audit", subsystems: "EcosystemHardeningMatrix, 90WorkflowCatalog"),
+            WorkflowDescriptor(id: 91, name: "GitHub Copilot Multi-Model Routing & Token Watchdog Gate", subsystems: "CopilotMultiModelRouter, TokenWatchdog"),
+            WorkflowDescriptor(id: 92, name: "Dot Sandbox Disk Quota & Space Budget Gate", subsystems: "DotSandboxSnapshotEngine, FileAttributeSize"),
+            WorkflowDescriptor(id: 93, name: "Dot Sandbox Symlink Escape & Path Jail Gate", subsystems: "DotSandboxSnapshotEngine, PathJail"),
+            WorkflowDescriptor(id: 94, name: "Space Page Wiki-Link Graph & Cycle Detection Gate", subsystems: "SpacePageLinker, LinkGraph"),
+            WorkflowDescriptor(id: 95, name: "Space Page Proposal Conflict & Line Overlap Gate", subsystems: "SpaceProposalConflictDetector"),
+            WorkflowDescriptor(id: 96, name: "Space Unified Diff Engine & LCS Myers Validation Gate", subsystems: "SpaceDiffEngine, MyersLCS"),
+            WorkflowDescriptor(id: 97, name: "Proposal Cryptographic SHA-256 Audit Trail & Batch Review Gate", subsystems: "SpaceProposalAuditTrail, SHA256"),
+            WorkflowDescriptor(id: 98, name: "Model Tiering Fallback Cascade & Turn Loop Watchdog Gate", subsystems: "ModelTieringCascade, TurnLoopWatchdog"),
+            WorkflowDescriptor(id: 99, name: "Dot Native Keychain Credential Vault & TouchID Security Gate", subsystems: "DotCredentialVault, KeychainManager"),
+            WorkflowDescriptor(id: 100, name: "Centurion Milestone: OpenSpace Thread Investigation & 100-Workflow Catalog Audit", subsystems: "SpaceThreadDispatcher, SpaceModelMigrationGate, Milestone100Catalog")
         ]
     }
 
-    public static func run(ids: Set<Int>) async -> [WorkflowResult] {
+    public static func run(ids: Set<Int> = []) async -> [WorkflowResult] {
         let all: [(Int, String, () async -> WorkflowResult)] = [
             (1, "AI-assisted code review + persisted findings", workflow1),
             (2, "Natural-language query over the project store", workflow2),
@@ -274,12 +284,26 @@ public enum ApexWorkflows {
             (88, "PagerDuty Events API v2 Escalation & Opsgenie Alert Gate", workflow88),
             (89, "OAuth 2.0 PKCE (RFC 7636) S256 Code Challenge & Token Refresh Gate", workflow89),
             (90, "Milestone 90: Autonomous Ecosystem Integration Verification & 90-Workflow Catalog Audit", workflow90),
+            (91, "GitHub Copilot Multi-Model Routing & Token Watchdog Gate", workflow91),
+            (92, "Dot Sandbox Disk Quota & Space Budget Gate", workflow92),
+            (93, "Dot Sandbox Symlink Escape & Path Jail Gate", workflow93),
+            (94, "Space Page Wiki-Link Graph & Cycle Detection Gate", workflow94),
+            (95, "Space Page Proposal Conflict & Line Overlap Gate", workflow95),
+            (96, "Space Unified Diff Engine & LCS Myers Validation Gate", workflow96),
+            (97, "Proposal Cryptographic SHA-256 Audit Trail & Batch Review Gate", workflow97),
+            (98, "Model Tiering Fallback Cascade & Turn Loop Watchdog Gate", workflow98),
+            (99, "Dot Native Keychain Credential Vault & TouchID Security Gate", workflow99),
+            (100, "Centurion Milestone: OpenSpace Thread Investigation & 100-Workflow Catalog Audit", workflow100),
         ]
         var results: [WorkflowResult] = []
         for (id, _, body) in all where ids.isEmpty || ids.contains(id) {
             results.append(await body())
         }
         return results
+    }
+
+    public static func runAll(ids: Set<Int> = []) async -> [WorkflowResult] {
+        await run(ids: ids)
     }
 
     public static func formatJSON(_ results: [WorkflowResult]) -> String {
