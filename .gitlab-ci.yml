@@ -9,7 +9,7 @@ workflow:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 variables:
-  DEVELOPER_DIR: "/Applications/Xcode_27.app/Contents/Developer"
+  DEVELOPER_DIR: "/Applications/Xcode-beta.app/Contents/Developer"
 
 default:
   interruptible: true
@@ -42,7 +42,6 @@ build:
 test:
   stage: test
   script:
-    - sudo xcode-select -s /Applications/Xcode_27.app || true
     - xcodebuild -version && swift --version
     - mkdir -p build
     - >
