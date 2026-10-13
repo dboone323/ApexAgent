@@ -10,6 +10,7 @@
 		B1C0P1010001000100000001 /* GitHubCopilotLanguageModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0P1010001000100000001 /* GitHubCopilotLanguageModel.swift */; };
 		B1C0B121000000000000002 /* CopilotMultiModelRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0B121000000000000001 /* CopilotMultiModelRouter.swift */; };
 		B1C0P1010001000100000002 /* DotSandboxManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0P1010001000100000002 /* DotSandboxManager.swift */; };
+		B1C0B122000000000000002 /* DotSandboxSnapshotEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0B122000000000000001 /* DotSandboxSnapshotEngine.swift */; };
 		B1C0P1010001000100000003 /* SpacePageTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0P1010001000100000003 /* SpacePageTools.swift */; };
 		002FFD5E910F431AA50C85D7 /* AutomationWorkflows+4to7.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94BE12E3CCD68A483A7AEDF /* AutomationWorkflows+4to7.swift */; };
 		009A8AE7D710C956F0B1EFC8 /* MCPConfigImportAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E202A95E377CB28DAD9079D3 /* MCPConfigImportAuditor.swift */; };
@@ -372,6 +373,7 @@
 		9B62C3A139076FC6BA0E0F58 /* ApexAgentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CA7F601E86FD17476FCD003 /* ApexAgentTests.swift */; };
 		A0A000000000000000000002 /* OpenDotsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0A000000000000000000001 /* OpenDotsTests.swift */; };
 		B1C0B121000000000000004 /* CopilotMultiModelRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0B121000000000000003 /* CopilotMultiModelRouterTests.swift */; };
+		B1C0B122000000000000004 /* DotSandboxHardeningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0B122000000000000003 /* DotSandboxHardeningTests.swift */; };
 		9C9B9019D1F07D2A231D1D9E /* DaemonAndPeerGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D37200B382453196FCE2722 /* DaemonAndPeerGateTests.swift */; };
 		9C9D6D083A29DF2E5AB5B46E /* PlanTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F846649CFDC6FA77C1BFF6 /* PlanTools.swift */; };
 		9C9F9486F76B934A15596D8C /* CreateRoutineSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8384767A8FF764FAE2B9C90A /* CreateRoutineSheet.swift */; };
@@ -825,6 +827,7 @@
 		A1C0P1010001000100000001 /* GitHubCopilotLanguageModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubCopilotLanguageModel.swift; sourceTree = "<group>"; };
 		B1C0B121000000000000001 /* CopilotMultiModelRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopilotMultiModelRouter.swift; sourceTree = "<group>"; };
 		A1C0P1010001000100000002 /* DotSandboxManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotSandboxManager.swift; sourceTree = "<group>"; };
+		B1C0B122000000000000001 /* DotSandboxSnapshotEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotSandboxSnapshotEngine.swift; sourceTree = "<group>"; };
 		A1C0P1010001000100000003 /* SpacePageTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacePageTools.swift; sourceTree = "<group>"; };
 		00C1D19CCF1A38E3D1CF08C8 /* ScreenPerceptionTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenPerceptionTool.swift; sourceTree = "<group>"; };
 		0159C6A22D24E1F1A6B4D1C4 /* GhostCursorOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostCursorOverlay.swift; sourceTree = "<group>"; };
@@ -978,6 +981,7 @@
 		3CA7F601E86FD17476FCD003 /* ApexAgentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexAgentTests.swift; sourceTree = "<group>"; };
 		A0A000000000000000000001 /* OpenDotsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenDotsTests.swift; sourceTree = "<group>"; };
 		B1C0B121000000000000003 /* CopilotMultiModelRouterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopilotMultiModelRouterTests.swift; sourceTree = "<group>"; };
+		B1C0B122000000000000003 /* DotSandboxHardeningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotSandboxHardeningTests.swift; sourceTree = "<group>"; };
 		3CBBD144EC4039DC0E5977CF /* AutomationWorkflows+71to80.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+71to80.swift"; sourceTree = "<group>"; };
 		3D962AB21A303CE7B3D0D76B /* FilePatchTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePatchTool.swift; sourceTree = "<group>"; };
 		3DACB633859F62C64A5C1E54 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -1983,6 +1987,7 @@
 				A1C0P1010001000100000001 /* GitHubCopilotLanguageModel.swift */,
 				B1C0B121000000000000001 /* CopilotMultiModelRouter.swift */,
 				A1C0P1010001000100000002 /* DotSandboxManager.swift */,
+				B1C0B122000000000000001 /* DotSandboxSnapshotEngine.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -2136,6 +2141,7 @@
 				3CA7F601E86FD17476FCD003 /* ApexAgentTests.swift */,
 				A0A000000000000000000001 /* OpenDotsTests.swift */,
 				B1C0B121000000000000003 /* CopilotMultiModelRouterTests.swift */,
+				B1C0B122000000000000003 /* DotSandboxHardeningTests.swift */,
 				6D6DA119E9AA14FA498904C9 /* ApexCLIRouterTests.swift */,
 				55BA5085CF2D6C1E59916D61 /* ApexCompanionAppTests.swift */,
 				385313E98181D152D76E2164 /* ApexGatewayClientTests.swift */,
@@ -2713,6 +2719,7 @@
 				B1C0P1010001000100000001 /* GitHubCopilotLanguageModel.swift in Sources */,
 				B1C0B121000000000000002 /* CopilotMultiModelRouter.swift in Sources */,
 				B1C0P1010001000100000002 /* DotSandboxManager.swift in Sources */,
+				B1C0B122000000000000002 /* DotSandboxSnapshotEngine.swift in Sources */,
 				B1C0P1010001000100000003 /* SpacePageTools.swift in Sources */,
 				657894613E7EC550EDCF98F9 /* A2APeerDiscovery.swift in Sources */,
 				7AA7E819D103BC3CFFD5A4FF /* A2AServer.swift in Sources */,
@@ -3155,6 +3162,7 @@
 				9B62C3A139076FC6BA0E0F58 /* ApexAgentTests.swift in Sources */,
 				A0A000000000000000000002 /* OpenDotsTests.swift in Sources */,
 				B1C0B121000000000000004 /* CopilotMultiModelRouterTests.swift in Sources */,
+				B1C0B122000000000000004 /* DotSandboxHardeningTests.swift in Sources */,
 				D71F13544C5689BD6AAC9A0C /* ApexCLIRouterTests.swift in Sources */,
 				BCD0090BC7F4C2C3F60D3347 /* ApexCompanionAppTests.swift in Sources */,
 				3EAA55A2DE50E67ED99B9C90 /* ApexGatewayClientTests.swift in Sources */,
