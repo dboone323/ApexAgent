@@ -1,18 +1,18 @@
 import Foundation
 
-struct DiffLine: Identifiable, Sendable {
-    let id = UUID()
-    enum Kind: Sendable {
-        case unchanged
-        case added
-        case deleted
-    }
-    let kind: Kind
-    let text: String
-    let lineNumber: Int?
-}
-
 struct DiffHelper {
+    struct DiffLine: Identifiable, Sendable {
+        let id = UUID()
+        enum Kind: Sendable {
+            case unchanged
+            case added
+            case deleted
+        }
+        let kind: Kind
+        let text: String
+        let lineNumber: Int?
+    }
+
     static func computeDiff(oldText: String, newText: String) -> [DiffLine] {
         let oldLines = oldText.components(separatedBy: .newlines)
         let newLines = newText.components(separatedBy: .newlines)
@@ -119,7 +119,7 @@ extension DiffStats {
     }
 }
 
-extension DiffLine.Kind {
+extension DiffHelper.DiffLine.Kind {
     public var prefix: String {
         switch self {
         case .unchanged: return " "
@@ -129,9 +129,10 @@ extension DiffLine.Kind {
     }
 }
 
-extension DiffLine {
+extension DiffHelper.DiffLine {
     public func formatTruncated(maxWidth: Int = 160) -> String {
         let text = text.count > maxWidth ? String(text.prefix(maxWidth)) + "…" : text
         return "\(kind.prefix)\(text)"
     }
 }
+

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct DiffView: View {
+    private typealias DiffLine = DiffHelper.DiffLine
     let oldContent: String
     let newContent: String
     

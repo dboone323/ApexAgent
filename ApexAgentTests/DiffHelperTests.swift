@@ -6,6 +6,7 @@ import Foundation
 
 @Suite("DiffHelperTests")
 struct DiffHelperTests {
+    private typealias DiffLine = DiffHelper.DiffLine
     @Test func diffStatsBadge() {
         #expect(DiffStats(additions: 0, deletions: 0, unchanged: 5).badge.contains("No Changes"))
         #expect(DiffStats(additions: 3, deletions: 0, unchanged: 1).badge.contains("Additions"))
