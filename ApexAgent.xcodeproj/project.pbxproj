@@ -14,6 +14,8 @@
 		B1C0P1010001000100000003 /* SpacePageTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0P1010001000100000003 /* SpacePageTools.swift */; };
 		B1C0B123000000000000002 /* SpacePageLinker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0B123000000000000001 /* SpacePageLinker.swift */; };
 		B1C0B124000000000000002 /* SpaceProposalAuditTrail.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0B124000000000000001 /* SpaceProposalAuditTrail.swift */; };
+		B1C0B125000000000000002 /* ModelTieringCascade.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0B125000000000000001 /* ModelTieringCascade.swift */; };
+		B1C0B125000000000000004 /* TurnLoopWatchdog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0B125000000000000003 /* TurnLoopWatchdog.swift */; };
 		002FFD5E910F431AA50C85D7 /* AutomationWorkflows+4to7.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94BE12E3CCD68A483A7AEDF /* AutomationWorkflows+4to7.swift */; };
 		009A8AE7D710C956F0B1EFC8 /* MCPConfigImportAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E202A95E377CB28DAD9079D3 /* MCPConfigImportAuditor.swift */; };
 		0101F5F6BEE381BEA0584A8F /* SharedLogging.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 694736B63E8080A09030C984 /* SharedLogging.framework */; };
@@ -378,6 +380,7 @@
 		B1C0B122000000000000004 /* DotSandboxHardeningTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0B122000000000000003 /* DotSandboxHardeningTests.swift */; };
 		B1C0B123000000000000004 /* SpacePageLinkingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0B123000000000000003 /* SpacePageLinkingTests.swift */; };
 		B1C0B124000000000000004 /* ProposalAuditTrailTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0B124000000000000003 /* ProposalAuditTrailTests.swift */; };
+		B1C0B125000000000000006 /* ModelTieringCascadeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C0B125000000000000005 /* ModelTieringCascadeTests.swift */; };
 		9C9B9019D1F07D2A231D1D9E /* DaemonAndPeerGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D37200B382453196FCE2722 /* DaemonAndPeerGateTests.swift */; };
 		9C9D6D083A29DF2E5AB5B46E /* PlanTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90F846649CFDC6FA77C1BFF6 /* PlanTools.swift */; };
 		9C9F9486F76B934A15596D8C /* CreateRoutineSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8384767A8FF764FAE2B9C90A /* CreateRoutineSheet.swift */; };
@@ -835,6 +838,8 @@
 		A1C0P1010001000100000003 /* SpacePageTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacePageTools.swift; sourceTree = "<group>"; };
 		B1C0B123000000000000001 /* SpacePageLinker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacePageLinker.swift; sourceTree = "<group>"; };
 		B1C0B124000000000000001 /* SpaceProposalAuditTrail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceProposalAuditTrail.swift; sourceTree = "<group>"; };
+		B1C0B125000000000000001 /* ModelTieringCascade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTieringCascade.swift; sourceTree = "<group>"; };
+		B1C0B125000000000000003 /* TurnLoopWatchdog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnLoopWatchdog.swift; sourceTree = "<group>"; };
 		00C1D19CCF1A38E3D1CF08C8 /* ScreenPerceptionTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenPerceptionTool.swift; sourceTree = "<group>"; };
 		0159C6A22D24E1F1A6B4D1C4 /* GhostCursorOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostCursorOverlay.swift; sourceTree = "<group>"; };
 		01677869C536A1E8041FE4D0 /* ArtifactSizeBudgetGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtifactSizeBudgetGateTests.swift; sourceTree = "<group>"; };
@@ -990,6 +995,7 @@
 		B1C0B122000000000000003 /* DotSandboxHardeningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotSandboxHardeningTests.swift; sourceTree = "<group>"; };
 		B1C0B123000000000000003 /* SpacePageLinkingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacePageLinkingTests.swift; sourceTree = "<group>"; };
 		B1C0B124000000000000003 /* ProposalAuditTrailTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProposalAuditTrailTests.swift; sourceTree = "<group>"; };
+		B1C0B125000000000000005 /* ModelTieringCascadeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTieringCascadeTests.swift; sourceTree = "<group>"; };
 		3CBBD144EC4039DC0E5977CF /* AutomationWorkflows+71to80.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+71to80.swift"; sourceTree = "<group>"; };
 		3D962AB21A303CE7B3D0D76B /* FilePatchTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePatchTool.swift; sourceTree = "<group>"; };
 		3DACB633859F62C64A5C1E54 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
@@ -1998,6 +2004,8 @@
 				B1C0B122000000000000001 /* DotSandboxSnapshotEngine.swift */,
 				B1C0B123000000000000001 /* SpacePageLinker.swift */,
 				B1C0B124000000000000001 /* SpaceProposalAuditTrail.swift */,
+				B1C0B125000000000000001 /* ModelTieringCascade.swift */,
+				B1C0B125000000000000003 /* TurnLoopWatchdog.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -2154,6 +2162,7 @@
 				B1C0B122000000000000003 /* DotSandboxHardeningTests.swift */,
 				B1C0B123000000000000003 /* SpacePageLinkingTests.swift */,
 				B1C0B124000000000000003 /* ProposalAuditTrailTests.swift */,
+				B1C0B125000000000000005 /* ModelTieringCascadeTests.swift */,
 				6D6DA119E9AA14FA498904C9 /* ApexCLIRouterTests.swift */,
 				55BA5085CF2D6C1E59916D61 /* ApexCompanionAppTests.swift */,
 				385313E98181D152D76E2164 /* ApexGatewayClientTests.swift */,
@@ -2735,6 +2744,8 @@
 				B1C0P1010001000100000003 /* SpacePageTools.swift in Sources */,
 				B1C0B123000000000000002 /* SpacePageLinker.swift in Sources */,
 				B1C0B124000000000000002 /* SpaceProposalAuditTrail.swift in Sources */,
+				B1C0B125000000000000002 /* ModelTieringCascade.swift in Sources */,
+				B1C0B125000000000000004 /* TurnLoopWatchdog.swift in Sources */,
 				657894613E7EC550EDCF98F9 /* A2APeerDiscovery.swift in Sources */,
 				7AA7E819D103BC3CFFD5A4FF /* A2AServer.swift in Sources */,
 				32A8413C79A55EDDBA5196F6 /* ANSIColorParser.swift in Sources */,
@@ -3179,6 +3190,7 @@
 				B1C0B122000000000000004 /* DotSandboxHardeningTests.swift in Sources */,
 				B1C0B123000000000000004 /* SpacePageLinkingTests.swift in Sources */,
 				B1C0B124000000000000004 /* ProposalAuditTrailTests.swift in Sources */,
+				B1C0B125000000000000006 /* ModelTieringCascadeTests.swift in Sources */,
 				D71F13544C5689BD6AAC9A0C /* ApexCLIRouterTests.swift in Sources */,
 				BCD0090BC7F4C2C3F60D3347 /* ApexCompanionAppTests.swift in Sources */,
 				3EAA55A2DE50E67ED99B9C90 /* ApexGatewayClientTests.swift in Sources */,

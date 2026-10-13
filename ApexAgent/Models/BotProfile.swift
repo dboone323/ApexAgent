@@ -46,6 +46,10 @@ final class BotProfile {
     /// `.localOllama`. Nil = use the global `apex.ollamaModel` default.
     var ollamaModelOverride: String?
 
+    /// Optional specific model identifier override (e.g. "claude-3.5-sonnet",
+    /// "gemini-3.1-pro", or "gpt-4o") for the bot's configured provider.
+    var customModelIdentifier: String?
+
     /// Type-safe accessor for the per-bot model provider.
     /// Returns nil when the bot should use the global default.
     var modelProvider: ModelProvider? {
