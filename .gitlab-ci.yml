@@ -1,0 +1,67 @@
+# GitLab CI/CD Pipeline for ApexAgent (macOS / Xcode 27)
+include:
+  - template: Jobs/Secret-Detection.gitlab-ci.yml
+  - template: Jobs/SAST.gitlab-ci.yml
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+variables:
+  DEVELOPER_DIR: "/Applications/Xcode-beta.app/Contents/Developer"
+
+default:
+  interruptible: true
+
+.macos_job:
+  tags:
+    - macos
+    - macos27
+
+stages:
+  - hygiene
+  - lint
+  - build
+  - test
+
+hygiene:
+  stage: hygiene
+  extends: .macos_job
+  script:
+    - make hygiene
+
+lint:
+  stage: lint
+  extends: .macos_job
+  script:
+    - make lint
+
+build:
+  stage: build
+  extends: .macos_job
+  script:
+    - swift build -c release
+    - swift run apexflow --list
+
+test:
+  stage: test
+  extends: .macos_job
+  script:
+    - xcodebuild -version && swift --version
+    - mkdir -p build
+    - >
+      xcodebuild test -project ApexAgent.xcodeproj -scheme ApexAgent
+      -testPlan ApexAgent-UnitTests
+      -destination "platform=macOS"
+      -resultBundlePath build/CI-UnitTests.xcresult
+      -quiet
+  after_script:
+    - chmod +x ./Tools/scripts/xcresult-report.sh
+    - ./Tools/scripts/xcresult-report.sh build/CI-UnitTests.xcresult
+  artifacts:
+    when: always
+    paths:
+      - build/CI-UnitTests.xcresult
+      - build/test-summary.md
+    expire_in: 7 days

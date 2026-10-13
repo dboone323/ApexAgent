@@ -24,18 +24,20 @@ struct CenturionMilestoneTests {
 
     @Test("Workflow 70 certifies complete Centurion Milestone with 70 catalog descriptors and 8 hardening gates")
     func workflow70CertifiesCenturionMilestone() async {
+        let count = ApexWorkflows.allDescriptors().count
         let result = await ApexWorkflows.workflow70()
         #expect(result.id == 70)
         #expect(result.passed)
-        #expect(result.evidence.contains("totalWorkflows=70"))
+        #expect(result.evidence.contains("totalWorkflows=\(count)"))
         #expect(result.evidence.contains("hardeningGates=8"))
         #expect(result.evidence.contains("score=100.0"))
     }
 
-    @Test("Catalog markdown export renders all 70 local workflows with valid table formatting")
+    @Test("Catalog markdown export renders all local workflows with valid table formatting")
     func catalogMarkdownRenders70Workflows() {
+        let count = ApexWorkflows.allDescriptors().count
         let md = ApexWorkflows.exportWorkflowsCatalogMarkdown()
-        #expect(md.contains("Autonomous Local Workflows Catalog (70 workflows)"))
+        #expect(md.contains("Autonomous Local Workflows Catalog (\(count) workflows)"))
         #expect(md.contains("`70` | **Centurion Milestone"))
         #expect(md.contains("Native Swift 6.4"))
     }

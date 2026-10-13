@@ -70,25 +70,30 @@ fi
 
 echo "================================================================="
 
-# Append GitHub Actions step summary if running under CI
+# Emit Markdown test report artifact for CI pipelines (GitLab CI & local inspection)
+mkdir -p build
+REPORT_MD="build/test-summary.md"
+{
+    echo "### 📊 ApexAgent Test Result Diagnostic Report"
+    echo ""
+    echo "| Metric | Value |"
+    echo "| :--- | :--- |"
+    echo "| **Result** | \`$RESULT\` |"
+    echo "| **Total Tests** | \`${TOTAL:-0}\` |"
+    echo "| **Passed** | \`${PASSED:-0}\` |"
+    echo "| **Failed** | \`${FAILED:-0}\` |"
+    echo "| **Skipped** | \`${SKIPPED:-0}\` |"
+    if [[ -n "$TOTAL" && "$TOTAL" -gt 0 ]]; then
+        echo "| **Pass Rate** | \`${PERCENT}%\` |"
+    fi
+    echo ""
+    echo "#### 🎯 Target-Level Code Coverage"
+    echo '```text'
+    xcrun xccov view --report --only-targets "$XCRESULT_PATH" 2>/dev/null || echo "No code coverage data available"
+    echo '```'
+} > "$REPORT_MD"
+
+# Also append to GITHUB_STEP_SUMMARY if configured in environment
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" && -w "$GITHUB_STEP_SUMMARY" ]]; then
-    {
-        echo "### 📊 ApexAgent Test Result Diagnostic Report"
-        echo ""
-        echo "| Metric | Value |"
-        echo "| :--- | :--- |"
-        echo "| **Result** | \`$RESULT\` |"
-        echo "| **Total Tests** | \`${TOTAL:-0}\` |"
-        echo "| **Passed** | \`${PASSED:-0}\` |"
-        echo "| **Failed** | \`${FAILED:-0}\` |"
-        echo "| **Skipped** | \`${SKIPPED:-0}\` |"
-        if [[ -n "$TOTAL" && "$TOTAL" -gt 0 ]]; then
-            echo "| **Pass Rate** | \`${PERCENT}%\` |"
-        fi
-        echo ""
-        echo "#### 🎯 Target-Level Code Coverage"
-        echo '```text'
-        xcrun xccov view --report --only-targets "$XCRESULT_PATH" 2>/dev/null || echo "No code coverage data available"
-        echo '```'
-    } >> "$GITHUB_STEP_SUMMARY"
+    cat "$REPORT_MD" >> "$GITHUB_STEP_SUMMARY"
 fi

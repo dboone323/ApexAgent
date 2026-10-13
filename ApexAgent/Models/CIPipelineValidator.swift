@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Batch 35: GitHub Actions CI & xcresult Quality Gate Synchronization
+// MARK: - Batch 35: CI Pipeline & xcresult Quality Gate Synchronization
 
 /// Parsed representation of `xcrun xcresulttool get test-results summary` JSON output.
 public struct XCResultSummaryReport: Codable, Sendable, Equatable {
@@ -39,7 +39,7 @@ public struct XCResultSummaryReport: Codable, Sendable, Equatable {
     }
 }
 
-/// Audit result for synchronizing local `Makefile` targets and `.github/workflows/swift.yml` CI stages.
+/// Audit result for synchronizing local `Makefile` targets and CI workflow stages.
 public struct CIPipelineAuditReport: Codable, Sendable, Equatable {
     public let passed: Bool
     public let missingWorkflowSteps: [String]
@@ -73,18 +73,23 @@ public struct CIPipelineAuditReport: Codable, Sendable, Equatable {
     }
 }
 
-/// Validator that ensures `.github/workflows/swift.yml`, `Makefile`, and `.xcresult` bundles
+/// Validator that ensures CI workflow files (`.gitlab-ci.yml` or `.github/workflows/swift.yml`), `Makefile`, and `.xcresult` bundles
 /// enforce the same pre-push hygiene, diff lint, `apexflow`, and unit test gates.
 public enum CIPipelineValidator {
 
-    /// Required command substrings in `.github/workflows/swift.yml`.
-    public static let requiredGitHubWorkflowSteps: [String] = [
+    /// Required command substrings in the CI workflow.
+    public static let requiredCIWorkflowSteps: [String] = [
         "make hygiene",
         "make lint",
         "apexflow",
         "xcodebuild test",
         "xcresult-report.sh"
     ]
+
+    /// Backwards-compatibility alias.
+    public static var requiredGitHubWorkflowSteps: [String] {
+        requiredCIWorkflowSteps
+    }
 
     /// Required `.PHONY` / target definitions in `Makefile`.
     public static let requiredMakefileTargets: [String] = [
@@ -100,10 +105,15 @@ public enum CIPipelineValidator {
     ]
 
     /// Returns any required CI step substrings missing from the given workflow YAML string.
-    public static func validateGitHubWorkflowYAML(_ yaml: String) -> [String] {
-        requiredGitHubWorkflowSteps.filter { step in
+    public static func validateCIWorkflowYAML(_ yaml: String) -> [String] {
+        requiredCIWorkflowSteps.filter { step in
             !yaml.contains(step)
         }
+    }
+
+    /// Backwards-compatibility alias.
+    public static func validateGitHubWorkflowYAML(_ yaml: String) -> [String] {
+        validateCIWorkflowYAML(yaml)
     }
 
     /// Returns any required targets missing from the given `Makefile` content.
@@ -130,17 +140,28 @@ public enum CIPipelineValidator {
         return requiredMakefileTargets.filter { !definedTargets.contains($0) }
     }
 
-    /// Audits `.github/workflows/swift.yml` and `Makefile` under `repoRoot`.
+    /// Audits `.gitlab-ci.yml` (or `.github/workflows/swift.yml`) and `Makefile` under `repoRoot`.
     public static func validateRepositoryPipeline(atRepoRoot repoRoot: URL) -> CIPipelineAuditReport {
-        let workflowRel = ".github/workflows/swift.yml"
+        let gitlabWorkflowRel = ".gitlab-ci.yml"
+        let githubWorkflowRel = ".github/workflows/swift.yml"
         let makefileRel = "Makefile"
-        let workflowURL = repoRoot.appendingPathComponent(workflowRel)
+
+        let gitlabURL = repoRoot.appendingPathComponent(gitlabWorkflowRel)
+        let githubURL = repoRoot.appendingPathComponent(githubWorkflowRel)
         let makefileURL = repoRoot.appendingPathComponent(makefileRel)
 
-        let yaml = (try? String(contentsOf: workflowURL, encoding: .utf8)) ?? ""
+        let chosenWorkflowRel: String
+        let yaml: String
+        if FileManager.default.fileExists(atPath: gitlabURL.path) {
+            chosenWorkflowRel = gitlabWorkflowRel
+            yaml = (try? String(contentsOf: gitlabURL, encoding: .utf8)) ?? ""
+        } else {
+            chosenWorkflowRel = githubWorkflowRel
+            yaml = (try? String(contentsOf: githubURL, encoding: .utf8)) ?? ""
+        }
         let makefile = (try? String(contentsOf: makefileURL, encoding: .utf8)) ?? ""
 
-        let missingSteps = validateGitHubWorkflowYAML(yaml)
+        let missingSteps = validateCIWorkflowYAML(yaml)
         let missingTargets = validateMakefile(makefile)
         let passed = missingSteps.isEmpty && missingTargets.isEmpty
 
@@ -148,7 +169,7 @@ public enum CIPipelineValidator {
             passed: passed,
             missingWorkflowSteps: missingSteps,
             missingMakefileTargets: missingTargets,
-            checkedFiles: [workflowRel, makefileRel]
+            checkedFiles: [chosenWorkflowRel, makefileRel]
         )
     }
 

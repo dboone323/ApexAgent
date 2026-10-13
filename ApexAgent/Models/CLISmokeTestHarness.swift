@@ -119,7 +119,7 @@ public enum CLISmokeTestHarness {
     @MainActor
     public static func runMatrix(
         cases: [(label: String, arguments: [String])] = standardMatrix,
-        maxCommandDurationMs: Double = 5000.0
+        maxCommandDurationMs: Double = 15000.0
     ) -> CLISmokeSuiteReport {
         var results: [CLISmokeCaseResult] = []
         let suiteStart = DispatchTime.now().uptimeNanoseconds

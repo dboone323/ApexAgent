@@ -13,11 +13,8 @@ let package = Package(
         .executable(name: "benchmark-repro", targets: ["benchmark-repro"])
     ],
     dependencies: [
-        // shared-kit modules are now INLINED as local targets under Modules/
-        // (see SharedLogging/SharedModels/Utilities/AI/MCPKit/SharedKit below).
-        // The external github.com/dboone323/shared-kit dependency was removed to
-        // make ApexAgent fully self-contained (no cross-repo coupling, no LFS,
-        // no separate CI). shared-kit was pure-Foundation, so this is a clean lift.
+        // Shared modules are local targets under Modules/
+        // (SharedLogging, SharedModels, Utilities, MCPKit, SharedKit).
         // Container runtime — pinned to release tag 0.38.0 (= revision d9868bb,
         // the same revision apple/container's own Package.resolved pins). The
         // host library and the guest vminit initfs image MUST be the same
@@ -30,13 +27,9 @@ let package = Package(
     ],
     targets: [
         // ─────────────────────────────────────────────────────────────────────
-        // INLINED shared-kit modules (formerly github.com/dboone323/shared-kit).
-        // Pure-Foundation, ~1,800 LOC. Kept as separate local targets so the
-        // existing `import SharedKit / MCPKit / SharedModels` statements in
-        // app + test sources compile unchanged. Dependency graph mirrors the
-        // original package exactly. SharedUI was unused and intentionally
-        // dropped. The `AI` routing module was removed as dead code (its
-        // ModelRouter singleton was stored but never invoked).
+        // Local shared modules (Modules/). Pure-Foundation, ~1,800 LOC.
+        // Maintained as separate local targets for modularity and clean
+        // architecture across app and test targets.
         // ─────────────────────────────────────────────────────────────────────
         .target(
             name: "SharedLogging",

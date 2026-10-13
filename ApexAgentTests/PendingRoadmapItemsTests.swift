@@ -52,6 +52,7 @@ final class PendingRoadmapItemsTests: XCTestCase {
     }
 
     override func tearDown() async throws {
+        RoutineManager.shared.resetForTesting()
         modelContainer = nil
         modelContext = nil
         orchestrator = nil

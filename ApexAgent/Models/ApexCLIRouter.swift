@@ -601,15 +601,21 @@ public enum ApexCLIRouter {
         case .routinesList(let jsonOutput):
             let routines = RoutineManager.shared.routines
             if jsonOutput {
-                let items = routines.map { ["name": $0.name, "trigger": $0.trigger.rawValue, "enabled": "\($0.enabled)"] }
+                let items = routines.compactMap { r -> [String: String]? in
+                    guard let name = Optional(r.name), !name.isEmpty else { return nil }
+                    return ["name": name, "trigger": r.trigger.rawValue, "enabled": "\(r.enabled)"]
+                }
                 let data = (try? JSONSerialization.data(withJSONObject: items, options: [.prettyPrinted, .sortedKeys])) ?? Data()
                 return (String(data: data, encoding: .utf8) ?? "[]", 0)
             }
             if routines.isEmpty {
                 return ("Routines (0)", 0)
             }
-            let rows = routines.map { "- \($0.name) [trigger=\($0.trigger.rawValue), enabled=\($0.enabled)]" }
-            return ((["Routines (\(routines.count)):"] + rows).joined(separator: "\n"), 0)
+            let rows = routines.compactMap { r -> String? in
+                guard let name = Optional(r.name), !name.isEmpty else { return nil }
+                return "- \(name) [trigger=\(r.trigger.rawValue), enabled=\(r.enabled)]"
+            }
+            return ((["Routines (\(rows.count)):"] + rows).joined(separator: "\n"), 0)
 
         case .completions(let shell):
             return (CLICompletionGenerator.generateCompletionScript(for: shell), 0)

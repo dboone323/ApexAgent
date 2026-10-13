@@ -325,10 +325,7 @@ public enum SwiftSyntaxLintGate {
         let canonicalRoot = repoRoot.resolvingSymlinksInPath()
         var relativePaths = Set<String>()
 
-        for args in [
-            ["diff", "--name-only", "--diff-filter=ACMRTUXB", "\(baseRef)...HEAD", "--", "*.swift"],
-            ["diff", "--name-only", "--diff-filter=ACMRTUXB", "HEAD", "--", "*.swift"]
-        ] {
+        func runGitDiff(args: [String]) {
             let proc = Process()
             proc.executableURL = URL(fileURLWithPath: "/usr/bin/git")
             proc.currentDirectoryURL = canonicalRoot
@@ -338,6 +335,7 @@ public enum SwiftSyntaxLintGate {
             proc.standardError = FileHandle.nullDevice
             try? proc.run()
             proc.waitUntilExit()
+            guard proc.terminationStatus == 0 else { return }
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             if let out = String(data: data, encoding: .utf8) {
                 for line in out.components(separatedBy: .newlines) {
@@ -345,6 +343,36 @@ public enum SwiftSyntaxLintGate {
                     if !trimmed.isEmpty && trimmed.hasSuffix(".swift") {
                         relativePaths.insert(trimmed)
                     }
+                }
+            }
+        }
+
+        // Try candidate base refs in priority order
+        let candidateBases = [baseRef, "origin/main", "main", "HEAD~1"]
+        for candidate in candidateBases {
+            runGitDiff(args: ["diff", "--name-only", "--diff-filter=ACMRTUXB", "\(candidate)...HEAD", "--", "*.swift"])
+            if !relativePaths.isEmpty {
+                break
+            }
+        }
+
+        // Also include uncommitted working-tree changes
+        runGitDiff(args: ["diff", "--name-only", "--diff-filter=ACMRTUXB", "HEAD", "--", "*.swift"])
+
+        // If working tree is completely clean and no branch diff was found, inspect HEAD~1..HEAD
+        if relativePaths.isEmpty {
+            runGitDiff(args: ["diff", "--name-only", "--diff-filter=ACMRTUXB", "HEAD~1", "HEAD", "--", "*.swift"])
+        }
+
+        // If still empty (e.g. shallow clone without history or detached clean HEAD), discover real Swift files in repo
+        if relativePaths.isEmpty {
+            let fm = FileManager.default
+            let enumerator = fm.enumerator(at: canonicalRoot.appendingPathComponent("ApexAgent"), includingPropertiesForKeys: nil)
+            while let fileURL = enumerator?.nextObject() as? URL {
+                if fileURL.pathExtension == "swift" {
+                    let rel = fileURL.path.replacingOccurrences(of: canonicalRoot.path + "/", with: "")
+                    relativePaths.insert(rel)
+                    if relativePaths.count >= 25 { break }
                 }
             }
         }

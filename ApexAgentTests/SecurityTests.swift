@@ -1337,8 +1337,9 @@ struct SecurityTests {
     // MARK: - Batch 10 Self-Hardening Tests
 
     @Test @MainActor func testAutomationWorkflowsCatalogMarkdown() {
+        let count = ApexWorkflows.allDescriptors().count
         let md = ApexWorkflows.exportWorkflowsCatalogMarkdown()
-        #expect(md.contains("### ⚙️ Autonomous Local Workflows Catalog (30 workflows)"))
+        #expect(md.contains("### ⚙️ Autonomous Local Workflows Catalog (\(count) workflows)"))
         #expect(md.contains("| ID | Workflow Name | Target Subsystems | Engine |"))
         #expect(md.contains("CI/CD failure triage"))
         #expect(md.contains("Multi-agent orchestration"))

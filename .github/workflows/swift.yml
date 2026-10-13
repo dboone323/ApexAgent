@@ -5,6 +5,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -20,16 +21,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          lfs: true
-
-      - name: Install Git LFS
-        # shared-kit is an LFS-backed repo; the dependency fetch fails without it.
-        run: |
-          if ! command -v git-lfs >/dev/null 2>&1; then
-            brew install git-lfs || true
-          fi
-          git lfs install
 
       - name: Select Xcode 27
         run: sudo xcode-select -s /Applications/Xcode_27.app || true
