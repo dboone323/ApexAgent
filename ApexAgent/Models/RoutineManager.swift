@@ -20,13 +20,28 @@ final class RoutineManager: Observable {
     static let shared = RoutineManager()
 
     /// The SwiftData context used to persist routine definitions.
-    var modelContext: ModelContext?
+    var modelContext: ModelContext? {
+        didSet {
+            if modelContext == nil {
+                routines = []
+            } else {
+                loadRoutines()
+            }
+        }
+    }
 
     /// The BotManager used to route routine execution messages.
     weak var botManager: BotManager?
 
     /// All persisted routines, refreshed from disk on demand.
     var routines: [Routine] = []
+
+    /// Resets testing state and disassociates modelContext and routines.
+    func resetForTesting() {
+        modelContext = nil
+        botManager = nil
+        routines = []
+    }
 
     // MARK: - Durable Automation Receipts
 

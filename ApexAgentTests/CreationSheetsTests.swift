@@ -107,7 +107,7 @@ final class CreationSheetsTests {
     @Test func testRoutineTargetBotDispatchFormatting() throws {
         let container = try makeTestContainer()
         let context = ModelContext(container)
-        let routineManager = RoutineManager.shared
+        let routineManager = RoutineManager()
         routineManager.modelContext = context
 
         // 1. Default Apex bot -> no prefix
@@ -168,7 +168,7 @@ final class CreationSheetsTests {
     @Test func testRoutineSwiftDataPersistenceAndManagerReload() throws {
         let container = try makeTestContainer()
         let context = ModelContext(container)
-        let routineManager = RoutineManager.shared
+        let routineManager = RoutineManager()
         routineManager.modelContext = context
 
         let uniqueName = "Nightly Backup_\(UUID().uuidString.prefix(8))"
@@ -402,7 +402,7 @@ final class CreationSheetsTests {
     @Test func testCreateRoutineSheetViewHosting() throws {
         let container = try makeTestContainer()
         let context = ModelContext(container)
-        let routineManager = RoutineManager.shared
+        let routineManager = RoutineManager()
         routineManager.modelContext = context
 
         let view = CreateRoutineSheet()
@@ -415,7 +415,7 @@ final class CreationSheetsTests {
     @Test func testCreateSkillSheetViewHosting() throws {
         let container = try makeTestContainer()
         let context = ModelContext(container)
-        let skillManager = SkillManager.shared
+        let skillManager = SkillManager()
         skillManager.modelContext = context
 
         let view = CreateSkillSheet()
@@ -428,7 +428,7 @@ final class CreationSheetsTests {
     @Test func testRoutinesSectionViewHosting() throws {
         let container = try makeTestContainer()
         let context = ModelContext(container)
-        let routineManager = RoutineManager.shared
+        let routineManager = RoutineManager()
         routineManager.modelContext = context
 
         // Add a sample routine
@@ -450,7 +450,7 @@ final class CreationSheetsTests {
     @Test func testSkillsSectionViewHosting() throws {
         let container = try makeTestContainer()
         let context = ModelContext(container)
-        let skillManager = SkillManager.shared
+        let skillManager = SkillManager()
         skillManager.modelContext = context
 
         // Add a sample skill
@@ -474,9 +474,9 @@ final class CreationSheetsTests {
         let orchestrator = AgentOrchestrator()
         orchestrator.modelContext = context
 
-        let routineManager = RoutineManager.shared
+        let routineManager = RoutineManager()
         routineManager.modelContext = context
-        let skillManager = SkillManager.shared
+        let skillManager = SkillManager()
         skillManager.modelContext = context
 
         let view = SettingsView()
@@ -799,7 +799,7 @@ final class CreationSheetsTests {
 
     @Test func testRoutineManagementDeepHierarchy() async throws {
         let container = try makeTestContainer()
-        let routineManager = RoutineManager.shared
+        let routineManager = RoutineManager()
         routineManager.modelContext = container.mainContext
 
         // Level 1: Add Routine -> CreateRoutineSheet validation
