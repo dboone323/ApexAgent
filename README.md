@@ -55,49 +55,56 @@ ApexAgent.app/Contents/MacOS/ApexAgent --cli --allow-tools "Search the workspace
 The on-device Apple Foundation Model needs **no key**. Keys are only needed for optional providers:
 
 - **Google Gemini** — paste your key in **Settings**; stored in the Keychain.
-- **Ollama** — point Apex at your local Ollama host URL (default `http://localhost:11434`, default model `gemma4:12b` with multimodal vision + `nomic-embed-text:latest` for semantic memory embeddings).
+- **Ollama** — point Apex at your local Ollama host URL (default `http://localhost:11434`, default fast/research model `gemma4:12b`, coding/automation model `qwen2.5-coder:7b`, with multimodal vision + `nomic-embed-text:latest` for semantic memory embeddings).
 - **Brave Search** (optional web search) — Brave primary with a no-config DuckDuckGo fallback. Add a Brave key in Settings for higher-quality results.
 
 ---
 
 ## 🧠 LLM Backends
 
-- **On-device Apple Foundation Models** (default) — `NativeAppleEngine`
+- **Auto Model Picker** (default) — intelligent dynamic routing: AFM 3 → Cloud Gemini → Ollama with task tiering & single-active-local-weights policy
+- **On-device Apple Foundation Models** — `NativeAppleEngine`
 - **Private Cloud Compute** — Apple's PCC when available
-- **Cloud Gemini** — optional, Keychain-backed
-- **Local Ollama** — optional, self-hosted (`gemma4:12b` default with multimodal image attachments + `nomic-embed-text:latest` embeddings)
+- **Cloud Gemini** — optional, Keychain-backed (`gemini-3.8-flash`, `gemini-3.1-pro`, `gemini-2.5-pro`)
+- **Local Ollama** — optional, self-hosted (`gemma4:12b` default, `qwen2.5-coder:7b` coding/automation, with multimodal image attachments + `nomic-embed-text:latest` embeddings)
+- **Local MLX-LM** — Apple Silicon metal-optimized local inference
+- **Apple FoundationModels CLI** (`fmCLI`)
+- **OpenAI-Compatible REST** / **Anthropic Claude** / **GitHub Copilot**
 
-Per-agent model preferences are supported (`localSystem` / `privateCloud` / `cloudGemini` / `localOllama` / `localMLX` / `hybrid`).
+Per-agent model preferences are supported (`autoPicker` / `appleOnDevice` / `applePCC` / `cloudGemini` / `localOllama` / `localMLX` / `fmCLI` / `openAICompatible` / `anthropic` / `gitHubCopilot`).
 
 ---
 
 ## 🧰 Agent Capabilities
 
-Apex ships **63 tools** the model can call, including:
+Apex ships **70 tools** the model can call, including:
 
 | Tool | What It Does |
 |------|-------------|
 | 🐚 `run_shell_command` | Execute any zsh command, capture output |
 | 📄 `read_file` / ✍️ `write_file` | Read/write files anywhere |
+| 🩹 `patch_file` / ⏪ `rollback_file` | Apply unified diff patches / rollback snapshots |
 | 📁 `list_directory` / 📂 `create_directory` | Browse and create directories |
 | 🗑️ `delete_file` / 🔀 `move_file` | Delete (to Trash) / move / rename files |
-| 🔎 `file_search` | Search the filesystem |
-| 🌐 `web_search` | Search the web (Brave → DDG fallback) |
+| 🔎 `file_search` / 🔦 `spotlight_search` | Search the filesystem / Spotlight metadata query |
+| 🌿 `git_operation` | Inspect git status, branches, commits, diffs |
+| 🌐 `web_search` / 📖 `web_reader` | Search the web (Brave → DDG) / scrape page content |
 | 🍎 `run_applescript` | Control any scriptable macOS app |
 | 🖥️ `get_frontmost_app` / 📸 `take_screenshot` | Identify the active app / capture the screen |
 | 📋 `read_clipboard` / `write_clipboard` | Read/set clipboard content |
 | 🔔 `send_notification` | Send macOS notifications |
 | ℹ️ `get_system_info` / 📊 `get_running_processes` | System & process info |
-| 🧩 `application_control` / `accessibility_control` | Drive apps via Accessibility |
-| 🌍 `browser_automation` | Automate the browser |
+| 🧩 `control_app` / `control_accessibility` | Drive apps via Accessibility & UI automation |
+| 🌍 `control_browser` | Headless WebKit browser automation with persistent session |
 | 🖼️ `analyze_image` / `detect_image_text` | Multimodal vision + OCR |
 | 🗂️ `audit_projects` | Audit Swift/Xcode projects in a workspace |
-| 🧠 `store_memory` / `search_memory` | Persistent agent memory |
-| 🤝 `delegate_task` | Delegate to a specialized sub-agent |
+| 🧠 `store_memory` / `search_memory` / `delete_memory` | Persistent agent memory & embeddings |
+| 🤖 `ask_bot` / 🤝 `delegate_task` | Ask or delegate to a specialized bot with peer review |
+| 🐝 `dispatch_swarm` | Fan-out concurrent execution to a multi-bot swarm |
 | 👥 `convene_meeting` | Multi-agent panel debate to consensus |
-| 🛠️ `create_skill` / `run_workflow` | Author skills / run workflows |
-| 🧱 `dynamic_tool_call` | Call MCP-registered dynamic tools |
-| 📦 `container_status` | Container runtime status (Apple Silicon) |
+| 🛠️ `create_skill` / `run_workflow` | Author skills / run automated workflows |
+| 🧱 `execute_dynamic_tool` | Call MCP-registered dynamic tools |
+| 📦 `manage_sandbox` | Apple Silicon container / sandbox lifecycle management |
 | 📰 `daily_briefing` | Daily briefing from the shared data bus |
 | 📝 `update_plan` | Maintain a live task plan |
 

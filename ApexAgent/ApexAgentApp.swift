@@ -7,6 +7,7 @@ import Intents
 import SwiftData
 import SwiftUI
 import SharedKit
+import os
 
 @MainActor
 public struct ApexAgentApp: App {
@@ -338,16 +339,18 @@ extension AppDelegate {
 public func runDaemonMode() async {
     AppLog.info(.app, "=== RUNNING DAEMON MODE ===")
     let orchestrator = AgentOrchestrator()
+    let mainContext: ModelContext?
     do {
         let container = try ModelContainer(for: Conversation.self, Message.self, AgentMemory.self, AppPermissions.self, ProjectModel.self, TaskModel.self, SprintModel.self, CodeIssueModel.self, ReviewSession.self, Skill.self, Routine.self, BotProfile.self, SpaceModel.self, SpaceParticipant.self, SpaceChannel.self, SpaceMessage.self, SpacePage.self, SpacePageProposal.self)
-        let mainContext = ModelContext(container)
-        orchestrator.modelContext = mainContext
+        let context = ModelContext(container)
+        mainContext = context
+        orchestrator.modelContext = context
         let computer = Computer()
         let botManager = BotManager(orchestrator: orchestrator, computer: computer)
         orchestrator.botManager = botManager
-        botManager.modelContext = mainContext
+        botManager.modelContext = context
         botManager.loadBotsFromDisk()
-        RoutineManager.shared.modelContext = mainContext
+        RoutineManager.shared.modelContext = context
         RoutineManager.shared.botManager = botManager
         RoutineManager.shared.loadRoutines()
         RoutineManager.shared.startScheduledRoutines()
@@ -356,16 +359,29 @@ public func runDaemonMode() async {
         }
     } catch {
         AppLog.error(.app, "⚠️ Failed to initialize SwiftData model context: \(error)")
+        mainContext = nil
     }
 
     let server = ApexGatewayServer(port: 1337, orchestrator: orchestrator)
+    let isRunning = OSAllocatedUnfairLock<Bool>(initialState: true)
+
+    // Install POSIX signal handlers (SIGTERM / SIGINT) for graceful shutdown on logout or launchctl bootout
+    DaemonSignalHandler.shared.install { @MainActor sig in
+        AppLog.info(.app, "💾 Flushing SwiftData context and stopping daemon routines for signal \(sig)...")
+        try? mainContext?.save()
+        RoutineManager.shared.stopScheduledRoutines()
+        server.stop()
+        isRunning.withLock { $0 = false }
+    }
+
     do {
         try server.start()
         AppLog.info(.app, "🚀 ApexGatewayServer started on port 1337")
         try? await Task.sleep(for: .seconds(1))
-        while true {
-            try? await Task.sleep(for: .seconds(3600))
+        while isRunning.withLock({ $0 }) {
+            try? await Task.sleep(for: .seconds(1))
         }
+        AppLog.info(.app, "🏁 Graceful daemon shutdown complete.")
     } catch {
         AppLog.error(.app, "⚠️ Failed to start daemon server: \(error)")
         exit(1)

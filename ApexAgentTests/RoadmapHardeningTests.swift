@@ -403,5 +403,58 @@ struct RoadmapHardeningTests {
         #expect(clearMsg.contains("Browser session and stored website data cleared"))
         #expect(browser.isPersistent == true)
     }
+
+    // MARK: - Step 16: Background Daemon POSIX Signal Handling
+    @Test("DaemonSignalHandler installs, receives signals, and tears down cleanly")
+    @MainActor
+    func testDaemonSignalHandling() async {
+        let handler = DaemonSignalHandler()
+        #expect(handler.isInstalled == false)
+
+        let receivedSignal = OSAllocatedUnfairLock<Int32?>(initialState: nil)
+
+        handler.install { sig in
+            receivedSignal.withLock { $0 = sig }
+        }
+        #expect(handler.isInstalled == true)
+
+        // Dispatch SIGTERM to current process; with SIG_IGN active and DispatchSource attached,
+        // the source catches the signal without terminating the test runner
+        Darwin.kill(Darwin.getpid(), SIGTERM)
+
+        // Allow runloop/queue to process the signal
+        for _ in 0..<20 {
+            if receivedSignal.withLock({ $0 }) != nil { break }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+
+        #expect(receivedSignal.withLock({ $0 }) == SIGTERM)
+        #expect(handler.isInstalled == false) // Handler automatically tears down upon signal
+
+        // Clean teardown
+        handler.teardown()
+        #expect(handler.isInstalled == false)
+    }
+
+    // MARK: - Step 17: Tool & Settings Parity
+    @Test("ToolPolicy and documentation maintain parity with registered tool catalog")
+    @MainActor
+    func testDocumentationAndSettingsToolParity() {
+        let orchestrator = AgentOrchestrator()
+        let names = Set(orchestrator.allTools.map(\.name))
+
+        #expect(names.contains("control_browser"))
+        #expect(names.contains("manage_sandbox"))
+        #expect(names.contains("execute_dynamic_tool"))
+        #expect(names.contains("control_app"))
+        #expect(names.contains("control_accessibility"))
+        #expect(names.contains("patch_file"))
+        #expect(names.contains("git_operation"))
+        #expect(names.contains("ask_bot"))
+        #expect(names.contains("dispatch_swarm"))
+        #expect(names.contains("spotlight_search"))
+        #expect(orchestrator.allTools.count == 70)
+    }
 }
+
 

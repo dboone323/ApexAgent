@@ -783,7 +783,7 @@ struct SettingsView: View {
                     .font(AppTheme.Font.caption(10))
                     .foregroundStyle(AppTheme.Palette.textSecondary)
 
-                ForEach(["run_shell_command", "write_file", "delete_file", "run_applescript", "browser_automation", "computer_use", "create_skill"], id: \.self) { toolName in
+                ForEach(["run_shell_command", "write_file", "delete_file", "run_applescript", "control_browser", "computer_use", "create_skill"], id: \.self) { toolName in
                     HStack {
                         Text(toolName)
                             .font(AppTheme.Font.mono(11))

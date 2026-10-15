@@ -1,5 +1,6 @@
 import Foundation
 import Synchronization
+import os
 
 // MARK: - WS3: LaunchAgent supervision so bots keep working with the app closed
 //
@@ -218,3 +219,71 @@ extension LaunchAgentConfig {
         return md
     }
 }
+
+// MARK: - Daemon POSIX Signal Supervision
+
+/// Supervised signal listener for the LaunchAgent background daemon mode.
+/// Traps SIGTERM (from launchd bootout/logout) and SIGINT (from terminal interrupt),
+/// executing a graceful teardown closure (flushing SwiftData and closing network listeners) before process exit.
+public final class DaemonSignalHandler: @unchecked Sendable {
+    public static let shared = DaemonSignalHandler()
+
+    private var sigtermSource: (any DispatchSourceSignal)?
+    private var sigintSource: (any DispatchSourceSignal)?
+    private let isRunningLock = OSAllocatedUnfairLock<Bool>(initialState: false)
+
+    public init() {}
+
+    /// Installs dispatch signal sources for SIGTERM and SIGINT on the main runloop.
+    /// Default signal handlers are ignored via `signal(sig, SIG_IGN)` so Darwin does not abort prematurely.
+    public func install(onShutdown: @escaping @Sendable @MainActor (Int32) -> Void) {
+        teardown()
+
+        signal(SIGTERM, SIG_IGN)
+        signal(SIGINT, SIG_IGN)
+
+        let termSource = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
+        termSource.setEventHandler { [weak self] in
+            AppLog.info(.app, "🛑 Received SIGTERM (launchd bootout or logout). Initiating graceful shutdown...")
+            self?.teardown()
+            Task { @MainActor in
+                onShutdown(SIGTERM)
+            }
+        }
+        termSource.resume()
+        self.sigtermSource = termSource
+
+        let intSource = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
+        intSource.setEventHandler { [weak self] in
+            AppLog.info(.app, "🛑 Received SIGINT (terminal interrupt). Initiating graceful shutdown...")
+            self?.teardown()
+            Task { @MainActor in
+                onShutdown(SIGINT)
+            }
+        }
+        intSource.resume()
+        self.sigintSource = intSource
+
+        isRunningLock.withLock { $0 = true }
+    }
+
+    /// Whether signal sources are currently active.
+    public var isInstalled: Bool {
+        isRunningLock.withLock { $0 }
+    }
+
+    /// Tears down any active dispatch signal sources and restores default signal actions.
+    public func teardown() {
+        isRunningLock.withLock { isRunning in
+            guard isRunning else { return }
+            isRunning = false
+            sigtermSource?.cancel()
+            sigtermSource = nil
+            sigintSource?.cancel()
+            sigintSource = nil
+            signal(SIGTERM, SIG_DFL)
+            signal(SIGINT, SIG_DFL)
+        }
+    }
+}
+
