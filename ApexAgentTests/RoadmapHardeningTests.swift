@@ -363,5 +363,45 @@ struct RoadmapHardeningTests {
         // Verify last message is untouched
         #expect(session.messages[2].content == "What were the results?")
     }
+
+    // MARK: - Step 15: Single-Active-Local-Weights Policy & Browser Session Persistence
+    @Test("ModelRegistry tracks and unloads previous Ollama weights when switching local models")
+    func testSingleActiveLocalWeightsPolicy() {
+        ModelRegistry.resetActiveOllamaModelForTesting()
+        #expect(ModelRegistry.currentActiveOllamaModel == nil)
+
+        // First model loaded: no previous model to unload
+        let firstUnloaded = ModelRegistry.unloadPreviousOllamaModelIfNeeded(newModel: "qwen2.5-coder:7b")
+        #expect(firstUnloaded == nil)
+        #expect(ModelRegistry.currentActiveOllamaModel == "qwen2.5-coder:7b")
+
+        // Same model re-invoked: no unload triggered
+        let sameUnloaded = ModelRegistry.unloadPreviousOllamaModelIfNeeded(newModel: "qwen2.5-coder:7b")
+        #expect(sameUnloaded == nil)
+        #expect(ModelRegistry.currentActiveOllamaModel == "qwen2.5-coder:7b")
+
+        // Switch to different model: previous model returned for keep_alive: 0 unloading
+        let switchedUnloaded = ModelRegistry.unloadPreviousOllamaModelIfNeeded(newModel: "llama3.2:3b")
+        #expect(switchedUnloaded == "qwen2.5-coder:7b")
+        #expect(ModelRegistry.currentActiveOllamaModel == "llama3.2:3b")
+
+        // Switch again to deepseek-r1:8b
+        let thirdUnloaded = ModelRegistry.unloadPreviousOllamaModelIfNeeded(newModel: "deepseek-r1:8b")
+        #expect(thirdUnloaded == "llama3.2:3b")
+        #expect(ModelRegistry.currentActiveOllamaModel == "deepseek-r1:8b")
+    }
+
+    @Test("BrowserManager persistent dataStore maintains session configuration across invocations")
+    @MainActor
+    func testBrowserSessionStorePersistence() async throws {
+        let browser = BrowserManager.shared
+        #expect(browser.isPersistent == true)
+        #expect(browser.dataStore.isPersistent == true)
+
+        // Verify clearSession operates on the active dataStore cleanly
+        let clearMsg = try await browser.clearSession()
+        #expect(clearMsg.contains("Browser session and stored website data cleared"))
+        #expect(browser.isPersistent == true)
+    }
 }
 
