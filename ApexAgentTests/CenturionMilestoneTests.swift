@@ -27,7 +27,7 @@ struct CenturionMilestoneTests {
         let result = await ApexWorkflows.workflow70()
         #expect(result.id == 70)
         #expect(result.passed)
-        #expect(result.evidence.contains("totalWorkflows=70"))
+        #expect(result.evidence.contains("totalWorkflows=100"))
         #expect(result.evidence.contains("hardeningGates=8"))
         #expect(result.evidence.contains("score=100.0"))
     }
@@ -35,7 +35,7 @@ struct CenturionMilestoneTests {
     @Test("Catalog markdown export renders all 70 local workflows with valid table formatting")
     func catalogMarkdownRenders70Workflows() {
         let md = ApexWorkflows.exportWorkflowsCatalogMarkdown()
-        #expect(md.contains("Autonomous Local Workflows Catalog (70 workflows)"))
+        #expect(md.contains("Autonomous Local Workflows Catalog (100 workflows)"))
         #expect(md.contains("`70` | **Centurion Milestone"))
         #expect(md.contains("Native Swift 6.4"))
     }

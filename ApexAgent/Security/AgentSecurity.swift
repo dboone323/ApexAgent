@@ -36,6 +36,7 @@ enum AgentSecurity {
         "extract_entities": .low,
         "screen_diff": .low,
         "screen_perception": .low,
+        "space_read_page": .low, // read-only Space page fetch
 
         // ── Medium: fetches external data or writes local state ──────────
         "web_search": .medium,
@@ -66,6 +67,8 @@ enum AgentSecurity {
         "delete_memory": .medium,
         "export_review_session": .low,
         "verify_execution": .medium,
+        "space_write_page": .medium, // stages a Space page proposal (human-gated); local state only
+        "space_propose_diff": .medium, // stages a surgical page diff proposal (human-gated); local state only
 
         // ── High: destructive, code-executing, or externally visible ─────
         "run_shell_command": .high,

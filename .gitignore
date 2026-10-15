@@ -51,7 +51,6 @@ BuildArtifacts/
 *~
 *.swp
 *.swo
-Tools/benchmark-repro/
 
 # Local xcodebuild artifacts
 .dd/

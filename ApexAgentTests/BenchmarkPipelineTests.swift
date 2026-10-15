@@ -70,11 +70,11 @@ final class BenchmarkPipelineTests: XCTestCase {
         XCTAssertTrue(report.contains("`osworld_vision_ocr`"))
     }
 
-    // MARK: - Multi-Model Benchmarks: AFM, PCC, Gemini 3.5 Flash, Ollama Gemma 4:12B
+    // MARK: - Multi-Model Benchmarks: AFM, PCC, Gemini 3.8 Flash, Ollama Gemma 4:12B
 
-    func testGeminiVersionConfiguredToGemini35Flash() {
+    func testGeminiVersionConfiguredToGemini3_8Flash() {
         let model = ModelRegistry.geminiModel()
-        XCTAssertEqual(model, "gemini-3.5-flash", "Gemini model must be upgraded to gemini-3.5-flash")
+        XCTAssertEqual(model, "gemini-3.8-flash", "Gemini model must be gemini-3.8-flash")
     }
 
     func testPCCModelResolutionAndEntitlement() {
