@@ -85,8 +85,12 @@ class BrowserManager: NSObject, WKNavigationDelegate {
         }
 
         let timer = Task {
-            try? await Task.sleep(for: .seconds(2))
-            self.cancelNavigationOnTimeout()
+            do {
+                try await Task.sleep(for: .seconds(2))
+                self.cancelNavigationOnTimeout()
+            } catch {
+                // Task was cancelled prior to timeout expiry
+            }
         }
         
         do {

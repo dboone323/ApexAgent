@@ -149,8 +149,12 @@ struct ScreenshotTool: Tool {
             do {
                 try process.run()
                 let screenshotWatchdog = Task {
-                    try? await Task.sleep(nanoseconds: 10_000_000_000)
-                    if process.isRunning { process.terminate() }
+                    do {
+                        try await Task.sleep(nanoseconds: 10_000_000_000)
+                        if process.isRunning { process.terminate() }
+                    } catch {
+                        // Cancelled when process finishes before timeout
+                    }
                 }
                 process.waitUntilExit()
                 screenshotWatchdog.cancel()

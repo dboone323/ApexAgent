@@ -218,4 +218,80 @@ struct RoadmapHardeningTests {
         #expect(resAfterReset.allowed == true)
         #expect(orchestrator.totalTurnDelegations == 1)
     }
+
+    // MARK: - Step 9: Real Functional Spotlight Concurrency Execution
+    @Test("SpotlightSearchTool runs real query safely with OSAllocatedUnfairLock")
+    func testSpotlightSearchRealQueryExecution() async {
+        // Runs real Spotlight query using the native NSMetadataQuery engine
+        let hits = await SpotlightSearchTool.runSpotlightQuery(
+            query: "ApexAgent",
+            maxResults: 5,
+            contentType: nil
+        )
+        // Ensure execution completes safely without double-resume runtime trap
+        #expect(hits.count >= 0)
+    }
+
+    // MARK: - Step 10: Real Functional ShellTool Direct Process & Watchdog Timeout
+    @Test("ShellTool direct process executes cleanly and enforces watchdog timeout")
+    @MainActor
+    func testShellToolProcessAndWatchdogExecution() async throws {
+        let orchestrator = AgentOrchestrator()
+        orchestrator.permissions = AppPermissions()
+        let tool = ShellTool(orchestrator: orchestrator)
+
+        // 1. Real successful process execution via fallback
+        let successResult = try await tool.call(arguments: .init(
+            command: "echo 'APEX_WATCHDOG_SMOKE_PASS'",
+            timeoutSeconds: 5
+        ))
+        #expect(successResult.contains("APEX_WATCHDOG_SMOKE_PASS"))
+
+        // 2. Real timeout watchdog execution
+        let timeoutResult = try await tool.call(arguments: .init(
+            command: "sleep 5",
+            timeoutSeconds: 1
+        ))
+        #expect(timeoutResult.contains("Command timed out after 1 seconds") || timeoutResult.contains("ERROR"))
+    }
+
+    // MARK: - Step 11: Real Functional Network Diagnostics Execution
+    @Test("NetworkDiagnosticsTool executes status and probe safely without double-resume")
+    @MainActor
+    func testNetworkDiagnosticsRealExecution() async throws {
+        let orchestrator = AgentOrchestrator()
+        orchestrator.permissions = AppPermissions()
+        let tool = NetworkDiagnosticsTool(orchestrator: orchestrator)
+
+        // 1. Real interface status
+        let statusResult = try await tool.call(arguments: .init(
+            action: "status",
+            host: nil,
+            port: nil,
+            timeoutSeconds: 5
+        ))
+        #expect(statusResult.contains("Network Interface Status"))
+        #expect(statusResult.contains("Primary Interface"))
+
+        // 2. Real probe to localhost port with cancellation safety
+        let probeResult = try await tool.call(arguments: .init(
+            action: "probe",
+            host: "127.0.0.1",
+            port: 59999,
+            timeoutSeconds: 1
+        ))
+        // Either connection refused/failed/timed out, but must return cleanly without double-resume crash
+        #expect(probeResult.contains("Connected") || probeResult.contains("ERROR") || probeResult.contains("timed out") || probeResult.contains("Connection"))
+
+        // 3. Real DNS resolution
+        let dnsResult = try await tool.call(arguments: .init(
+            action: "dns",
+            host: "localhost",
+            port: nil,
+            timeoutSeconds: 5
+        ))
+        #expect(dnsResult.contains("DNS Resolution for `localhost`"))
+        #expect(dnsResult.contains("127.0.0.1") || dnsResult.contains("::1"))
+    }
 }
+

@@ -107,8 +107,12 @@ struct CreateSkillTool: Tool {
             chmodProcess.arguments = ["+x", scriptPath.path]
             try chmodProcess.run()
             let chmodWatchdog = Task {
-                try? await Task.sleep(nanoseconds: 10_000_000_000)
-                if chmodProcess.isRunning { chmodProcess.terminate() }
+                do {
+                    try await Task.sleep(nanoseconds: 10_000_000_000)
+                    if chmodProcess.isRunning { chmodProcess.terminate() }
+                } catch {
+                    // Watchdog cancelled
+                }
             }
             chmodProcess.waitUntilExit()
             chmodWatchdog.cancel()

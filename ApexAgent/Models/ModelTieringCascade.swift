@@ -136,7 +136,7 @@ public actor ModelTieringCascade {
             let reason: String
             if candidate == .appleOnDevice {
                 reason = "All higher tier engines unavailable; defaulted to on-device AFM"
-            } else if let requested = requested {
+            } else if requested != nil {
                 reason = "Failover to \(candidate.displayName) (requested provider unavailable)"
             } else {
                 reason = "Cascade ladder selected \(candidate.displayName)"
