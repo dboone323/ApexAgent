@@ -293,5 +293,75 @@ struct RoadmapHardeningTests {
         #expect(dnsResult.contains("DNS Resolution for `localhost`"))
         #expect(dnsResult.contains("127.0.0.1") || dnsResult.contains("::1"))
     }
+
+    // MARK: - Step 12: Chief of Staff Inter-Bot Tool Registration Verification
+    @Test("ChiefOfStaff systemPrompt references exact inter-bot tool names and no hyphen typos")
+    func testChiefOfStaffToolPromptExactness() {
+        let chiefId = "chief-01"
+        let bots = [
+            ChiefTeamMember(id: "chief-01", name: "Chief", title: "Chief of Staff", descriptionText: "Coordinates team"),
+            ChiefTeamMember(id: "dev-01", name: "Developer", title: "Codex Specialist", descriptionText: "Writes swift code")
+        ]
+        let prompt = ChiefOfStaff.systemPrompt(chiefId: chiefId, bots: bots, canDelegate: true)
+        
+        #expect(prompt.contains("`ask_bot`"))
+        #expect(prompt.contains("`delegate_task`"))
+        #expect(prompt.contains("`dispatch_swarm`"))
+        #expect(prompt.contains("`convene_meeting`"))
+        #expect(!prompt.contains("ask-bot"))
+    }
+
+    // MARK: - Step 13: ModelRegistry Context Ceilings and Long Context Routing
+    @Test("ModelRegistry enforces accurate context ceilings and long-context offloading")
+    func testModelRegistryContextCeilingsAndRouting() {
+        #expect(ModelRegistry.contextCeiling(for: .appleOnDevice) == 4096)
+        #expect(ModelRegistry.contextCeiling(for: .localOllama) == 8192)
+        #expect(ModelRegistry.contextCeiling(for: .applePCC) == 32768)
+        #expect(ModelRegistry.contextCeiling(for: .cloudGemini) == 1000000)
+
+        // Long context > 8000 tokens should route to cloudGemini if API key configured
+        let (provider, reason) = ModelRegistry.resolveProviderForTask(
+            preferred: .autoPicker,
+            prompt: String(repeating: "Large prompt content ", count: 2000), // ~8000+ tokens
+            history: [],
+            instructions: "",
+            tools: []
+        )
+        if !ModelRegistry.geminiAPIKey().isEmpty {
+            #expect(provider == .cloudGemini)
+            #expect(reason?.contains("exceed local 8k ceiling") == true)
+        } else {
+            #expect(provider == .localOllama)
+        }
+    }
+
+    // MARK: - Step 14: Pre-flight Token Budget & Tool Output Pruning
+    @Test("BotSession prunes excessive older tool outputs when approaching context threshold")
+    @MainActor
+    func testBotSessionToolOutputPruning() {
+        let profile = BotProfile(name: "Tester", title: "QA Specialist", descriptionText: "Runs validations")
+        let orchestrator = AgentOrchestrator()
+        let session = BotSession(bot: profile, orchestrator: orchestrator)
+
+        // Insert a normal user message
+        session.appendMessage(ChatMessage(role: .user, content: "Run diagnostic tool"))
+        // Insert a giant tool output simulating a 10KB shell/file read
+        let giantOutput = String(repeating: "LOG_LINE_DATA_STREAM_PAYLOAD_INDEX_0123456789\n", count: 200)
+        session.appendMessage(ChatMessage(role: .assistant, content: giantOutput))
+        // Insert current active user follow-up prompt
+        session.appendMessage(ChatMessage(role: .user, content: "What were the results?"))
+
+        #expect(session.messages[1].content.count > 8000)
+
+        // Prune excessive tool outputs
+        session.pruneExcessiveToolOutputs(maxOutputChars: 1000)
+
+        #expect(session.messages[1].content.contains("[... Tool output truncated from"))
+        #expect(session.messages[1].content.count <= 1200)
+        // Verify head and tail preserved
+        #expect(session.messages[1].content.hasPrefix("LOG_LINE_DATA_STREAM_PAYLOAD"))
+        // Verify last message is untouched
+        #expect(session.messages[2].content == "What were the results?")
+    }
 }
 

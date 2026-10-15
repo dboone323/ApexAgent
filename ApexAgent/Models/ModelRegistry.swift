@@ -243,6 +243,17 @@ public struct ModelRegistry: Sendable {
         return textTokens + toolTokens
     }
 
+    /// Context window ceiling in tokens for a given model provider.
+    public static func contextCeiling(for provider: ModelProvider) -> Int {
+        switch provider {
+        case .appleOnDevice: return 4_096
+        case .localOllama, .localMLX, .fmCLI: return 8_192
+        case .applePCC, .openAICompatible, .anthropic, .gitHubCopilot: return 32_768
+        case .cloudGemini: return 1_000_000
+        case .autoPicker: return 8_192
+        }
+    }
+
     /// Returns the currently active privacy tier.
     public static func privacyTier() -> PrivacyTier {
         guard let raw = UserDefaults.standard.string(forKey: privacyTierKey),
@@ -437,6 +448,10 @@ public struct ModelRegistry: Sendable {
 
         if hasAttachments && !geminiAPIKey().isEmpty {
             return (.cloudGemini, "Attachments require multimodal vision processing; tiering to Cloud Gemini.")
+        }
+
+        if estimatedTokens > 8000 && !geminiAPIKey().isEmpty {
+            return (.cloudGemini, "Context tokens (\(estimatedTokens)) exceed local 8k ceiling; tiering to Cloud Gemini long-context engine.")
         }
 
         return (.localOllama, "Context tokens (\(estimatedTokens)) exceed safe limit (3.2k); Auto-tiering to Local Ollama.")

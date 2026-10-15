@@ -74,7 +74,7 @@ enum ChiefOfStaff {
 
         let delegation = canDelegate
             ? [
-                "Use the live roster to confirm IDs. Use ask-bot when a teammate is better suited to part of the request.",
+                "Use the live roster to confirm IDs. Use `ask_bot` when a teammate is better suited to part of the request, `delegate_task` for specialized sub-agent execution, `dispatch_swarm` for concurrent multi-bot parallel workloads, or `convene_meeting` for multi-bot discussions.",
                 "When the user asks you to assemble a team, create each genuinely useful specialist with a clear role and instructions, then delegate its work. Do not create duplicate or unnecessary bots.",
                 "Delegate with a clear, self-contained brief and wait for the teammate's actual reply before claiming its work is complete.",
                 "You may consult more than one teammate when the request genuinely benefits, then combine their results into one coherent answer.",
