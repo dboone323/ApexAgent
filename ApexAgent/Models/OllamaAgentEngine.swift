@@ -142,6 +142,8 @@ final class OllamaAgentEngine: AgentEngine {
         var lastToolOutput = ""
         var disableToolsOnNextTurn = false
 
+        ModelRegistry.unloadPreviousOllamaModelIfNeeded(newModel: selectedModel)
+
         while loopCount < maxLoops {
             loopCount += 1
 
@@ -149,6 +151,7 @@ final class OllamaAgentEngine: AgentEngine {
                 "model": selectedModel,
                 "messages": messages,
                 "stream": true,
+                "keep_alive": "2m",
                 "options": [
                     "temperature": 0.3,
                     "num_ctx": 8192

@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import FoundationModels
+import os
 
 // MARK: - Auto Tiering Routing Strategy
 public enum AutoTieringStrategy: String, CaseIterable, Identifiable, Codable, Sendable {
@@ -386,6 +387,47 @@ public struct ModelRegistry: Sendable {
         }
 
         return defaultFastOllamaModel
+    }
+
+    private static let lastActiveOllamaModelLock = OSAllocatedUnfairLock<String?>(initialState: nil)
+
+    /// Currently active Ollama model tracked for single-active-local-weights policy.
+    public static var currentActiveOllamaModel: String? {
+        lastActiveOllamaModelLock.withLock { $0 }
+    }
+
+    /// Resets the tracked active Ollama model (used for test isolation).
+    public static func resetActiveOllamaModelForTesting() {
+        lastActiveOllamaModelLock.withLock { $0 = nil }
+    }
+
+    /// Enforces a single-active-local-weights policy in unified memory by explicitly unloading previously resident Ollama models.
+    @discardableResult
+    public static func unloadPreviousOllamaModelIfNeeded(newModel: String) -> String? {
+        let previousModel = lastActiveOllamaModelLock.withLock { current -> String? in
+            let prev = current
+            current = newModel
+            return (prev != nil && prev != newModel) ? prev : nil
+        }
+        guard let modelToUnload = previousModel else { return nil }
+
+        Task {
+            let hostStr = ollamaHost()
+            guard let host = URL(string: hostStr) else { return }
+            let endpoint = host.appendingPathComponent("api/chat")
+            var request = URLRequest(url: endpoint)
+            request.httpMethod = "POST"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            let payload: [String: Any] = [
+                "model": modelToUnload,
+                "keep_alive": 0
+            ]
+            request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+            request.timeoutInterval = 5
+            _ = try? await URLSession.shared.data(for: request)
+            AppLog.info(.registry, "Unloaded previous Ollama weights for '\(modelToUnload)' (keep_alive: 0) to free unified memory.")
+        }
+        return modelToUnload
     }
 
     /// Returns true if the prompt suggests a math or analytical reasoning problem.

@@ -16,12 +16,19 @@ class BrowserManager: NSObject, WKNavigationDelegate {
         return config
     }()
     
-    var isPersistent: Bool { true }
-    var dataStore: WKWebsiteDataStore? { webViewConfig.websiteDataStore }
+    var isPersistent: Bool { webViewConfig.websiteDataStore.isPersistent }
+    var dataStore: WKWebsiteDataStore { webViewConfig.websiteDataStore }
     
     private var offscreenWindow: NSWindow?
     private var loadedDocumentHtml: String?
     private var loadedDocumentTitle: String?
+    
+    func configureDataStore(_ store: WKWebsiteDataStore) {
+        cleanup()
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = store
+        self.webViewConfig = config
+    }
     
     func cleanup() {
         webView?.stopLoading()
@@ -37,10 +44,7 @@ class BrowserManager: NSObject, WKNavigationDelegate {
     
     func initializeWebView() {
         if webView == nil {
-            let config = WKWebViewConfiguration()
-            let isTesting = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil || NSClassFromString("XCTestCase") != nil
-            config.websiteDataStore = isTesting ? WKWebsiteDataStore.nonPersistent() : WKWebsiteDataStore.default()
-            let wv = WKWebView(frame: CGRect(x: 0, y: 0, width: 1280, height: 800), configuration: config)
+            let wv = WKWebView(frame: CGRect(x: 0, y: 0, width: 1280, height: 800), configuration: webViewConfig)
             wv.navigationDelegate = self
             let win = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 1280, height: 800), styleMask: [.borderless], backing: .buffered, defer: false)
             win.isReleasedWhenClosed = false
@@ -267,7 +271,7 @@ class BrowserManager: NSObject, WKNavigationDelegate {
     }
 
     func clearSession() async throws -> String {
-        let store = WKWebsiteDataStore.default()
+        let store = dataStore
         let types = WKWebsiteDataStore.allWebsiteDataTypes()
         let date = Date(timeIntervalSince1970: 0)
         await store.removeData(ofTypes: types, modifiedSince: date)
