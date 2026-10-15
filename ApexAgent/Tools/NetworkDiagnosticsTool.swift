@@ -1,6 +1,7 @@
 import Foundation
 import FoundationModels
 import Network
+import os
 
 struct NetworkDiagnosticsTool: Tool {
     let orchestrator: OrchestratorProvider
@@ -33,9 +34,17 @@ struct NetworkDiagnosticsTool: Tool {
             case "status":
                 let monitor = NWPathMonitor()
                 let path: NWPath = await withCheckedContinuation { cont in
+                    let isResumed = OSAllocatedUnfairLock(initialState: false)
                     monitor.pathUpdateHandler = { path in
-                        cont.resume(returning: path)
-                        monitor.cancel()
+                        let shouldResume = isResumed.withLock { resumed -> Bool in
+                            if resumed { return false }
+                            resumed = true
+                            return true
+                        }
+                        if shouldResume {
+                            cont.resume(returning: path)
+                            monitor.cancel()
+                        }
                     }
                     monitor.start(queue: .global())
                 }
@@ -68,16 +77,38 @@ struct NetworkDiagnosticsTool: Tool {
                 return try await withThrowingTaskGroup(of: String.self) { group in
                     group.addTask {
                         return try await withCheckedThrowingContinuation { (cont: CheckedContinuation<String, Error>) in
+                            let isResumed = OSAllocatedUnfairLock(initialState: false)
                             connection.stateUpdateHandler = { state in
                                 switch state {
                                 case .ready:
-                                    let latency = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
-                                    cont.resume(returning: String(format: "Connected to %@:%d (Latency: %.2f ms)", host, port, latency))
+                                    let shouldResume = isResumed.withLock { resumed -> Bool in
+                                        if resumed { return false }
+                                        resumed = true
+                                        return true
+                                    }
+                                    if shouldResume {
+                                        let latency = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+                                        cont.resume(returning: String(format: "Connected to %@:%d (Latency: %.2f ms)", host, port, latency))
+                                    }
                                     connection.cancel()
                                 case .failed(let error):
-                                    cont.resume(throwing: error)
+                                    let shouldResume = isResumed.withLock { resumed -> Bool in
+                                        if resumed { return false }
+                                        resumed = true
+                                        return true
+                                    }
+                                    if shouldResume {
+                                        cont.resume(throwing: error)
+                                    }
                                 case .cancelled:
-                                    cont.resume(throwing: NSError(domain: "NetworkDiagnosticsTool", code: -1, userInfo: [NSLocalizedDescriptionKey: "Connection cancelled"]))
+                                    let shouldResume = isResumed.withLock { resumed -> Bool in
+                                        if resumed { return false }
+                                        resumed = true
+                                        return true
+                                    }
+                                    if shouldResume {
+                                        cont.resume(throwing: NSError(domain: "NetworkDiagnosticsTool", code: -1, userInfo: [NSLocalizedDescriptionKey: "Connection cancelled"]))
+                                    }
                                 default:
                                     break
                                 }

@@ -145,9 +145,23 @@ struct ShellTool: Tool {
 
                 do {
                     try process.run()
-                    process.waitUntilExit()
-                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                    let output = String(data: data, encoding: .utf8) ?? ""
+                    let output: String = try await withThrowingTaskGroup(of: String.self) { group in
+                        group.addTask {
+                            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                            process.waitUntilExit()
+                            return String(data: data, encoding: .utf8) ?? ""
+                        }
+                        group.addTask {
+                            try await Task.sleep(for: .seconds(timeout))
+                            if process.isRunning {
+                                process.terminate()
+                            }
+                            throw NSError(domain: "ShellTool", code: -2, userInfo: [NSLocalizedDescriptionKey: "Command timed out after \(timeout) seconds."])
+                        }
+                        let first = try await group.next()!
+                        group.cancelAll()
+                        return first
+                    }
                     await MainActor.run {
                         orchestrator.appendTerminalOutput(conversationId: conversationId, text: output)
                     }
@@ -160,7 +174,14 @@ struct ShellTool: Tool {
                     }
                     return output
                 } catch {
-                    return "ERROR: Failed to run process: \(error.localizedDescription)"
+                    if process.isRunning {
+                        process.terminate()
+                    }
+                    var outputMsg = "ERROR: \(error.localizedDescription)"
+                    if isBuildCommand {
+                        outputMsg += "\n\n[REMEDIATION GUIDANCE: The build failed. Please read the error log above, identify the failing lines in the code, use the appropriate tools to fix the code, and rerun the build command. Do not give up.]"
+                    }
+                    return outputMsg
                 }
             }
         }

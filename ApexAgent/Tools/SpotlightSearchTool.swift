@@ -1,5 +1,6 @@
 @preconcurrency import Foundation
 import FoundationModels
+import os
 
 // MARK: - Spotlight Search Tool (Core Spotlight RAG)
 //
@@ -79,14 +80,34 @@ struct SpotlightSearchTool: Tool {
             metadataQuery.sortDescriptors = [NSSortDescriptor(key: kMDItemFSCreationDate as String, ascending: false)]
             metadataQuery.valueListAttributes = [kMDItemTitle as String, kMDItemPath as String, kMDItemTextContent as String]
 
+            let hasResumed = OSAllocatedUnfairLock(initialState: false)
             let obsBox = UncheckedSendableBox<NSObjectProtocol?>(nil)
             let queryBoxInner = UncheckedSendableBox(metadataQuery)
+
+            let resumeOnce: @Sendable ([SpotlightHit]) -> Void = { hits in
+                let shouldResume = hasResumed.withLock { isResumed -> Bool in
+                    if !isResumed {
+                        isResumed = true
+                        return true
+                    }
+                    return false
+                }
+                guard shouldResume else { return }
+
+                queryBoxInner.value.disableUpdates()
+                queryBoxInner.value.stop()
+                if let obs = obsBox.value {
+                    NotificationCenter.default.removeObserver(obs)
+                    obsBox.value = nil
+                }
+                continuation.resume(returning: hits)
+            }
+
             obsBox.value = NotificationCenter.default.addObserver(
                 forName: .NSMetadataQueryDidFinishGathering,
                 object: metadataQuery,
                 queue: .main
             ) { _ in
-                queryBoxInner.value.disableUpdates()
                 let count = min(queryBoxInner.value.resultCount, maxResults)
                 var hits: [SpotlightHit] = []
                 for i in 0..<count {
@@ -99,19 +120,14 @@ struct SpotlightSearchTool: Tool {
                     let snippet = rawContent.isEmpty ? nil : String(rawContent.prefix(200))
                     hits.append(SpotlightHit(title: title, path: path, snippet: snippet))
                 }
-                queryBoxInner.value.stop()
-                if let obs = obsBox.value { NotificationCenter.default.removeObserver(obs) }
-                continuation.resume(returning: hits)
+                resumeOnce(hits)
             }
 
             // Watchdog: if the gather never completes (Spotlight unavailable),
             // resume with an empty result so the caller is never stranded.
-            let watchdogBox = UncheckedSendableBox(metadataQuery)
             DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 3) {
                 DispatchQueue.main.async {
-                    watchdogBox.value.stop()
-                    if let obs = obsBox.value { NotificationCenter.default.removeObserver(obs) }
-                    continuation.resume(returning: [])
+                    resumeOnce([])
                 }
             }
 

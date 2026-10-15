@@ -32,7 +32,7 @@ struct VisualPerceptionAuditorTests {
     func substantialChangeDetected() {
         let width = 100
         let height = 100
-        var frameA = [UInt8](repeating: 50, count: width * height)
+        let frameA = [UInt8](repeating: 50, count: width * height)
         var frameB = frameA
 
         // Paint a 30x30 bright region (900 pixels = 9% of screen) at (20, 20)
@@ -67,7 +67,7 @@ struct VisualPerceptionAuditorTests {
     func minorNoiseFiltered() {
         let width = 100
         let height = 100
-        var frameA = [UInt8](repeating: 100, count: width * height)
+        let frameA = [UInt8](repeating: 100, count: width * height)
         var frameB = frameA
 
         // Modify only 2 pixels (0.02% of screen)

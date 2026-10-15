@@ -33,7 +33,7 @@ struct ApexFlow {
         }
 
         if args.contains("--list") {
-            let descriptors = await ApexWorkflows.allDescriptors()
+            let descriptors = ApexWorkflows.allDescriptors()
             if jsonOutput {
                 let encoder = JSONEncoder()
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -55,7 +55,7 @@ struct ApexFlow {
         let results = await ApexWorkflows.run(ids: selected)
 
         if jsonOutput {
-            print(await ApexWorkflows.formatJSON(results))
+            print(ApexWorkflows.formatJSON(results))
         } else {
             print("ApexAgent automation workflows")
             print(String(repeating: "─", count: 72))

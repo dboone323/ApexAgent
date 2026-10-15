@@ -127,14 +127,20 @@ public final class DotSandboxManager: Sendable {
                     return false
                 }
                 group.addTask {
-                    try? await Task.sleep(for: .seconds(timeoutSeconds))
-                    if process.isRunning {
-                        process.terminate()
-                        return true
+                    do {
+                        try await Task.sleep(for: .seconds(timeoutSeconds))
+                        if process.isRunning {
+                            process.terminate()
+                            return true
+                        }
+                    } catch {
+                        // Cancelled when process finishes before timeout
                     }
                     return false
                 }
-                return await group.next() ?? false
+                let first = await group.next() ?? false
+                group.cancelAll()
+                return first
             }
 
             let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
