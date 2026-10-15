@@ -57,9 +57,10 @@ extension BotSession {
                 self.processNextQueuedPromptIfNeeded()
             }
 
-            // 0. Compact context if conversation history has exceeded character limits
+            // 0. Pre-flight character/token budget check and compaction
             if Task.isCancelled { return }
-            await self.compactContextIfNeeded()
+            let activeProvider = ModelRegistry.effectiveProvider(for: self.bot)
+            await self.enforceTokenBudgetBeforeDispatch(provider: activeProvider)
             if Task.isCancelled { return }
 
             // 1. Create or reset the model session with this Bot's instructions

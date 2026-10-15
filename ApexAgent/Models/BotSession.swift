@@ -294,7 +294,7 @@ final class BotSession {
                 history: messages.dropLast(), // exclude the empty assistant placeholder
                 instructions: systemInstructions,
                 orchestrator: orch,
-                onEvent: { event in
+                onEvent: { _ in
                     // Granular events can be logged or reflected in UI
                 },
                 onUpdate: { [weak self] delta in
@@ -412,10 +412,11 @@ final class BotSession {
         try? context.save()
     }
 
-    // MARK: - Context Compaction
+    // MARK: - Context Compaction & Token Budgeting
 
     func compactContextIfNeeded() async {
-        guard messages.count > 10 else { return }
+        let totalChars = messages.reduce(0) { $0 + $1.content.count }
+        guard messages.count > 10 || totalChars > 16000 else { return }
         let targetBotId = bot.id
         do {
             let (compacted, archivedCount) = try await CognitiveMemoryEngine.shared.compactMessages(
@@ -458,6 +459,52 @@ final class BotSession {
             }
         } catch {
             AppLog.error(.bot, "⚠️ Context compaction skipped: \(error.localizedDescription)")
+        }
+    }
+
+    /// Prunes excessive tool output blocks in older conversation turns to prevent context window overflow.
+    func pruneExcessiveToolOutputs(maxOutputChars: Int = 3000) {
+        guard messages.count > 1 else { return }
+        var modified = false
+        var updated = messages
+        // Leave the very last message intact (most recent prompt/turn)
+        for i in 0..<(updated.count - 1) {
+            let msg = updated[i]
+            if msg.content.count > maxOutputChars {
+                let origCount = msg.content.count
+                let head = msg.content.prefix(maxOutputChars / 2)
+                let tail = msg.content.suffix(maxOutputChars / 2)
+                let prunedContent = "\(head)\n\n[... Tool output truncated from \(origCount) chars for model context window budget ...]\n\n\(tail)"
+                updated[i].content = prunedContent
+                modified = true
+            }
+        }
+        if modified {
+            self.messages = updated
+        }
+    }
+
+    /// Pre-flight character and token budget validation before dispatching to the selected model provider.
+    func enforceTokenBudgetBeforeDispatch(provider: ModelProvider) async {
+        let ceiling = ModelRegistry.contextCeiling(for: provider)
+        let threshold = Int(Double(ceiling) * 0.75)
+        let estimatedTokens = ModelRegistry.estimateTokenCount(
+            prompt: "",
+            history: self.messages,
+            instructions: self.systemInstructions,
+            tools: self.bot.allowedToolNames
+        )
+        if estimatedTokens > threshold {
+            await self.compactContextIfNeeded()
+            let updatedTokens = ModelRegistry.estimateTokenCount(
+                prompt: "",
+                history: self.messages,
+                instructions: self.systemInstructions,
+                tools: self.bot.allowedToolNames
+            )
+            if updatedTokens > threshold {
+                self.pruneExcessiveToolOutputs(maxOutputChars: 3000)
+            }
         }
     }
 
