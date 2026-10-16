@@ -526,6 +526,61 @@ struct RoadmapHardeningTests {
         #expect(manager.recentRuns.first?.routineName == "Audit Pipeline")
         #expect(manager.recentRuns.first?.output?.contains("Security verification passed") == true)
     }
+
+    // MARK: - Step 20: Space Page Creation, Selection, and Deletion Lifecycle
+    @Test("SpacePage creation, selection, and deletion lifecycle in SpaceManager")
+    @MainActor
+    func testSpacePageCreationAndDeletionLifecycle() async {
+        let orchestrator = AgentOrchestrator()
+        let computer = Computer()
+        let botManager = BotManager(orchestrator: orchestrator, computer: computer)
+        let spaceManager = SpaceManager()
+        spaceManager.orchestrator = orchestrator
+        spaceManager.botManager = botManager
+
+        let space = spaceManager.createSpace(
+            name: "Platform Architecture",
+            summary: "Cross-system architectural design and standards",
+            seedDefaults: false
+        )
+        spaceManager.activeSpaceId = space.id
+
+        #expect(space.pages.isEmpty)
+
+        // Create page
+        let page1 = spaceManager.createPage(
+            in: space,
+            title: "Architecture Charter",
+            markdownBody: "# Architecture Charter\n\nGuidelines for multi-agent workflows.",
+            authorName: "Alex Rivera"
+        )
+        let page2 = spaceManager.createPage(
+            in: space,
+            title: "Release Checklist",
+            markdownBody: "# Release Checklist\n\n- Pre-push gates\n- Signoff",
+            authorName: "Alex Rivera"
+        )
+
+        #expect(space.pages.count == 2)
+        #expect(space.sortedPages.count == 2)
+
+        // Select page
+        spaceManager.activePageId = page1.id
+        #expect(spaceManager.activePage?.id == page1.id)
+        #expect(spaceManager.activePage?.title == "Architecture Charter")
+
+        // Delete page
+        spaceManager.deletePage(page1, from: space)
+        #expect(space.pages.count == 1)
+        let remainingIds = space.pages.map(\.id)
+        #expect(!remainingIds.contains(page1.id))
+        #expect(spaceManager.activePage?.id == page2.id)
+
+        // Delete remaining page
+        spaceManager.deletePage(page2, from: space)
+        #expect(space.pages.isEmpty)
+        #expect(spaceManager.activePage == nil)
+    }
 }
 
 
