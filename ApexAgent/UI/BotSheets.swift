@@ -132,7 +132,23 @@ struct CreateBotSheet: View {
                 }
             }
         }
+        .onAppear {
+            resetForm()
+        }
         .accessibilityIdentifier("createBotSheet")
+    }
+
+    private func resetForm() {
+        name = ""
+        title = ""
+        descriptionText = ""
+        avatarName = "person.fill"
+        selectedModelProvider = nil
+        ollamaModelBinding = ""
+        restrictTools = false
+        selectedToolNames = []
+        restrictMCPServers = false
+        selectedMCPServers = []
     }
 
     private func createBot() {

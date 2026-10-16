@@ -136,8 +136,10 @@ struct BotSidebarSection: View {
         .sheet(isPresented: $showEditSheet) {
             if let bot = editingBot {
                 EditBotSheet(bot: bot)
+                    .id(bot.id)
             } else {
                 CreateBotSheet()
+                    .id("create-new-bot-sheet")
             }
         }
         .confirmationDialog("Delete Bot?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {

@@ -134,29 +134,47 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                modelConfigSection
-                reasoningSection
-                apiCredentialsSection
-                tieringStrategySection
-                ollamaSection
-                safetySection
-                voiceSection
-                containersSection
-                permissionsSection
-                collaborativeSection
-                a2aSection
-                cognitiveMemorySection
-                enterpriseSecuritySection
-                mcpSection
-                daemonSection
-                proactivitySection
-                toolGovernanceSection
-                instructionsSection
-                quickModesSection
-                conversationDataSection
+            ScrollViewReader { proxy in
+                Form {
+                    modelConfigSection
+                    reasoningSection
+                    apiCredentialsSection
+                    tieringStrategySection
+                    ollamaSection
+                    safetySection
+                    voiceSection
+                    containersSection
+                    permissionsSection
+                    collaborativeSection
+                    a2aSection
+                    cognitiveMemorySection
+                    enterpriseSecuritySection
+                    mcpSection
+                    routinesSection
+                    daemonSection
+                    proactivitySection
+                    toolGovernanceSection
+                    instructionsSection
+                    quickModesSection
+                    conversationDataSection
+                }
+                .formStyle(.grouped)
+                .onAppear {
+                    if DeepLinkNavigationState.shared.selectedRoutineId != nil {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation {
+                                proxy.scrollTo("routinesSection", anchor: .top)
+                            }
+                        }
+                    } else if DeepLinkNavigationState.shared.selectedSkillName != nil {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation {
+                                proxy.scrollTo("skillsSection", anchor: .top)
+                            }
+                        }
+                    }
+                }
             }
-            .formStyle(.grouped)
             .navigationTitle("Settings")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -667,10 +685,10 @@ struct SettingsView: View {
     private var mcpSection: some View {
         Section("Model Context Protocol (MCP) Servers") {
             DynamicToolboxManagerSection()
-            RoutinesSection()
         }
 
         SkillsSection()
+            .id("skillsSection")
 
         Section("Add New MCP Server") {
             VStack(alignment: .leading, spacing: AppTheme.Spacing.sm) {
@@ -702,6 +720,12 @@ struct SettingsView: View {
                 .padding(.top, AppTheme.Spacing.sm)
             }
         }
+    }
+
+    @ViewBuilder
+    private var routinesSection: some View {
+        RoutinesSection()
+            .id("routinesSection")
     }
 
     @ViewBuilder

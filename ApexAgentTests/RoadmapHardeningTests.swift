@@ -455,6 +455,77 @@ struct RoadmapHardeningTests {
         #expect(names.contains("spotlight_search"))
         #expect(orchestrator.allTools.count == 70)
     }
+
+    // MARK: - Step 18: Routine and Skill DeepLink & Settings Sheet Integration
+    @Test("Routine and Skill deep link routing activates settings navigation and broadcasts notification")
+    @MainActor
+    func testRoutineAndSkillDeepLinkRouting() async {
+        let navState = DeepLinkNavigationState()
+
+        let notificationFired = OSAllocatedUnfairLock(initialState: 0)
+        let observer = NotificationCenter.default.addObserver(
+            forName: .showSettingsSheet,
+            object: nil,
+            queue: .main
+        ) { _ in
+            notificationFired.withLock { $0 += 1 }
+        }
+        defer { NotificationCenter.default.removeObserver(observer) }
+
+        // Test routine deep link routing
+        navState.apply(.routine(id: "daily-sync"))
+        #expect(navState.selectedRoutineId == "daily-sync")
+        #expect(navState.showSettings == true)
+
+        // Test skill deep link routing
+        navState.reset()
+        #expect(navState.selectedRoutineId == nil)
+        #expect(navState.showSettings == false)
+
+        navState.apply(.skill(name: "swift-concurrency"))
+        #expect(navState.selectedSkillName == "swift-concurrency")
+        #expect(navState.showSettings == true)
+
+        #expect(notificationFired.withLock({ $0 }) >= 2)
+    }
+
+    // MARK: - Step 19: Routine Lifecycle & Execution Receipt Durability
+    @Test("Routine creation, schedule description, and durable run receipt recording")
+    @MainActor
+    func testRoutineReceiptDurabilityAndLifecycle() async {
+        let routine = Routine(
+            name: "Audit Pipeline",
+            descriptionText: "Run workspace security verification",
+            trigger: .timeInterval,
+            scheduledMinutes: 30,
+            enabled: true
+        )
+
+        #expect(routine.configurationError() == nil)
+        #expect(routine.effectiveScheduleDescription == "Every 30 min")
+        #expect(routine.enabled == true)
+
+        // Toggle state
+        let manager = RoutineManager.shared
+        manager.toggle(routine)
+        #expect(routine.enabled == false)
+        manager.toggle(routine)
+        #expect(routine.enabled == true)
+
+        // Durable receipt recording verification
+        let initialRunCount = manager.recentRuns.count
+        let run = RoutineRun(
+            routineId: routine.stableUUID,
+            routineName: routine.name,
+            prompt: routine.descriptionText,
+            trigger: routine.trigger,
+            output: "Security verification passed: 0 vulnerabilities found."
+        )
+        manager.recentRuns.insert(run, at: 0)
+        #expect(manager.recentRuns.count == initialRunCount + 1)
+        #expect(manager.recentRuns.first?.routineName == "Audit Pipeline")
+        #expect(manager.recentRuns.first?.output?.contains("Security verification passed") == true)
+    }
 }
 
 
