@@ -205,6 +205,13 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
         startWebhookReceiverIfPossible()
     }
 
+    /// Handles macOS standard Help menu and shortcut (⌘?) routing to official documentation.
+    @IBAction public func showHelp(_ sender: Any?) {
+        if let url = URL(string: "https://github.com/dboone323/ApexAgent#readme") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
     /// O5: serve .webhook routines while the GUI runs. If the port is taken
     /// (e.g. the daemon is already bound), its receiver covers us — non-fatal.
     private func startWebhookReceiverIfPossible() {

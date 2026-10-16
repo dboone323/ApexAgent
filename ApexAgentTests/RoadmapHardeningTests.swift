@@ -648,6 +648,44 @@ struct RoadmapHardeningTests {
         #expect(decision3 == .deliver)
         #expect(botManager.pendingPeerApprovals.isEmpty)
     }
+
+    // MARK: - Step 22: Bot Deletion and Conversation Reset Lifecycle
+    @Test("Bot deletion lifecycle and conversation reset in BotManager")
+    @MainActor
+    func testBotDeletionAndConversationResetLifecycle() async {
+        let orchestrator = AgentOrchestrator()
+        let computer = Computer()
+        let botManager = BotManager(orchestrator: orchestrator, computer: computer)
+
+        // 1. Create a bot and attach messages to its session
+        let initialBotCount = botManager.allBots.count
+        let tempBot = botManager.createBot(
+            name: "TempCleanupBot",
+            title: "Disposable Bot",
+            descriptionText: "Used for real lifecycle validation"
+        )
+        #expect(botManager.allBots.count == initialBotCount + 1)
+        #expect(botManager.bot(byId: tempBot.id) != nil)
+
+        let session = botManager.session(for: tempBot)
+        session.appendMessage(ChatMessage(role: .user, content: "Initial query for cleanup bot"))
+        session.appendMessage(ChatMessage(role: .assistant, content: "Ready for cleanup"))
+        #expect(session.messages.count == 2)
+
+        // 2. Delete bot through BotManager API
+        botManager.deleteBot(tempBot)
+        #expect(botManager.allBots.count == initialBotCount)
+        #expect(botManager.bot(byId: tempBot.id) == nil)
+        #expect(botManager.session(forBotId: tempBot.id) == nil)
+
+        // 3. Conversation reset clears messages and states cleanly
+        orchestrator.appendMessage(ChatMessage(role: .user, content: "Active query in main chat"))
+        #expect(!orchestrator.messages.isEmpty)
+        orchestrator.startNewConversation()
+        #expect(orchestrator.messages.isEmpty)
+        #expect(orchestrator.toolEvents.isEmpty)
+        #expect(orchestrator.currentConversation == nil)
+    }
 }
 
 

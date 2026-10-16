@@ -171,6 +171,7 @@ struct BotSidebarSection: View {
                     bm.deleteBot(bot)
                 }
             }
+            .accessibilityIdentifier("confirmDeleteBotButton")
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This removes the Bot's profile and conversation. Files on the shared computer are not deleted.")
