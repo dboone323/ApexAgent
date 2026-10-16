@@ -6,6 +6,7 @@ struct ChatView: View {
     @Environment(AgentOrchestrator.self) private var orchestrator
     @State private var inputText = ""
     @FocusState private var isInputFocused: Bool
+    @State private var showNewChatBanner = false
     
     private var gatewayClient: ApexGatewayClient { ApexGatewayClient.shared }
     
@@ -56,6 +57,28 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            // New conversation feedback banner
+            if showNewChatBanner {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(AppTheme.Palette.accent)
+                    Text("New Conversation Ready")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.primary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(Color(nsColor: .windowBackgroundColor))
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(AppTheme.Palette.accent.opacity(0.35), lineWidth: 1))
+                .shadow(color: .black.opacity(0.08), radius: 3, y: 1)
+                .accessibilityIdentifier("newConversationBanner")
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+            }
+
             // Generation state banner
             if displayIsGenerating {
                 HStack(spacing: AppTheme.Spacing.sm) {
@@ -120,6 +143,15 @@ struct ChatView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ApexAgent.focusChatInput"))) { _ in
             inputText = ""
             isInputFocused = true
+            withAnimation(.easeInOut(duration: 0.25)) {
+                showNewChatBanner = true
+            }
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                withAnimation(.easeOut(duration: 0.3)) {
+                    showNewChatBanner = false
+                }
+            }
         }
     }
 
