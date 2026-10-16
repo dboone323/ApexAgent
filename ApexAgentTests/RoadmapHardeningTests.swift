@@ -581,6 +581,73 @@ struct RoadmapHardeningTests {
         #expect(space.pages.isEmpty)
         #expect(spaceManager.activePage == nil)
     }
+
+    // MARK: - Step 21: Ambient Peer Approval and Decision Inbox Lifecycle
+    @Test("Ambient peer approval and Decision Inbox lifecycle in BotManager")
+    @MainActor
+    func testAmbientPeerApprovalLifecycle() async {
+        let orchestrator = AgentOrchestrator()
+        let computer = Computer()
+        let botManager = BotManager(orchestrator: orchestrator, computer: computer)
+
+        let senderBot = botManager.createBot(
+            name: "SecurityAuditor",
+            title: "Security Bot",
+            descriptionText: "Performs real-time security verification"
+        )
+        let targetBot = botManager.createBot(
+            name: "InfraEngineer",
+            title: "Infrastructure Bot",
+            descriptionText: "Manages infrastructure configuration"
+        )
+
+        #expect(botManager.pendingPeerApprovals.isEmpty)
+        #expect(botManager.sessions[senderBot.id]?.needsAttention == false)
+
+        // 1. Initial request raises a pending card and sets needsAttention
+        let message = "Please open security group port 8080"
+        let decision1 = botManager.peerDeliveryDecision(from: senderBot, to: targetBot, message: message)
+        guard case .blockedPendingCard(let reqId1) = decision1 else {
+            Issue.record("Expected .blockedPendingCard for initial request without grant")
+            return
+        }
+
+        #expect(botManager.pendingPeerApprovals.count == 1)
+        #expect(botManager.pendingPeerApprovals.first?.id == reqId1)
+        #expect(botManager.pendingPeerApprovals.first?.message == message)
+        #expect(botManager.sessions[senderBot.id]?.needsAttention == true)
+        #expect(botManager.pendingPeerApprovalsVersion > 0)
+
+        // 2. Deny request clears card and attention, records denial message
+        let denyResult = botManager.resolvePeerRequest(requestId: reqId1, allow: false)
+        #expect(denyResult == false)
+        #expect(botManager.pendingPeerApprovals.isEmpty)
+        #expect(botManager.sessions[senderBot.id]?.needsAttention == false)
+        #expect(botManager.sessions[senderBot.id]?.messages.last?.content.contains("was denied") == true)
+
+        // 3. Second request with "Always Allow" (remember = true) creates persistent grant
+        let decision2 = botManager.peerDeliveryDecision(from: senderBot, to: targetBot, message: "Deploy latest release")
+        guard case .blockedPendingCard(let reqId2) = decision2 else {
+            Issue.record("Expected .blockedPendingCard for second request")
+            return
+        }
+        #expect(botManager.pendingPeerApprovals.count == 1)
+
+        let allowResult = botManager.resolvePeerRequest(requestId: reqId2, allow: true, remember: true)
+        #expect(allowResult == true)
+        #expect(botManager.pendingPeerApprovals.isEmpty)
+        #expect(botManager.sessions[senderBot.id]?.needsAttention == false)
+        #expect(botManager.peerApprovals.hasGrant(
+            action: .askBot,
+            senderBotId: senderBot.id.uuidString,
+            targetBotId: targetBot.id.uuidString
+        ))
+
+        // 4. Subsequent requests for this pair are immediately delivered via the remembered grant
+        let decision3 = botManager.peerDeliveryDecision(from: senderBot, to: targetBot, message: "Run integration checks")
+        #expect(decision3 == .deliver)
+        #expect(botManager.pendingPeerApprovals.isEmpty)
+    }
 }
 
 

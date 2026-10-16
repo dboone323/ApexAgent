@@ -53,8 +53,11 @@ struct ContentView: View {
             .navigationTitle("Apex Spaces & Bots")
         } detail: {
             // MARK: - Detail: Space Workspace / Bot Chat + Toggleable Sidebars
-            HStack(spacing: 0) {
-                VSplitView {
+            VStack(spacing: 0) {
+                AmbientApprovalSurfaceView()
+
+                HStack(spacing: 0) {
+                    VSplitView {
                     // Chat view (driven by active 1:1 Bot session, active Space channel, or legacy orchestrator)
                     if let session = botManager.activeSession {
                         BotChatView(session: session)
@@ -94,6 +97,7 @@ struct ContentView: View {
                 }
             }
         }
+    }
         .navigationTitle("")
         .toolbar {
             ToolbarItemGroup(placement: .navigation) {

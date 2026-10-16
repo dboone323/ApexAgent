@@ -26,6 +26,24 @@ struct BotSidebarSection: View {
                 Text("Bots")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AppTheme.Palette.textSecondary)
+
+                let pendingCount = bm.pendingPeerApprovals.count + (bm.activePlaybookRunners.filter { $0.pendingApprovalCard != nil }.count)
+                if pendingCount > 0 {
+                    HStack(spacing: 2) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 8))
+                        Text("\(pendingCount)")
+                            .font(.system(size: 9, weight: .bold))
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color.orange.opacity(0.2))
+                    .foregroundStyle(.orange)
+                    .clipShape(Capsule())
+                    .accessibilityIdentifier("botsPendingApprovalBadge")
+                    .help("\(pendingCount) pending approval(s)")
+                }
+
                 Spacer()
                 Text("\(bm.allBots.count)")
                     .font(.system(size: 10))
@@ -90,9 +108,14 @@ struct BotSidebarSection: View {
             ScrollView(.vertical, showsIndicators: false) {
                 LazyVStack(spacing: 2) {
                     ForEach(bm.allBots) { bot in
+                        let hasApproval = bm.pendingPeerApprovals.contains {
+                            $0.fromBotId == bot.id.uuidString || $0.toBotId == bot.id.uuidString
+                        } || (bm.sessions[bot.id]?.needsAttention == true)
+
                         BotSidebarItem(
                             bot: bot,
                             isActive: bm.activeBotId == bot.id,
+                            hasPendingApproval: hasApproval,
                             onSelect: {
                                 bm.setActiveBot(bot.id)
                                 bm.openConversation(with: bot)
@@ -270,6 +293,7 @@ struct BotSidebarSection: View {
 struct BotSidebarItem: View {
     let bot: BotProfile
     let isActive: Bool
+    var hasPendingApproval: Bool = false
     let onSelect: () -> Void
     let onEdit: () -> Void
     let onDelete: () -> Void
@@ -297,6 +321,13 @@ struct BotSidebarItem: View {
                             .font(.system(size: 12, weight: isActive ? .semibold : .regular))
                             .foregroundStyle(isActive ? .white : .primary)
                             .lineLimit(1)
+                        if hasPendingApproval {
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.orange)
+                                .accessibilityIdentifier("botItemPendingBadge_\(bot.name)")
+                                .help("Awaiting approval or attention")
+                        }
                         if bot.isPinned {
                             Image(systemName: "pin.fill")
                                 .font(.system(size: 8))

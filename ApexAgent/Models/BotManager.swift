@@ -136,6 +136,7 @@ final class BotManager {
     /// Tracks bounded peer-to-peer approvals (grants, pending requests, audit logs).
     /// Kept in memory; grants can be persisted into bot descriptions/memory when permanent.
     let peerApprovals = PeerApprovalCoordinator()
+    private(set) var pendingPeerApprovalsVersion: Int = 0
 
     // MARK: - Init
     init(modelContext: ModelContext? = nil, orchestrator: AgentOrchestrator? = nil, computer: Computer? = nil) {
@@ -198,6 +199,7 @@ final class BotManager {
         case .allowedByExistingGrant:
             return .deliver
         case .pendingCard(let requestId):
+            pendingPeerApprovalsVersion += 1
             if let senderSession = sessions[from.id] {
                 senderSession.needsAttention = true
             }
@@ -209,6 +211,7 @@ final class BotManager {
     /// sender, action, and target.
     @discardableResult
     func resolvePeerRequest(requestId: String, allow: Bool, remember: Bool = false) -> Bool {
+        pendingPeerApprovalsVersion += 1
         let request = peerApprovals.pendingRequest(id: requestId)
         guard case .resolved(let allowed) =
             peerApprovals.resolve(requestId: requestId, allow: allow, rememberGrant: remember) else {
@@ -250,7 +253,11 @@ final class BotManager {
     }
 
     func expireStalePeerApprovals() {
-        for expired in peerApprovals.expireStale() {
+        let stale = peerApprovals.expireStale()
+        if !stale.isEmpty {
+            pendingPeerApprovalsVersion += 1
+        }
+        for expired in stale {
             guard let senderId = UUID(uuidString: expired.fromBotId),
                   let senderSession = sessions[senderId] else { continue }
             senderSession.needsAttention = false
@@ -264,7 +271,8 @@ final class BotManager {
     }
 
     var pendingPeerApprovals: [PendingPeerApproval] {
-        peerApprovals.pendingRequests
+        _ = pendingPeerApprovalsVersion
+        return peerApprovals.pendingRequests
     }
 
     // MARK: - Bot CRUD
