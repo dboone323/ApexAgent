@@ -82,9 +82,9 @@ final class PlaybookRunner: Identifiable {
     /// Shorten in tests to exercise the timeout path quickly.
     var approvalTimeout: TimeInterval = 300
 
-    private var pendingApprovalContinuation: CheckedContinuation<ApprovalOutcome, Never>?
-    private var approvalTimeoutTask: Task<Void, Never>?
-    private var delegationEventHandler: ((PlaybookDelegationEvent) -> Void)?
+    @ObservationIgnored private var pendingApprovalContinuation: CheckedContinuation<ApprovalOutcome, Never>?
+    @ObservationIgnored private var approvalTimeoutTask: Task<Void, Never>?
+    @ObservationIgnored private var delegationEventHandler: ((PlaybookDelegationEvent) -> Void)?
     private var lastApprovalResolutionNotes: String?
     private var lastActiveBot: BotProfile?
 

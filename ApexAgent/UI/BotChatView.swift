@@ -95,7 +95,7 @@ struct BotChatView: View {
     }
 }
 
-private struct PeerApprovalCard: View {
+struct PeerApprovalCard: View {
     let request: PendingPeerApproval
     let botManager: BotManager
 
@@ -104,10 +104,20 @@ private struct PeerApprovalCard: View {
         return botManager.bot(byId: id)?.name ?? "teammate"
     }
 
+    private var senderName: String {
+        guard let id = UUID(uuidString: request.fromBotId) else { return "Teammate" }
+        return botManager.bot(byId: id)?.name ?? "Teammate"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Allow \(targetName) to receive this request?")
-                .font(.headline)
+            HStack(spacing: 6) {
+                Image(systemName: "hand.raised.fill")
+                    .foregroundStyle(.orange)
+                    .font(.system(size: 13))
+                Text("Allow \(senderName) to send request to \(targetName)?")
+                    .font(.headline)
+            }
             Text(request.message)
                 .font(.callout)
                 .textSelection(.enabled)
