@@ -118,6 +118,7 @@ struct ChatView: View {
         .background(Color(nsColor: .controlBackgroundColor))
         .onAppear { isInputFocused = true }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("ApexAgent.focusChatInput"))) { _ in
+            inputText = ""
             isInputFocused = true
         }
     }

@@ -1027,24 +1027,39 @@ private struct SpaceInspectorDrawer: View {
                 HStack(spacing: 6) {
                     ForEach(space.sortedPages) { page in
                         let isSelected = spaceManager.activePage?.id == page.id
-                        Button {
-                            spaceManager.activePageId = page.id
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "doc.text.fill")
-                                    .font(.system(size: 10))
-                                Text(page.title)
-                                    .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
-                                    .lineLimit(1)
+                        HStack(spacing: 4) {
+                            Button {
+                                spaceManager.activePageId = page.id
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "doc.text.fill")
+                                        .font(.system(size: 10))
+                                    Text(page.title)
+                                        .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+                                        .lineLimit(1)
+                                }
                             }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(isSelected ? AppTheme.Palette.accent.opacity(0.18) : Color.primary.opacity(0.05))
-                            )
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("spacePagePill_\(page.id)")
+
+                            Button {
+                                spaceManager.deletePage(page, from: space)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.secondary.opacity(0.7))
+                            }
+                            .buttonStyle(.plain)
+                            .help("Delete \(page.title)")
+                            .accessibilityLabel("Delete page \(page.title)")
+                            .accessibilityIdentifier("deletePageButton_\(page.id)")
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(isSelected ? AppTheme.Palette.accent.opacity(0.18) : Color.primary.opacity(0.05))
+                        )
                         .contextMenu {
                             Button(role: .destructive) {
                                 spaceManager.deletePage(page, from: space)
@@ -1074,15 +1089,17 @@ private struct SpaceInspectorDrawer: View {
 
                         Spacer()
 
-                        Button {
+                        Button(role: .destructive) {
                             spaceManager.deletePage(page, from: space)
                         } label: {
                             Image(systemName: "trash")
                                 .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Color.red.opacity(0.8))
                         }
                         .buttonStyle(.plain)
                         .help("Delete this page")
+                        .accessibilityLabel("Delete this page")
+                        .accessibilityIdentifier("deleteActivePageButton")
                     }
 
                     Text("Last edited by \(page.lastEditedByName) • \(page.updatedAt.formatted(date: .omitted, time: .shortened))")
