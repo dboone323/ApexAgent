@@ -164,8 +164,12 @@ public final class DeepLinkNavigationState {
             activeChatId = id
         case .routine(let id):
             selectedRoutineId = id
+            showSettings = true
+            NotificationCenter.default.post(name: .showSettingsSheet, object: nil)
         case .skill(let name):
             selectedSkillName = name
+            showSettings = true
+            NotificationCenter.default.post(name: .showSettingsSheet, object: nil)
         case .diagnostics:
             showDiagnostics = true
             NotificationCenter.default.post(name: .showDiagnosticsSheet, object: nil)

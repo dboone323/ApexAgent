@@ -30,6 +30,11 @@ struct ContentView: View {
                 BotSidebarSection(bm: botManager)
                 
                 Divider().padding(.horizontal, 12)
+
+                // Routines section (Automated workflows & trigger schedules)
+                RoutinesSidebarSection()
+
+                Divider().padding(.horizontal, 12)
                 
                 // Conversations section (legacy)
                 SidebarView(

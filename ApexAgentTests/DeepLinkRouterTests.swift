@@ -69,9 +69,13 @@ struct DeepLinkRouterTests {
 
         _ = nav.handle(try #require(URL(string: "apexagent://routine/routine-7")))
         #expect(nav.selectedRoutineId == "routine-7")
+        #expect(nav.showSettings == true)
+
+        nav.reset()
 
         _ = nav.handle(try #require(URL(string: "apexagent://skill/code-review")))
         #expect(nav.selectedSkillName == "code-review")
+        #expect(nav.showSettings == true)
 
         _ = nav.handle(try #require(URL(string: "apexagent://diagnostics")))
         #expect(nav.showDiagnostics == true)

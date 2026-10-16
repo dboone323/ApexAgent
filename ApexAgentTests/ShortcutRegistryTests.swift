@@ -82,10 +82,16 @@ struct ShortcutRegistryTests {
         registry.dispatch(.goRoutines)
         #expect(registry.lastDispatchedAction == .goRoutines)
         #expect(DeepLinkNavigationState.shared.selectedRoutineId == "all")
+        #expect(DeepLinkNavigationState.shared.showSettings == true)
+
+        DeepLinkNavigationState.shared.reset()
 
         registry.dispatch(.goSkills)
         #expect(registry.lastDispatchedAction == .goSkills)
         #expect(DeepLinkNavigationState.shared.selectedSkillName == "all")
+        #expect(DeepLinkNavigationState.shared.showSettings == true)
+
+        DeepLinkNavigationState.shared.reset()
 
         registry.dispatch(.goSettings)
         #expect(registry.lastDispatchedAction == .goSettings)
