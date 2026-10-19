@@ -310,7 +310,7 @@ public enum ToolExecutionSandboxGate {
                     ToolSandboxViolation(
                         operationName: operationName,
                         ruleId: "PATH-004",
-                        severity: .medium,
+                        severity: .high,
                         message: "Path '\(standardized)' is outside the active workspace '\(standardRoot)'.",
                         remediation: "Specify paths relative to or inside the active project directory."
                     )

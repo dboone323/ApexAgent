@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import Observation
+import os
 
 @Observable
 @MainActor
@@ -115,6 +116,18 @@ public final class A2APeerDiscovery {
         let connection = NWConnection(to: endpoint, using: .tcp)
         
         return await withCheckedContinuation { continuation in
+            let resumedLock = OSAllocatedUnfairLock<Bool>(initialState: false)
+            let resumeOnce: @Sendable (A2AAgentCard?) -> Void = { card in
+                let alreadyResumed = resumedLock.withLock { isResumed in
+                    let prev = isResumed
+                    isResumed = true
+                    return prev
+                }
+                if !alreadyResumed {
+                    continuation.resume(returning: card)
+                }
+            }
+
             connection.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
@@ -122,7 +135,7 @@ public final class A2APeerDiscovery {
                     connection.send(content: Data(request.utf8), completion: .contentProcessed({ error in
                         if error != nil {
                             connection.cancel()
-                            continuation.resume(returning: nil)
+                            resumeOnce(nil)
                             return
                         }
                         
@@ -132,18 +145,18 @@ public final class A2APeerDiscovery {
                                 if components.count >= 2, let bodyData = components[1].data(using: .utf8) {
                                     let decoder = JSONDecoder()
                                     let card = try? decoder.decode(A2AAgentCard.self, from: bodyData)
-                                    continuation.resume(returning: card)
+                                    resumeOnce(card)
                                 } else {
-                                    continuation.resume(returning: nil)
+                                    resumeOnce(nil)
                                 }
                             } else {
-                                continuation.resume(returning: nil)
+                                resumeOnce(nil)
                             }
                             connection.cancel()
                         }
                     }))
                 case .failed, .cancelled:
-                    continuation.resume(returning: nil)
+                    resumeOnce(nil)
                 default:
                     break
                 }

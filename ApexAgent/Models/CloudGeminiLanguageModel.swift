@@ -151,7 +151,7 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                 }
                 
                 geminiContents.append([
-                    "role": "function",
+                    "role": "user",
                     "parts": [[
                         "functionResponse": [
                             "name": toolOutput.toolName,
@@ -356,7 +356,7 @@ public struct CloudGeminiLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                 
                 if !functionResponses.isEmpty {
                     currentContents.append([
-                        "role": "function",
+                        "role": "user",
                         "parts": functionResponses
                     ])
                 }
@@ -652,7 +652,7 @@ struct GeminiAgentEngine: AgentEngine {
                 }
 
                 currentContents.append([
-                    "role": "function",
+                    "role": "user",
                     "parts": functionResponses
                 ])
                 loopCount += 1

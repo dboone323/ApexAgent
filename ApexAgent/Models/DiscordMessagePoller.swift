@@ -26,10 +26,20 @@ final class DiscordMessagePoller {
         }
     }
 
-    /// Bot token (read from env or UserDefaults at poll time, like DiscordBotTool)
+    /// Bot token (read from env or Keychain at poll time)
     private func getBotToken() -> String? {
-        ProcessInfo.processInfo.environment["DISCORD_APEX_TOKEN"]
-            ?? UserDefaults.standard.string(forKey: "apex.discordBotToken")
+        if let env = ProcessInfo.processInfo.environment["DISCORD_APEX_TOKEN"], !env.isEmpty {
+            return env
+        }
+        if let stored = KeychainManager.get(key: "apex.discordBotToken"), !stored.isEmpty {
+            return stored
+        }
+        if let legacy = UserDefaults.standard.string(forKey: "apex.discordBotToken"), !legacy.isEmpty {
+            _ = KeychainManager.save(key: "apex.discordBotToken", value: legacy)
+            UserDefaults.standard.removeObject(forKey: "apex.discordBotToken")
+            return legacy
+        }
+        return nil
     }
 
     /// Start the polling loop. Idempotent — restarts if already running.

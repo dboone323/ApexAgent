@@ -389,7 +389,7 @@ public final class SpacePage {
 // MARK: - Space Page Proposal (Human-in-the-Loop Diff Staging)
 
 @Model
-public final class SpacePageProposal {
+public final class SpacePageProposal: @unchecked Sendable {
     public var id: UUID
     public var pageId: UUID
     public var pageTitle: String

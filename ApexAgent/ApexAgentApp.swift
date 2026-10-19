@@ -105,17 +105,10 @@ public struct ApexAgentApp: App {
                 }
                 .keyboardShortcut("2", modifiers: .command)
 
-                Divider()
-
-                Button("Settings…") {
-                    ShortcutRegistry.shared.dispatch(.goSettings, orchestrator: orchestrator)
-                }
-                .keyboardShortcut(",", modifiers: .command)
             }
 
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
-                    ShortcutRegistry.shared.dispatch(.goSettings, orchestrator: orchestrator)
                     if #available(macOS 14.0, *) {
                         NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
                     } else {

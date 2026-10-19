@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 // MARK: - Webhooks: external triggers for .webhook routines
 //
@@ -108,7 +109,9 @@ final class WebhookManager: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         guard let endpoint = endpoints[id], endpoint.enabled else { return false }
-        return endpoint.secret == secret
+        let hashExpected = SHA256.hash(data: Data(endpoint.secret.utf8))
+        let hashActual = SHA256.hash(data: Data(secret.utf8))
+        return hashExpected == hashActual
     }
 
     /// Credential bundle for senders: endpoint URL, bearer secret, and the

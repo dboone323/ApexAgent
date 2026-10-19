@@ -6,10 +6,6 @@ import Foundation
 import CryptoKit
 import SwiftData
 
-// MARK: - Unchecked Sendable Conformance for Model
-
-extension SpacePageProposal: @unchecked Sendable {}
-
 // MARK: - Diff Line & Unified Diff
 
 public enum DiffLineKind: String, Sendable, Equatable, Codable {

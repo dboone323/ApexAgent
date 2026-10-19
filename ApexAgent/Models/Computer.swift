@@ -84,8 +84,6 @@ final class Computer {
 
         if append, FileManager.default.fileExists(atPath: expanded) {
             let existing = (try? String(contentsOfFile: expanded, encoding: .utf8)) ?? ""
-            try? content.data(using: .utf8)?.write(to: url, options: .atomic)
-            // Actually append:
             let combined = existing + content
             try? combined.write(to: url, atomically: true, encoding: .utf8)
         } else {
@@ -145,9 +143,27 @@ final class Computer {
         process.standardError = err
         do {
             try process.run()
+            let outHandle = out.fileHandleForReading
+            let errHandle = err.fileHandleForReading
+            final class PipeCapture: @unchecked Sendable {
+                var data = Data()
+            }
+            let outCapture = PipeCapture()
+            let errCapture = PipeCapture()
+            let t1 = Thread {
+                outCapture.data = outHandle.readDataToEndOfFile()
+            }
+            let t2 = Thread {
+                errCapture.data = errHandle.readDataToEndOfFile()
+            }
+            t1.start()
+            t2.start()
             process.waitUntilExit()
-            let stdout = String(data: out.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-            let stderr = String(data: err.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+            while !t1.isFinished || !t2.isFinished {
+                Thread.sleep(forTimeInterval: 0.005)
+            }
+            let stdout = String(data: outCapture.data, encoding: .utf8) ?? ""
+            let stderr = String(data: errCapture.data, encoding: .utf8) ?? ""
             let combined = stdout + stderr
             let truncated = combined.count > 50000 ? String(combined.prefix(50000)) + "\n[... output truncated ...]" : combined
             return "Exit code: \(process.terminationStatus)\n\n\(truncated)"

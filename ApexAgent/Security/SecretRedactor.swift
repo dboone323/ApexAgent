@@ -24,7 +24,7 @@ enum SecretRedactor {
     }
 
     static func mask(_ value: String) -> String {
-        "«redacted \(value.count) chars»"
+        "«redacted»"
     }
 
     // MARK: Content-shaped secrets
@@ -32,6 +32,10 @@ enum SecretRedactor {
     private static func makeRegex(_ pattern: String, options: NSRegularExpression.Options = []) -> NSRegularExpression {
         (try? NSRegularExpression(pattern: pattern, options: options)) ?? NSRegularExpression()
     }
+
+    private static let uriPattern = makeRegex(
+        #"([a-zA-Z][a-zA-Z0-9+.-]*://[^:\s@/]+:)([^@\s/]+)(@[^\s]+)"#
+    )
 
     private static let contentPatterns: [NSRegularExpression] = [
         makeRegex(#"\bsk-(?:ant-|proj-|live-|test-)?[A-Za-z0-9_-]{16,}"#),  // anthropic / openai / stripe
@@ -106,6 +110,11 @@ enum SecretRedactor {
         // key=value / key="value": keep the name and quoting, drop the value.
         out = replaceAll(out, pattern: keyValuePattern) { groups in
             "\(groups[1])\(groups[2])\(groups[3])\(mask(groups[4]))\(groups[3])"
+        }
+
+        // URI credentials: scheme://user:password@host -> scheme://user:«redacted»@host
+        out = replaceAll(out, pattern: uriPattern) { groups in
+            "\(groups[1])\(mask(groups[2]))\(groups[3])"
         }
 
         return out
