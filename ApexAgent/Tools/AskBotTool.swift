@@ -99,7 +99,7 @@ struct AskBotTool: Tool {
         let bm = self.orchestrator.orchestrator.botManager
         guard let bm, let bot = bm.bot(byId: targetId) else { return nil }
         let session = bm.session(for: bot)
-        return await session.sendMessageAsync(message)
+        return await session.executeIsolatedTurn(prompt: message)
     }
 
     @MainActor

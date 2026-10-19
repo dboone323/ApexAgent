@@ -218,7 +218,7 @@ struct DispatchSwarmTool: Tool, @unchecked Sendable {
                         let output: String = await Task { @MainActor in
                             if let bm = activeBM, let bot = bm.botByName(botName) ?? (UUID(uuidString: botName).flatMap { bm.bot(byId: $0) }) {
                                 let session = bm.session(for: bot)
-                                let response = await session.sendMessageAsync(sanitizedPrompt)
+                                let response = await session.executeIsolatedTurn(prompt: sanitizedPrompt)
                                 if let text = response {
                                     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                                     let out = trimmed.isEmpty ? "Completed with no output." : trimmed

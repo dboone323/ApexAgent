@@ -163,6 +163,66 @@ extension BotSession {
         return messages.last(where: { $0.role == .assistant })?.content
     }
 
+    /// Executes an isolated inference turn without appending to `session.messages` or persisting to disk.
+    /// This prevents swarm executions, background debates, playbooks, and peer inquiries from polluting the bot's private 1:1 conversation history.
+    func executeIsolatedTurn(
+        prompt: String,
+        attachments: [NSImage] = [],
+        ephemeralHistory: [ChatMessage] = [],
+        overrideInstructions: String? = nil,
+        toolCallingMode: AgentToolCallingMode? = nil
+    ) async -> String? {
+        let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty || !attachments.isEmpty else { return nil }
+        guard !isGenerating else { return nil }
+
+        isGenerating = true
+        defer {
+            isGenerating = false
+            drainNextQueuedPromptIfIdle()
+        }
+
+        let mode = toolCallingMode ?? self.toolCallingMode
+        let request = AgentRequest(
+            id: UUID(),
+            senderIdentity: .bot(id: bot.id, name: bot.name),
+            prompt: trimmed,
+            attachments: attachments,
+            toolCallingMode: mode
+        )
+
+        guard let orch = orchestrator else {
+            return nil
+        }
+
+        let instructions = overrideInstructions ?? systemInstructions
+        let result = await AgentRequestRouter.shared.route(
+            request,
+            bot: bot,
+            session: session,
+            history: ephemeralHistory,
+            instructions: instructions,
+            orchestrator: orch,
+            onEvent: { _ in },
+            onUpdate: { _ in }
+        )
+
+        switch result {
+        case .completed(let output):
+            return output
+        case .failed(let error, _):
+            return "❌ Error: \(error)"
+        case .fallbackExhausted(let errors):
+            return "⚠️ Provider fallback exhausted: \(errors.joined(separator: "; "))"
+        case .cancelled(let reason):
+            return "⏹️ \(reason)"
+        case .timedOut(let duration):
+            return "⏱️ Timed out after \(Int(duration))s"
+        case .emptyOutput:
+            return "⚠️ Turn produced no output."
+        }
+    }
+
     /// Dispatches chained turns for other bots that were @mentioned in a 1:1 conversation.
     func dispatchMentionedBotsInSession(
         mentionedBots: [BotProfile],

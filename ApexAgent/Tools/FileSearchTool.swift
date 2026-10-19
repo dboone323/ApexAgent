@@ -56,6 +56,7 @@ struct FileSearchTool: Tool {
             if let pattern = arguments.filePattern {
                 args.append("--include=\(pattern)")
             }
+            args.append("-e")
             args.append(arguments.query)
             args.append(expandedDir)
             
@@ -65,6 +66,14 @@ struct FileSearchTool: Tool {
             process.standardOutput = pipe
             process.standardError = pipe
             
+            let timeoutTask = Task {
+                try? await Task.sleep(nanoseconds: 15_000_000_000)
+                if process.isRunning {
+                    process.terminate()
+                }
+            }
+            defer { timeoutTask.cancel() }
+
             try process.run()
             
             let data = pipe.fileHandleForReading.readDataToEndOfFile()

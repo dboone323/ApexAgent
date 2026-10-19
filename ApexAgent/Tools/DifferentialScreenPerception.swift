@@ -5,7 +5,7 @@ import CoreGraphics
 import ScreenCaptureKit
 
 struct DifferentialScreenPerception: Tool {
-    let orchestrator: AgentOrchestrator
+    let orchestrator: OrchestratorProvider
     
     let name = "screen_diff"
     let description = "Captures only the changed regions of the screen since the last call. Returns Base64-encoded PNG of bounding box of changed regions, plus description. First call returns full screen."

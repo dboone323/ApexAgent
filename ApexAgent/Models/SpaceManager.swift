@@ -106,6 +106,25 @@ public final class SpaceManager {
     /// Per-channel currently speaking bot (`channelId -> BotName`).
     public var activeSpeakerByChannel: [UUID: String] = [:]
 
+    struct QueuedChannelTurn: @unchecked Sendable {
+        let space: SpaceModel
+        let channel: SpaceChannel
+        let bots: [BotProfile]
+        let triggerMessage: SpaceMessage
+        let parallel: Bool
+
+        init(space: SpaceModel, channel: SpaceChannel, bots: [BotProfile], triggerMessage: SpaceMessage, parallel: Bool) {
+            self.space = space
+            self.channel = channel
+            self.bots = bots
+            self.triggerMessage = triggerMessage
+            self.parallel = parallel
+        }
+    }
+
+    /// Turn request queue for concurrent channel messages (`channelId -> [QueuedChannelTurn]`).
+    private var channelTurnQueues: [UUID: [QueuedChannelTurn]] = [:]
+
     init(orchestrator: AgentOrchestrator? = nil, botManager: BotManager? = nil) {
         self.orchestrator = orchestrator
         self.botManager = botManager
@@ -883,12 +902,18 @@ public final class SpaceManager {
         let channelId = channel.id
         let threadParentId = triggerMessage.threadParentId
 
-        guard channelGenerating[channelId] != true else { return }
+        if channelGenerating[channelId] == true {
+            var q = channelTurnQueues[channelId] ?? []
+            q.append(QueuedChannelTurn(space: space, channel: channel, bots: bots, triggerMessage: triggerMessage, parallel: parallel))
+            channelTurnQueues[channelId] = q
+            return
+        }
 
         channelGenerating[channelId] = true
         defer {
             channelGenerating[channelId] = false
             activeSpeakerByChannel[channelId] = nil
+            drainNextChannelTurnIfAny(for: channelId)
         }
 
         var queue: [BotProfile] = bots
@@ -960,6 +985,21 @@ public final class SpaceManager {
                     }
                 }
             }
+        }
+    }
+
+    private func drainNextChannelTurnIfAny(for channelId: UUID) {
+        guard var q = channelTurnQueues[channelId], !q.isEmpty else { return }
+        let next = q.removeFirst()
+        channelTurnQueues[channelId] = q.isEmpty ? nil : q
+        Task { @MainActor in
+            await self.dispatchBotTurns(
+                bots: next.bots,
+                in: next.space,
+                channel: next.channel,
+                triggerMessage: next.triggerMessage,
+                parallel: next.parallel
+            )
         }
     }
 

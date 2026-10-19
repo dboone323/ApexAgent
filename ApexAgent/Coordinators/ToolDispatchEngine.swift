@@ -96,7 +96,16 @@ final class ToolDispatchEngine {
             AnyExecutableTool(DeepLinkTool(orchestrator: orchestrator)),
             AnyExecutableTool(SpaceReadPageTool(orchestrator: orchestrator)),
             AnyExecutableTool(SpaceWritePageTool(orchestrator: orchestrator)),
-            AnyExecutableTool(SpaceProposeDiffTool(orchestrator: orchestrator))
+            AnyExecutableTool(SpaceProposeDiffTool(orchestrator: orchestrator)),
+            // Project management and web reader tools
+            AnyExecutableTool(CreateProjectTool(orchestrator: orchestrator)),
+            AnyExecutableTool(CreateSprintTool(orchestrator: orchestrator)),
+            AnyExecutableTool(CreateTaskTool(orchestrator: orchestrator)),
+            AnyExecutableTool(UpdateTaskStatusTool(orchestrator: orchestrator)),
+            AnyExecutableTool(ListProjectsTool(orchestrator: orchestrator)),
+            AnyExecutableTool(ListTasksTool(orchestrator: orchestrator)),
+            AnyExecutableTool(ListSprintsTool(orchestrator: orchestrator)),
+            AnyExecutableTool(WebReaderTool(orchestrator: orchestrator))
         ]
     }
 

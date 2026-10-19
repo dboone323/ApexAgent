@@ -240,7 +240,7 @@ final class BotManager {
             let inbound = SecretRedactor.redact(text: request.message)
             Task { @MainActor [weak self, weak senderSession] in
                 guard let self, let senderSession else { return }
-                let response = await self.session(for: target).sendMessageAsync(inbound)
+                let response = await self.session(for: target).executeIsolatedTurn(prompt: inbound)
                     ?? "The teammate returned no response."
                 let safeResponse = SecretRedactor.redact(text: response)
                 senderSession.appendMessage(ChatMessage(

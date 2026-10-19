@@ -214,7 +214,7 @@ final class RoutineManager: Observable {
         recordRun(run)
 
         let session = botManager.session(for: targetBot)
-        let response = await session.sendMessageAsync(prompt)
+        let response = await session.executeIsolatedTurn(prompt: prompt)
 
         run.finishedAt = Date()
         if let response = response {

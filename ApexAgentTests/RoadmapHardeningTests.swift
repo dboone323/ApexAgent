@@ -146,11 +146,19 @@ struct RoadmapHardeningTests {
     func testAllToolsRegistrationCount() {
         let orchestrator = AgentOrchestrator()
         let tools = orchestrator.allTools
-        // 70 tools registered across all pillars and specialized features
-        // (includes RollbackTool, DeleteMemoryTool, and the Space page tools).
-        #expect(tools.count == 70)
+        // 78 tools registered across all pillars and specialized features
+        // (including project management tools and web_reader).
+        #expect(tools.count == 78)
 
         let names = Set(tools.map(\.name))
+        #expect(names.contains("create_project"))
+        #expect(names.contains("create_sprint"))
+        #expect(names.contains("create_task"))
+        #expect(names.contains("update_task_status"))
+        #expect(names.contains("list_projects"))
+        #expect(names.contains("list_tasks"))
+        #expect(names.contains("list_sprints"))
+        #expect(names.contains("web_reader"))
         #expect(names.contains("run_shell_command"))
         #expect(names.contains("read_file"))
         #expect(names.contains("patch_file"))
@@ -453,7 +461,7 @@ struct RoadmapHardeningTests {
         #expect(names.contains("ask_bot"))
         #expect(names.contains("dispatch_swarm"))
         #expect(names.contains("spotlight_search"))
-        #expect(orchestrator.allTools.count == 70)
+        #expect(orchestrator.allTools.count == 78)
     }
 
     // MARK: - Step 18: Routine and Skill DeepLink & Settings Sheet Integration

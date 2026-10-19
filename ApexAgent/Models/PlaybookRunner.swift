@@ -733,10 +733,10 @@ final class PlaybookRunner: Identifiable {
         do {
             let response = try await withThrowingTaskGroup(of: String.self) { group in
                 group.addTask {
-                    // sendMessageAsync returns nil when the session is already
+                    // executeIsolatedTurn returns nil when the session is already
                     // generating; the empty check below turns that into an
                     // explicit failure marker (never a fake success).
-                    let text = await session.sendMessageAsync(cleanPrompt) ?? ""
+                    let text = await session.executeIsolatedTurn(prompt: cleanPrompt) ?? ""
                     return SecretRedactor.redact(text: text)
                 }
                 group.addTask {
