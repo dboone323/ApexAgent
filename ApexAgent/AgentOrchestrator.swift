@@ -1187,6 +1187,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
 
     func cancelGeneration() {
+        if pendingConfirmation != nil {
+            resolveConfirmation(approved: false)
+        }
         currentTask?.cancel()
         currentTask = nil
         clearPromptQueue()

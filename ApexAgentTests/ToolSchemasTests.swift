@@ -42,13 +42,29 @@ import Foundation
     @MainActor
     @Test func testDumpToolSchemas() throws {
         let orchestrator = AgentOrchestrator()
-        let shellTool = ShellTool(orchestrator: orchestrator)
-        let params = shellTool.parameters
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
-        let data = try encoder.encode(params)
-        #expect(!data.isEmpty, "ShellTool schema must encode to non-empty data")
-        let jsonStr = try #require(String(data: data, encoding: .utf8), "Encoded schema must be valid UTF-8 string")
-        #expect(jsonStr.contains("command") || jsonStr.contains("properties"), "Schema must define tool properties")
+        let tools = orchestrator.toolDispatchEngine.buildAllTools(orchestrator: orchestrator, botManager: nil)
+        #expect(tools.count == 78, "Must register all 78 native tools")
+
+        var allSchemas: [[String: Any]] = []
+        for tool in tools {
+            if let jsonStr = tool.schemaJSON,
+               let data = jsonStr.data(using: .utf8),
+               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                allSchemas.append(dict)
+            }
+        }
+        #expect(allSchemas.count == 78, "Every registered tool must generate valid schema JSON")
+
+        let projectDir = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let resourceFile = projectDir
+            .appendingPathComponent("ApexAgent")
+            .appendingPathComponent("Resources")
+            .appendingPathComponent("ToolSchemas.json")
+        if FileManager.default.fileExists(atPath: resourceFile.path) {
+            let data = try JSONSerialization.data(withJSONObject: allSchemas, options: [.prettyPrinted, .sortedKeys])
+            try data.write(to: resourceFile)
+        }
     }
 }

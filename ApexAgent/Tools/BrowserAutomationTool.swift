@@ -37,7 +37,10 @@ class BrowserManager: NSObject, WKNavigationDelegate {
         offscreenWindow?.contentView = nil
         offscreenWindow = nil
         webView = nil
-        navigationContinuation = nil
+        if let cont = navigationContinuation {
+            navigationContinuation = nil
+            cont.resume(throwing: CancellationError())
+        }
         loadedDocumentHtml = nil
         loadedDocumentTitle = nil
     }

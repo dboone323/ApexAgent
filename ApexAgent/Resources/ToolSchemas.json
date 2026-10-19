@@ -1,351 +1,2573 @@
 [
   {
-    "name": "run_shell_command",
-    "description": "Runs a zsh shell command. Returns stdout, stderr, and exit code. Use for any terminal task.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "command": { "type": "string", "description": "The shell command to execute. Will be run via /bin/zsh -c" },
-        "workingDirectory": { "type": "string", "description": "Working directory for the command. Defaults to user home if not specified." },
-        "timeoutSeconds": { "type": "integer", "description": "Timeout in seconds before the command is killed. Default is 30." }
+    "description" : "Runs a zsh shell command. Returns stdout, stderr, and exit code. Use for terminal tasks, testing, or building. After a command that changes state or performs an action, verify the requested end state with a separate read-only tool before reporting success; approval and exit status alone are not proof. For exploring files or project directories, prefer targeted tools like directory_tree, list_directory, or find_by_name rather than unbounded recursive commands like `ls -R`.",
+    "name" : "run_shell_command",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "command" : {
+          "description" : "The shell command to execute. Will be run via \/bin\/zsh -c",
+          "type" : "string"
+        },
+        "timeoutSeconds" : {
+          "description" : "Timeout in seconds before the command is killed. Default is 30.",
+          "maximum" : 300,
+          "minimum" : 1,
+          "type" : "integer"
+        },
+        "workingDirectory" : {
+          "description" : "Working directory for the command. Defaults to user home if not specified.",
+          "type" : "string"
+        }
       },
-      "required": ["command"]
+      "required" : [
+        "command"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "command",
+        "workingDirectory",
+        "timeoutSeconds"
+      ]
     }
   },
   {
-    "name": "read_file",
-    "description": "Reads a file and returns its contents. Supports tilde paths (~/).",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "path": { "type": "string", "description": "Absolute or tilde-expanded path to the file to read" },
-        "maxLines": { "type": "integer", "description": "Maximum number of lines to read. Reads entire file if not specified." }
+    "description" : "Reads a file and returns its contents. Supports tilde paths (~\/).",
+    "name" : "read_file",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "endLine" : {
+          "description" : "1-indexed ending line number to read to, inclusive (optional)",
+          "type" : "integer"
+        },
+        "maxLines" : {
+          "description" : "Maximum number of lines to read. Reads entire file if not specified.",
+          "maximum" : 10000,
+          "minimum" : 1,
+          "type" : "integer"
+        },
+        "path" : {
+          "description" : "Absolute or tilde-expanded path to the file to read",
+          "type" : "string"
+        },
+        "startLine" : {
+          "description" : "1-indexed starting line number to read from (optional)",
+          "type" : "integer"
+        }
       },
-      "required": ["path"]
+      "required" : [
+        "path"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "path",
+        "startLine",
+        "endLine",
+        "maxLines"
+      ]
     }
   },
   {
-    "name": "write_file",
-    "description": "Writes text content to a file. Creates the file and parent directories if needed.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "path": { "type": "string", "description": "Absolute or tilde-expanded path to write to" },
-        "content": { "type": "string", "description": "The text content to write to the file" },
-        "append": { "type": "boolean", "description": "If true, appends to existing file instead of overwriting" }
+    "description" : "Writes text content to a file. Creates the file and parent directories if needed.",
+    "name" : "write_file",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "append" : {
+          "description" : "If true, appends to existing file instead of overwriting",
+          "type" : "boolean"
+        },
+        "content" : {
+          "description" : "The text content to write to the file",
+          "type" : "string"
+        },
+        "path" : {
+          "description" : "Absolute or tilde-expanded path to write to",
+          "type" : "string"
+        }
       },
-      "required": ["path", "content"]
+      "required" : [
+        "path",
+        "content"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "path",
+        "content",
+        "append"
+      ]
     }
   },
   {
-    "name": "list_directory",
-    "description": "Lists files and subdirectories at a path with sizes. Supports tilde paths.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "path": { "type": "string", "description": "Path to the directory to list" },
-        "showHidden": { "type": "boolean", "description": "If true, shows hidden files (starting with .)" },
-        "depth": { "type": "integer", "description": "Maximum depth for recursive listing. 1 = only immediate children." }
+    "description" : "Lists files and subdirectories at a path with sizes. Supports tilde paths.",
+    "name" : "list_directory",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "depth" : {
+          "description" : "Maximum depth for recursive listing. 1 = only immediate children.",
+          "maximum" : 5,
+          "minimum" : 1,
+          "type" : "integer"
+        },
+        "path" : {
+          "description" : "Path to the directory to list",
+          "type" : "string"
+        },
+        "showHidden" : {
+          "description" : "If true, shows hidden files (starting with .)",
+          "type" : "boolean"
+        }
       },
-      "required": ["path"]
+      "required" : [
+        "path"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "path",
+        "showHidden",
+        "depth"
+      ]
     }
   },
   {
-    "name": "create_directory",
-    "description": "Creates a directory (including parent directories) at the given path.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "path": { "type": "string", "description": "Path of the directory to create" }
+    "description" : "Creates a directory (including parent directories) at the given path.",
+    "name" : "create_directory",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "path" : {
+          "description" : "Path of the directory to create",
+          "type" : "string"
+        }
       },
-      "required": ["path"]
+      "required" : [
+        "path"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "path"
+      ]
     }
   },
   {
-    "name": "delete_file",
-    "description": "Moves a file or directory to Trash (or permanently deletes if permanent=true). DESTRUCTIVE.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "path": { "type": "string", "description": "Path of the file or directory to delete" },
-        "permanent": { "type": "boolean", "description": "If true, permanently deletes instead of moving to Trash. DANGEROUS." }
+    "description" : "Moves a file or directory to Trash (or permanently deletes if permanent=true). DESTRUCTIVE.",
+    "name" : "delete_file",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "path" : {
+          "description" : "Path of the file or directory to delete",
+          "type" : "string"
+        },
+        "permanent" : {
+          "description" : "If true, permanently deletes instead of moving to Trash. DANGEROUS.",
+          "type" : "boolean"
+        }
       },
-      "required": ["path"]
+      "required" : [
+        "path"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "path",
+        "permanent"
+      ]
     }
   },
   {
-    "name": "move_file",
-    "description": "Moves or renames a file or directory from source to destination.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "sourcePath": { "type": "string", "description": "Source path of the file/directory to move" },
-        "destinationPath": { "type": "string", "description": "Destination path (including new filename if renaming)" }
+    "description" : "Moves or renames a file or directory from source to destination.",
+    "name" : "move_file",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "destinationPath" : {
+          "description" : "Destination path (including new filename if renaming)",
+          "type" : "string"
+        },
+        "sourcePath" : {
+          "description" : "Source path of the file\/directory to move",
+          "type" : "string"
+        }
       },
-      "required": ["sourcePath", "destinationPath"]
+      "required" : [
+        "sourcePath",
+        "destinationPath"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "sourcePath",
+        "destinationPath"
+      ]
     }
   },
   {
-    "name": "web_search",
-    "description": "Searches the web using Brave Search (primary) with DuckDuckGo as fallback. Returns the top search results including titles, URLs, and text snippets.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "query": { "type": "string", "description": "The search query to look up on the web" },
-        "count": { "type": "integer", "description": "Number of results to return" }
+    "description" : "Restores previous versions of files modified or deleted by the agent. Supports listing recent backups (list), reverting a specific file (restore), or undoing the last write (undo_last).",
+    "name" : "rollback_file",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action to perform: 'list', 'restore', or 'undo_last'",
+          "type" : "string"
+        },
+        "path" : {
+          "description" : "Path of the file to restore (required if action is 'restore')",
+          "type" : "string"
+        }
       },
-      "required": ["query"]
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "path"
+      ]
     }
   },
   {
-    "name": "run_applescript",
-    "description": "Executes an AppleScript string and returns the result. Use this to control any scriptable macOS application (Finder, Safari, Chrome, System Settings, etc.).",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "script": { "type": "string", "description": "The AppleScript code to execute" }
+    "description" : "Searches the web using Brave Search (primary) with DuckDuckGo as fallback. Returns the top search results including titles, URLs, and text snippets. Use this to find current information, documentation, news, or any web content.",
+    "name" : "web_search",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "count" : {
+          "description" : "Number of results to return",
+          "maximum" : 10,
+          "minimum" : 1,
+          "type" : "integer"
+        },
+        "query" : {
+          "description" : "The search query to look up on the web",
+          "type" : "string"
+        }
       },
-      "required": ["script"]
+      "required" : [
+        "query"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "query",
+        "count"
+      ]
     }
   },
   {
-    "name": "take_screenshot",
-    "description": "Captures a screenshot of the entire screen and saves it to a PNG file. Returns the file path. Requires Screen Recording permission.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "savePath": { "type": "string", "description": "Path to save the screenshot PNG. Defaults to ~/Desktop/apex_screenshot_<timestamp>.png" },
-        "windowOnly": { "type": "boolean", "description": "If true, captures only the frontmost window instead of the full screen" }
-      }
-    }
-  },
-  {
-    "name": "read_clipboard",
-    "description": "Reads the current text content of the macOS clipboard (pasteboard) and returns it.",
-    "parameters": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "name": "write_clipboard",
-    "description": "Sets the macOS clipboard (pasteboard) to the specified text content.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "text": { "type": "string", "description": "The text to copy to the clipboard" }
+    "description" : "Executes an AppleScript string and returns the result. Use this to control any scriptable macOS application (Finder, Safari, Mail, Calendar, Reminders, Terminal, etc.). Also useful for UI automation tasks that don't have a direct API.",
+    "name" : "run_applescript",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "script" : {
+          "description" : "The AppleScript code to execute",
+          "type" : "string"
+        }
       },
-      "required": ["text"]
+      "required" : [
+        "script"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "script"
+      ]
     }
   },
   {
-    "name": "send_notification",
-    "description": "Sends a macOS user notification that appears in Notification Center. Use this to alert the user when a long-running task completes.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "title": { "type": "string", "description": "The title of the notification" },
-        "body": { "type": "string", "description": "The body text of the notification" },
-        "subtitle": { "type": "string", "description": "Optional subtitle shown below the title" }
+    "description" : "Captures a screenshot of the entire screen and saves it to a PNG file. Returns the file path of the saved screenshot. Requires Screen Recording permission (System Settings → Privacy & Security → Screen Recording). The saved file can then be opened or read as needed.",
+    "name" : "take_screenshot",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "fast" : {
+          "description" : "If true, uses fast ScreenCaptureKit instead of fallback screencapture. Defaults to true.",
+          "type" : "boolean"
+        },
+        "savePath" : {
+          "description" : "Path to save the screenshot PNG. Defaults to ~\/Desktop\/apex_screenshot_<timestamp>.png",
+          "type" : "string"
+        },
+        "windowOnly" : {
+          "description" : "If true, captures only the frontmost window instead of the full screen",
+          "type" : "boolean"
+        }
       },
-      "required": ["title", "body"]
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "savePath",
+        "windowOnly",
+        "fast"
+      ]
     }
   },
   {
-    "name": "get_system_info",
-    "description": "Returns detailed information about the macOS system including OS version, hardware model, chip, RAM, storage, and network info.",
-    "parameters": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "name": "get_running_processes",
-    "description": "Returns a list of currently running macOS applications (user-visible apps, not background daemons).",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "includeBackground": { "type": "boolean", "description": "If true, includes background/hidden processes. If false (default), only shows user-visible apps." }
-      }
-    }
-  },
-  {
-    "name": "get_frontmost_app",
-    "description": "Returns the bundle ID, name, and process ID of the currently active (frontmost) macOS application.",
-    "parameters": {
-      "type": "object",
-      "properties": {}
-    }
-  },
-  {
-    "name": "store_memory",
-    "description": "Stores or updates a key-value memory record in the on-device SQLite database. Use this to remember important system locations, file changes, or status of long-running tasks.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "key": { "type": "string", "description": "The topic or identifier for this memory (e.g., 'task_status', 'project_root')" },
-        "value": { "type": "string", "description": "The detailed value/notes to remember" }
+    "description" : "Reads the current text content of the macOS clipboard (pasteboard) and returns it.",
+    "name" : "read_clipboard",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+
       },
-      "required": ["key", "value"]
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+
+      ]
     }
   },
   {
-    "name": "search_memory",
-    "description": "Searches the long-term SQLite memory database for entries matching the query keyword.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "query": { "type": "string", "description": "Search keyword to match against keys or values. If empty, lists the most recent memories." }
-      }
-    }
-  },
-  {
-    "name": "control_app",
-    "description": "Performs reliable, pre-tested GUI automation actions on common macOS apps (Safari, Chrome, Finder, System Settings).",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "appName": { "type": "string", "description": "Target application ('Safari', 'Chrome', 'Finder', 'System Settings')" },
-        "action": { "type": "string", "description": "Action to perform ('open_url', 'get_active_tab', 'open_folder', 'get_selected', 'open_preference_pane')" },
-        "parameter": { "type": "string", "description": "Argument for the action (e.g., URL for 'open_url', folder path for 'open_folder', pane ID for 'open_preference_pane')" }
+    "description" : "Sets the macOS clipboard (pasteboard) to the specified text content.",
+    "name" : "write_clipboard",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "text" : {
+          "description" : "The text to copy to the clipboard",
+          "type" : "string"
+        }
       },
-      "required": ["appName", "action"]
+      "required" : [
+        "text"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "text"
+      ]
     }
   },
   {
-    "name": "control_accessibility",
-    "description": "Performs UI automation actions on the active application window using accessibility (AXUIElement) APIs. Requires Accessibility permissions.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "action": { "type": "string", "description": "The action to perform: 'list_elements', 'click', 'set_text', 'focus'" },
-        "elementId": { "type": "string", "description": "The registry ID of the element (e.g. 'elem_1') - required for click, set_text, focus" },
-        "textValue": { "type": "string", "description": "The text value to enter - required for set_text" }
+    "description" : "Sends a macOS user notification that appears in Notification Center. Use this to alert the user when a long-running task completes, or to provide important information while they're doing other things.",
+    "name" : "send_notification",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "body" : {
+          "description" : "The body text of the notification",
+          "type" : "string"
+        },
+        "subtitle" : {
+          "description" : "Optional subtitle shown below the title",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "The title of the notification",
+          "type" : "string"
+        }
       },
-      "required": ["action"]
+      "required" : [
+        "title",
+        "body"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "title",
+        "body",
+        "subtitle"
+      ]
     }
   },
   {
-    "name": "control_browser",
-    "description": "Controls a headless, windowless web browser (Safari/WebKit based) to open pages, scrape content, click elements, and fill forms.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "action": { "type": "string", "description": "The action to perform: 'open_url', 'scrape_page', 'click_element', 'input_text'" },
-        "url": { "type": "string", "description": "The URL to navigate to - required for open_url" },
-        "selector": { "type": "string", "description": "CSS selector for the target element - required for click_element and input_text" },
-        "textValue": { "type": "string", "description": "The text value to input - required for input_text" }
+    "description" : "Returns detailed information about the macOS system including OS version, hardware model, chip, RAM, storage, and network info. ONLY call this tool when the user's request actually depends on OS version, hardware, storage, or network details. For greetings (\"hi\", \"hey\", \"hello\"), casual chat, or any input that does not require environmental details, respond conversationally and do NOT call this tool. Call this tool AT MOST ONCE per turn; once you receive the info block, summarize the relevant details and proceed — do not retry or re-call it. If the block contains an error or warning, report it and stop.",
+    "name" : "get_system_info",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+
       },
-      "required": ["action"]
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+
+      ]
     }
   },
   {
-    "name": "update_plan",
-    "description": "Sets or updates the current execution plan steps to be visualized in the Plan Dashboard.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "steps": {
-          "type": "array",
-          "description": "The list of plan steps",
-          "items": {
-            "type": "object",
-            "properties": {
-              "title": { "type": "string", "description": "The description of the step" },
-              "status": { "type": "string", "description": "The status of the step: 'queued', 'running', 'completed', 'failed'" }
+    "description" : "Returns a list of currently running macOS applications (user-visible apps, not background daemons). Call this tool AT MOST ONCE per turn. Once you receive the list, do NOT call it again — summarize what is running to the user and proceed. If the result contains an error, report it and stop; do not retry.",
+    "name" : "get_running_processes",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "includeBackground" : {
+          "description" : "If true, includes background\/hidden processes. If false (default), only shows user-visible apps.",
+          "type" : "boolean"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "includeBackground"
+      ]
+    }
+  },
+  {
+    "description" : "Returns the bundle ID, name, and process ID of the currently active (frontmost) macOS application.",
+    "name" : "get_frontmost_app",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+
+      ]
+    }
+  },
+  {
+    "description" : "Stores or updates a key-value memory record in the on-device SQLite database. Use this to remember important system locations, file changes, or status of long-running tasks.",
+    "name" : "store_memory",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "category" : {
+          "description" : "The category\/profile type for this memory (e.g., 'user_preference', 'codebase_insight', 'execution_history')",
+          "type" : "string"
+        },
+        "key" : {
+          "description" : "The topic or identifier for this memory (e.g., 'task_status', 'project_root')",
+          "type" : "string"
+        },
+        "value" : {
+          "description" : "The detailed value\/notes to remember",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "key",
+        "value"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "key",
+        "value",
+        "category"
+      ]
+    }
+  },
+  {
+    "description" : "Searches the long-term SQLite memory database for entries matching the query keyword.",
+    "name" : "search_memory",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "category" : {
+          "description" : "Optional category filter to search only memories under a specific profile type.",
+          "type" : "string"
+        },
+        "query" : {
+          "description" : "Search keyword to match against keys or values. If empty, lists the most recent memories.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "query",
+        "category"
+      ]
+    }
+  },
+  {
+    "description" : "Deletes an agent memory record by key, or clears all memory records matching a category.",
+    "name" : "delete_memory",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "category" : {
+          "description" : "The category of memories to clear (if deleting an entire category)",
+          "type" : "string"
+        },
+        "key" : {
+          "description" : "The specific memory key to delete",
+          "type" : "string"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "key",
+        "category"
+      ]
+    }
+  },
+  {
+    "description" : "Performs reliable, pre-tested GUI automation actions on common macOS apps (Safari, Chrome, Finder, System Settings).",
+    "name" : "control_app",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action to perform ('open_url', 'get_active_tab', 'open_folder', 'get_selected', 'open_preference_pane')",
+          "type" : "string"
+        },
+        "appName" : {
+          "description" : "Target application ('Safari', 'Chrome', 'Finder', 'System Settings')",
+          "type" : "string"
+        },
+        "parameter" : {
+          "description" : "Argument for the action (e.g., URL for 'open_url', folder path for 'open_folder', pane ID for 'open_preference_pane')",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "appName",
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "appName",
+        "action",
+        "parameter"
+      ]
+    }
+  },
+  {
+    "description" : "Performs UI automation actions on the active application window using accessibility (AXUIElement) APIs, and provides observation capabilities to inspect the live UI tree with elements' roles, titles, values, and positions. Requires Accessibility permissions.",
+    "name" : "control_accessibility",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "The action to perform: 'inspect_ui', 'list_elements', 'click', 'set_text', 'focus'",
+          "type" : "string"
+        },
+        "appName" : {
+          "description" : "Name of the running app to inspect (e.g. 'Safari'). Defaults to the frontmost app.",
+          "type" : "string"
+        },
+        "bundleId" : {
+          "description" : "Bundle identifier of the running app to inspect. Takes precedence over appName.",
+          "type" : "string"
+        },
+        "elementId" : {
+          "description" : "The registry ID of the element (e.g. 'elem_1') - required for click, set_text, focus",
+          "type" : "string"
+        },
+        "includeValues" : {
+          "description" : "Include element values such as text field contents (default true).",
+          "type" : "boolean"
+        },
+        "maxDepth" : {
+          "description" : "Maximum tree depth to traverse (default 8, capped at 12).",
+          "type" : "integer"
+        },
+        "textValue" : {
+          "description" : "The text value to enter - required for set_text",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "elementId",
+        "textValue",
+        "appName",
+        "bundleId",
+        "maxDepth",
+        "includeValues"
+      ]
+    }
+  },
+  {
+    "description" : "Builds a semantic index of every interactive element in the frontmost (or named) application window using the macOS Accessibility tree. Returns a numbered list like '[#1 Button Build, #2 TextField Filter...]'. Bots can then act on elements by their index using control_accessibility. Requires Accessibility permission.",
+    "name" : "ax_target_element",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "appName" : {
+          "type" : "string"
+        },
+        "filterRoles" : {
+          "type" : "string"
+        },
+        "maxDepth" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "appName",
+        "filterRoles",
+        "maxDepth"
+      ]
+    }
+  },
+  {
+    "description" : "Captures only the changed regions of the screen since the last call. Returns Base64-encoded PNG of bounding box of changed regions, plus description. First call returns full screen.",
+    "name" : "screen_diff",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "displayIndex" : {
+          "type" : "integer"
+        },
+        "resetCache" : {
+          "type" : "boolean"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "displayIndex",
+        "resetCache"
+      ]
+    }
+  },
+  {
+    "description" : "Captures an application window frame by name or window ID without bringing the application frontmost or stealing display focus.",
+    "name" : "capture_window_image",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "appName" : {
+          "type" : "string"
+        },
+        "windowID" : {
+          "type" : "integer"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "appName",
+        "windowID"
+      ]
+    }
+  },
+  {
+    "description" : "Controls a persistent headless web browser (WebKit-based) to open pages, scrape content, click elements, fill forms, extract links, evaluate JavaScript, and manage sessions.",
+    "name" : "control_browser",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "The action to perform: 'open_url', 'scrape_page', 'extract_links', 'click_element', 'input_text', 'evaluate_script', 'clear_session'",
+          "type" : "string"
+        },
+        "selector" : {
+          "description" : "CSS selector for the target element - required for click_element and input_text",
+          "type" : "string"
+        },
+        "textValue" : {
+          "description" : "The text value to input or JavaScript snippet to evaluate",
+          "type" : "string"
+        },
+        "url" : {
+          "description" : "The URL to navigate to - required for open_url",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "url",
+        "selector",
+        "textValue"
+      ]
+    }
+  },
+  {
+    "description" : "Sets or updates the current execution plan steps to be visualized in the Plan Dashboard.",
+    "name" : "update_plan",
+    "parameters" : {
+      "$defs" : {
+        "Step" : {
+          "additionalProperties" : false,
+          "properties" : {
+            "error" : {
+              "type" : "string"
             },
-            "required": ["title", "status"]
-          }
+            "result" : {
+              "type" : "string"
+            },
+            "status" : {
+              "type" : "string"
+            },
+            "title" : {
+              "type" : "string"
+            }
+          },
+          "required" : [
+            "title",
+            "status"
+          ],
+          "title" : "Step",
+          "type" : "object",
+          "x-order" : [
+            "title",
+            "status",
+            "result",
+            "error"
+          ]
         }
       },
-      "required": ["steps"]
-    }
-  },
-  {
-    "name": "delegate_task",
-    "description": "Delegates a specific sub-task to a specialized sub-agent (developer, executor, controller, researcher, linter, uiDesigner, planner) and returns their final response report.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "agentType": { "type": "string", "description": "The type of sub-agent to delegate the task to (developer, executor, controller, researcher, linter, uiDesigner, planner)" },
-        "taskDescription": { "type": "string", "description": "The detailed task instructions and context for the sub-agent to execute." }
-      },
-      "required": ["agentType", "taskDescription"]
-    }
-  },
-  {
-    "name": "convene_meeting",
-    "description": "Convenes a round-robin debate among multiple specialized sub-agents to find consensus on a complex topic.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "topic": { "type": "string", "description": "The discussion topic or problem to debate" },
-        "participants": {
-          "type": "array",
-          "description": "List of sub-agent types participating (developer, executor, controller, researcher, linter, uiDesigner, planner)",
-          "items": { "type": "string" }
+      "additionalProperties" : false,
+      "properties" : {
+        "steps" : {
+          "description" : "The list of plan steps",
+          "items" : {
+            "$ref" : "#\/$defs\/Step"
+          },
+          "type" : "array"
         }
       },
-      "required": ["topic", "participants"]
+      "required" : [
+        "steps"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "steps"
+      ]
     }
   },
   {
-    "name": "create_skill",
-    "description": "Creates a new custom skill/tool by writing a shell or python script and registering its schema.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "skillName": { "type": "string", "description": "Name of the skill to create (snake_case)" },
-        "skillDescription": { "type": "string", "description": "Short description of what the skill does" },
-        "scriptContent": { "type": "string", "description": "The zsh or python script content" },
-        "parameterSchemaJSON": { "type": "string", "description": "The JSON Schema of the parameters this script expects" }
+    "description" : "Audits Swift\/Xcode projects in the specified directory. Scans for targets, swift versions, strict concurrency compliance, and broken references.",
+    "name" : "audit_projects",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "directoryPath" : {
+          "description" : "The directory containing Xcode projects to audit. Defaults to the configured workspace (apex.workspacePath), else the user's ~\/Developer folder or home directory.",
+          "type" : "string"
+        }
       },
-      "required": ["skillName", "skillDescription", "scriptContent", "parameterSchemaJSON"]
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "directoryPath"
+      ]
     }
   },
   {
-    "name": "run_workflow",
-    "description": "Runs a pre-defined multi-agent state-graph workflow pipeline (Codex -> Auditor -> Nexus) to resolve a development task.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "task": { "type": "string", "description": "The task or bug description to solve using the pipeline" }
+    "description" : "Delegates the user's specific concrete task to a specialized sub-agent (developer\/Codex, executor\/Nexus, controller\/Pilot, researcher\/Oracle, linter\/Auditor, uiDesigner\/Aura, planner\/Chronos) and returns the completed response report. Preserve the task; do not replace it with a generic operational-status or readiness report unless the user explicitly requested readiness.",
+    "name" : "delegate_task",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "agentType" : {
+          "description" : "The type or name of sub-agent to delegate to (e.g. 'developer'\/'Codex', 'executor'\/'Nexus', 'controller'\/'Pilot', 'researcher'\/'Oracle')",
+          "type" : "string"
+        },
+        "taskDescription" : {
+          "description" : "The detailed task instructions and context for the sub-agent to execute.",
+          "type" : "string"
+        }
       },
-      "required": ["task"]
+      "required" : [
+        "agentType",
+        "taskDescription"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "agentType",
+        "taskDescription"
+      ]
     }
   },
   {
-    "name": "audit_projects",
-    "description": "Audits Xcode projects in a directory for potential code style, warning, and configuration issues.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "directoryPath": { "type": "string", "description": "The path to the directory containing Xcode projects to audit" }
+    "description" : "Analyzes an image file locally using on-device vision\/multimodal capabilities to answer questions about its content.",
+    "name" : "analyze_image",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "imagePath" : {
+          "description" : "Path to the image file to analyze.",
+          "type" : "string"
+        },
+        "query" : {
+          "description" : "What to look for or analyze in the image (e.g., 'describe this image', 'read the error message').",
+          "type" : "string"
+        }
       },
-      "required": ["directoryPath"]
+      "required" : [
+        "imagePath",
+        "query"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "imagePath",
+        "query"
+      ]
     }
   },
   {
-    "name": "analyze_image",
-    "description": "Analyzes the visual contents of a local image file based on a natural language query (multimodal visual QA).",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "imagePath": { "type": "string", "description": "Path to the local image file to analyze" },
-        "query": { "type": "string", "description": "The visual query or question about the image content" }
+    "description" : "Performs fast, fully on-device optical character recognition (OCR) using macOS Vision APIs to extract all text from an image file.",
+    "name" : "detect_image_text",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "imagePath" : {
+          "description" : "Path to the image file to perform OCR on.",
+          "type" : "string"
+        }
       },
-      "required": ["imagePath", "query"]
+      "required" : [
+        "imagePath"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "imagePath"
+      ]
     }
   },
   {
-    "name": "detect_image_text",
-    "description": "Runs optical character recognition (OCR) on a local image file to extract readable text.",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "imagePath": { "type": "string", "description": "Path to the local image file to perform OCR on" }
+    "description" : "Convenes a panel meeting\/debate between the requested specialized sub-agents to execute the user's concrete topic, review findings, and reach a consensus. Preserve the supplied topic and participants; do not replace a concrete discussion with an agent-status or readiness report.",
+    "name" : "convene_meeting",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "participants" : {
+          "description" : "List of sub-agent types to invite to the meeting (e.g., ['developer', 'uiDesigner', 'planner', 'researcher']).",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "topic" : {
+          "description" : "The topic or problem to be discussed in the meeting.",
+          "type" : "string"
+        }
       },
-      "required": ["imagePath"]
+      "required" : [
+        "topic",
+        "participants"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "topic",
+        "participants"
+      ]
+    }
+  },
+  {
+    "description" : "Creates a new reusable skill (tool) for the agent. Saves the script and its JSON schema parameter manifest in ~\/.apex\/skills\/ so it can be dynamically loaded and run in subsequent turns.",
+    "name" : "create_skill",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "parameterSchemaJSON" : {
+          "description" : "JSON string describing the parameters schema of the tool, matching standard JSON Schema format (e.g. '{\"type\": \"object\", \"properties\": {\"path\": {\"type\": \"string\", \"description\": \"Directory path\"}}, \"required\": [\"path\"]}')",
+          "type" : "string"
+        },
+        "scriptContent" : {
+          "description" : "The executable shell script code (typically zsh\/bash, starting with '#!\/bin\/zsh'). It will receive arguments via the environment variable APEX_ARGS.",
+          "type" : "string"
+        },
+        "skillDescription" : {
+          "description" : "Clear description of what the skill does and what it returns",
+          "type" : "string"
+        },
+        "skillName" : {
+          "description" : "Unique name of the new skill (use snake_case, e.g. 'count_source_lines')",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "skillName",
+        "skillDescription",
+        "scriptContent",
+        "parameterSchemaJSON"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "skillName",
+        "skillDescription",
+        "scriptContent",
+        "parameterSchemaJSON"
+      ]
+    }
+  },
+  {
+    "description" : "Runs a structured explicit workflow (Codex -> Auditor -> Nexus) to implement code changes, lint them, and verify compilation.",
+    "name" : "run_workflow",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "task" : {
+          "description" : "The coding task or goal to accomplish.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "task"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "task"
+      ]
+    }
+  },
+  {
+    "description" : "Searches for a text query or pattern across files recursively within a directory. Uses system grep.",
+    "name" : "file_search",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "directory" : {
+          "description" : "The directory path to search. Defaults to current workspace if not specified.",
+          "type" : "string"
+        },
+        "filePattern" : {
+          "description" : "Optional file pattern\/extension filter (e.g. '*.swift').",
+          "type" : "string"
+        },
+        "maxResults" : {
+          "description" : "Maximum number of matches to return (defaults to 50).",
+          "maximum" : 200,
+          "minimum" : 1,
+          "type" : "integer"
+        },
+        "query" : {
+          "description" : "The query string to search for inside files.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "query"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "query",
+        "directory",
+        "filePattern",
+        "maxResults"
+      ]
+    }
+  },
+  {
+    "description" : "Searches the user's locally indexed files via Core Spotlight (macOS Spotlight). Returns matching file paths with a short content snippet. Use this to ground answers in the user's own documents.",
+    "name" : "spotlight_search",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "contentType" : {
+          "description" : "Optional file kind filter, e.g. 'public.plain-text', 'public.pdf', 'public.image'.",
+          "type" : "string"
+        },
+        "maxResults" : {
+          "description" : "Maximum number of results to return. Defaults to 10.",
+          "type" : "integer"
+        },
+        "query" : {
+          "description" : "The search query (keywords or phrase) to find in indexed local files.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "query"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "query",
+        "maxResults",
+        "contentType"
+      ]
+    }
+  },
+  {
+    "description" : "Executes a dynamic tool or MCP tool by name with JSON arguments. Returns the tool output.",
+    "name" : "execute_dynamic_tool",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "jsonArguments" : {
+          "description" : "JSON string containing arguments for the tool.",
+          "type" : "string"
+        },
+        "toolName" : {
+          "description" : "The name of the dynamic tool or MCP tool to execute.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "toolName",
+        "jsonArguments"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "toolName",
+        "jsonArguments"
+      ]
+    }
+  },
+  {
+    "description" : "Generates the user's daily briefing from the shared Momentum Ecosystem data bus: today's mood, budget alert status, habit completion count, active power-up, and recent shared tasks. Use this when the user asks for their daily briefing, morning summary, or a status overview.",
+    "name" : "daily_briefing",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+
+      ]
+    }
+  },
+  {
+    "description" : "Sends a query to a named Bot teammate and returns their response. Use this to delegate subtasks to specialized bots (e.g. asking the Code Architect to review a snippet, or asking the Researcher for domain knowledge). If peer approval is required, the call will pause until the user decides.",
+    "name" : "ask_bot",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "message" : {
+          "description" : "The message or task prompt to send to the Bot.",
+          "type" : "string"
+        },
+        "targetBot" : {
+          "description" : "The name or UUID of the Bot teammate to query.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "targetBot",
+        "message"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "targetBot",
+        "message"
+      ]
+    }
+  },
+  {
+    "description" : "Informs the user that the task is complete and requests final approval. Provide a detailed summary of what was completed, list of files modified, and validation\/testing results. If the user approves, the task is marked done. If denied, the user will specify further changes needed.",
+    "name" : "confirm_completion",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "filesModified" : {
+          "description" : "Comma-separated list of file paths that were modified or created, if any.",
+          "type" : "string"
+        },
+        "summary" : {
+          "description" : "A comprehensive summary of the changes and actions completed.",
+          "type" : "string"
+        },
+        "verificationResults" : {
+          "description" : "Detailed description of how the changes were verified\/tested.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "summary"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "summary",
+        "filesModified",
+        "verificationResults"
+      ]
+    }
+  },
+  {
+    "description" : "Performs independent end-to-end execution verification of state mutations (files, terminal commands, or build products) before reporting success. Approval and exit status alone are not proof. Use this tool to verify file existence, check file contents, or assert command outcomes.",
+    "name" : "verify_execution",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "command" : {
+          "description" : "Shell command to execute to verify the end state (returns verification success if exit code is 0)",
+          "type" : "string"
+        },
+        "expectedPattern" : {
+          "description" : "Expected string or regex pattern to search for in the file or command output",
+          "type" : "string"
+        },
+        "targetPath" : {
+          "description" : "Absolute or relative file or directory path to check",
+          "type" : "string"
+        },
+        "verificationType" : {
+          "description" : "Type of verification: 'file_exists', 'file_contains', 'file_not_contains', 'command_succeeds', or 'directory_not_empty'",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "verificationType"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "verificationType",
+        "targetPath",
+        "expectedPattern",
+        "command"
+      ]
+    }
+  },
+  {
+    "description" : "Saves code review findings (summary, suggestions, file metrics, issues) to the database.",
+    "name" : "save_review_session",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "fileName" : {
+          "description" : "The name of the file reviewed.",
+          "type" : "string"
+        },
+        "issuesJSON" : {
+          "description" : "JSON array string of specific issues. Each issue should have: line (Int), message (String), and severity (String: 'info', 'warning', 'error').",
+          "type" : "string"
+        },
+        "suggestions" : {
+          "description" : "List of general suggestions.",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "summary" : {
+          "description" : "A summary of the code review.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "fileName",
+        "summary",
+        "suggestions",
+        "issuesJSON"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "fileName",
+        "summary",
+        "suggestions",
+        "issuesJSON"
+      ]
+    }
+  },
+  {
+    "description" : "Lists past code review sessions stored in the database with optional filtering.",
+    "name" : "list_review_sessions",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "fileName" : {
+          "description" : "Filter sessions by file name.",
+          "type" : "string"
+        },
+        "limit" : {
+          "description" : "Maximum number of review sessions to return (defaults to 20).",
+          "maximum" : 100,
+          "minimum" : 1,
+          "type" : "integer"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "fileName",
+        "limit"
+      ]
+    }
+  },
+  {
+    "description" : "Exports a specific code review session and its issues into a structured Markdown report.",
+    "name" : "export_review_session",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "fileName" : {
+          "description" : "File name of the review session to export.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "fileName"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "fileName"
+      ]
+    }
+  },
+  {
+    "description" : "Retrieves real-time weather information and forecasts for a specified location (e.g. \"Anoka, MN\", \"London, UK\", or \"45.1983,-93.3886\") using Apple WeatherKit and CoreLocation geocoding. Supports current conditions, hourly forecasts, 10-day daily forecasts, and severe weather alerts.",
+    "name" : "get_weather",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "forecastType" : {
+          "description" : "Type of forecast to return: 'current', 'hourly', 'daily', or 'alerts'. Defaults to 'current'.",
+          "type" : "string"
+        },
+        "location" : {
+          "description" : "The city, address, or geographic coordinate (e.g., 'Anoka, MN', 'San Francisco', '45.19,-93.38')",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "location"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "location",
+        "forecastType"
+      ]
+    }
+  },
+  {
+    "description" : "Searches for places, businesses, landmarks, and addresses (e.g. \"coffee shops in Minneapolis\", \"Apple Store\", \"libraries near Anoka\") using Apple MapKit Local Search. Returns structured names, addresses, phone numbers, URLs, and coordinates.",
+    "name" : "map_search",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "nearLocation" : {
+          "description" : "Optional city, address, or coordinate to center the search around (e.g. 'Anoka, MN', 'Downtown Minneapolis')",
+          "type" : "string"
+        },
+        "query" : {
+          "description" : "The search query for places, businesses, or landmarks (e.g. 'Italian restaurants', 'gas station', 'Target')",
+          "type" : "string"
+        },
+        "resultCount" : {
+          "description" : "Number of results to return (1 to 20, default: 5)",
+          "type" : "integer"
+        }
+      },
+      "required" : [
+        "query"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "query",
+        "nearLocation",
+        "resultCount"
+      ]
+    }
+  },
+  {
+    "description" : "Calculates routes, driving\/walking times, distances, and turn-by-turn navigation steps between two locations using Apple MapKit Directions.",
+    "name" : "get_directions",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "from" : {
+          "description" : "Starting location or address (e.g. 'Anoka, MN', 'Minneapolis-Saint Paul Airport')",
+          "type" : "string"
+        },
+        "to" : {
+          "description" : "Destination location or address (e.g. 'Mall of America', 'Duluth, MN')",
+          "type" : "string"
+        },
+        "transportType" : {
+          "description" : "Transportation mode: 'driving' (automobile), 'walking', or 'transit'. Defaults to 'driving'.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "from",
+        "to"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "from",
+        "to",
+        "transportType"
+      ]
+    }
+  },
+  {
+    "description" : "Reads, searches, creates, and deletes events from Apple Calendar using EventKit. Supports listing upcoming events, finding events by title\/keyword, and creating scheduled meetings or appointments.",
+    "name" : "calendar",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action to perform: 'list' (view upcoming), 'create' (new event), 'search' (find events), or 'delete' (remove by ID\/title)",
+          "type" : "string"
+        },
+        "daysAhead" : {
+          "description" : "Number of days ahead to list events for 'list' action (default: 7)",
+          "type" : "integer"
+        },
+        "endDate" : {
+          "description" : "End date and time in ISO 8601 or natural format. If omitted for 'create', defaults to 1 hour after start.",
+          "type" : "string"
+        },
+        "eventId" : {
+          "description" : "Identifier of event to delete",
+          "type" : "string"
+        },
+        "location" : {
+          "description" : "Location or meeting link for the event",
+          "type" : "string"
+        },
+        "notes" : {
+          "description" : "Notes or description for the event",
+          "type" : "string"
+        },
+        "startDate" : {
+          "description" : "Start date and time in ISO 8601 or natural format (e.g. '2026-08-27T09:00:00Z', '2026-08-27 14:00', or 'tomorrow 9am')",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "Title \/ summary of the event",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "title",
+        "startDate",
+        "endDate",
+        "location",
+        "notes",
+        "daysAhead",
+        "eventId"
+      ]
+    }
+  },
+  {
+    "description" : "Reads, creates, completes, and manages reminders\/to-do items in Apple Reminders using EventKit. Supports listing active tasks, creating reminders with due dates and priorities, and marking tasks complete.",
+    "name" : "reminders",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action to perform: 'list' (view incomplete tasks), 'create' (add task), 'complete' (mark done), or 'delete' (remove task)",
+          "type" : "string"
+        },
+        "dueDate" : {
+          "description" : "Due date in ISO 8601 or standard format (e.g. '2026-08-27T17:00:00Z', '2026-08-28 09:00')",
+          "type" : "string"
+        },
+        "listName" : {
+          "description" : "Target list name (optional, defaults to default Reminders list)",
+          "type" : "string"
+        },
+        "notes" : {
+          "description" : "Notes or additional details for the reminder",
+          "type" : "string"
+        },
+        "priority" : {
+          "description" : "Priority level: 1 (High), 5 (Medium), 9 (Low), 0 (None)",
+          "type" : "integer"
+        },
+        "reminderId" : {
+          "description" : "Identifier of the reminder to complete or delete",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "Title \/ task description of the reminder",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "title",
+        "dueDate",
+        "priority",
+        "notes",
+        "listName",
+        "reminderId"
+      ]
+    }
+  },
+  {
+    "description" : "Translates text between languages using Apple's on-device Translation and NaturalLanguage frameworks. Supports automatic source language detection and translation into target languages (e.g. English, Spanish, French, German, Japanese, Chinese). Can also translate entire local files: pass 'filePath' instead of\/in addition to 'text' and the whole document will be translated chunk-by-chunk and written to '<original-stem>.<targetlang>.<ext>' next to the source file. Only plain-text-representable files are supported.",
+    "name" : "translate",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "filePath" : {
+          "description" : "Path to a local text file whose ENTIRE contents should be translated. The result is written to '<stem>.<targetlang>.<ext>' beside the source file.",
+          "type" : "string"
+        },
+        "sourceLanguage" : {
+          "description" : "Source language code (e.g. 'auto', 'es', 'fr', 'ja'). If omitted or 'auto', automatically detects the language.",
+          "type" : "string"
+        },
+        "targetLanguage" : {
+          "description" : "Target language code or name (e.g. 'en', 'es', 'fr', 'de', 'ja', 'zh', 'Spanish', 'French'). Defaults to 'en'.",
+          "type" : "string"
+        },
+        "text" : {
+          "description" : "The text to translate. Optional if 'filePath' is provided.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "text",
+        "filePath",
+        "targetLanguage",
+        "sourceLanguage"
+      ]
+    }
+  },
+  {
+    "description" : "Extracts named entities (people, places, locations, organizations), sentiment polarity, and dominant language from text using Apple's on-device NaturalLanguage framework.",
+    "name" : "extract_entities",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "filter" : {
+          "description" : "Optional filter for entity types to extract: 'people', 'places', 'organizations', 'sentiment', or 'all'. Defaults to 'all'.",
+          "type" : "string"
+        },
+        "text" : {
+          "description" : "The input text, document excerpt, or query to analyze",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "text"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "text",
+        "filter"
+      ]
+    }
+  },
+  {
+    "description" : "Wraps the macOS shortcuts CLI to list or run Apple Shortcuts.",
+    "name" : "run_shortcut",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action to perform: 'list' or 'run'",
+          "type" : "string"
+        },
+        "input" : {
+          "description" : "Optional text input to pass to the shortcut",
+          "type" : "string"
+        },
+        "shortcutName" : {
+          "description" : "Name of the shortcut to run",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "shortcutName",
+        "input"
+      ]
+    }
+  },
+  {
+    "description" : "Queries the macOS unified system log via OSLogStore (for system diagnostics, OS subsystems, and Apple unified logging). NOTE: This is NOT for compiler, Xcode build, terminal, or Swift build output. Use run_shell_command to check build or terminal logs.",
+    "name" : "query_logs",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "category" : {
+          "description" : "Category to filter by",
+          "type" : "string"
+        },
+        "lastSeconds" : {
+          "description" : "Look back time in seconds (default 300)",
+          "type" : "integer"
+        },
+        "level" : {
+          "description" : "Log level: debug, info, error, or fault",
+          "type" : "string"
+        },
+        "limit" : {
+          "description" : "Maximum number of logs to return (default 50)",
+          "type" : "integer"
+        },
+        "searchText" : {
+          "description" : "Text to search in log messages",
+          "type" : "string"
+        },
+        "subsystem" : {
+          "description" : "Apple OSLog subsystem (e.g. 'com.apple.dt.xcode', 'com.apex.agent'). NOT for terminal logs.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "subsystem",
+        "category",
+        "level",
+        "lastSeconds",
+        "searchText",
+        "limit"
+      ]
+    }
+  },
+  {
+    "description" : "Watches directories for filesystem changes.",
+    "name" : "watch_paths",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action to perform: 'start', 'check', or 'stop'",
+          "type" : "string"
+        },
+        "path" : {
+          "description" : "Path to watch (required for 'start')",
+          "type" : "string"
+        },
+        "watchId" : {
+          "description" : "Watch ID returned by 'start' (required for 'check' and 'stop')",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "path",
+        "watchId"
+      ]
+    }
+  },
+  {
+    "description" : "Network status and endpoint probing.",
+    "name" : "network_diagnostics",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action to perform: 'status', 'probe', or 'dns'",
+          "type" : "string"
+        },
+        "host" : {
+          "description" : "Host to probe or resolve (required for probe\/dns)",
+          "type" : "string"
+        },
+        "port" : {
+          "description" : "Port to probe (default 443)",
+          "type" : "integer"
+        },
+        "timeoutSeconds" : {
+          "description" : "Timeout in seconds (default 10)",
+          "type" : "integer"
+        }
+      },
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "host",
+        "port",
+        "timeoutSeconds"
+      ]
+    }
+  },
+  {
+    "description" : "Inspect current screen visual context, extract on-screen UI text, identify error dialogs\/compiler failures, and highlight bounding boxes on displays.",
+    "name" : "screen_perception",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action to perform: 'capture_and_analyze', 'list_displays', or 'highlight_region'. Defaults to 'capture_and_analyze'.",
+          "type" : "string"
+        },
+        "highlightHeight" : {
+          "description" : "Normalized height [0..1] for highlight_region",
+          "type" : "number"
+        },
+        "highlightWidth" : {
+          "description" : "Normalized width [0..1] for highlight_region",
+          "type" : "number"
+        },
+        "highlightX" : {
+          "description" : "Normalized X coordinate [0..1] for highlight_region",
+          "type" : "number"
+        },
+        "highlightY" : {
+          "description" : "Normalized Y coordinate [0..1] for highlight_region",
+          "type" : "number"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "highlightX",
+        "highlightY",
+        "highlightWidth",
+        "highlightHeight"
+      ]
+    }
+  },
+  {
+    "description" : "Surgically replaces a block of text in a file. Must provide exact targetContent to find and replacementContent to substitute. Optional startLine and endLine constrain the search range.",
+    "name" : "patch_file",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "allowMultiple" : {
+          "description" : "If true, replaces all occurrences of targetContent; otherwise fails if multiple matches exist",
+          "type" : "boolean"
+        },
+        "endLine" : {
+          "description" : "Optional 1-indexed ending line number to constrain the search range",
+          "type" : "integer"
+        },
+        "path" : {
+          "description" : "Absolute or tilde-expanded path to the file to modify",
+          "type" : "string"
+        },
+        "replacementContent" : {
+          "description" : "The new content to replace targetContent with",
+          "type" : "string"
+        },
+        "startLine" : {
+          "description" : "Optional 1-indexed starting line number to constrain the search range",
+          "type" : "integer"
+        },
+        "targetContent" : {
+          "description" : "The exact substring to replace in the file (must match exactly including whitespace)",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "path",
+        "targetContent",
+        "replacementContent"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "path",
+        "targetContent",
+        "replacementContent",
+        "startLine",
+        "endLine",
+        "allowMultiple"
+      ]
+    }
+  },
+  {
+    "description" : "Performs structured Git repository operations (status, diff, log, branch, checkout, commit, add, unstage, show, stash) within an allowed workspace repository.",
+    "name" : "git_operation",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "The git action to execute: 'status', 'diff', 'log', 'branch', 'checkout', 'commit', 'add', 'unstage', 'show', 'stash'",
+          "type" : "string"
+        },
+        "branchName" : {
+          "description" : "Branch name (for 'checkout' or 'branch')",
+          "type" : "string"
+        },
+        "createBranch" : {
+          "description" : "Whether to create a new branch during checkout (-b)",
+          "type" : "boolean"
+        },
+        "message" : {
+          "description" : "Commit message (required for 'commit')",
+          "type" : "string"
+        },
+        "paths" : {
+          "description" : "File paths to add, diff, or checkout",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "repoPath" : {
+          "description" : "Absolute or tilde-expanded path to the repository directory. Defaults to current workspace if omitted.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "repoPath",
+        "message",
+        "paths",
+        "branchName",
+        "createBranch"
+      ]
+    }
+  },
+  {
+    "description" : "Dispatches multiple tasks concurrently to different specialist bots in parallel, awaiting all responses and returning an aggregated summary.",
+    "name" : "dispatch_swarm",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "targetBots" : {
+          "description" : "Comma-separated list of target bot names, e.g. 'Codex, Nexus, Auditor, Oracle'",
+          "type" : "string"
+        },
+        "taskPrompts" : {
+          "description" : "Single string or |||-delimited \/ JSON array of task prompts for the swarm",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "targetBots",
+        "taskPrompts"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "targetBots",
+        "taskPrompts"
+      ]
+    }
+  },
+  {
+    "description" : "Performs live mouse and keyboard actions on the user's desktop: coordinate clicking, typing text, pressing key combos (e.g. command+s), scrolling, and opening applications. Prefer 'control_accessibility' ('inspect_ui' action) FIRST to read the target app's AX outline and pick exact element coordinates; re-inspect or screenshot after acting to verify the expected change happened. Use this tool for raw input that AX element actions cannot express (key shortcuts, scrolling, non-accessible UI). Requires Accessibility permission. At most one desktop input action per call.",
+    "name" : "computer_use",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action: 'click', 'double_click', 'type', 'key', 'scroll', 'open_app', or 'wait'.",
+          "type" : "string"
+        },
+        "appName" : {
+          "description" : "Bundle identifier for 'open_app' (e.g. 'com.apple.Safari').",
+          "type" : "string"
+        },
+        "deltaX" : {
+          "description" : "Horizontal scroll lines for 'scroll' (positive scrolls right).",
+          "type" : "integer"
+        },
+        "deltaY" : {
+          "description" : "Vertical scroll lines for 'scroll' (positive scrolls down).",
+          "type" : "integer"
+        },
+        "keys" : {
+          "description" : "Space-separated key names for 'key', e.g. 'command+s', tokens: command\/cmd, shift, option\/alt, control\/ctrl, letters, digits, return, tab, space, delete, escape, arrows, f1-f12.",
+          "type" : "string"
+        },
+        "seconds" : {
+          "description" : "Seconds to wait (max 30) for the 'wait' action.",
+          "type" : "number"
+        },
+        "text" : {
+          "description" : "Text to type for the 'type' action.",
+          "type" : "string"
+        },
+        "x" : {
+          "description" : "Screen X coordinate for click\/double_click (from inspect_ui element frames).",
+          "type" : "integer"
+        },
+        "y" : {
+          "description" : "Screen Y coordinate for click\/double_click.",
+          "type" : "integer"
+        }
+      },
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "x",
+        "y",
+        "text",
+        "keys",
+        "deltaX",
+        "deltaY",
+        "appName",
+        "seconds"
+      ]
+    }
+  },
+  {
+    "description" : "GitHub API access via gh CLI.\nActions: issue (list\/create\/get\/edit), pr (list\/create\/get\/edit\/merge), repo (list\/create\/clone\/view), workflow (list\/run\/view), auth (status\/login), api (raw REST call).\nRequires gh CLI installed and authenticated (gh auth login).",
+    "name" : "github",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action: issue, pr, repo, workflow, auth, api",
+          "type" : "string"
+        },
+        "assignees" : {
+          "description" : "Assignees (comma-separated, for create\/edit)",
+          "type" : "string"
+        },
+        "body" : {
+          "description" : "Body (for create\/edit\/comment)",
+          "type" : "string"
+        },
+        "endpoint" : {
+          "description" : "Raw API endpoint for 'api' action (e.g. '\/repos\/owner\/repo\/issues')",
+          "type" : "string"
+        },
+        "labels" : {
+          "description" : "Labels (comma-separated, for create\/edit)",
+          "type" : "string"
+        },
+        "limit" : {
+          "description" : "Limit (for list, default 30)",
+          "type" : "integer"
+        },
+        "method" : {
+          "description" : "HTTP method for 'api' action (GET, POST, PATCH, DELETE)",
+          "type" : "string"
+        },
+        "number" : {
+          "description" : "Issue\/PR number",
+          "type" : "integer"
+        },
+        "repo" : {
+          "description" : "Repository in owner\/name format (e.g. 'owner\/repo')",
+          "type" : "string"
+        },
+        "state" : {
+          "description" : "State filter: open, closed, all (for list)",
+          "type" : "string"
+        },
+        "subAction" : {
+          "description" : "Sub-action (e.g. for issue: list, create, get, edit, comment, close, reopen)",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "Title (for create)",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "subAction",
+        "repo",
+        "number",
+        "title",
+        "body",
+        "labels",
+        "assignees",
+        "state",
+        "limit",
+        "endpoint",
+        "method"
+      ]
+    }
+  },
+  {
+    "description" : "Queries status and manages the native macOS Apple Container sandbox (start, stop, check status).",
+    "name" : "manage_sandbox",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "The action to perform: 'status' (get details), 'start' (boot sandbox micro-VM), 'stop' (shut down micro-VM). Defaults to 'status'.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action"
+      ]
+    }
+  },
+  {
+    "description" : "iOS Simulator control via xcrun simctl.",
+    "name" : "simctl",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action: 'list', 'boot', 'shutdown', 'install', 'launch', 'screenshot', 'openurl'",
+          "type" : "string"
+        },
+        "appPath" : {
+          "description" : "Path to app to install",
+          "type" : "string"
+        },
+        "bundleId" : {
+          "description" : "Bundle ID of app to launch",
+          "type" : "string"
+        },
+        "deviceId" : {
+          "description" : "Simulator device ID",
+          "type" : "string"
+        },
+        "savePath" : {
+          "description" : "Path to save screenshot",
+          "type" : "string"
+        },
+        "url" : {
+          "description" : "URL to open",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "deviceId",
+        "appPath",
+        "bundleId",
+        "url",
+        "savePath"
+      ]
+    }
+  },
+  {
+    "description" : "Mail inbox management via AppleScript.",
+    "name" : "mail_automation",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action to perform ('inbox', 'read', 'draft', 'search', 'move')",
+          "type" : "string"
+        },
+        "body" : {
+          "description" : "Body content for 'draft' action",
+          "type" : "string"
+        },
+        "folder" : {
+          "description" : "Target folder for 'move' action",
+          "type" : "string"
+        },
+        "limit" : {
+          "description" : "Limit for 'inbox' action (default 10)",
+          "type" : "integer"
+        },
+        "messageIndex" : {
+          "description" : "Message index for 'read' and 'move' actions",
+          "type" : "integer"
+        },
+        "searchQuery" : {
+          "description" : "Search query for 'search' action",
+          "type" : "string"
+        },
+        "subject" : {
+          "description" : "Subject for 'draft' action",
+          "type" : "string"
+        },
+        "to" : {
+          "description" : "To recipient for 'draft' action",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "messageIndex",
+        "subject",
+        "to",
+        "body",
+        "folder",
+        "searchQuery",
+        "limit"
+      ]
+    }
+  },
+  {
+    "description" : "Two-way Discord communication via bot token.\nPosts, reads, replies, edits, deletes, and reacts to messages\nin a Discord channel. Configure the bot token in environment\nvariable DISCORD_APEX_TOKEN or UserDefaults key\n\"apex.discordBotToken\". Bot identity: @ApexAgent\n(ID: 1537957778998431775).",
+    "name" : "discord_bot",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action to perform: 'post', 'read', 'reply', 'edit', 'delete', or 'react'",
+          "type" : "string"
+        },
+        "channelId" : {
+          "description" : "Discord channel ID to interact with (numeric string)",
+          "type" : "string"
+        },
+        "emoji" : {
+          "description" : "Reaction emoji to add (required for 'react' action, e.g. '👍', '✅', '🔥')",
+          "type" : "string"
+        },
+        "limit" : {
+          "description" : "Number of recent messages to read (default 10, for 'read' action)",
+          "type" : "integer"
+        },
+        "message" : {
+          "description" : "Message content to post\/reply\/edit (required for post\/reply\/edit)",
+          "type" : "string"
+        },
+        "messageId" : {
+          "description" : "Message ID to reply to \/ edit \/ delete (required for reply\/edit\/delete)",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "channelId",
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "channelId",
+        "action",
+        "message",
+        "messageId",
+        "emoji",
+        "limit"
+      ]
+    }
+  },
+  {
+    "description" : "Posts a message to a Discord channel via an incoming webhook URL.\nNo bot token required — the webhook URL carries the channel identity.\nConfigure the webhook URL in environment variable DISCORD_WEBHOOK_URL\nor UserDefaults key \"apex.discordWebhookUrl\".",
+    "name" : "discord_webhook",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "avatarUrl" : {
+          "description" : "Optional avatar URL for the webhook sender",
+          "type" : "string"
+        },
+        "message" : {
+          "description" : "Message content to post to Discord (supports basic markdown)",
+          "type" : "string"
+        },
+        "username" : {
+          "description" : "Optional username to display as the webhook sender",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "message"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "message",
+        "username",
+        "avatarUrl"
+      ]
+    }
+  },
+  {
+    "description" : "Open deep links into Notes, Things 3, Fantastical, and other apps.",
+    "name" : "deep_link",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "action" : {
+          "description" : "Action to perform ('notes_create', 'notes_search', 'notes_list', 'things_add', 'fantastical_add', 'open_url')",
+          "type" : "string"
+        },
+        "body" : {
+          "description" : "Body or notes for note or task",
+          "type" : "string"
+        },
+        "dueDate" : {
+          "description" : "Due date for task or event",
+          "type" : "string"
+        },
+        "priority" : {
+          "description" : "Priority for task",
+          "type" : "integer"
+        },
+        "searchQuery" : {
+          "description" : "Search query for 'notes_search'",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "Title for note or task",
+          "type" : "string"
+        },
+        "url" : {
+          "description" : "URL for 'open_url' action",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "action"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "action",
+        "title",
+        "body",
+        "searchQuery",
+        "dueDate",
+        "priority",
+        "url"
+      ]
+    }
+  },
+  {
+    "description" : "Reads a collaborative Space Page by its title or ID, returning its markdown body and metadata.",
+    "name" : "space_read_page",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "pageTitleOrId" : {
+          "description" : "The title or UUID of the Space Page to read",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "pageTitleOrId"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "pageTitleOrId"
+      ]
+    }
+  },
+  {
+    "description" : "Proposes creating or updating a collaborative Space Page with new markdown content. Stages a review proposal for human approval.",
+    "name" : "space_write_page",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "content" : {
+          "description" : "The full proposed markdown body of the page",
+          "type" : "string"
+        },
+        "pageTitleOrId" : {
+          "description" : "The title or UUID of the Space Page to write or update",
+          "type" : "string"
+        },
+        "summary" : {
+          "description" : "A short summary explaining what changed and why",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "pageTitleOrId",
+        "content",
+        "summary"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "pageTitleOrId",
+        "content",
+        "summary"
+      ]
+    }
+  },
+  {
+    "description" : "Proposes a surgical modification to a Space Page using exact text search and replacement. Stages a review proposal for human approval.",
+    "name" : "space_propose_diff",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "pageTitleOrId" : {
+          "description" : "The title or UUID of the Space Page to modify",
+          "type" : "string"
+        },
+        "replaceContent" : {
+          "description" : "Replacement block of text",
+          "type" : "string"
+        },
+        "searchContent" : {
+          "description" : "Exact existing block of text within the page to find and replace",
+          "type" : "string"
+        },
+        "summary" : {
+          "description" : "Brief rationale explaining why this edit is proposed",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "pageTitleOrId",
+        "searchContent",
+        "replaceContent",
+        "summary"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "pageTitleOrId",
+        "searchContent",
+        "replaceContent",
+        "summary"
+      ]
+    }
+  },
+  {
+    "description" : "Creates a new project in the database to track tasks and sprints.",
+    "name" : "create_project",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "language" : {
+          "description" : "The primary programming language of the project.",
+          "type" : "string"
+        },
+        "localPath" : {
+          "description" : "Optional local file path of the project.",
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "The name of the project.",
+          "type" : "string"
+        },
+        "repoURL" : {
+          "description" : "Optional URL of the repository.",
+          "type" : "string"
+        },
+        "summary" : {
+          "description" : "A short summary of the project.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "name",
+        "summary",
+        "language"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "name",
+        "summary",
+        "language",
+        "repoURL",
+        "localPath"
+      ]
+    }
+  },
+  {
+    "description" : "Creates a new sprint for a project to organize tasks.",
+    "name" : "create_sprint",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "endDateString" : {
+          "description" : "End date of the sprint (ISO8601 or YYYY-MM-DD).",
+          "type" : "string"
+        },
+        "goal" : {
+          "description" : "The goal of the sprint.",
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "The name of the sprint.",
+          "type" : "string"
+        },
+        "projectID" : {
+          "description" : "The UUID of the project.",
+          "type" : "string"
+        },
+        "startDateString" : {
+          "description" : "Start date of the sprint (ISO8601 or YYYY-MM-DD).",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "projectID",
+        "name",
+        "goal",
+        "startDateString",
+        "endDateString"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "projectID",
+        "name",
+        "goal",
+        "startDateString",
+        "endDateString"
+      ]
+    }
+  },
+  {
+    "description" : "Creates a new task associated with a project and optionally a sprint.",
+    "name" : "create_task",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "detail" : {
+          "description" : "The description or details of the task.",
+          "type" : "string"
+        },
+        "estimatedHours" : {
+          "description" : "Estimated hours to complete.",
+          "type" : "number"
+        },
+        "priority" : {
+          "description" : "The priority: low, medium, high.",
+          "type" : "string"
+        },
+        "projectID" : {
+          "description" : "The UUID of the project.",
+          "type" : "string"
+        },
+        "sprintID" : {
+          "description" : "Optional UUID of the sprint.",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "The title of the task.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "projectID",
+        "title",
+        "priority"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "projectID",
+        "sprintID",
+        "title",
+        "detail",
+        "priority",
+        "estimatedHours"
+      ]
+    }
+  },
+  {
+    "description" : "Updates the status of a task and records actual hours spent.",
+    "name" : "update_task_status",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "actualHours" : {
+          "description" : "Actual hours spent so far or for completion.",
+          "type" : "number"
+        },
+        "status" : {
+          "description" : "The new status: backlog, todo, in_progress, review, completed.",
+          "type" : "string"
+        },
+        "taskID" : {
+          "description" : "The UUID of the task.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "taskID",
+        "status"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "taskID",
+        "status",
+        "actualHours"
+      ]
+    }
+  },
+  {
+    "description" : "Lists all active projects tracked in the database.",
+    "name" : "list_projects",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+
+      ]
+    }
+  },
+  {
+    "description" : "Lists tasks for a specific project or sprint.",
+    "name" : "list_tasks",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "projectID" : {
+          "description" : "Optional project UUID to filter by.",
+          "type" : "string"
+        },
+        "sprintID" : {
+          "description" : "Optional sprint UUID to filter by.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "projectID",
+        "sprintID"
+      ]
+    }
+  },
+  {
+    "description" : "Lists sprints for a specific project.",
+    "name" : "list_sprints",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "projectID" : {
+          "description" : "The project UUID.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "projectID"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "projectID"
+      ]
+    }
+  },
+  {
+    "description" : "Reads content from a public web page, returning sanitized, clean Markdown text. Enforces SSRF perimeter checks, strips scripts\/styles\/hidden injection vectors, and caps response size for safe LLM context ingestion.",
+    "name" : "web_reader",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "maxLength" : {
+          "description" : "Optional maximum characters to extract (default 40,000)",
+          "type" : "integer"
+        },
+        "url" : {
+          "description" : "The HTTP\/HTTPS URL of the web page to read",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "url"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "url",
+        "maxLength"
+      ]
     }
   }
 ]
