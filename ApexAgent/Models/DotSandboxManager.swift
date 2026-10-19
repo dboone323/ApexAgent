@@ -37,13 +37,14 @@ public final class DotSandboxManager: Sendable {
 
     /// Resolves and verifies that a relative path stays securely within the Dot's sandbox jail.
     public func resolvePath(for dotId: UUID, relativePath: String) throws -> URL {
-        let root = sandboxURL(for: dotId).standardizedFileURL
-        let cleaned = relativePath.trimmingCharacters(in: .whitespacesAndNewlines)
-            .replacingOccurrences(of: "../", with: "")
-            .replacingOccurrences(of: "..\\", with: "")
+        let root = sandboxURL(for: dotId).standardizedFileURL.resolvingSymlinksInPath()
+        let trimmed = relativePath.trimmingCharacters(in: .whitespacesAndNewlines)
+        let target = root.appendingPathComponent(trimmed).standardizedFileURL.resolvingSymlinksInPath()
 
-        let target = root.appendingPathComponent(cleaned).standardizedFileURL
-        guard target.path.hasPrefix(root.path) else {
+        let rootPath = root.path.hasSuffix("/") ? root.path : root.path + "/"
+        let targetPath = target.path
+
+        guard targetPath == root.path || targetPath.hasPrefix(rootPath) else {
             throw NSError(
                 domain: "DotSandboxManager",
                 code: 403,
@@ -120,6 +121,11 @@ public final class DotSandboxManager: Sendable {
 
             try process.run()
 
+            let outHandle = outPipe.fileHandleForReading
+            let errHandle = errPipe.fileHandleForReading
+            async let outTask = Task.detached { outHandle.readDataToEndOfFile() }.value
+            async let errTask = Task.detached { errHandle.readDataToEndOfFile() }.value
+
             // Timeout watchdog
             let didTimeout = await withTaskGroup(of: Bool.self) { group in
                 group.addTask {
@@ -143,8 +149,7 @@ public final class DotSandboxManager: Sendable {
                 return first
             }
 
-            let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
-            let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
+            let (outData, errData) = await (outTask, errTask)
             let stdoutStr = String(data: outData, encoding: .utf8) ?? ""
             let stderrStr = String(data: errData, encoding: .utf8) ?? ""
             let combined = stdoutStr + (stderrStr.isEmpty ? "" : "\n[stderr]: " + stderrStr)

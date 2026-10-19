@@ -119,8 +119,8 @@ struct SimctlTool: Tool {
             return try await withThrowingTaskGroup(of: String.self) { group in
                 group.addTask {
                     try process.run()
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
                     process.waitUntilExit()
-                    let data = try pipe.fileHandleForReading.readToEnd() ?? Data()
                     var output = String(decoding: data, as: UTF8.self)
                     
                     if arguments.action == "list" {

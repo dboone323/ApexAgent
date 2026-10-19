@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import AppKit
+import CryptoKit
 
 @MainActor
 class CollaborativeServer: NSObject, ObservableObject {
@@ -351,15 +352,17 @@ class CollaborativeServer: NSObject, ObservableObject {
     }
 
     func isAuthorized(headers: [String: String], queryToken: String?, connection: NWConnection) -> Bool {
-        // Only genuine loopback addresses are implicitly trusted. An
-        // unresolvable client IP ("unknown") must NOT be trusted — it must
-        // present a valid token (handled below in LAN mode).
-        if isLoopbackClient(connection) {
+        let isLoopback = isLoopbackClient(connection)
+        let lanModeEnabled = UserDefaults.standard.bool(forKey: "apex.lanModeEnabled")
+
+        // In secure mode (default), all clients must provide a valid token.
+        // Optional override allows unauthenticated loopback only if explicitly enabled.
+        if isLoopback && UserDefaults.standard.bool(forKey: "apex.collabAllowUnauthenticatedLoopback") {
             return true
         }
 
-        let lanModeEnabled = UserDefaults.standard.bool(forKey: "apex.lanModeEnabled")
-        guard lanModeEnabled else {
+        // Non-loopback remote callers require LAN mode to be enabled
+        if !isLoopback && !lanModeEnabled {
             return false
         }
 
@@ -371,11 +374,11 @@ class CollaborativeServer: NSObject, ObservableObject {
         if let authHeader = headers["authorization"],
            authHeader.lowercased().starts(with: "bearer ") {
             let requestToken = authHeader.dropFirst(7).trimmingCharacters(in: .whitespacesAndNewlines)
-            return requestToken == token
+            return constantTimeCompare(requestToken, token)
         }
 
         if let qToken = queryToken {
-            return qToken == token
+            return constantTimeCompare(qToken, token)
         }
 
         return false
@@ -386,13 +389,16 @@ class CollaborativeServer: NSObject, ObservableObject {
         return clientIP == "127.0.0.1" || clientIP == "::1" || clientIP == "localhost"
     }
 
+    private func constantTimeCompare(_ a: String, _ b: String) -> Bool {
+        let hashA = SHA256.hash(data: Data(a.utf8))
+        let hashB = SHA256.hash(data: Data(b.utf8))
+        return hashA == hashB
+    }
+
     private func hasPermission(token: String, requiredPermission: String) -> Bool {
         let mainToken = Self.collabToken()
-        // Require a non-empty token matching the stored collabToken.
-        // Loopback trust is already handled by isAuthorized(); hasPermission
-        // must NOT grant access to empty tokens from any client.
         guard !mainToken.isEmpty, !token.isEmpty else { return false }
-        return token == mainToken
+        return constantTimeCompare(token, mainToken)
     }
 
     func logAccess(clientIP: String, endpoint: String, isAuthorized: Bool, decision: String) {

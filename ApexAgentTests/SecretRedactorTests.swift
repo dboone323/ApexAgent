@@ -50,4 +50,11 @@ struct SecretRedactorTests {
         #expect(!SecretRedactor.isSecretName("keyboard"))
         #expect(!SecretRedactor.isSecretName("hotkeys"))
     }
+
+    @Test func redactsURIPasswords() {
+        let uri = "Connecting to postgresql://postgres:mysecretpassword123@db.example.com:5432/mydb"
+        let out = SecretRedactor.redact(text: uri)
+        #expect(!out.contains("mysecretpassword123"))
+        #expect(out.contains("postgresql://postgres:«redacted»@db.example.com:5432/mydb"))
+    }
 }

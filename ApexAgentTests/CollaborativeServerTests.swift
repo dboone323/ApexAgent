@@ -55,10 +55,27 @@ struct CollaborativeServerTests {
 
     // MARK: - Auth
 
-    @Test func testLocalhostBypassesTokenAuth() async throws {
+    @Test func testLocalhostRequiresTokenAuthByDefault() async throws {
+        let authorized = server.isAuthorized(
+            headers: [:], queryToken: nil, connection: mockConnection(host: "127.0.0.1"))
+        #expect(authorized == false, "Unauthenticated localhost requests must be rejected by default to prevent screen/state extraction")
+    }
+
+    @Test func testLocalhostBypassesTokenAuthWhenExplicitlyAllowed() async throws {
+        UserDefaults.standard.set(true, forKey: "apex.collabAllowUnauthenticatedLoopback")
+        defer { UserDefaults.standard.removeObject(forKey: "apex.collabAllowUnauthenticatedLoopback") }
         let authorized = server.isAuthorized(
             headers: [:], queryToken: nil, connection: mockConnection(host: "127.0.0.1"))
         #expect(authorized == true)
+    }
+
+    @Test func testLocalhostAuthorizedWithBearerToken() async throws {
+        withLAN(enabled: false, token: "local-secret") {
+            let authorized = server.isAuthorized(
+                headers: ["authorization": "Bearer local-secret"], queryToken: nil,
+                connection: mockConnection(host: "127.0.0.1"))
+            #expect(authorized == true, "Localhost caller presenting configured token must be authorized")
+        }
     }
 
     @Test func testRemoteBlockedWithoutTokenWhenLanModeOff() async throws {

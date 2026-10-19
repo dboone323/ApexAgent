@@ -61,6 +61,7 @@ struct ContentView: View {
                     // Chat view (driven by active 1:1 Bot session, active Space channel, or legacy orchestrator)
                     if let session = botManager.activeSession {
                         BotChatView(session: session)
+                            .id(session.id)
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .frame(minHeight: 200)
                     } else if spaceManager.activeSpaceId != nil && orchestrator.currentConversation == nil {

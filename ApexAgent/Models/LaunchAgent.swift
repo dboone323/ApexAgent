@@ -245,9 +245,11 @@ public final class DaemonSignalHandler: @unchecked Sendable {
         let termSource = DispatchSource.makeSignalSource(signal: SIGTERM, queue: .main)
         termSource.setEventHandler { [weak self] in
             AppLog.info(.app, "🛑 Received SIGTERM (launchd bootout or logout). Initiating graceful shutdown...")
-            self?.teardown()
+            self?.sigtermSource?.cancel()
+            self?.sigtermSource = nil
             Task { @MainActor in
                 onShutdown(SIGTERM)
+                self?.teardown()
             }
         }
         termSource.resume()
@@ -256,9 +258,11 @@ public final class DaemonSignalHandler: @unchecked Sendable {
         let intSource = DispatchSource.makeSignalSource(signal: SIGINT, queue: .main)
         intSource.setEventHandler { [weak self] in
             AppLog.info(.app, "🛑 Received SIGINT (terminal interrupt). Initiating graceful shutdown...")
-            self?.teardown()
+            self?.sigintSource?.cancel()
+            self?.sigintSource = nil
             Task { @MainActor in
                 onShutdown(SIGINT)
+                self?.teardown()
             }
         }
         intSource.resume()

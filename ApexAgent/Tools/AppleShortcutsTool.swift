@@ -53,8 +53,8 @@ struct AppleShortcutsTool: Tool {
             return try await withThrowingTaskGroup(of: String.self) { group in
                 group.addTask {
                     try process.run()
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
                     process.waitUntilExit()
-                    let data = try pipe.fileHandleForReading.readToEnd() ?? Data()
                     return String(decoding: data, as: UTF8.self)
                 }
                 group.addTask {

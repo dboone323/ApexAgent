@@ -125,8 +125,18 @@ struct DiscordBotTool: Tool {
     // MARK: - Bot Token
 
     private func getBotToken() -> String? {
-        ProcessInfo.processInfo.environment["DISCORD_APEX_TOKEN"]
-            ?? UserDefaults.standard.string(forKey: "apex.discordBotToken")
+        if let env = ProcessInfo.processInfo.environment["DISCORD_APEX_TOKEN"], !env.isEmpty {
+            return env
+        }
+        if let stored = KeychainManager.get(key: "apex.discordBotToken"), !stored.isEmpty {
+            return stored
+        }
+        if let legacy = UserDefaults.standard.string(forKey: "apex.discordBotToken"), !legacy.isEmpty {
+            _ = KeychainManager.save(key: "apex.discordBotToken", value: legacy)
+            UserDefaults.standard.removeObject(forKey: "apex.discordBotToken")
+            return legacy
+        }
+        return nil
     }
 
     // MARK: - POST Message

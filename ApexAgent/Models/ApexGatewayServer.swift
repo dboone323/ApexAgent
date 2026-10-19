@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import Network
+import CryptoKit
 
 @MainActor
 public final class ApexGatewayServer {
@@ -95,11 +96,11 @@ public final class ApexGatewayServer {
         }
 
         listener.newConnectionHandler = { [weak self] connection in
-            // C2 accept-time loopback guard.
-            let localEndpoint = connection.currentPath?.localEndpoint
+            // C2 accept-time loopback guard on incoming peer endpoint.
+            let targetEndpoint = connection.currentPath?.remoteEndpoint ?? connection.endpoint
             var isLoopback = false
             var hostString = ""
-            if case .hostPort(let host, _) = localEndpoint {
+            if case .hostPort(let host, _) = targetEndpoint {
                 switch host {
                 case .name(let name, _):
                     hostString = name
@@ -115,7 +116,7 @@ public final class ApexGatewayServer {
                 }
             }
             guard isLoopback else {
-                AppLog.error(.gateway, "📡 Rejected non-loopback connection: \(String(describing: localEndpoint)) host=\(hostString)")
+                AppLog.error(.gateway, "📡 Rejected non-loopback connection: \(String(describing: targetEndpoint)) host=\(hostString)")
                 connection.cancel()
                 return
             }
@@ -225,10 +226,16 @@ public final class ApexGatewayServer {
         }
     }
     
+    private func constantTimeCompare(_ a: String, _ b: String) -> Bool {
+        let hashA = SHA256.hash(data: Data(a.utf8))
+        let hashB = SHA256.hash(data: Data(b.utf8))
+        return hashA == hashB
+    }
+
     private func handleClientAction(_ action: GatewayAction, connectionId: UUID) async {
         // C2: no client action is honored until the pre-shared token is presented.
         if case .authenticate(let token) = action {
-            if !token.isEmpty, token == authenticationToken {
+            if !token.isEmpty, constantTimeCompare(token, authenticationToken) {
                 authenticatedConnections.insert(connectionId)
                 AppLog.info(.gateway, "📡 Client \(connectionId) authenticated.")
                 // Send initial state only to the newly authenticated client, not all.
