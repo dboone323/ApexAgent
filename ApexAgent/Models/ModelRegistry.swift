@@ -644,6 +644,48 @@ public struct ModelRegistry: Sendable {
         return candidates
     }
 
+    /// Builds a dedicated LanguageModelSession for external or custom LanguageModel implementations
+    /// (OpenAICompatible, Anthropic, GitHub Copilot) configured with the appropriate bot instructions and tools.
+    @MainActor
+    private static func sessionForProvider(
+        _ provider: ModelProvider,
+        bot: BotProfile? = nil,
+        allowedTools: [String] = [],
+        orchestrator: AgentOrchestrator
+    ) -> LanguageModelSession? {
+        let instructions = bot?.systemInstructions ?? orchestrator.agentInstructions
+        let rawModel = self.model(for: .explicit(provider))
+
+        func makeCustomSession<M: LanguageModel>(_ m: M) -> LanguageModelSession {
+            let profile = SpecializedAgentProfile(
+                instructions: instructions,
+                model: m,
+                toolCallingMode: .allowed,
+                orchestrator: orchestrator,
+                allowedTools: allowedTools
+            )
+            return LanguageModelSession(profile: profile, history: Transcript(entries: []))
+        }
+
+        switch provider {
+        case .openAICompatible:
+            if let m = rawModel as? OpenAICompatibleLanguageModel {
+                return makeCustomSession(m)
+            }
+        case .anthropic:
+            if let m = rawModel as? AnthropicLanguageModel {
+                return makeCustomSession(m)
+            }
+        case .gitHubCopilot:
+            if let m = rawModel as? GitHubCopilotLanguageModel {
+                return makeCustomSession(m)
+            }
+        default:
+            break
+        }
+        return nil
+    }
+
     /// Returns the corresponding execution engine for the given provider.
     @MainActor
     static func engine(
@@ -664,7 +706,15 @@ public struct ModelRegistry: Sendable {
             return OllamaStreamingEngine(orchestrator: orchestrator, bot: bot, allowedTools: allowedTools)
         case .localMLX:
             return MLXAgentEngine(orchestrator: orchestrator, bot: bot)
-        case .openAICompatible, .anthropic, .gitHubCopilot, .autoPicker:
+        case .openAICompatible, .anthropic, .gitHubCopilot:
+            let effectiveSession = session ?? sessionForProvider(
+                provider,
+                bot: bot,
+                allowedTools: allowedTools ?? [],
+                orchestrator: orchestrator
+            )
+            return NativeAppleEngine(orchestrator: orchestrator, customSession: effectiveSession)
+        case .autoPicker:
             return NativeAppleEngine(orchestrator: orchestrator, customSession: session)
         }
     }
