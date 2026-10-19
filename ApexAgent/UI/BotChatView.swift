@@ -129,15 +129,18 @@ struct PeerApprovalCard: View {
                     _ = botManager.resolvePeerRequest(requestId: request.id, allow: false)
                 }
                 .accessibilityIdentifier("peerApprovalDeny-\(request.id)")
+                .accessibilityLabel("Deny request from \(senderName)")
                 Spacer()
                 Button("Always Allow") {
                     _ = botManager.resolvePeerRequest(requestId: request.id, allow: true, remember: true)
                 }
                 .accessibilityIdentifier("peerApprovalAlwaysAllow-\(request.id)")
+                .accessibilityLabel("Always allow requests from \(senderName)")
                 Button("Allow Once") {
                     _ = botManager.resolvePeerRequest(requestId: request.id, allow: true)
                 }
                 .accessibilityIdentifier("peerApprovalAllowOnce-\(request.id)")
+                .accessibilityLabel("Allow request from \(senderName) once")
                 .buttonStyle(.borderedProminent)
             }
         }

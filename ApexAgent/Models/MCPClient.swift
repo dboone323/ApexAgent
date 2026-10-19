@@ -751,9 +751,9 @@ actor MCPClient {
     }
     
     func ping() async -> Bool {
+        let id = self.nextRequestId
+        self.nextRequestId += 1
         do {
-            let id = self.nextRequestId
-            self.nextRequestId += 1
             let request = JSONRPCRequest(id: id, method: "tools/list", params: EmptyParams())
             let encoder = JSONEncoder()
             let requestData = try encoder.encode(request)
@@ -770,9 +770,11 @@ actor MCPClient {
                 }
                 group.addTask {
                     try await Task.sleep(for: .seconds(pingTimeoutSec))
+                    await self.resumeOnTimeout(id: id)
                     throw MCPError.timeout("Ping timeout")
                 }
                 guard let result = try await group.next() else {
+                    self.resumeOnTimeout(id: id)
                     throw MCPError.timeout("Ping timeout")
                 }
                 group.cancelAll()
@@ -782,6 +784,7 @@ actor MCPClient {
             let response = try decoder.decode(JSONRPCResponse<ToolsListResponse>.self, from: responseData)
             return response.result != nil
         } catch {
+            self.resumeOnTimeout(id: id)
             return false
         }
     }

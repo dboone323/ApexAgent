@@ -71,7 +71,19 @@ struct AmbientApprovalSurfaceView: View {
             }
             .background(Color.orange.opacity(0.08))
             .accessibilityIdentifier("ambientApprovalSurface")
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Decision Inbox, \(totalCount) pending approvals")
             .transition(.move(edge: .top).combined(with: .opacity))
+            .onAppear {
+                if totalCount > 0 {
+                    AccessibilityNotification.Announcement("New approval request requires attention").post()
+                }
+            }
+            .onChange(of: totalCount) { oldValue, newValue in
+                if newValue > oldValue {
+                    AccessibilityNotification.Announcement("New approval request requires attention").post()
+                }
+            }
         }
     }
 }

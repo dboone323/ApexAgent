@@ -82,6 +82,21 @@ public final class VirtualizationMicroVMSandbox {
     /// Executes a shell command inside an isolated ephemeral directory with rollback on exit.
     ///
     /// - Note: This provides ephemeral APFS process isolation (temp directory sandbox with
+    /// POSIX-quote an argv array for safe transport through `/bin/zsh -c`
+    public static func shellQuoted(_ args: [String]) -> String {
+        args.map { arg in
+            if arg.range(of: "^[a-zA-Z0-9_./-]+$", options: .regularExpression) != nil {
+                return arg
+            } else {
+                return "'" + arg.replacingOccurrences(of: "'", with: "'\\''") + "'"
+            }
+        }.joined(separator: " ")
+    }
+
+    /// Executes a command in an isolated ephemeral sandbox directory with
+    /// sanitized environment variables, resource timeouts, and clean teardown.
+    ///
+    /// - Note: this provides process-level directory isolation (with post-run
     ///   rollback), NOT hardware virtual-machine isolation. For VM isolation, use
     ///   `buildMicroVMConfiguration` + a `VZVirtualMachine` guest process.
     public func executeInIsolatedSandbox(command: String, arguments: [String] = [], workingFiles: [URL] = [], timeoutSeconds: TimeInterval = 30.0) async throws -> SandboxExecutionResult {
@@ -121,7 +136,13 @@ public final class VirtualizationMicroVMSandbox {
         process.standardOutput = stdoutPipe
         process.standardError = stderrPipe
         
-        let script = ([command] + arguments).joined(separator: " ")
+        let script: String
+        if arguments.isEmpty {
+            script = command
+        } else {
+            let quotedArgs = Self.shellQuoted(arguments)
+            script = "\(command) \(quotedArgs)"
+        }
         process.arguments = ["-c", script]
         
         try process.run()
