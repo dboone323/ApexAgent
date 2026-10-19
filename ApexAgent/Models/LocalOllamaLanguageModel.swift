@@ -163,7 +163,7 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor, DynamicTo
         var loopCount = 0
         let maxLoops = 8
         
-        ModelRegistry.unloadPreviousOllamaModelIfNeeded(newModel: savedModel)
+        _ = await ModelRegistry.unloadPreviousOllamaModelIfNeededAsync(newModel: savedModel)
         
         while loopCount < maxLoops {
             var requestBody: [String: Any] = [
@@ -172,7 +172,7 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                 "stream": true,
                 "keep_alive": "2m",
                 "options": [
-                    "num_ctx": 16384
+                    "num_ctx": 8192
                 ]
             ]
             

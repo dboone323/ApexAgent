@@ -52,7 +52,7 @@ public final class MultiAgentDebateCoordinator {
                     do {
                         return try await withThrowingTaskGroup(of: String.self) { timeoutGroup in
                             timeoutGroup.addTask {
-                                return await session.sendMessageAsync(prompt) ?? "No response"
+                                return await session.executeIsolatedTurn(prompt: prompt) ?? "No response"
                             }
                             timeoutGroup.addTask {
                                 try await Task.sleep(nanoseconds: 30_000_000_000)
@@ -88,7 +88,7 @@ public final class MultiAgentDebateCoordinator {
             }
             synthesisPrompt += "Synthesize a consensus recommendation in 1-2 sentences that best serves the objective."
             
-            consensus = await session.sendMessageAsync(synthesisPrompt)
+            consensus = await session.executeIsolatedTurn(prompt: synthesisPrompt)
         }
         
         let debate = DebateRound(

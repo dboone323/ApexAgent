@@ -55,15 +55,14 @@ class BrowserManager: NSObject, WKNavigationDelegate {
     }
     
     func navigate(to urlString: String) async throws -> String {
-        // Ensure urlString has a scheme
-        var finalUrlStr = urlString
-        if !finalUrlStr.lowercased().hasPrefix("http://") && !finalUrlStr.lowercased().hasPrefix("https://") && !finalUrlStr.lowercased().hasPrefix("data:") {
-            finalUrlStr = "https://" + finalUrlStr
+        let auditReport = BrowserSecurityAuditor.auditNavigationURL(urlString)
+        guard auditReport.passed, let safeURL = auditReport.sanitizedURL else {
+            let errorMsg = auditReport.violations.map { $0.message }.joined(separator: "; ")
+            throw NSError(domain: "BrowserSecurityAuditor", code: -4, userInfo: [NSLocalizedDescriptionKey: "Security violation: \(errorMsg.isEmpty ? "Blocked by browser security policy" : errorMsg)"])
         }
-        
-        guard let url = URL(string: finalUrlStr) else {
-            throw NSError(domain: "BrowserManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Invalid URL: \(urlString)"])
-        }
+
+        let finalUrlStr = safeURL.absoluteString
+        let url = safeURL
 
         if finalUrlStr.hasPrefix("data:text/html,") {
             let rawHtml = String(finalUrlStr.dropFirst("data:text/html,".count))
@@ -90,7 +89,7 @@ class BrowserManager: NSObject, WKNavigationDelegate {
 
         let timer = Task {
             do {
-                try await Task.sleep(for: .seconds(2))
+                try await Task.sleep(for: .seconds(15))
                 self.cancelNavigationOnTimeout()
             } catch {
                 // Task was cancelled prior to timeout expiry

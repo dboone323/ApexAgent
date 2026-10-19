@@ -75,6 +75,7 @@ final class OllamaAgentEngine: AgentEngine {
         _ = try await executeTurn(
             prompt: prompt,
             bot: nil,
+            history: history,
             instructions: instructions,
             allowedTools: nil,
             toolCallingMode: toolCallingMode,
@@ -91,6 +92,7 @@ final class OllamaAgentEngine: AgentEngine {
     func executeTurn(
         prompt: String,
         bot: BotProfile? = nil,
+        history: [ChatMessage] = [],
         instructions: String = "",
         allowedTools: [String]? = nil,
         toolCallingMode: AgentToolCallingMode = .auto,
@@ -116,11 +118,29 @@ final class OllamaAgentEngine: AgentEngine {
             ])
         }
 
-        // Add user prompt
-        messages.append([
-            "role": "user",
-            "content": prompt
-        ])
+        // Multi-turn conversation history replay
+        for msg in history {
+            let roleStr: String = switch msg.role {
+            case .user: "user"
+            case .assistant: "assistant"
+            case .system: "system"
+            @unknown default: "user"
+            }
+            if !msg.content.isEmpty {
+                messages.append([
+                    "role": roleStr,
+                    "content": msg.content
+                ])
+            }
+        }
+
+        // Add user prompt if not already the last turn in history
+        if history.last?.content != prompt || history.last?.role != .user {
+            messages.append([
+                "role": "user",
+                "content": prompt
+            ])
+        }
 
         // Build tool schemas if enabled
         let toolsSchema = (toolCallingMode != .disabled) ? getParsedSchemas() : []
@@ -142,7 +162,7 @@ final class OllamaAgentEngine: AgentEngine {
         var lastToolOutput = ""
         var disableToolsOnNextTurn = false
 
-        ModelRegistry.unloadPreviousOllamaModelIfNeeded(newModel: selectedModel)
+        _ = await ModelRegistry.unloadPreviousOllamaModelIfNeededAsync(newModel: selectedModel)
 
         while loopCount < maxLoops {
             loopCount += 1
@@ -282,6 +302,7 @@ struct OllamaStreamingEngine: AgentEngine {
         _ = try await OllamaAgentEngine.shared.executeTurn(
             prompt: prompt,
             bot: bot,
+            history: history,
             instructions: instructions,
             allowedTools: allowedTools,
             toolCallingMode: toolCallingMode,

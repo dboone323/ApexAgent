@@ -4,7 +4,7 @@ import CoreGraphics
 import AppKit
 
 struct CaptureWindowImageTool: Tool {
-    let orchestrator: AgentOrchestrator
+    let orchestrator: OrchestratorProvider
     
     let name = "capture_window_image"
     let description = "Captures an application window frame by name or window ID without bringing the application frontmost or stealing display focus."

@@ -264,6 +264,12 @@ struct ContentView: View {
                 orchestrator.loadConversation(match)
             }
         }
+        .task {
+            while !Task.isCancelled {
+                botManager.expireStalePeerApprovals()
+                try? await Task.sleep(for: .seconds(30))
+            }
+        }
     }
     
     private func deleteSavedConversations(at offsets: IndexSet) {

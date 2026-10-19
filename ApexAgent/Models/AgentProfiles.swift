@@ -350,6 +350,81 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
             if allowedTools.contains("git_operation") {
                 GitOperationsTool(orchestrator: orchestrator)
             }
+            if allowedTools.contains("rollback_file") {
+                RollbackTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("delete_memory") {
+                DeleteMemoryTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("ax_target_element") {
+                AccessibilityOmniTargeter(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("screen_diff") {
+                DifferentialScreenPerception(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("capture_window_image") {
+                CaptureWindowImageTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("spotlight_search") {
+                SpotlightSearchTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("daily_briefing") {
+                DailyBriefingTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("ask_bot") {
+                AskBotTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("screen_perception") {
+                ScreenPerceptionTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("dispatch_swarm") {
+                DispatchSwarmTool(orchestrator: orchestrator, botManager: nil)
+            }
+            if allowedTools.contains("github") {
+                GitHubTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("manage_sandbox") {
+                ContainerStatusTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("discord_bot") {
+                DiscordBotTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("discord_webhook") {
+                DiscordWebhookTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("space_read_page") {
+                SpaceReadPageTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("space_write_page") {
+                SpaceWritePageTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("space_propose_diff") {
+                SpaceProposeDiffTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("create_project") {
+                CreateProjectTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("create_sprint") {
+                CreateSprintTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("create_task") {
+                CreateTaskTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("update_task_status") {
+                UpdateTaskStatusTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("list_projects") {
+                ListProjectsTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("list_tasks") {
+                ListTasksTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("list_sprints") {
+                ListSprintsTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("web_reader") {
+                WebReaderTool(orchestrator: orchestrator)
+            }
         }
         return profile
             .apexAuditHooks()

@@ -4,7 +4,7 @@ import AppKit
 import ApplicationServices
 
 struct AccessibilityOmniTargeter: Tool {
-    let orchestrator: AgentOrchestrator
+    let orchestrator: OrchestratorProvider
     
     let name = "ax_target_element"
     let description = "Builds a semantic index of every interactive element in the frontmost (or named) application window using the macOS Accessibility tree. Returns a numbered list like '[#1 Button Build, #2 TextField Filter...]'. Bots can then act on elements by their index using control_accessibility. Requires Accessibility permission."

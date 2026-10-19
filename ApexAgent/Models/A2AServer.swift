@@ -350,7 +350,7 @@ public final class A2AServer {
         
         if let botManager = botManager, let bot = botManager.allBots.first {
             let session = botManager.session(for: bot)
-            replyText = await session.sendMessageAsync(combinedText) ?? "No response"
+            replyText = await session.executeIsolatedTurn(prompt: combinedText) ?? "No response"
         }
         
         let artifact = A2AResponse.A2ATaskResult.A2AArtifact(parts: [
