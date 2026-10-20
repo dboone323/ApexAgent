@@ -58,13 +58,20 @@ final class OpenDotsTests: XCTestCase {
             try? FileManager.default.removeItem(at: manager.sandboxURL(for: dotId).deletingLastPathComponent())
         }
 
-        // Test ../ path escaping attempts
+        // Test ../ path escaping attempts are rejected with 403
         let escapedPath = "../../../../../etc/passwd"
-        let resolved = try manager.resolvePath(for: dotId, relativePath: escapedPath)
-        XCTAssertTrue(resolved.path.hasPrefix(manager.sandboxURL(for: dotId).standardizedFileURL.path))
+        XCTAssertThrowsError(try manager.resolvePath(for: dotId, relativePath: escapedPath)) { error in
+            let nsError = error as NSError
+            XCTAssertEqual(nsError.domain, "DotSandboxManager")
+            XCTAssertEqual(nsError.code, 403)
+        }
 
-        let evilResolved = try manager.resolvePath(for: dotId, relativePath: "workspace/../../outside.txt")
-        XCTAssertTrue(evilResolved.path.hasPrefix(manager.sandboxURL(for: dotId).standardizedFileURL.path))
+        let evilResolved = "workspace/../../outside.txt"
+        XCTAssertThrowsError(try manager.resolvePath(for: dotId, relativePath: evilResolved)) { error in
+            let nsError = error as NSError
+            XCTAssertEqual(nsError.domain, "DotSandboxManager")
+            XCTAssertEqual(nsError.code, 403)
+        }
     }
 
     func testDotSandboxCommandExecution() async throws {

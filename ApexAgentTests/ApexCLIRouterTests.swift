@@ -93,6 +93,7 @@ struct ApexCLIRouterTests {
     @Test("renderImmediateSubcommand renders help, version, doctor, diagnostics, skills, routines, and traces")
     @MainActor
     func renderImmediateSubcommands() throws {
+        RoutineManager.shared.reset()
         let help = try #require(ApexCLIRouter.renderImmediateSubcommand(.help))
         #expect(help.exitCode == 0)
         #expect(help.output.contains("SUBCOMMANDS:"))
