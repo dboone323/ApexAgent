@@ -9,7 +9,7 @@
 
 ## Phase 1 — TartCLIClient + VMWorkspaceManager
 - `ApexAgent/Models/TartCLIClient.swift`: actor implementing `TartClientProtocol` (Sendable). Pure static arg builders and parsers (`cloneArguments`, `setArguments`, `runArguments`, `execArguments`, `ipArguments`, `stopArguments`, `deleteArguments`, `listArguments`, `parseVMList`, `parseIP`) for unit testability. Stores long-running `run` `Process` handles keyed by VM name. Process execution via `Process` + `Pipe`.
-- `ApexAgent/Models/VMWorkspaceManager.swift`: actor managing single shared VM `apex-shared` (clone-once from `apex-base`, set CPU/memory, run, exec readiness poll, stop, delete). Status state machine: `notProvisioned` → `stopped` → `starting` → `ready` / `error`. Async build lock (`withBuildLock`) serializes concurrent build invocations.
+- `ApexAgent/Models/VMWorkspaceManager.swift`: actor managing per-Space VMs named `apex-space-<spaceID>` (each a clone of `apex-base`), with provision/start/stop/destroy per Space and at most `maxConcurrentRunning` (2) VMs running concurrently (refuses beyond that). Same sizing (8 vCPU / 10240 MB) and `--net-softnet`. Status state machine per Space: `notProvisioned` → `stopped` → `starting` → `ready` / `error`. Async build lock (`withBuildLock`) serializes concurrent build invocations.
 - Tests: `ApexAgentTests/TartCLIClientTests.swift` (arg builders, parsers, constants), `ApexAgentTests/VMWorkspaceManagerTests.swift` (provisioning skip/clone, readiness, stop/destroy, build-lock serialization) using a `FakeTartClient`.
 
 ## Verification
