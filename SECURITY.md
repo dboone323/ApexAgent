@@ -63,3 +63,7 @@ the graphical application.
   tests load and execute real script fixtures only from temporary directories.
 - `ApexAgentIntelligenceTests/RuntimeContractTests.swift` — migration and A2A
   tests use isolated storage and do not access the user's credential account.
+
+## Spaces-on-VM sandbox (Phase 4, 2026-10-23)
+
+Spaces run in per-Space Tart VMs (`apex-space-<spaceID>`, softnet networking) cloned from the pristine `apex-base` image. No host credentials or Keychain enter the guest; the real repo enters as a read-only git bundle and results leave as a git bundle. The guest's allowlist egress proxy (`proxy.py`/`allowlist.txt`) is retired as of 2026-10-23 — the app flow does not reference it, and the files are archived at `~/ApexSandbox/archive-2026-10-23/`. Work lands only through the host-side landing gate (in-VM gate → additions-only test-integrity check → bundle verify → quarantine branch → host pristine re-run → manual merge).
