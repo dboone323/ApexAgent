@@ -98,3 +98,101 @@ struct VMRoutingLiveTests {
         try await backend.manager.destroy(spaceID: spaceID)
     }
 }
+
+@Suite("SpaceLandingLiveTests", .serialized)
+struct SpaceLandingLiveTests {
+    private func runGit(_ args: [String], cwd: URL) throws {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        p.arguments = args
+        p.currentDirectoryURL = cwd
+        let pipe = Pipe(); p.standardOutput = pipe; p.standardError = pipe
+        try p.run(); p.waitUntilExit()
+        guard p.terminationStatus == 0 else {
+            throw NSError(domain: "git", code: Int(p.terminationStatus), userInfo: [NSLocalizedDescriptionKey: String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""])
+        }
+    }
+
+    @Test("landing smoke — legitimate guest change lands", .enabled(if: ProcessInfo.processInfo.environment["APEX_LIVE_VM"] == "1"))
+    func landingLegitimate() async throws {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("scratch-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        try runGit(["init", "-b", "main"], cwd: tmp)
+        try "base\n".write(to: tmp.appendingPathComponent("README.md"), atomically: true, encoding: .utf8)
+        try runGit(["add", "."], cwd: tmp)
+        try runGit(["-c", "user.email=t@t.com", "-c", "user.name=t", "commit", "-m", "base"], cwd: tmp)
+
+        let manager = VMWorkspaceManager()
+        let backend = TartVMBackend(spaceID: "smoke", manager: manager)
+        defer { Task { try? await manager.destroy(spaceID: "smoke") } }
+        try await manager.ensureProvisioned(spaceID: "smoke")
+        try await backend.seed(workspacePath: tmp.path)
+
+        try await backend.writeFile(relativePath: "feature.txt", content: "new\n")
+        let (_, _, ac) = try await backend.git(arguments: ["add", "."])
+        #expect(ac == 0)
+        let (_, _, cc) = try await backend.git(arguments: ["-c", "user.email=t@t.com", "-c", "user.name=t", "commit", "-m", "guest change"])
+        #expect(cc == 0)
+
+        let rc = FileManager.default.temporaryDirectory.appendingPathComponent("rc-\(UUID().uuidString)").path
+        defer { try? FileManager.default.removeItem(atPath: rc) }
+        let svc = SpaceLandingService(client: TartCLIClient(), manager: manager, reviewClonePath: rc, isApexAgent: false)
+        let report = await svc.land(input: .init(spaceID: "smoke", spaceName: "smoke", workspacePath: tmp.path))
+        #expect(report.succeeded, "report: \(report.summary)")
+        #expect(report.quarantineBranch == "space/smoke-review")
+
+        let branchProc = Process()
+        branchProc.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        branchProc.arguments = ["-C", rc, "rev-parse", "--verify", "space/smoke-review"]
+        try branchProc.run(); branchProc.waitUntilExit()
+        #expect(branchProc.terminationStatus == 0)
+
+        let showProc = Process()
+        showProc.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+        showProc.arguments = ["-C", rc, "show", "space/smoke-review:feature.txt"]
+        let sp = Pipe(); showProc.standardOutput = sp; showProc.standardError = Pipe()
+        try showProc.run(); showProc.waitUntilExit()
+        let out = String(data: sp.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        #expect(out.contains("new"))
+
+        try await manager.destroy(spaceID: "smoke")
+    }
+
+    @Test("landing smoke — tampered guest change refused", .enabled(if: ProcessInfo.processInfo.environment["APEX_LIVE_VM"] == "1"))
+    func landingTampered() async throws {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("scratch-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        try FileManager.default.createDirectory(at: tmp.appendingPathComponent("ApexAgentTests"), withIntermediateDirectories: true)
+        try "test\n".write(to: tmp.appendingPathComponent("ApexAgentTests/FooTests.swift"), atomically: true, encoding: .utf8)
+        try runGit(["init", "-b", "main"], cwd: tmp)
+        try runGit(["add", "."], cwd: tmp)
+        try runGit(["-c", "user.email=t@t.com", "-c", "user.name=t", "commit", "-m", "base"], cwd: tmp)
+
+        let manager = VMWorkspaceManager()
+        let backend = TartVMBackend(spaceID: "smoke", manager: manager)
+        defer { Task { try? await manager.destroy(spaceID: "smoke") } }
+        try await manager.ensureProvisioned(spaceID: "smoke")
+        try await backend.seed(workspacePath: tmp.path)
+
+        try await backend.deleteFile(relativePath: "ApexAgentTests/FooTests.swift")
+        let (_, _, ac) = try await backend.git(arguments: ["add", "-A"])
+        #expect(ac == 0)
+        let (_, _, cc) = try await backend.git(arguments: ["-c", "user.email=t@t.com", "-c", "user.name=t", "commit", "-m", "tamper"])
+        #expect(cc == 0)
+
+        let rc = FileManager.default.temporaryDirectory.appendingPathComponent("rc-\(UUID().uuidString)").path
+        defer { try? FileManager.default.removeItem(atPath: rc) }
+        let svc = SpaceLandingService(client: TartCLIClient(), manager: manager, reviewClonePath: rc, isApexAgent: false)
+        let report = await svc.land(input: .init(spaceID: "smoke", spaceName: "smoke", workspacePath: tmp.path))
+        #expect(!report.succeeded)
+        #expect(report.failedStage == "Test-integrity check")
+        #expect(report.quarantineBranch == nil)
+        #expect(!FileManager.default.fileExists(atPath: rc))
+
+        try await manager.destroy(spaceID: "smoke")
+    }
+}
