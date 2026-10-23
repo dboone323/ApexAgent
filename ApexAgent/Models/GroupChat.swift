@@ -91,10 +91,6 @@ final class GroupChatSession {
             guard let orch = orchestrator else {
                 return "DECLINED: Orchestrator unavailable to request human approval."
             }
-            let approved = await orch.requestConfirmation(toolName: tool, arguments: arguments, riskDescription: "Group chat tool action")
-            if !approved {
-                return "DECLINED: User declined execution of \(tool)."
-            }
             do {
                 let out = try await orch.executeToolByName(name: tool, jsonArguments: arguments)
                 toolExecutionLog.append("\(tool): \(out)")

@@ -16,7 +16,8 @@ struct AccessibilityOmniTargeter: Tool {
     }
     
     func call(arguments: Arguments) async throws -> String {
-        return await Task { @MainActor in
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+            await Task { @MainActor in
             guard AXIsProcessTrusted() else {
                 return "ERROR: Accessibility permissions not granted. Please enable in System Settings -> Privacy & Security -> Accessibility."
             }
@@ -116,5 +117,6 @@ struct AccessibilityOmniTargeter: Tool {
             
             return output
         }.value
+        }
     }
 }

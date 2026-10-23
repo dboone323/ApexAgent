@@ -58,8 +58,15 @@ public final class AgentRequestRouter {
             globalProvider: ModelRegistry.activeProvider()
         )
 
+        var baseInstructions = resolvedContext.effectiveInstructions
+        let workspacePath = await MainActor.run { orchestrator.currentWorkspacePath }
+        let skillContext = SkillCatalog.skillInstructions(for: request.prompt, workspacePath: workspacePath)
+        if !skillContext.isEmpty && !baseInstructions.contains(skillContext) {
+            baseInstructions += "\n\n" + skillContext
+        }
+
         let verifiedInstructions = AgentExecutionVerification.applyingDirective(
-            to: resolvedContext.effectiveInstructions
+            to: baseInstructions
         )
         let effectiveInstructions = Self.applyingDirectAddressPolicy(
             base: verifiedInstructions,

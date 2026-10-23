@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import FoundationModels
 import AppKit
 import CoreGraphics
@@ -15,10 +16,11 @@ struct DifferentialScreenPerception: Tool {
         let resetCache: Bool?
     }
     
-    nonisolated(unsafe) private static var previousFrame: CGImage?
+    private static let previousFrame = Mutex<CGImage?>(nil)
     
     func call(arguments: Arguments) async throws -> String {
-        guard #available(macOS 14.0, *) else {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+            guard #available(macOS 14.0, *) else {
             return "{\"error\": \"Requires macOS 14.0+\"}"
         }
         
@@ -33,8 +35,8 @@ struct DifferentialScreenPerception: Tool {
         
         let screenImage = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
         
-        if arguments.resetCache == true || DifferentialScreenPerception.previousFrame == nil {
-            DifferentialScreenPerception.previousFrame = screenImage
+        if arguments.resetCache == true || DifferentialScreenPerception.previousFrame.withLock({ $0 }) == nil {
+            DifferentialScreenPerception.previousFrame.withLock { $0 = screenImage }
             let b64 = cgImageToBase64PNG(screenImage)
             return """
             {
@@ -46,10 +48,10 @@ struct DifferentialScreenPerception: Tool {
             """
         }
         
-        guard let prevImage = DifferentialScreenPerception.previousFrame else {
+        guard let prevImage = DifferentialScreenPerception.previousFrame.withLock({ $0 }) else {
             return "{\"error\": \"Unexpected missing previous frame\"}"
         }
-        DifferentialScreenPerception.previousFrame = screenImage
+        DifferentialScreenPerception.previousFrame.withLock { $0 = screenImage }
         
         let changedRect = Self.computeBoundingBoxDifference(frame1: prevImage, frame2: screenImage)
         
@@ -78,6 +80,8 @@ struct DifferentialScreenPerception: Tool {
         }
         """
     }
+        }
+
     
     public static func computeBoundingBoxDifference(frame1: CGImage, frame2: CGImage) -> CGRect? {
         let w = frame2.width

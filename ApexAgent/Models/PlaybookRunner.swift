@@ -348,9 +348,9 @@ final class PlaybookRunner: Identifiable {
             case .parallel:
                 // Swift Structured Concurrency: Execute all participant turns concurrently
                 let parallelRoles = stage.requiredRoles
-                var tasksResults: [PlaybookBotResult] = []
 
                 struct ParallelTaskItem {
+                    let index: Int
                     let botId: UUID
                     let botName: String
                     let roleId: String
@@ -362,8 +362,8 @@ final class PlaybookRunner: Identifiable {
                 }
 
                 var taskItems: [ParallelTaskItem] = []
-                for role in parallelRoles {
-                    guard let bot = self.resolveBot(for: role) else {
+                for (index, role) in parallelRoles.enumerated() {
+                    guard let bot = self.resolveDistinctBot(for: role, excluding: Set(taskItems.map { $0.botId })) else {
                         throw PlaybookExecutionError.missingParticipant(roleId: role.id)
                     }
 
@@ -383,6 +383,7 @@ final class PlaybookRunner: Identifiable {
                     let liveSession: BotSession? = (executionMode == .live) ? botManager?.session(for: bot) : nil
 
                     taskItems.append(ParallelTaskItem(
+                        index: index,
                         botId: bot.id,
                         botName: bot.name,
                         roleId: role.id,
@@ -393,7 +394,9 @@ final class PlaybookRunner: Identifiable {
                     ))
                 }
 
-                try await withThrowingTaskGroup(of: PlaybookBotResult.self) { group in
+                var orderedResults: [PlaybookBotResult?] = Array(repeating: nil, count: taskItems.count)
+
+                try await withThrowingTaskGroup(of: (Int, PlaybookBotResult).self) { group in
                     for item in taskItems {
                         group.addTask {
                             let turnStart = Date()
@@ -410,7 +413,7 @@ final class PlaybookRunner: Identifiable {
                                 )
                             }
                             let duration = Date().timeIntervalSince(turnStart)
-                            return PlaybookBotResult(
+                            let result = PlaybookBotResult(
                                 botId: item.botId,
                                 botName: item.botName,
                                 roleId: item.roleId,
@@ -419,14 +422,25 @@ final class PlaybookRunner: Identifiable {
                                 timestamp: Date(),
                                 isSimulated: item.session == nil
                             )
+                            return (item.index, result)
                         }
                     }
 
-                    for try await result in group {
-                        tasksResults.append(result)
+                    for try await (index, result) in group {
+                        orderedResults[index] = result
                     }
                 }
 
+                for (index, result) in orderedResults.enumerated() {
+                    if result == nil {
+                        throw PlaybookExecutionError.stageExecutionFailed(
+                            stageId: stage.id,
+                            reason: "Parallel turn at role index \(index) produced no result"
+                        )
+                    }
+                }
+
+                let tasksResults = orderedResults.compactMap { $0 }
                 botResults = tasksResults
                 combinedOutput = tasksResults.map { "[\($0.botName) - \($0.roleId)]: \($0.output)" }.joined(separator: "\n\n")
             }
@@ -621,11 +635,37 @@ final class PlaybookRunner: Identifiable {
         if let exact = participantMap[role] {
             return exact
         }
-        // Fallback search by role id
         if let matched = participantMap.first(where: { $0.key.id == role.id })?.value {
             return matched
         }
-        return participantMap.values.first
+        return participantMap.values.sorted { $0.id.uuidString < $1.id.uuidString }.first
+    }
+
+    private func resolveDistinctBot(for role: PlaybookRoleRequirement, excluding excludedIds: Set<UUID>) -> BotProfile? {
+        // Prefer exact participant mapping.
+        if let exact = participantMap[role], !excludedIds.contains(exact.id) {
+            return exact
+        }
+        if let exact = participantMap[role] {
+            // Allow reuse only when no distinct alternative exists.
+            if participantMap.values.contains(where: { !excludedIds.contains($0.id) }) == false {
+                return exact
+            }
+        }
+        // Fallback by role id among unassigned bots.
+        if let matched = participantMap.first(where: { $0.key.id == role.id })?.value,
+           !excludedIds.contains(matched.id) {
+            return matched
+        }
+        // Choose any unassigned participant deterministically (sorted by id).
+        let candidates = participantMap.values
+            .filter { !excludedIds.contains($0.id) }
+            .sorted { $0.id.uuidString < $1.id.uuidString }
+        if let remaining = candidates.first {
+            return remaining
+        }
+        // Partial roster: collapse deterministically to the first participant.
+        return participantMap.values.sorted { $0.id.uuidString < $1.id.uuidString }.first
     }
 
     public static func sanitizeForPrompt(_ text: String) -> String {

@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import CoreSpotlight
 import UniformTypeIdentifiers
 

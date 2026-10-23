@@ -25,6 +25,7 @@ enum AgentSecurity {
         "read_file": .low,
         "list_directory": .low,
         "file_search": .low,
+        "search_files": .low,
         "spotlight_search": .low,
         "search_memory": .low,
         "get_system_info": .low,

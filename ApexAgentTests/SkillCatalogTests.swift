@@ -96,4 +96,57 @@ struct SkillCatalogTests {
         #expect(SkillCatalog.decodeTerms(fromJSON: encoded) == ["release notes", "changelog"])
         #expect(SkillCatalog.decodeTerms(fromJSON: "not json") == [])
     }
+
+    @Test func frontmatterSynthesisParsesStandardSkillMarkdown() {
+        let skillMd = """
+        ---
+        name: Team Meeting Audit
+        description: Conducts an autonomous 9-bot audit session.
+        triggers: [team meeting, audit bot, sync]
+        ---
+
+        # Team Meeting Audit
+        Execute comprehensive peer review across all bots.
+        """
+        let manifest = SkillCatalog.synthesizeManifestFromFrontmatter(
+            instructions: skillMd,
+            directoryName: "team-meeting-audit"
+        )
+        #expect(manifest != nil)
+        #expect(manifest?.id == "team-meeting-audit")
+        #expect(manifest?.name == "Team Meeting Audit")
+        #expect(manifest?.description == "Conducts an autonomous 9-bot audit session.")
+        #expect(manifest?.version == "1.0.0")
+        #expect(manifest?.defaultEnabled == true)
+        #expect(manifest?.triggerTerms.contains("team meeting") == true)
+        #expect(manifest?.triggerTerms.contains("audit bot") == true)
+        #expect(manifest?.triggerTerms.contains("sync") == true)
+    }
+
+    @Test func loaderSynthesizesManifestWhenManifestJSONMissing() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("skills-fm-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let skillDir = root.appendingPathComponent("adopted-frameworks", isDirectory: true)
+        try FileManager.default.createDirectory(at: skillDir, withIntermediateDirectories: true)
+        let skillContent = """
+        ---
+        name: adopted-frameworks
+        description: Reference and search local high-quality development guides.
+        triggers: [architecture, design pattern, framework]
+        ---
+
+        # Adopted Frameworks
+        Consult local architecture blueprints.
+        """
+        try skillContent.write(to: skillDir.appendingPathComponent("SKILL.md"), atomically: true, encoding: .utf8)
+
+        let loaded = SkillCatalog.loadSkills(root: root)
+        #expect(loaded.count == 1)
+        #expect(loaded.first?.manifest.id == "adopted-frameworks")
+        #expect(loaded.first?.manifest.name == "adopted-frameworks")
+        #expect(loaded.first?.manifest.triggerTerms.contains("architecture") == true)
+        #expect(loaded.first?.instructions.contains("Consult local architecture blueprints") == true)
+    }
 }

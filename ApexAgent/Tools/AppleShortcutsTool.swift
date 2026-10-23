@@ -55,7 +55,11 @@ struct AppleShortcutsTool: Tool {
                     try process.run()
                     let data = pipe.fileHandleForReading.readDataToEndOfFile()
                     process.waitUntilExit()
-                    return String(decoding: data, as: UTF8.self)
+                    let raw = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
+                    if raw.isEmpty && arguments.action == "list" {
+                        return "No shortcuts installed or shortcuts service is empty."
+                    }
+                    return raw.isEmpty ? "(No output)" : raw
                 }
                 group.addTask {
                     try await Task.sleep(nanoseconds: 60_000_000_000)

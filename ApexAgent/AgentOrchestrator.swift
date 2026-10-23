@@ -391,36 +391,45 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
         #endif
         auditTask = Task {
-            let workspace = Self.proactiveAuditWorkspacePath()
+            // Allow the UI and window server 15 seconds to finish launching and rendering before scanning
+            try? await Task.sleep(for: .seconds(15))
+            guard !Task.isCancelled else { return }
+
+            guard let workspace = Self.proactiveAuditWorkspacePath(),
+                  !workspace.isEmpty,
+                  FileManager.default.isReadableFile(atPath: workspace) else {
+                return
+            }
             _ = await ProjectAuditor.shared.runWorkspaceAudit(at: workspace)
 
             while true {
                 guard !Task.isCancelled else { break }
                 try? await Task.sleep(for: .seconds(300))
-                _ = await ProjectAuditor.shared.runWorkspaceAudit(at: Self.proactiveAuditWorkspacePath())
+                guard let currentWorkspace = Self.proactiveAuditWorkspacePath(),
+                      !currentWorkspace.isEmpty,
+                      FileManager.default.isReadableFile(atPath: currentWorkspace) else {
+                    continue
+                }
+                _ = await ProjectAuditor.shared.runWorkspaceAudit(at: currentWorkspace)
             }
         }
     }
 
     /// Resolves the workspace directory that the proactive audit loop scans.
-    /// No hardcoded developer paths: user-configured setting → APEX_WORKSPACE →
-    /// ~/Developer (if present) → the user's home directory.
-    nonisolated static func proactiveAuditWorkspacePath() -> String {
+    /// Uses security-scoped bookmarks or explicit user workspace configuration.
+    /// NEVER crawls unselected user home directories on launch to prevent sudden TCC prompts.
+    nonisolated static func proactiveAuditWorkspacePath() -> String? {
+        if let envPath = ProcessInfo.processInfo.environment["APEX_WORKSPACE"],
+           !envPath.isEmpty,
+           FileManager.default.fileExists(atPath: envPath) {
+            return envPath
+        }
         if let configured = UserDefaults.standard.string(forKey: "apex.workspacePath"),
            !configured.isEmpty,
            FileManager.default.fileExists(atPath: configured) {
             return configured
         }
-        if let envPath = ProcessInfo.processInfo.environment["APEX_WORKSPACE"],
-           !envPath.isEmpty {
-            return envPath
-        }
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let devPath = home.appendingPathComponent("Developer").path
-        if FileManager.default.fileExists(atPath: devPath) {
-            return devPath
-        }
-        return home.path
+        return nil
     }
 
     // MARK: - App Permissions Handling
@@ -457,8 +466,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                !configured.isEmpty && configured != "." && configured != "./" {
                 return NSString(string: configured).expandingTildeInPath
             }
-            let fallback = Self.proactiveAuditWorkspacePath()
-            if !fallback.isEmpty && fallback != "/" && fallback != "." {
+            if let fallback = Self.proactiveAuditWorkspacePath(), !fallback.isEmpty && fallback != "/" && fallback != "." {
                 return fallback
             }
             let current = FileManager.default.currentDirectoryPath

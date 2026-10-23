@@ -15,7 +15,7 @@ func resolveToWorkspace(rawPath: String, workspacePath: String) -> String {
         return expanded
     }
     let ws = (workspacePath.isEmpty || workspacePath == "." || workspacePath == "./")
-        ? AgentOrchestrator.proactiveAuditWorkspacePath()
+        ? (AgentOrchestrator.proactiveAuditWorkspacePath() ?? FileManager.default.currentDirectoryPath)
         : workspacePath
     if expanded.isEmpty || expanded == "." || expanded == "./" {
         return ws
