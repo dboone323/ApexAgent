@@ -33,6 +33,9 @@ enum AgentSecurity {
         "read_clipboard": .low,
         "list_review_sessions": .low,
         "audit_projects": .low,
+        "list_projects": .low,
+        "list_tasks": .low,
+        "list_sprints": .low,
         "extract_entities": .low,
         "screen_diff": .low,
         "screen_perception": .low,
@@ -40,6 +43,11 @@ enum AgentSecurity {
 
         // ── Medium: fetches external data or writes local state ──────────
         "web_search": .medium,
+        "web_reader": .medium,
+        "create_project": .medium,
+        "create_task": .medium,
+        "update_task_status": .medium,
+        "create_sprint": .medium,
         "store_memory": .medium,
         "update_plan": .medium,
         "take_screenshot": .medium,

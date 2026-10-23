@@ -97,8 +97,21 @@ final class RoutineManager: Observable {
 
     // MARK: - Load / Persist / Toggle / Delete
 
+    func reset() {
+        cronHeartbeatTimer?.invalidate()
+        cronHeartbeatTimer = nil
+        scheduledRoutines.removeAll()
+        lastRunTimes.removeAll()
+        routines.removeAll()
+        modelContext = nil
+        botManager = nil
+    }
+
     func loadRoutines() {
-        guard let context = modelContext else { return }
+        guard let context = modelContext else {
+            routines = []
+            return
+        }
         let descriptor = FetchDescriptor<Routine>(
             sortBy: [SortDescriptor(\Routine.createdAt, order: .forward)]
         )

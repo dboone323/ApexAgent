@@ -437,9 +437,12 @@ import AppKit
         #expect(boundPort != 0)
         #expect(server.port == boundPort)
 
-        // Test fetching state from local server using URLSession
+        // Test fetching state from local server using URLSession with authenticated LAN token
+        let token = CollaborativeServer.collabToken()
         let url = URL(string: "http://localhost:\(boundPort)/api/state")!
-        let (data, response) = try await URLSession.shared.data(from: url)
+        var stateRequest = URLRequest(url: url)
+        stateRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: stateRequest)
 
         #expect(!data.isEmpty)
         if let httpResponse = response as? HTTPURLResponse {
@@ -452,9 +455,11 @@ import AppKit
             #expect(httpResponse.value(forHTTPHeaderField: "Server") == "ApexAgent")
         }
 
-        // Test fetching dashboard HTML
+        // Test fetching dashboard HTML with authenticated LAN token
         let htmlUrl = URL(string: "http://localhost:\(boundPort)/")!
-        let (htmlData, htmlResponse) = try await URLSession.shared.data(from: htmlUrl)
+        var htmlRequest = URLRequest(url: htmlUrl)
+        htmlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        let (htmlData, htmlResponse) = try await URLSession.shared.data(for: htmlRequest)
         #expect(!htmlData.isEmpty)
         if let httpResponse = htmlResponse as? HTTPURLResponse {
             #expect(httpResponse.statusCode == 200)
