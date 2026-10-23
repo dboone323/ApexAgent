@@ -18,6 +18,9 @@ actor FakeTartClient: TartClientProtocol {
     var execResult: (stdout: String, stderr: String, exitCode: Int32) = ("ok\n", "", 0)
 
     func setVMs(_ vms: [TartVMInfo]) { self.vms = vms }
+    func setExecResult(_ r: (stdout: String, stderr: String, exitCode: Int32)) {
+        self.execResult = r
+    }
 
     func clone(source: String, name: String) async throws {
         cloneCalled = true

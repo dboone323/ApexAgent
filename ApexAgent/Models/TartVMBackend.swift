@@ -36,7 +36,7 @@ public actor TartVMBackend {
         return try await runRaw(full)
     }
 
-    public func seed(workspacePath: String) async throws {
+    public func seed(workspacePath: String?) async throws {
         try await seedIfNeeded(workspacePath: workspacePath)
     }
 

@@ -92,7 +92,7 @@ public enum SpaceProposalState: String, Codable, CaseIterable, Sendable {
 // MARK: - SwiftData Models
 
 @Model
-public final class SpaceModel {
+public final class SpaceModel: @unchecked Sendable {
     public var id: UUID
     public var name: String
     public var iconName: String
