@@ -20,6 +20,81 @@
 ## Commit
 `2ba20f58 feat(spaces-vm): add TartCLIClient and VMWorkspaceManager (Phase 1)`
 
-## Next
-- Phase 2: integrate VMWorkspaceManager into SpaceManager / tooling; add exec-based build/test commands inside VM; VM lifecycle hooks in app.
-- Phase 3: Space-level VM isolation policy and cleanup; docs.
+## Verification evidence (post-rework)
+
+### Unit plan (fresh bundle: build/ApexAgent-UnitTests.xcresult)
+- totalTestCount: 1706
+- passedTests: 1702
+- failedTests: 0
+- skippedTests: 4
+- result: Passed
+
+### Step A confirmation run bundle (earliest available: build/ApexAgent-UnitTests-run1.xcresult)
+- totalTestCount: 1682
+- passedTests: 1678
+- failedTests: 0
+- skippedTests: 4
+- result: Passed
+(Note: does not match the documented 1691/1687/0/4 baseline; delta -9 tests. Reported as-is.)
+
+### SwiftSyntaxLintGate solo (only-testing:ApexAgentTests/SwiftSyntaxLintGateTests)
+- totalTestCount: 3
+- passedTests: 3
+- failedTests: 0
+- skippedTests: 0
+- result: Passed
+
+### Clean build warnings
+- 2 warnings, both:
+  `macro expansion @Model:9:30: warning: redundant conformance of 'SpacePageProposal' to protocol 'Sendable'`
+  (known reference warning at SpacePageProposal.swift:30)
+
+### PR #30 / main advancement
+- PR #29 "Fix: resolve 5 unit-test failures (Oct 20)" merged 2026-10-23T13:18:27Z.
+- PR #30 "Oct 22 audit fix pass F1–F13 (unit plan 1691/1687/0/4)" merged 2026-10-23T13:21:27Z, 3 minutes later, both from fix/oct20-test-fixes.
+- main advanced twice because two PRs from the same branch were merged sequentially.
+
+### Final VM state (`tart list`)
+```
+Source Name                                                                                                               Disk Size Accessed       State
+local  apex-base                                                                                                          113  113  42 minutes ago stopped
+OCI    ghcr.io/cirruslabs/macos-golden-gate-xcode:27.1                                                                    96   95   1 day ago      stopped
+OCI    ghcr.io/cirruslabs/macos-golden-gate-xcode@sha256:9ae66619fed9abc4740efefc0e2f6ac9440560095c79fa1ebe2b95d89d9b61b9 96   95   1 day ago      stopped
+```
+- apex-probe: deleted (absent).
+- apex-base: present, stopped.
+- No VMs running.
+
+### Step B probe outputs
+`tart --version`:
+```
+2.32.1
+```
+
+`tart list` (pre-rework probe context): see final state above.
+
+`tart exec --help`:
+```
+OVERVIEW: Execute a command in a running VM
+
+Requires Tart Guest Agent running in a guest VM.
+
+Note that all non-vanilla Cirrus Labs VM images already have the Tart Guest
+Agent installed.
+
+USAGE: tart exec [-i] [-t] <name> <command> ...
+
+ARGUMENTS:
+  <name>                  VM name
+  <command>               Command to execute
+
+OPTIONS:
+  -i                      Attach host's standard input to a remote command
+  -t                      Allocate a remote pseudo-terminal (PTY)
+  --version               Show the version.
+  -h, --help              Show help information.
+```
+
+### Step A details
+- Fix-loop commit hash: c99ffdf7 (Oct 22 audit fix pass F1–F13).
+- PR merge outcome: PR #29 and PR #30 both merged into main; branch feat/spaces-vm created from e624b585.
