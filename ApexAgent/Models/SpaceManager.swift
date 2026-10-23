@@ -494,10 +494,10 @@ public final class SpaceManager {
 
     public func inviteURL(for space: SpaceModel) -> String {
         CollaborativeServer.ensureCollabToken()
-        let token = CollaborativeServer.collabToken()
+        let code = CollaborativeServer.issueInviteCode()
         let port = CollaborativeServer.shared.port
         let host = Host.current().localizedName ?? "localhost"
-        return "http://\(host):\(port)/?spaceId=\(space.id.uuidString)&token=\(token)"
+        return "http://\(host):\(port)/?spaceId=\(space.id.uuidString)&code=\(code)"
     }
 
     // MARK: - Shared Pages CRUD

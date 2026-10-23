@@ -369,6 +369,7 @@ public final class BuiltinSlashCommandEngine {
     }
 
     private func handleRoutinesCommand(arg: String) async -> SlashCommandResult {
+RoutineManager.shared.loadRoutines()
         let routines = RoutineManager.shared.routines
         if routines.isEmpty {
             return SlashCommandResult(

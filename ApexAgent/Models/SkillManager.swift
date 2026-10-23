@@ -71,13 +71,15 @@ final class SkillManager: Observable {
 
         // Prune skills whose manifest was deleted from disk (preserve procedural memories)
         let allSkills = (try? context.fetch(FetchDescriptor<Skill>())) ?? []
+        self.skills = allSkills
         for skill in allSkills {
-            if !diskNames.contains(skill.name) {
+            if !diskNames.contains(skill.name) && !skill.name.hasSuffix("_procedural") {
                 context.delete(skill)
             }
         }
 
         try? context.save()
+        self.skills = (try? context.fetch(FetchDescriptor<Skill>())) ?? []
         DynamicToolbox.shared.loadTools()
     }
 

@@ -49,8 +49,8 @@ public final class ApexGatewayServer {
         }
         let fresh = Data((0..<32).map { _ in UInt8.random(in: 0...255) }).base64EncodedString()
         if KeychainManager.save(key: gatewayTokenKeychainKey, value: fresh) {
-            print("📡 [ApexGatewayServer] First launch: generated a new gateway token (stored in Keychain). New clients must present it to connect:")
-            print("   \(fresh)")
+            AppLog.info(.gateway, "Generated a new gateway token (stored in Keychain). New clients must present it to connect.")
+
         } else {
             AppLog.error(.gateway, "⚠️ Keychain unavailable; gateway token is in-memory only for this session.")
         }

@@ -20,7 +20,11 @@ final class ToolDispatchEngine {
 
     func shouldConfirmTool(name: String, requireConfirmationForAll: Bool = false) -> Bool {
         if requireConfirmationForAll { return true }
-        return Self.dangerousToolNames.contains(name)
+        // Floor: legacy dangerous set is always confirmed.
+        if Self.dangerousToolNames.contains(name) { return true }
+        // Fail closed: unclassified / dynamically discovered tools require confirmation.
+        guard AgentSecurity.toolRiskMap[name] != nil else { return true }
+        return AgentSecurity.requiresConfirmation(name)
     }
 
     func buildAllTools(orchestrator: AgentOrchestrator, botManager: BotManager?) -> [AnyExecutableTool] {
@@ -166,6 +170,17 @@ final class ToolDispatchEngine {
                 userInfo: [NSLocalizedDescriptionKey: "Tool '\(name)' is disabled by policy"]
             )
         }
+
+        // Path B minimal safeguard: dangerous/unclassified tools must already be
+        // confirmed in this scope; otherwise fail closed.
+        if shouldConfirmTool(name: name), ToolConfirmationScope.activeConfirmedToolName != name {
+            throw NSError(
+                domain: "AgentSecurity",
+                code: 403,
+                userInfo: [NSLocalizedDescriptionKey: "Tool '\(name)' requires confirmation (Path B safeguard)."]
+            )
+        }
+
 
         if let tool = allTools.first(where: { $0.name == name }) {
             return try await tool.execute(jsonArguments: jsonArguments)

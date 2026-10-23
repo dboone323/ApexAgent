@@ -25,6 +25,7 @@ struct CollaborativeServerTests {
         KeychainManager.delete(key: Self.tokenKey)
         UserDefaults.standard.removeObject(forKey: Self.tokenKey)
         CollaborativeServer.resetRateLimiter()
+        CollaborativeServer.resetInviteCodes()
     }
 
     private func withLAN(enabled: Bool, token: String?, _ body: () -> Void) {
@@ -141,7 +142,52 @@ struct CollaborativeServerTests {
         #expect(logLine.contains(marker), "Access decision should be appended to the audit log")
     }
 
-    // MARK: - Helpers
+    // MARK: - Invite redemption (F10)
+
+    @Test func testInviteCodeSingleUse() async throws {
+        withLAN(enabled: true, token: "the-real-token") {
+            let code = CollaborativeServer.issueInviteCode()
+            let first = CollaborativeServer.redeemInviteCode(code)
+            #expect(first == "the-real-token")
+            let second = CollaborativeServer.redeemInviteCode(code)
+            #expect(second == nil, "Invite code must be single-use")
+        }
+    }
+
+    @Test func testInviteCodeExpiry() async throws {
+        withLAN(enabled: true, token: "the-real-token") {
+            let code = CollaborativeServer.issueInviteCode(ttl: -1)
+            #expect(CollaborativeServer.isInviteCodeValid(code) == false)
+            let redeemed = CollaborativeServer.redeemInviteCode(code)
+            #expect(redeemed == nil, "Expired invite code must not redeem")
+        }
+    }
+
+    @Test func testInviteCodeUnknownRejected() async throws {
+        #expect(CollaborativeServer.redeemInviteCode("does-not-exist") == nil)
+    }
+
+    // MARK: - RBAC (F10)
+
+    @Test func testHasPermissionDeniedForUnknownToken() async throws {
+        withLAN(enabled: true, token: "the-real-token") {
+            #expect(CollaborativeServer.shared.hasPermission(token: "bogus", requiredPermission: "read:state") == false)
+            #expect(CollaborativeServer.shared.hasPermission(token: "", requiredPermission: "read:state") == false)
+        }
+    }
+
+    @Test func testHasPermissionGrantedForValidToken() async throws {
+        withLAN(enabled: true, token: "the-real-token") {
+            #expect(CollaborativeServer.shared.hasPermission(token: "the-real-token", requiredPermission: "read:state") == true)
+            #expect(CollaborativeServer.shared.hasPermission(token: "the-real-token", requiredPermission: "write:spaces") == true)
+        }
+    }
+
+    @Test func testHasPermissionDeniedForUnknownPermission() async throws {
+        withLAN(enabled: true, token: "the-real-token") {
+            #expect(CollaborativeServer.shared.hasPermission(token: "the-real-token", requiredPermission: "admin:nuke") == false)
+        }
+    }
 
     private func mockConnection(host: String) -> NWConnection {
         let endpoint = NWEndpoint.hostPort(

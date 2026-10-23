@@ -32,7 +32,7 @@ struct ProjectAuditTool: Tool {
                     path = (wsPath as NSString).appendingPathComponent(expanded)
                 }
             } else {
-                path = wsPath.isEmpty ? AgentOrchestrator.proactiveAuditWorkspacePath() : wsPath
+                path = wsPath.isEmpty ? (AgentOrchestrator.proactiveAuditWorkspacePath() ?? FileManager.default.currentDirectoryPath) : wsPath
             }
             let auditor = await ProjectAuditor.shared
             let reports = await auditor.runWorkspaceAudit(at: path)

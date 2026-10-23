@@ -15,7 +15,8 @@ struct CaptureWindowImageTool: Tool {
     }
     
     func call(arguments: Arguments) async throws -> String {
-        return await Task { @MainActor in
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+            await Task { @MainActor in
             let displayManager = VirtualDisplayManager.shared
             
             var targetWindowID: CGWindowID?
@@ -38,5 +39,6 @@ struct CaptureWindowImageTool: Tool {
             let base64 = pngData.base64EncodedString()
             return "SUCCESS: Captured window image (size: \(pngData.count) bytes). Base64 preview prefix: \(base64.prefix(100))..."
         }.value
+        }
     }
 }

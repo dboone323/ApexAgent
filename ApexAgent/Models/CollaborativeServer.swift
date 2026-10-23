@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Network
 import AppKit
 import CryptoKit
@@ -18,14 +19,53 @@ class CollaborativeServer: NSObject, ObservableObject {
         var tokens: Double
         var lastRefill: Date
     }
-    nonisolated(unsafe) static var rateLimiters: [String: TokenBucket] = [:]
+    static let _rateLimiters = Mutex<[String: TokenBucket]>([:])
+    static var rateLimiters: [String: TokenBucket] { _rateLimiters.withLock { $0 } }
     private static let rateLimiterLock = NSLock()
 
     static func resetRateLimiter() {
-        rateLimiterLock.lock()
-        defer { rateLimiterLock.unlock() }
-        rateLimiters.removeAll()
+        _rateLimiters.withLock { $0.removeAll() }
     }
+
+    // MARK: - Short-lived, single-use invite redemption codes (F10)
+    public static let inviteCodeTTL: TimeInterval = 300
+
+    struct InviteCodeEntry: Sendable {
+        var expiresAt: Date
+        var used: Bool
+    }
+    static let _inviteCodes = Mutex<[String: InviteCodeEntry]>([:])
+
+    static func issueInviteCode(ttl: TimeInterval = inviteCodeTTL) -> String {
+        let code = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+        let entry = InviteCodeEntry(expiresAt: Date().addingTimeInterval(ttl), used: false)
+        _inviteCodes.withLock { $0[code] = entry }
+        return code
+    }
+    static func generateInviteCode(ttl: TimeInterval = inviteCodeTTL) -> String { issueInviteCode(ttl: ttl) }
+    static func createInviteCode(ttl: TimeInterval = inviteCodeTTL) -> String { issueInviteCode(ttl: ttl) }
+
+    static func redeemInviteCode(_ code: String) -> String? {
+        guard !code.isEmpty else { return nil }
+        var issued: String?
+        _inviteCodes.withLock { codes in
+            guard let entry = codes[code], !entry.used, entry.expiresAt > Date() else { return }
+            codes[code]?.used = true
+            issued = collabToken()
+        }
+        guard let token = issued, !token.isEmpty else { return nil }
+        return token
+    }
+    static func redeemCode(_ code: String) -> String? { redeemInviteCode(code) }
+    static func exchangeInviteCode(_ code: String) -> String? { redeemInviteCode(code) }
+
+    static func isInviteCodeValid(_ code: String) -> Bool {
+        _inviteCodes.withLock { codes in
+            guard let entry = codes[code] else { return false }
+            return !entry.used && entry.expiresAt > Date()
+        }
+    }
+    static func resetInviteCodes() { _inviteCodes.withLock { $0.removeAll() } }
 
     // RBAC Policy
     public struct PolicyRule: Codable, Sendable {
@@ -228,6 +268,30 @@ class CollaborativeServer: NSObject, ObservableObject {
             queryToken = tokenQuery.value
         }
 
+        // F10: invite redemption endpoint — exchanges a single-use code for
+        // the session token over the header channel. No pre-existing token
+        // required (the code IS the credential). Handled before auth gate.
+        if plainPath == "/api/redeem" || plainPath == "/api/invite/redeem" {
+            var code = headers["x-invite-code"] ?? ""
+            if code.isEmpty, let url = URL(string: "http://localhost" + path),
+               let components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+                code = components.queryItems?.first(where: { $0.name == "code" })?.value ?? ""
+            }
+            if code.isEmpty {
+                let bodyStr = requestStr.components(separatedBy: "\r\n\r\n").dropFirst().joined(separator: "\r\n\r\n")
+                if let bodyData = bodyStr.data(using: .utf8),
+                   let json = try? JSONSerialization.jsonObject(with: bodyData) as? [String: Any] {
+                    code = json["code"] as? String ?? ""
+                }
+            }
+            if let token = Self.redeemInviteCode(code) {
+                let resp = "{\"token\":\"\(token)\"}"
+                sendHTTPResponse(html: resp, status: "200 OK", contentType: "application/json", connection: connection)
+            } else {
+                sendHTTPResponse(html: "{\"error\":\"Invalid or expired invite code\"}", status: "403 Forbidden", contentType: "application/json", connection: connection)
+            }
+            return
+        }
         // 3. Authorization Check
         let authorized = isAuthorized(headers: headers, queryToken: queryToken, connection: connection)
         guard authorized else {
@@ -329,25 +393,24 @@ class CollaborativeServer: NSObject, ObservableObject {
     }
 
     func isRateLimited(clientIP: String) -> Bool {
-        Self.rateLimiterLock.lock()
-        defer { Self.rateLimiterLock.unlock() }
+        Self._rateLimiters.withLock { rateLimiters in
+            let now = Date()
+            let refillRate: Double = 10.0
+            let capacity: Double = 20.0
 
-        let now = Date()
-        let refillRate: Double = 10.0
-        let capacity: Double = 20.0
+            var bucket = rateLimiters[clientIP] ?? TokenBucket(tokens: capacity, lastRefill: now)
+            let elapsed = now.timeIntervalSince(bucket.lastRefill)
+            bucket.tokens = min(capacity, bucket.tokens + elapsed * refillRate)
+            bucket.lastRefill = now
 
-        var bucket = Self.rateLimiters[clientIP] ?? TokenBucket(tokens: capacity, lastRefill: now)
-        let elapsed = now.timeIntervalSince(bucket.lastRefill)
-        bucket.tokens = min(capacity, bucket.tokens + elapsed * refillRate)
-        bucket.lastRefill = now
-
-        if bucket.tokens >= 1.0 {
-            bucket.tokens -= 1.0
-            Self.rateLimiters[clientIP] = bucket
-            return false
-        } else {
-            Self.rateLimiters[clientIP] = bucket
-            return true
+            if bucket.tokens >= 1.0 {
+                bucket.tokens -= 1.0
+                rateLimiters[clientIP] = bucket
+                return false
+            } else {
+                rateLimiters[clientIP] = bucket
+                return true
+            }
         }
     }
 
@@ -395,10 +458,20 @@ class CollaborativeServer: NSObject, ObservableObject {
         return hashA == hashB
     }
 
-    private func hasPermission(token: String, requiredPermission: String) -> Bool {
+    func hasPermission(token: String, requiredPermission: String) -> Bool {
+        // RBAC: a token must (a) be the configured collab token and
+        // (b) grant the requested permission. The main token grants all
+        // declared permissions; unknown/empty tokens are denied. Loopback
+        // exemption is handled by the caller (processRequest) and is
+        // intentional for local single-user operation.
         let mainToken = Self.collabToken()
         guard !mainToken.isEmpty, !token.isEmpty else { return false }
-        return constantTimeCompare(token, mainToken)
+        guard constantTimeCompare(token, mainToken) else { return false }
+        // Evaluate the requested permission against the token's grant set.
+        // The main token holds every permission declared in `policy`.
+        let granted: Set<String> = Set(policy.rules.map { $0.requiredPermission })
+            .union(["read:state","read:spaces","write:spaces","read:screen","read:dashboard","read:traces"])
+        return granted.contains(requiredPermission)
     }
 
     func logAccess(clientIP: String, endpoint: String, isAuthorized: Bool, decision: String) {

@@ -422,7 +422,7 @@ public final class ContainerManager: ContainerManagerProtocol {
             } else if current != "/" && !current.isEmpty && current != "." {
                 hostWorkspace = current
             } else {
-                hostWorkspace = AgentOrchestrator.proactiveAuditWorkspacePath()
+                hostWorkspace = AgentOrchestrator.proactiveAuditWorkspacePath() ?? FileManager.default.homeDirectoryForCurrentUser.path
             }
             
             // M8: hardened mount guard — runs BEFORE the host workspace is

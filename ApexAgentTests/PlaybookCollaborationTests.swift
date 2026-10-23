@@ -956,4 +956,39 @@ struct PlaybookCollaborationTests {
         #expect(!senderSession.needsAttention)
         #expect(senderSession.messages.last?.content.contains("was denied") == true)
     }
+
+    // MARK: - Round 6 F12 determinism
+
+    @Test @MainActor func testParallelStageDeterministicAssignmentAndOrdering() async throws {
+        let roster = createStandard5BotRoster()
+
+        func runOnce() async throws -> [String] {
+            let parallelStage = PlaybookStageDefinition(
+                id: "stage_parallel_specialists",
+                name: "Parallel Specialist Audit",
+                dispatchMode: .parallel,
+                requiredRoles: [.codeArchitect, .researcher, .automator],
+                promptTemplate: "Audit the payload: {input}"
+            )
+            let playbook = CollaborationPlaybook(
+                id: UUID(),
+                name: "Parallel Fan-Out Test",
+                roles: [.codeArchitect, .researcher, .automator],
+                stages: [parallelStage]
+            )
+            let runner = PlaybookRunner(playbook: playbook, availableBots: roster)
+            let report = try await runner.execute(contextInput: "Audit security, architecture, and CI pipeline")
+            let stage = report.stageResults[0]
+            #expect(stage.botResults.count == 3)
+            return stage.botResults.map { "\($0.roleId):\($0.botName)" }
+        }
+
+        let first = try await runOnce()
+        let second = try await runOnce()
+        let third = try await runOnce()
+        #expect(first == second)
+        #expect(second == third)
+        #expect(first == ["code_architect:Code Architect", "researcher:Researcher", "automator:Automator"])
+    }
 }
+

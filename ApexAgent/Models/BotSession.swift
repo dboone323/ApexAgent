@@ -108,6 +108,17 @@ final class BotSession {
         return baseInstructions + "\n\n" + rosterPrompt
     }
 
+    /// Composes system instructions with prompt-matched skills discovered from
+    /// user directory (~/.apex/skills) and workspace (.agents/skills).
+    func effectiveInstructions(for prompt: String) -> String {
+        var composed = systemInstructions
+        let skillAdditions = SkillCatalog.skillInstructions(for: prompt, workspacePath: orchestrator?.currentWorkspacePath)
+        if !skillAdditions.isEmpty && !composed.contains(skillAdditions) {
+            composed += "\n\n" + skillAdditions
+        }
+        return composed
+    }
+
     // MARK: - Queued Prompts Management
 
     func removeQueuedPrompt(id: UUID) {
@@ -292,7 +303,7 @@ final class BotSession {
                 bot: bot,
                 session: session,
                 history: messages.dropLast(), // exclude the empty assistant placeholder
-                instructions: systemInstructions,
+                instructions: effectiveInstructions(for: trimmed),
                 orchestrator: orch,
                 onEvent: { _ in
                     // Granular events can be logged or reflected in UI

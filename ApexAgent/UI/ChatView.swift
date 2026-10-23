@@ -105,7 +105,7 @@ struct ChatView: View {
                 ScrollView {
                     LazyVStack(spacing: 16) {
                         if displayMessages.isEmpty {
-                            WelcomeView()
+                            ChatWelcomePlaceholderView()
                                 .padding(.top, 80)
                         } else {
                             ForEach(displayMessages) { message in
@@ -167,7 +167,7 @@ struct ChatView: View {
 
 // MARK: - Welcome View
 
-struct WelcomeView: View {
+struct ChatWelcomePlaceholderView: View {
     @Environment(AgentOrchestrator.self) private var orchestrator
 
     let suggestions: [(String, String, Color)] = [

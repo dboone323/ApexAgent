@@ -1,5 +1,5 @@
 import Foundation
-
+import Synchronization
 /// File-write rollback safety net (WS5.7).
 ///
 /// Before a destructive file operation (overwrite, delete, move), call
@@ -38,7 +38,7 @@ public struct FileRollbackSnapshot: Identifiable, Sendable, Codable {
 public enum FileRollback {
     private static let maxSnapshotsToKeep = 50
     private static let lock = NSLock()
-    nonisolated(unsafe) private static var recordedSnapshots: [FileRollbackSnapshot] = []
+    private static let recordedSnapshots = Mutex<[FileRollbackSnapshot]>([])
 
     private static var snapshotsDirectory: URL {
         ApexAgentStoragePaths.directory("snapshots")
@@ -82,10 +82,15 @@ public enum FileRollback {
                 sizeBytes: fileSize
             )
 
-            lock.lock()
-            recordedSnapshots.insert(record, at: 0)
-            pruneSnapshotsLocked(fm: fm)
-            lock.unlock()
+            recordedSnapshots.withLock { snapshots in
+                snapshots.insert(record, at: 0)
+                guard snapshots.count > maxSnapshotsToKeep else { return }
+                let excess = snapshots.suffix(from: maxSnapshotsToKeep)
+                for item in excess {
+                    try? fm.removeItem(atPath: item.snapshotPath)
+                }
+                snapshots = Array(snapshots.prefix(maxSnapshotsToKeep))
+            }
 
             return sidecarURL
         } catch {
@@ -105,9 +110,7 @@ public enum FileRollback {
         if fm.fileExists(atPath: sidecarURL.path) {
             sourceSnapshotURL = sidecarURL
         } else {
-            lock.lock()
-            let match = recordedSnapshots.first(where: { $0.originalPath == path })
-            lock.unlock()
+            let match = recordedSnapshots.withLock { $0.first(where: { $0.originalPath == path }) }
             if let match = match, fm.fileExists(atPath: match.snapshotPath) {
                 sourceSnapshotURL = match.snapshotURL
             }
@@ -133,9 +136,7 @@ public enum FileRollback {
     /// Reverts the most recently snapshot file across all tools.
     /// Returns the restored path and success flag, or nil if no snapshots exist.
     public static func rollbackLast() -> (path: String, success: Bool)? {
-        lock.lock()
-        let mostRecent = recordedSnapshots.first
-        lock.unlock()
+        let mostRecent = recordedSnapshots.withLock { $0.first }
 
         guard let target = mostRecent else { return nil }
         let success = rollback(path: target.originalPath)
@@ -144,9 +145,7 @@ public enum FileRollback {
 
     /// List recorded snapshots, most recent first.
     public static func recentSnapshots(limit: Int = 50) -> [FileRollbackSnapshot] {
-        lock.lock()
-        defer { lock.unlock() }
-        return Array(recordedSnapshots.prefix(limit))
+        return recordedSnapshots.withLock { Array($0.prefix(limit)) }
     }
 
     /// Whether a snapshot exists for `path`.
@@ -155,23 +154,17 @@ public enum FileRollback {
         if fm.fileExists(atPath: snapshotURL(for: path).path) {
             return true
         }
-        lock.lock()
-        defer { lock.unlock() }
-        return recordedSnapshots.contains(where: { $0.originalPath == path && fm.fileExists(atPath: $0.snapshotPath) })
+        return recordedSnapshots.withLock { $0.contains(where: { $0.originalPath == path && fm.fileExists(atPath: $0.snapshotPath) }) }
     }
 
     /// Discard a snapshot for `path` (e.g. after a successful confirmed op).
     public static func discard(path: String) {
         try? FileManager.default.removeItem(at: snapshotURL(for: path))
-        lock.lock()
-        recordedSnapshots.removeAll(where: { $0.originalPath == path })
-        lock.unlock()
+        recordedSnapshots.withLock { $0.removeAll(where: { $0.originalPath == path }) }
     }
 
     public static func clearAllSnapshots() {
-        lock.lock()
-        recordedSnapshots.removeAll()
-        lock.unlock()
+        recordedSnapshots.withLock { $0.removeAll() }
         try? FileManager.default.removeItem(at: snapshotsDirectory)
     }
 
@@ -179,14 +172,8 @@ public enum FileRollback {
         URL(fileURLWithPath: path + ".apex-bak")
     }
 
-    private static func pruneSnapshotsLocked(fm: FileManager) {
-        guard recordedSnapshots.count > maxSnapshotsToKeep else { return }
-        let excess = recordedSnapshots.suffix(from: maxSnapshotsToKeep)
-        for item in excess {
-            try? fm.removeItem(atPath: item.snapshotPath)
-        }
-        recordedSnapshots = Array(recordedSnapshots.prefix(maxSnapshotsToKeep))
-    }
+    // prune handled inline above
+
 }
 
 extension FileRollbackSnapshot {

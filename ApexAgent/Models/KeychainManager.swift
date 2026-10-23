@@ -82,16 +82,16 @@ struct KeychainManager {
     private static func addToKeychain(key: String, value: String) -> Bool {
         guard let data = value.data(using: .utf8) else { return false }
 
-        var deleteQuery: [String: Any] = [
+        // Primary: Data Protection Keychain
+        let dpDeleteQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: activeServiceName,
-            kSecAttrAccount as String: key
+            kSecAttrAccount as String: key,
+            kSecUseDataProtectionKeychain as String: true
         ]
-        SecItemDelete(deleteQuery as CFDictionary)
-        deleteQuery[kSecUseDataProtectionKeychain as String] = true
-        SecItemDelete(deleteQuery as CFDictionary)
+        SecItemDelete(dpDeleteQuery as CFDictionary)
 
-        var query: [String: Any] = [
+        let dpAddQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: activeServiceName,
             kSecAttrAccount as String: key,
@@ -100,15 +100,31 @@ struct KeychainManager {
             kSecUseDataProtectionKeychain as String: true
         ]
 
-        let status = SecItemAdd(query as CFDictionary, nil)
+        let status = SecItemAdd(dpAddQuery as CFDictionary, nil)
         if status == errSecSuccess { return true }
-        query.removeValue(forKey: kSecUseDataProtectionKeychain as String)
-        let legacyStatus = SecItemAdd(query as CFDictionary, nil)
+
+        // Fallback for legacy environments, but skip interactive UI prompts so the app is never blocked
+        let legacyQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: activeServiceName,
+            kSecAttrAccount as String: key,
+            kSecValueData as String: data,
+            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
+        ]
+        let legacyStatus = SecItemAdd(legacyQuery as CFDictionary, nil)
         return legacyStatus == errSecSuccess
     }
     
     @discardableResult
     static func save(key: String, value: String) -> Bool {
+        if isTestProcess {
+            if value.isEmpty {
+                FallbackStorage.shared.remove(key)
+                return true
+            }
+            FallbackStorage.shared.set(value, for: key)
+            return true
+        }
         runLegacyMigration()
         guard !value.isEmpty else { return delete(key: key) }
         let success = addToKeychain(key: key, value: value)
@@ -123,6 +139,9 @@ struct KeychainManager {
     }
 
     static func get(key: String) -> String? {
+        if isTestProcess {
+            return FallbackStorage.shared.get(key)
+        }
         runLegacyMigration()
         if let fallback = FallbackStorage.shared.get(key) {
             Task { await AgentAuditLog.shared.record(toolName: "keychain.get", arguments: "key=\(key)", wasConfirmed: false, status: "success") }
@@ -130,19 +149,30 @@ struct KeychainManager {
             return fallback
         }
 
-        var query: [String: Any] = [
+        // 1. Primary: Query the Data Protection Keychain first (no UI prompts)
+        let dpQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: activeServiceName,
             kSecAttrAccount as String: key,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
+            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecUseDataProtectionKeychain as String: true
         ]
         
         var dataTypeRef: AnyObject?
-        var status = SecItemCopyMatching(query as CFDictionary, &dataTypeRef)
+        var status = SecItemCopyMatching(dpQuery as CFDictionary, &dataTypeRef)
+
+        // 2. Fallback: Query legacy keychain ONLY with authentication UI skipped so we NEVER block the app with a modal
         if status != errSecSuccess {
-            query[kSecUseDataProtectionKeychain as String] = true
-            status = SecItemCopyMatching(query as CFDictionary, &dataTypeRef)
+            let legacyQuery: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: activeServiceName,
+                kSecAttrAccount as String: key,
+                kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne,
+                kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
+            ]
+            status = SecItemCopyMatching(legacyQuery as CFDictionary, &dataTypeRef)
         }
         
         if status == errSecSuccess, let data = dataTypeRef as? Data, let str = String(data: data, encoding: .utf8) {
@@ -158,22 +188,30 @@ struct KeychainManager {
 
     @discardableResult
     static func delete(key: String) -> Bool {
+        if isTestProcess {
+            FallbackStorage.shared.remove(key)
+            return true
+        }
         runLegacyMigration()
-        var query: [String: Any] = [
+        let dpQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: activeServiceName,
-            kSecAttrAccount as String: key
+            kSecAttrAccount as String: key,
+            kSecUseDataProtectionKeychain as String: true
         ]
-        var status = SecItemDelete(query as CFDictionary)
-        query[kSecUseDataProtectionKeychain as String] = true
-        let dpStatus = SecItemDelete(query as CFDictionary)
-        if status != errSecSuccess {
-            status = dpStatus
-        }
+        let dpStatus = SecItemDelete(dpQuery as CFDictionary)
+
+        let legacyQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: activeServiceName,
+            kSecAttrAccount as String: key,
+            kSecUseAuthenticationUI as String: kSecUseAuthenticationUISkip
+        ]
+        let legacyStatus = SecItemDelete(legacyQuery as CFDictionary)
 
         FallbackStorage.shared.remove(key)
 
-        let success = status == errSecSuccess || status == errSecItemNotFound
+        let success = dpStatus == errSecSuccess || dpStatus == errSecItemNotFound || legacyStatus == errSecSuccess || legacyStatus == errSecItemNotFound
         Task { await AgentAuditLog.shared.record(toolName: "keychain.delete", arguments: "key=\(key)", wasConfirmed: false, status: success ? "success" : "failed") }
         Task { await KeychainAuditLogger.shared.record(operation: "delete", key: key, success: success) }
         return success

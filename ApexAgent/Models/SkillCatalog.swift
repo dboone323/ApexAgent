@@ -84,9 +84,86 @@ enum SkillCatalog {
             requiredCapabilities: requiredCapabilities)
     }
 
+    /// Synthesizes a valid SkillManifest from SKILL.md YAML frontmatter when manifest.json is absent.
+    /// Supports standard YAML frontmatter (---\nname: ...\ndescription: ...\n---)
+    static func synthesizeManifestFromFrontmatter(instructions: String, directoryName: String) -> SkillManifest? {
+        let safeId = directoryName.lowercased()
+        guard matches(safeId, safeIdPattern) else { return nil }
+
+        var name = directoryName.replacingOccurrences(of: "-", with: " ").capitalized
+        var description = "Skill instructions loaded from \(directoryName)/SKILL.md"
+        var triggerTerms: [String] = [safeId, name.lowercased()]
+
+        let lines = instructions.components(separatedBy: .newlines)
+        if let firstLine = lines.first?.trimmingCharacters(in: .whitespaces), firstLine == "---" {
+            var inFrontmatter = true
+            var fmLines: [String] = []
+            for line in lines.dropFirst() {
+                if line.trimmingCharacters(in: .whitespaces) == "---" {
+                    inFrontmatter = false
+                    break
+                }
+                fmLines.append(line)
+            }
+            if !inFrontmatter {
+                for line in fmLines {
+                    let trimmed = line.trimmingCharacters(in: .whitespaces)
+                    if trimmed.hasPrefix("name:") {
+                        let val = trimmed.dropFirst("name:".count)
+                            .trimmingCharacters(in: .whitespaces)
+                            .trimmingCharacters(in: CharacterSet(charactersIn: "\"\'"))
+                        if !val.isEmpty {
+                            name = val
+                            if !triggerTerms.contains(val.lowercased()) {
+                                triggerTerms.append(val.lowercased())
+                            }
+                        }
+                    } else if trimmed.hasPrefix("description:") {
+                        let val = trimmed.dropFirst("description:".count)
+                            .trimmingCharacters(in: .whitespaces)
+                            .trimmingCharacters(in: CharacterSet(charactersIn: "\"\'"))
+                        if !val.isEmpty {
+                            description = val
+                        }
+                    } else if trimmed.hasPrefix("triggers:") {
+                        let val = trimmed.dropFirst("triggers:".count).trimmingCharacters(in: .whitespaces)
+                        let parsed = val.components(separatedBy: ",").map {
+                            $0.trimmingCharacters(in: .whitespaces)
+                              .trimmingCharacters(in: CharacterSet(charactersIn: "[]\"\'"))
+                              .lowercased()
+                        }.filter { !$0.isEmpty }
+                        for t in parsed {
+                            if !triggerTerms.contains(t) {
+                                triggerTerms.append(t)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let parts = safeId.split(separator: "-").map(String.init).filter { $0.count >= 3 }
+        for p in parts {
+            if !triggerTerms.contains(p) {
+                triggerTerms.append(p)
+            }
+        }
+
+        return SkillManifest(
+            id: safeId,
+            name: name,
+            version: "1.0.0",
+            description: description,
+            defaultEnabled: true,
+            triggerTerms: triggerTerms,
+            requiredCapabilities: []
+        )
+    }
+
     /// Load every valid skill directory under `root`; invalid folders are
     /// isolated (skipped) and corrupt `manifest.json` files are moved aside
     /// to `manifest.json.corrupt-<ts>` via ``ResilientJSONStore``.
+    /// If `manifest.json` is missing, synthesizes a manifest from `SKILL.md` frontmatter.
     static func loadSkills(root: URL) -> [(manifest: SkillManifest, instructions: String)] {
         let fileManager = FileManager.default
         guard let names = try? fileManager.contentsOfDirectory(atPath: root.path) else { return [] }
@@ -94,26 +171,37 @@ enum SkillCatalog {
         for name in names.sorted() {
             let dir = root.appendingPathComponent(name, isDirectory: true)
             let manifestUrl = dir.appendingPathComponent("manifest.json")
-            guard fileManager.fileExists(atPath: manifestUrl.path) else { continue }
-            guard let json = ResilientJSONStore.shared.loadJSONObject(from: manifestUrl, subsystem: "SkillCatalog") else {
-                continue
+            let skillMdUrl = dir.appendingPathComponent("SKILL.md")
+
+            var manifest: SkillManifest?
+
+            if fileManager.fileExists(atPath: manifestUrl.path) {
+                guard let json = ResilientJSONStore.shared.loadJSONObject(from: manifestUrl, subsystem: "SkillCatalog") else {
+                    continue
+                }
+                do {
+                    manifest = try parseManifest(json, directoryName: name)
+                } catch {
+                    ResilientJSONStore.shared.quarantineCorruptFile(
+                        at: manifestUrl,
+                        subsystem: "SkillCatalog",
+                        errorDescription: String(describing: error)
+                    )
+                    continue
+                }
             }
-            let manifest: SkillManifest
-            do {
-                manifest = try parseManifest(json, directoryName: name)
-            } catch {
-                ResilientJSONStore.shared.quarantineCorruptFile(
-                    at: manifestUrl,
-                    subsystem: "SkillCatalog",
-                    errorDescription: String(describing: error)
-                )
-                continue
-            }
-            guard fileManager.fileExists(atPath: dir.appendingPathComponent("SKILL.md").path) else { continue }
-            let instructions = (try? String(contentsOf: dir.appendingPathComponent("SKILL.md"), encoding: .utf8))?
+
+            guard fileManager.fileExists(atPath: skillMdUrl.path) else { continue }
+            let instructions = (try? String(contentsOf: skillMdUrl, encoding: .utf8))?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             guard !instructions.isEmpty else { continue }
-            skills.append((manifest, instructions))
+
+            if manifest == nil {
+                manifest = synthesizeManifestFromFrontmatter(instructions: instructions, directoryName: name)
+            }
+
+            guard let finalManifest = manifest else { continue }
+            skills.append((finalManifest, instructions))
         }
         return skills
     }
@@ -139,6 +227,60 @@ enum SkillCatalog {
                 loweredPrompt.contains(term.lowercased())
             }
             return hit ? entry.manifest : nil
+        }
+    }
+
+    /// Discovers all available skills across standard locations:
+    /// 1. User directory: ~/.apex/skills
+    /// 2. Workspace directories: <workspacePath>/.agents/skills and <workspacePath>/.apex/skills
+    static func discoverAllSkills(workspacePath: String? = nil) -> [(manifest: SkillManifest, instructions: String)] {
+        var results: [(manifest: SkillManifest, instructions: String)] = []
+        var seenIds = Set<String>()
+
+        var roots: [URL] = [ApexAgentStoragePaths.skills]
+        if let ws = workspacePath, !ws.isEmpty {
+            let wsUrl = URL(fileURLWithPath: ws)
+            roots.append(wsUrl.appendingPathComponent(".agents/skills", isDirectory: true))
+            roots.append(wsUrl.appendingPathComponent(".apex/skills", isDirectory: true))
+        }
+
+        for root in roots {
+            guard FileManager.default.fileExists(atPath: root.path) else { continue }
+            let loaded = loadSkills(root: root)
+            for item in loaded {
+                if !seenIds.contains(item.manifest.id) {
+                    seenIds.insert(item.manifest.id)
+                    results.append(item)
+                }
+            }
+        }
+        return results
+    }
+
+    /// Evaluates prompt against all available skills (user ~/.apex/skills and workspace .agents/skills)
+    /// and formats instructional context to inject into an agent's turn.
+    static func skillInstructions(for prompt: String, workspacePath: String? = nil) -> String {
+        let skills = discoverAllSkills(workspacePath: workspacePath)
+        guard !skills.isEmpty else { return "" }
+
+        let matching = matchingSkills(prompt: prompt, skills: skills)
+        if !matching.isEmpty {
+            var section = "### 🛠️ Activated Skills for this Turn\n"
+            section += "The following skills match the current user intent. Follow their workflows and principles strictly:\n\n"
+            for m in matching {
+                if let entry = skills.first(where: { $0.manifest.id == m.id }) {
+                    section += "#### Skill: \(m.name) (`\(m.id)` v\(m.version))\n"
+                    section += entry.instructions + "\n\n"
+                }
+            }
+            return section.trimmingCharacters(in: .whitespacesAndNewlines)
+        } else {
+            var summary = "### 🧩 Available Skills Catalog\n"
+            summary += "You have access to the following specialized skills if needed for this project:\n"
+            for skill in skills {
+                summary += "- **\(skill.manifest.name)** (`\(skill.manifest.id)`): \(skill.manifest.description)\n"
+            }
+            return summary.trimmingCharacters(in: .whitespacesAndNewlines)
         }
     }
 

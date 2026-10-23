@@ -86,6 +86,8 @@ struct SettingsView: View {
     @State private var isSandboxRunning: Bool = false
     @State private var isSandboxTransitioning: Bool = false
     @State private var sandboxPollTask: Task<Void, Never>?
+    @ObservedObject private var accountManager = UserAccountManager.shared
+    @ObservedObject private var workspaceManager = WorkspaceSecurityManager.shared
 
     private var isolationMode: Binding<IsolationMode> {
         Binding(
@@ -136,6 +138,7 @@ struct SettingsView: View {
         NavigationStack {
             ScrollViewReader { proxy in
                 Form {
+                    accountAndWorkspaceSection
                     modelConfigSection
                     reasoningSection
                     apiCredentialsSection
@@ -215,6 +218,72 @@ struct SettingsView: View {
     }
 
     // MARK: - Subsections
+
+    @ViewBuilder
+    private var accountAndWorkspaceSection: some View {
+        Section("Account & Workspace") {
+            HStack {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(accountManager.displayName)
+                            .font(.system(size: 13, weight: .semibold))
+                        if let email = accountManager.email {
+                            Text(email)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text(accountManager.accountType == .apple ? "Apple Account" : "Local Guest Profile")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } icon: {
+                    Image(systemName: accountManager.accountType == .apple ? "apple.logo" : "person.crop.circle")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Color.accentColor)
+                }
+
+                Spacer()
+
+                if accountManager.isAuthenticated && accountManager.accountType == .apple {
+                    Button("Sign Out") {
+                        accountManager.signOut()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+
+            Toggle("Sync Settings Across Instances (iCloud)", isOn: $accountManager.syncSettingsAcrossInstances)
+                .font(.system(size: 12))
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Active Working Directory")
+                            .font(.system(size: 12, weight: .medium))
+                        Text(workspaceManager.activeWorkspacePath ?? "No directory selected")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+
+                    Spacer()
+
+                    Button(workspaceManager.hasWorkspaceConfigured ? "Change…" : "Select Folder…") {
+                        _ = workspaceManager.promptUserForWorkspace()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                Text("Folder permissions are saved as security-scoped bookmarks and never re-prompt on launch.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 2)
+        }
+    }
 
     @ViewBuilder
     private var modelConfigSection: some View {

@@ -51,7 +51,7 @@ final class SecurityAuditor {
 
     func verifyPathAllowed(_ path: String, workspacePath: String, permissions: AppPermissions?) throws(SecuritySandboxError) {
         let ws = (workspacePath.isEmpty || workspacePath == "." || workspacePath == "./")
-            ? AgentOrchestrator.proactiveAuditWorkspacePath()
+            ? (AgentOrchestrator.proactiveAuditWorkspacePath() ?? FileManager.default.currentDirectoryPath)
             : workspacePath
         let wsURL = URL(fileURLWithPath: ws)
         saveSandboxBookmark(for: wsURL)
@@ -108,16 +108,20 @@ final class SecurityAuditor {
         let resolvedWorkspace = URL(fileURLWithPath: ws).resolvingSymlinksInPath().path
         let isInWorkspace = standardized == resolvedWorkspace || standardized.hasPrefix(resolvedWorkspace + "/")
 
-        if !effectivePerms.desktopFolderAllowed && (standardized == desktopPath || standardized.hasPrefix(desktopPath + "/")) && !isInWorkspace {
+        let isWorkspaceInsideDesktop = resolvedWorkspace == desktopPath || resolvedWorkspace.hasPrefix(desktopPath + "/")
+        if !effectivePerms.desktopFolderAllowed && (standardized == desktopPath || standardized.hasPrefix(desktopPath + "/")) && !isWorkspaceInsideDesktop {
             throw .desktopFolderRestricted
         }
-        if !effectivePerms.documentsFolderAllowed && (standardized == documentsPath || standardized.hasPrefix(documentsPath + "/")) && !isInWorkspace {
+        let isWorkspaceInsideDocuments = resolvedWorkspace == documentsPath || resolvedWorkspace.hasPrefix(documentsPath + "/")
+        if !effectivePerms.documentsFolderAllowed && (standardized == documentsPath || standardized.hasPrefix(documentsPath + "/")) && !isWorkspaceInsideDocuments {
             throw .documentsFolderRestricted
         }
-        if !effectivePerms.downloadsFolderAllowed && (standardized == downloadsPath || standardized.hasPrefix(downloadsPath + "/")) && !isInWorkspace {
+        let isWorkspaceInsideDownloads = resolvedWorkspace == downloadsPath || resolvedWorkspace.hasPrefix(downloadsPath + "/")
+        if !effectivePerms.downloadsFolderAllowed && (standardized == downloadsPath || standardized.hasPrefix(downloadsPath + "/")) && !isWorkspaceInsideDownloads {
             throw .downloadsFolderRestricted
         }
-        if !effectivePerms.musicFolderAllowed && (standardized == musicPath || standardized.hasPrefix(musicPath + "/")) && !isInWorkspace {
+        let isWorkspaceInsideMusic = resolvedWorkspace == musicPath || resolvedWorkspace.hasPrefix(musicPath + "/")
+        if !effectivePerms.musicFolderAllowed && (standardized == musicPath || standardized.hasPrefix(musicPath + "/")) && !isWorkspaceInsideMusic {
             throw .musicFolderRestricted
         }
         if standardized == sshPath || standardized.hasPrefix(sshPath + "/") {

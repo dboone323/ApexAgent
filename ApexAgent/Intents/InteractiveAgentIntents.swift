@@ -69,12 +69,15 @@ public struct InspectAgentStatusIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        let botCount = AppDelegate.sharedOrchestrator.botManager?.bots.count ?? 0
-        let activeSessions = AppDelegate.sharedOrchestrator.botManager?.sessions.count ?? 0
+        let botManager = AppDelegate.sharedOrchestrator.botManager
+        let botCount = botManager?.bots.count ?? 0
+        let activeSessions = botManager?.sessions.count ?? 0
+        let statusLine = botManager != nil ? "ONLINE" : "UNAVAILABLE (no bot manager)"
+RoutineManager.shared.loadRoutines()
         let routinesCount = RoutineManager.shared.routines.count
 
         let report = """
-        ApexAgent Status: ONLINE
+        ApexAgent Status: \(statusLine)
         Active Bots: \(botCount)
         Running Sessions: \(activeSessions)
         Registered Routines: \(routinesCount)

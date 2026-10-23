@@ -599,6 +599,7 @@ public enum ApexCLIRouter {
             return ((["Skills (\(loaded.count)):"] + rows).joined(separator: "\n"), 0)
 
         case .routinesList(let jsonOutput):
+RoutineManager.shared.loadRoutines()
             let routines = RoutineManager.shared.routines
             if jsonOutput {
                 let items = routines.map { ["name": $0.name, "trigger": $0.trigger.rawValue, "enabled": "\($0.enabled)"] }
@@ -776,6 +777,7 @@ public enum ApexCLIRouter {
     /// Executes a named routine inside `ApexAgentCore` and returns its output and exit code.
     @MainActor
     public static func runNamedRoutine(_ name: String) async -> (output: String, exitCode: Int32) {
+RoutineManager.shared.loadRoutines()
         guard let match = RoutineManager.shared.routines.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) else {
             return ("Routine '\(name)' not found.", 1)
         }

@@ -58,6 +58,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.SharedLogging
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_STRICT_CONCURRENCY: complete
+        ENABLE_APPINTENTS_METADATA_PROCESSING: NO
+        OTHER_LDFLAGS: "-framework AppIntents"
 
   SharedModels:
     type: framework
@@ -70,6 +72,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.SharedModels
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_STRICT_CONCURRENCY: complete
+        ENABLE_APPINTENTS_METADATA_PROCESSING: NO
+        OTHER_LDFLAGS: "-framework AppIntents"
     dependencies:
       - target: SharedLogging
 
@@ -87,6 +91,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.SharedKit
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_STRICT_CONCURRENCY: complete
+        ENABLE_APPINTENTS_METADATA_PROCESSING: NO
+        OTHER_LDFLAGS: "-framework AppIntents"
 
   MCPKit:
     type: framework
@@ -101,6 +107,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.MCPKit
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_STRICT_CONCURRENCY: complete
+        ENABLE_APPINTENTS_METADATA_PROCESSING: NO
+        OTHER_LDFLAGS: "-framework AppIntents"
 
   # ── Core app logic (the framework, now includes @main app entry) ──
   ApexAgentCore:
@@ -134,6 +142,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgentCore
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_STRICT_CONCURRENCY: complete
+        OTHER_LDFLAGS: "-framework AppIntents"
 
   # ── Application executable ──
   ApexAgent:
@@ -151,9 +160,18 @@ targets:
         PRODUCT_MODULE_NAME: ApexAgent
         PRODUCT_BUNDLE_IDENTIFIER: com.apexagent.ApexAgent
         INFOPLIST_FILE: ApexAgent/Info.plist
-        CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent.entitlements
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks
         ENABLE_PREVIEWS: YES
+        ENABLE_APPINTENTS_METADATA_PROCESSING: NO
+      configs:
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent-Debug.entitlements
+        Release:
+          CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent-Release.entitlements
+          ENABLE_HARDENED_RUNTIME: YES
+          CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
+          # DEVELOPER TEAM ID PLACEHOLDER — replace with your 10-char Apple Developer Team ID before Release signing/notarization.
+          DEVELOPMENT_TEAM: "TEAM_ID_PLACEHOLDER"
     dependencies:
       # Local frameworks are linked + embedded by the app.
       - target: ApexAgentCore
@@ -199,7 +217,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGNING_ALLOWED: YES
         CODE_SIGN_IDENTITY: "-"
-        CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent.entitlements
+        CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent-Debug.entitlements
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks
     dependencies:
       - target: ApexAgentCore
@@ -221,7 +239,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGNING_ALLOWED: YES
         CODE_SIGN_IDENTITY: "-"
-        CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent.entitlements
+        CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent-Debug.entitlements
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks
     dependencies:
       - target: ApexAgentCore
@@ -239,7 +257,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGNING_ALLOWED: YES
         CODE_SIGN_IDENTITY: "-"
-        CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent.entitlements
+        CODE_SIGN_ENTITLEMENTS: ApexAgent/ApexAgent-Debug.entitlements
         LD_RUNPATH_SEARCH_PATHS: $(inherited) @executable_path/../Frameworks
 
   # ── Tests ──

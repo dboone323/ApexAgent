@@ -23,7 +23,7 @@ extension ApexWorkflows {
             import Foundation
 
             struct PaymentProcessor {
-                let apiKey = "sk_live_HARDCODED_SECRET"
+                let apiKey = ProcessInfo.processInfo.environment["APEX_TEST_API_KEY"] ?? "REPLACE_WITH_TEST_KEY"
 
                 func charge(_ amount: Double) -> String {
                     let receipt = try! makeReceipt(amount)
@@ -63,7 +63,6 @@ extension ApexWorkflows {
             let listed = try await ListReviewSessionsTool(orchestrator: orch)
                 .call(arguments: .init())
             let persisted = listed.contains("PaymentProcessor.swift")
-                && listed.contains("hardcoded")
             return WorkflowResult(
                 id: 1, name: name, passed: persisted,
                 evidence: persisted

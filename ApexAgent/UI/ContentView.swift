@@ -16,6 +16,12 @@ struct ContentView: View {
     @AppStorage("apex.showTerminal") private var showTerminal = false
     @AppStorage("apex.showPlanDashboard") private var showPlanDashboard = false
     @State private var showCreateBotSheet = false
+    @AppStorage("apex.hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @StateObject private var accountManager = UserAccountManager.shared
+
+    private var isTestMode: Bool {
+        ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1" || KeychainManager.isTestProcess
+    }
     
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -268,6 +274,14 @@ struct ContentView: View {
             while !Task.isCancelled {
                 botManager.expireStalePeerApprovals()
                 try? await Task.sleep(for: .seconds(30))
+            }
+        }
+        .sheet(isPresented: Binding(
+            get: { !hasCompletedOnboarding && !isTestMode },
+            set: { if !$0 { hasCompletedOnboarding = true } }
+        )) {
+            WelcomeView(accountManager: accountManager) {
+                hasCompletedOnboarding = true
             }
         }
     }

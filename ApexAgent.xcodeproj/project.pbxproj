@@ -60,6 +60,7 @@
 		128D7CC8EE9DA4189D37F532 /* AppIntentsContractAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01F6B6D4B696148853346579 /* AppIntentsContractAuditorTests.swift */; };
 		129C09CC682BF64BA5009248 /* GitOperationsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86656B960D361A4F8E482E69 /* GitOperationsTool.swift */; };
 		12BFCF23A966D482E85B95E1 /* SecurityGovernanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30D42FF1852354B25ADFA0BB /* SecurityGovernanceTests.swift */; };
+		131F5AABF1EC36EF9169C779 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6BB3D379F4131D7773F53DD /* WelcomeView.swift */; };
 		136EAEAA76FC50E936E7E240 /* EnterpriseSecurityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2957F6490F82EE48FA0EC17B /* EnterpriseSecurityTests.swift */; };
 		13DDA0DCC2A21D1049E3D2C9 /* JiraIntegrationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7FD12D7EFE90E197CF1DD0F /* JiraIntegrationAuditorTests.swift */; };
 		142343E83DEBF4BB4502D187 /* ApexAgentApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C76440A35838941EFC30E32 /* ApexAgentApp.swift */; };
@@ -523,6 +524,7 @@
 		D35E46E6BA06CE5DDEE9135B /* R3R4AdversarialStressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDB982F99ED2ECD82AB8B499 /* R3R4AdversarialStressTests.swift */; };
 		D36627273561500EC0396DB3 /* TestPlanIntegrityAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F324E4CA2B48FE65E1F02C7A /* TestPlanIntegrityAuditor.swift */; };
 		D37B98ADD9A335FFFA006DDD /* DebateConsensusAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F282B40E56CDC581A3FADAF7 /* DebateConsensusAuditorTests.swift */; };
+		D38849255C470FCEF508E33D /* UserAccountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F05FED5CB1FDCE419E62A80A /* UserAccountManager.swift */; };
 		D3C4628E33DFBBB8B41D2DF6 /* ChatProbeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B8EEE62CAC123B5B1DF50EE /* ChatProbeTests.swift */; };
 		D4133F505587710A0020C4B1 /* ApprovalPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3411229BCFE6CB8EF616EA44 /* ApprovalPolicyTests.swift */; };
 		D42314C3867104DC2E8B5699 /* ProjectAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B87EC4E276D1925AE6463B17 /* ProjectAuditor.swift */; };
@@ -625,6 +627,7 @@
 		F9EB20278467249B050BFC42 /* CompanionVoiceOrbView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EE5EE4657B4668F8D665984 /* CompanionVoiceOrbView.swift */; };
 		FA006B50608F7F6CE5D1B582 /* AskApexAgentIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = F49308EB721317B242E0C24C /* AskApexAgentIntent.swift */; };
 		FAB224533C33E973C2BB339C /* WebhookIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A24EA6259BDFCEBF67C5D67 /* WebhookIntegrationTests.swift */; };
+		FB0AC566754F55D09954443B /* WorkspaceSecurityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF51C41BE7F9054DF64DDE4B /* WorkspaceSecurityManager.swift */; };
 		FB3C5742ABF1AB0C38B58EF5 /* ScreenStreamerResilienceAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3C6CF91933CB290A37E4814 /* ScreenStreamerResilienceAuditorTests.swift */; };
 		FB443FD6175F99C5F631F6AE /* BrowserAndDaemonTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D91C06E7F88679C5C794F2D6 /* BrowserAndDaemonTests.swift */; };
 		FB9B0243104189B3936BEB1F /* AgentSessionEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C0392E1D6F6CA4B11C6DF5 /* AgentSessionEntity.swift */; };
@@ -1391,6 +1394,7 @@
 		E3F59EC75F3D21C0BF0F1CE4 /* MessageCompressionHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageCompressionHelper.swift; sourceTree = "<group>"; };
 		E47159FE60C60728E4EC287D /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		E538597D4C821CC359930D8B /* SecurityAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityAuditor.swift; sourceTree = "<group>"; };
+		E6BB3D379F4131D7773F53DD /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		E6E862FC7A7EB6367D85FAAF /* SharedLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedLogger.swift; sourceTree = "<group>"; };
 		E7D2D0D85063D0D8705E2834 /* VoiceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceController.swift; sourceTree = "<group>"; };
 		E82B03F0EA3321EF8ACF973C /* PlaybookExecutionAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybookExecutionAuditor.swift; sourceTree = "<group>"; };
@@ -1421,8 +1425,10 @@
 		EE35AAF4587FFAF6F0E0447D /* DependencyLockAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DependencyLockAuditorTests.swift; sourceTree = "<group>"; };
 		EF3EBC6C7029E08C8ED7200C /* BotManagerDuplicateModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotManagerDuplicateModelTests.swift; sourceTree = "<group>"; };
 		EF48EBF7067949B2BC247A27 /* DynamicToolRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicToolRoutingTests.swift; sourceTree = "<group>"; };
+		EF51C41BE7F9054DF64DDE4B /* WorkspaceSecurityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceSecurityManager.swift; sourceTree = "<group>"; };
 		EFFB591382DD55D243EDB25A /* DailyBriefing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyBriefing.swift; sourceTree = "<group>"; };
 		F0411E4CA902104A603F0819 /* TransactionalEmailAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransactionalEmailAuditor.swift; sourceTree = "<group>"; };
+		F05FED5CB1FDCE419E62A80A /* UserAccountManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAccountManager.swift; sourceTree = "<group>"; };
 		F064D929D23188DD1C6571B5 /* RemoteCompanionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteCompanionTests.swift; sourceTree = "<group>"; };
 		F068AA485B301C197126E40F /* ApplicationControlTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationControlTool.swift; sourceTree = "<group>"; };
 		F0DCC1A2314ABCD8D4CE6D1D /* CronParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CronParserTests.swift; sourceTree = "<group>"; };
@@ -1842,6 +1848,7 @@
 				F0411E4CA902104A603F0819 /* TransactionalEmailAuditor.swift */,
 				A2E71805DAE4F1BF815E362E /* VirtualizationMicroVMSandbox.swift */,
 				60CB82DE47FCA6D056616043 /* WebhookSignatureAuditor.swift */,
+				EF51C41BE7F9054DF64DDE4B /* WorkspaceSecurityManager.swift */,
 			);
 			path = Security;
 			sourceTree = "<group>";
@@ -1879,6 +1886,7 @@
 				C969C3513ACFED675B536F24 /* TerminalView.swift */,
 				94F7A6D8BD96CCBCA6C43C3D /* ToolActivityView.swift */,
 				E9FEC6CC55B91A30F4873DF8 /* VoiceOrbHUDView.swift */,
+				E6BB3D379F4131D7773F53DD /* WelcomeView.swift */,
 				C6BFC553F72EA059FA15375A /* Components */,
 				2A0C0221A81143B4D69663A6 /* Styles */,
 			);
@@ -2027,6 +2035,7 @@
 				AA4B7FD790B3719020BA4735 /* Tracing.swift */,
 				17603A2F984F932CC9176621 /* TurnLoopWatchdog.swift */,
 				35767072501619A9999B1A4E /* TurnWatchdog.swift */,
+				F05FED5CB1FDCE419E62A80A /* UserAccountManager.swift */,
 				FE8AA257E4B0DA3933E569AC /* VirtualDisplayManager.swift */,
 				536F475812E76C2F6A8D3703 /* VisualPerceptionObserver.swift */,
 				E7D2D0D85063D0D8705E2834 /* VoiceController.swift */,
@@ -3086,6 +3095,7 @@
 				B433C599E5945F34C4D59280 /* TurnLoopWatchdog.swift in Sources */,
 				095090882B5CABB20C489A8E /* TurnWatchdog.swift in Sources */,
 				84221870A2281A30DD24BC15 /* TurnWatchdogAuditor.swift in Sources */,
+				D38849255C470FCEF508E33D /* UserAccountManager.swift in Sources */,
 				1E94D45514A22AB083592DBD /* VirtualDisplayManager.swift in Sources */,
 				040EF011F6A972F9A8453E9F /* VirtualizationMicroVMSandbox.swift in Sources */,
 				D78B2F735A9976DC709458E8 /* VisualPerceptionAuditor.swift in Sources */,
@@ -3103,7 +3113,9 @@
 				1B8DE7D0B74A56B5FCE0277B /* WebhookSignatureAuditor.swift in Sources */,
 				41DC723F26F11802E58DEDBB /* WeeklyReflection.swift in Sources */,
 				A5563BDE3900736E18214475 /* WeeklyReflectionTool.swift in Sources */,
+				131F5AABF1EC36EF9169C779 /* WelcomeView.swift in Sources */,
 				C15B5CC5B2DC99D02F46B0C3 /* WorkspaceProactiveAuditor.swift in Sources */,
+				FB0AC566754F55D09954443B /* WorkspaceSecurityManager.swift in Sources */,
 				2742167F184C76BEF3694B8C /* WritingToolsSupport.swift in Sources */,
 				88A490B799A767F83191C1BC /* XCResultTrendAnalyzer.swift in Sources */,
 			);
@@ -3579,12 +3591,14 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedModels;
 				PRODUCT_NAME = SharedModels;
 				SDKROOT = macosx;
@@ -3598,7 +3612,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGNING_ALLOWED = YES;
-				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -3620,12 +3634,14 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.MCPKit;
 				PRODUCT_NAME = MCPKit;
 				SDKROOT = macosx;
@@ -3639,8 +3655,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
 				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = ApexAgent/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
@@ -3662,12 +3679,14 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedKit;
 				PRODUCT_NAME = SharedKit;
 				SDKROOT = macosx;
@@ -3751,12 +3770,14 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedLogging;
 				PRODUCT_NAME = SharedLogging;
 				SDKROOT = macosx;
@@ -3770,7 +3791,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGNING_ALLOWED = YES;
-				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -3786,7 +3807,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGNING_ALLOWED = YES;
-				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -3802,7 +3823,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGNING_ALLOWED = YES;
-				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -3838,12 +3859,14 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedLogging;
 				PRODUCT_NAME = SharedLogging;
 				SDKROOT = macosx;
@@ -3857,7 +3880,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGNING_ALLOWED = YES;
-				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -3911,12 +3934,14 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedModels;
 				PRODUCT_NAME = SharedModels;
 				SDKROOT = macosx;
@@ -3936,12 +3961,14 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.MCPKit;
 				PRODUCT_NAME = MCPKit;
 				SDKROOT = macosx;
@@ -4026,7 +4053,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGNING_ALLOWED = YES;
-				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
 				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -4128,12 +4155,14 @@
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedKit;
 				PRODUCT_NAME = SharedKit;
 				SDKROOT = macosx;
@@ -4161,8 +4190,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = ApexAgent/ApexAgent.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Release.entitlements";
+				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = TEAM_ID_PLACEHOLDER;
+				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = ApexAgent/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
@@ -4191,6 +4224,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentCore;
 				PRODUCT_NAME = ApexAgentCore;
 				SDKROOT = macosx;
@@ -4217,6 +4251,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentCore;
 				PRODUCT_NAME = ApexAgentCore;
 				SDKROOT = macosx;

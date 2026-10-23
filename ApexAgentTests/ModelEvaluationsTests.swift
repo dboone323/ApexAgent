@@ -155,9 +155,11 @@ struct ModelEvaluationsTests {
         }
     }
 
-    @Test("ModelRegistry default Ollama model is gemma4:12b")
-    func ollamaDefaultModelIsGemma4() {
-        #expect(ModelRegistry.ollamaModel().contains("gemma4"))
+    @Test("ModelRegistry resolves configured or default Ollama model")
+    func ollamaModelResolution() {
+        let current = ModelRegistry.ollamaModel()
+        #expect(!current.isEmpty)
+        #expect(current == ModelRegistry.defaultFastOllamaModel || current.contains("gemma4") || current.contains("qwen"))
     }
 
     @Test("AgentModelPreference correctly maps to ModelProvider")

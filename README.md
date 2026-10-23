@@ -77,7 +77,7 @@ Per-agent model preferences are supported (`autoPicker` / `appleOnDevice` / `app
 
 ## 🧰 Agent Capabilities
 
-Apex ships **70 tools** the model can call, including:
+Apex ships **78 static tools** registered in `ToolDispatchEngine.buildAllTools` (verified by census: 78 `AnyExecutableTool(...)` registrations and 78 unique `let name = "..."` identifiers; `AgentSecurity.toolRiskMap` has 80 entries, one unregistered `container_status`).
 
 | Tool | What It Does |
 |------|-------------|
