@@ -314,6 +314,7 @@
 		7C351E8B3BDB2259AE4A2D0D /* ApexAgentCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF959C9824A399A7C6398153 /* ApexAgentCore.framework */; };
 		7CA4054ED5A75F487BAB7028 /* SwarmConcurrencyAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD9DBAEE108C819D563770D /* SwarmConcurrencyAuditorTests.swift */; };
 		7D22AB2A73F0FC1DA59EFE27 /* GeneratedContent+JSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC0E77C44B399B3BE2F5D4C5 /* GeneratedContent+JSON.swift */; };
+		7D3E4425F7968B7686723E2F /* VMRoutingLiveTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2847DB722DB79514E5578B05 /* VMRoutingLiveTests.swift */; };
 		7E7A80CC0D0C6C9AF33BDE58 /* SharedKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9339DA69FCF40209669906C3 /* SharedKit.swift */; };
 		7F8237AE87F29A59A66F22D4 /* DotSandboxManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F40413DDC9CCE9D24C8578A6 /* DotSandboxManager.swift */; };
 		7FC084A981E0F645B4E15810 /* SkillManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B52F6C3959978D838C4B01 /* SkillManagerTests.swift */; };
@@ -438,6 +439,7 @@
 		AFB5A2EAFCE8A6E395EF9705 /* DoctorExpansionAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53F3E9FFE6FBF938F696C0C1 /* DoctorExpansionAuditor.swift */; };
 		AFFBAA806FD276862498EDF4 /* SpaceThreadDispatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7831D06C9B4410ACCEC74473 /* SpaceThreadDispatcherTests.swift */; };
 		B0C5FDD258ED646F1B0650FE /* DiagnosticQuerySecurityAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BE4D69859E750AC4D9258DC /* DiagnosticQuerySecurityAuditorTests.swift */; };
+		B0D8887DC408FA3F18C90BD0 /* ExecutionEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2073187624347E40F730A22 /* ExecutionEnvironment.swift */; };
 		B0F3336D0E3FB4DF9E2FEA1B /* OpenDotsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7276175451A5703EDBCADABC /* OpenDotsTests.swift */; };
 		B119A8FCACA3F29DD39A00C3 /* AgentAuditLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01D36BE270D67C0F522A0602 /* AgentAuditLog.swift */; };
 		B15293A4CAF3E3C85967BB61 /* SpotlightContractAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75BFD972A5DC0BE6D97B86D /* SpotlightContractAuditorTests.swift */; };
@@ -572,6 +574,7 @@
 		E27953A958417F0A07299EE3 /* AutomationWorkflows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 733F3E47FEB39C118326CA51 /* AutomationWorkflows.swift */; };
 		E2FEEE71E5770E14566E6EB8 /* GroupChatEngineRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A30810DC3FF5F43D5615E50 /* GroupChatEngineRoutingTests.swift */; };
 		E37AA58C8D7690441DBB824E /* CompanionSensorConsentGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4702ECD3ACCE2FEBD6196C6 /* CompanionSensorConsentGate.swift */; };
+		E41D1B6710999CFFE0A48553 /* TartVMBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD92B4C412C139D6324E6C5 /* TartVMBackend.swift */; };
 		E45C5C886DBA1EB70E91E7AA /* TeamPlaybook.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F98B9AC9559F0CA668F7F5 /* TeamPlaybook.swift */; };
 		E47995D12CAF8FD5459A5824 /* AgentSystemPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B66A755BDD664BFE2E951C37 /* AgentSystemPrompt.swift */; };
 		E4E34BAA9EBA4CDE6AA7FD15 /* ExternalToolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3090F85717E417C67EB22E /* ExternalToolsTests.swift */; };
@@ -956,6 +959,7 @@
 		27F1418D4187BE8D6678C076 /* SwiftDataStoreIntegrityGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataStoreIntegrityGate.swift; sourceTree = "<group>"; };
 		283522708C14485797415040 /* ScreenHighlightOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenHighlightOverlay.swift; sourceTree = "<group>"; };
 		2839819F835E6B5DAB51A8CA /* RoutineRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineRecorder.swift; sourceTree = "<group>"; };
+		2847DB722DB79514E5578B05 /* VMRoutingLiveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VMRoutingLiveTests.swift; sourceTree = "<group>"; };
 		290DB8A218C3789C5B722C90 /* SpotlightContractAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightContractAuditor.swift; sourceTree = "<group>"; };
 		2957F6490F82EE48FA0EC17B /* EnterpriseSecurityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnterpriseSecurityTests.swift; sourceTree = "<group>"; };
 		2961B4C4738E77BCEF8FAE0A /* ChiefOfStaff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChiefOfStaff.swift; sourceTree = "<group>"; };
@@ -1255,6 +1259,7 @@
 		AB9EDD6FFF0BF06243F2DCCF /* RoutineRecordingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineRecordingSheet.swift; sourceTree = "<group>"; };
 		ABA3F3C0A6C1C53A4AC18150 /* WebhookServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebhookServer.swift; sourceTree = "<group>"; };
 		ABC5AA0AF4AEAC87616E6142 /* ResilientJSONStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResilientJSONStore.swift; sourceTree = "<group>"; };
+		ABD92B4C412C139D6324E6C5 /* TartVMBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TartVMBackend.swift; sourceTree = "<group>"; };
 		ACA20C2A176DB00AD435BCD7 /* MCPKit.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = MCPKit.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACCCB1308EA171EF16B9F04C /* LocalRetrievalIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRetrievalIndex.swift; sourceTree = "<group>"; };
 		AD4AE05D0A840978A90B36C4 /* ComputerUseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComputerUseTests.swift; sourceTree = "<group>"; };
@@ -1363,6 +1368,7 @@
 		D179C4E088707045651E9481 /* AgentOrchestrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentOrchestrator.swift; sourceTree = "<group>"; };
 		D1844C7164F6C29E259C41A2 /* WritingToolsSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WritingToolsSupport.swift; sourceTree = "<group>"; };
 		D1E54B01D0CEEB92A6038E92 /* MCPServerDashboardTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerDashboardTests.swift; sourceTree = "<group>"; };
+		D2073187624347E40F730A22 /* ExecutionEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutionEnvironment.swift; sourceTree = "<group>"; };
 		D22EA774422B67EDF3268A5D /* ScreenPerceptionContractAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenPerceptionContractAuditor.swift; sourceTree = "<group>"; };
 		D326AF58C2BEFC04CC7F728A /* MapSearchTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapSearchTool.swift; sourceTree = "<group>"; };
 		D3680423044E98907CCBB2F0 /* MeshSecurityAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshSecurityAuditor.swift; sourceTree = "<group>"; };
@@ -1973,6 +1979,7 @@
 				6CC18AB32A3DF8C2143150CC /* DotSandboxSnapshotEngine.swift */,
 				8D2F1E2C20493EBA7C41D988 /* DynamicToolbox.swift */,
 				D167A0B5084A0E6678EF5C2C /* DynamicToolRouting.swift */,
+				D2073187624347E40F730A22 /* ExecutionEnvironment.swift */,
 				11E0A8477669508409BBF75C /* FMCLILanguageModel.swift */,
 				12C08988ADE9622B7FB4F53A /* FullDuplexVoiceSession.swift */,
 				B0776AA9BE76DC67FDF4A0BF /* GatewayModels.swift */,
@@ -2034,6 +2041,7 @@
 				27F1418D4187BE8D6678C076 /* SwiftDataStoreIntegrityGate.swift */,
 				C316E8F6E1A7060059F0BA31 /* SwiftSyntaxLintGate.swift */,
 				7217D55CCD9E913BCF50DBF9 /* TartCLIClient.swift */,
+				ABD92B4C412C139D6324E6C5 /* TartVMBackend.swift */,
 				40F98B9AC9559F0CA668F7F5 /* TeamPlaybook.swift */,
 				F324E4CA2B48FE65E1F02C7A /* TestPlanIntegrityAuditor.swift */,
 				2ED5DD2104326A302B1FFA8B /* TickerScheduler.swift */,
@@ -2415,6 +2423,7 @@
 				F8A198C9570501E3AD96FCEE /* ViewHostingTests.swift */,
 				EDF3EA5EA19B9E8380047A46 /* VisualPerceptionAuditorTests.swift */,
 				AE8102260E0AD2CBD2C53A0E /* VisualPerceptionTests.swift */,
+				2847DB722DB79514E5578B05 /* VMRoutingLiveTests.swift */,
 				03B5719A6D5F43D8A558525A /* VMWorkspaceManagerTests.swift */,
 				0EE58BA9AC308C6503387195 /* VoiceSessionAudioAuditorTests.swift */,
 				80649EED2030079A9DD7810E /* VoiceTTSProviderTests.swift */,
@@ -2943,6 +2952,7 @@
 				01063A18A0F26FD1F9762FB5 /* EmptyState.swift in Sources */,
 				07C2B32E3F7941ABE0E2FFB6 /* EntityExtractTool.swift in Sources */,
 				F393E18FAF0D576978E3DE1A /* EphemeralCapabilityManager.swift in Sources */,
+				B0D8887DC408FA3F18C90BD0 /* ExecutionEnvironment.swift in Sources */,
 				F843EBD803D6BD2D7C17CE61 /* ExternalSecretVaultAuditor.swift in Sources */,
 				C7AD55A29C73639A859DB122 /* FMCLILanguageModel.swift in Sources */,
 				67E9CD2ED77821342A356D7A /* FilePatchResilienceAuditor.swift in Sources */,
@@ -3085,6 +3095,7 @@
 				A8D59C36AE4D44EB8E8929F6 /* SwiftSyntaxLintGate.swift in Sources */,
 				93E62A6E487F23B5C5E8B5EB /* SystemInfoTool.swift in Sources */,
 				1FD0C3729710AFE0E9570804 /* TartCLIClient.swift in Sources */,
+				E41D1B6710999CFFE0A48553 /* TartVMBackend.swift in Sources */,
 				E45C5C886DBA1EB70E91E7AA /* TeamPlaybook.swift in Sources */,
 				9B1DDB66711F254A82F2BCF9 /* TerminalSecurityGate.swift in Sources */,
 				C132647E03BE31A9422783FD /* TerminalStateView.swift in Sources */,
@@ -3459,6 +3470,7 @@
 				2D9291BF15AD56B0ABCBEEC5 /* TurnWatchdogAuditorTests.swift in Sources */,
 				D23B9E551FA95B6996955A35 /* TurnWatchdogTests.swift in Sources */,
 				676F8DB33FDDF163DB2062E1 /* UITests.swift in Sources */,
+				7D3E4425F7968B7686723E2F /* VMRoutingLiveTests.swift in Sources */,
 				B82626CA9B6C96BBB2C79D94 /* VMWorkspaceManagerTests.swift in Sources */,
 				6ED3A0191CCE489985E5FC9B /* ViewHostingTests.swift in Sources */,
 				3E9C037A51D3F763C035CEB9 /* VisualPerceptionAuditorTests.swift in Sources */,

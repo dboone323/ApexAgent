@@ -100,6 +100,7 @@ public final class SpaceModel {
     public var workspacePath: String
     public var memoryNamespace: String
     public var defaultOrchestrationModeRaw: String
+    public var executionTargetRaw: String
     public var inviteToken: String
     public var createdAt: Date
     public var updatedAt: Date
@@ -122,7 +123,8 @@ public final class SpaceModel {
         iconName: String = "person.3.sequence.fill",
         summary: String = "",
         workspacePath: String? = nil,
-        defaultOrchestrationMode: SpaceOrchestrationMode = .mentionDriven
+        defaultOrchestrationMode: SpaceOrchestrationMode = .mentionDriven,
+        executionTargetRaw: String = "host"
     ) {
         self.id = id
         self.name = name
@@ -133,6 +135,7 @@ public final class SpaceModel {
         self.workspacePath = workspacePath ?? baseDir.appendingPathComponent("workspace").path
         self.memoryNamespace = "spaces/\(id.uuidString)"
         self.defaultOrchestrationModeRaw = defaultOrchestrationMode.rawValue
+        self.executionTargetRaw = executionTargetRaw
         self.inviteToken = String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(12)).lowercased()
         self.createdAt = Date()
         self.updatedAt = Date()
@@ -142,6 +145,10 @@ public final class SpaceModel {
         get { SpaceOrchestrationMode(rawValue: defaultOrchestrationModeRaw) ?? .mentionDriven }
         set { defaultOrchestrationModeRaw = newValue.rawValue }
     }
+
+    public var executionTarget: String { executionTargetRaw }
+
+    public var isSandboxVM: Bool { executionTargetRaw == "tartVM" }
 
     public var sortedChannels: [SpaceChannel] {
         channels.sorted { $0.createdAt < $1.createdAt }

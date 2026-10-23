@@ -32,9 +32,14 @@ actor FakeTartClient: TartClientProtocol {
     func exec(name: String, arguments: [String]) async throws -> (stdout: String, stderr: String, exitCode: Int32) {
         execResult
     }
+    func execStdin(name: String, arguments: [String], input: Data) async throws -> (stdout: String, stderr: String, exitCode: Int32) {
+        execResult
+    }
+
     func ip(name: String, wait: Int?) async throws -> String {
         "192.168.2.20"
     }
+
     func stop(name: String) async throws {
         stopCalled = true
     }
@@ -113,6 +118,7 @@ struct VMWorkspaceManagerTests {
             #expect(error is VMWorkspaceManager.ManagerError)
         }
     }
+
 
     @Test func buildLockSerializes() async throws {
         let fake = FakeTartClient()

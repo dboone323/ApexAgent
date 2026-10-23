@@ -40,6 +40,7 @@ public protocol TartClientProtocol: Sendable {
     func set(name: String, cpu: Int?, memoryMB: Int?) async throws
     func run(name: String, softnet: Bool) async throws
     func exec(name: String, arguments: [String]) async throws -> (stdout: String, stderr: String, exitCode: Int32)
+    func execStdin(name: String, arguments: [String], input: Data) async throws -> (stdout: String, stderr: String, exitCode: Int32)
     func ip(name: String, wait: Int?) async throws -> String
     func stop(name: String) async throws
     func delete(name: String) async throws
@@ -106,6 +107,10 @@ public actor TartCLIClient: TartClientProtocol {
 
     public static func execArguments(name: String, arguments: [String]) -> [String] {
         ["exec", name] + arguments
+    }
+
+    public static func execStdinArguments(name: String, arguments: [String]) -> [String] {
+        ["exec", "-i", name] + arguments
     }
 
     public static func ipArguments(name: String, wait: Int? = nil) -> [String] {
@@ -215,6 +220,36 @@ public actor TartCLIClient: TartClientProtocol {
         } catch {
             throw TartCLIClientError.launchFailed(error.localizedDescription)
         }
+
+        let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
+        let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
+        process.waitUntilExit()
+
+        let stdout = String(data: outData, encoding: .utf8) ?? ""
+        let stderr = String(data: errData, encoding: .utf8) ?? ""
+        return (stdout, stderr, process.terminationStatus)
+    }
+
+    public func execStdin(name: String, arguments: [String], input: Data) async throws -> (stdout: String, stderr: String, exitCode: Int32) {
+        let process = Process()
+        process.executableURL = binaryURL
+        process.arguments = Self.execStdinArguments(name: name, arguments: arguments)
+
+        let inPipe = Pipe()
+        let outPipe = Pipe()
+        let errPipe = Pipe()
+        process.standardInput = inPipe
+        process.standardOutput = outPipe
+        process.standardError = errPipe
+
+        do {
+            try process.run()
+        } catch {
+            throw TartCLIClientError.launchFailed(error.localizedDescription)
+        }
+
+        inPipe.fileHandleForWriting.write(input)
+        try? inPipe.fileHandleForWriting.close()
 
         let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
         let errData = errPipe.fileHandleForReading.readDataToEndOfFile()

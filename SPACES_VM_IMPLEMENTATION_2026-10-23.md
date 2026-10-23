@@ -18,7 +18,7 @@
 - Lint gate: `Tools/scripts/lint-changed-swift.sh` (no changed tracked files pre-commit; new files pass `swift format` with only style warnings).
 
 ## Commit
-`2ba20f58 feat(spaces-vm): add TartCLIClient and VMWorkspaceManager (Phase 1)`
+`16511023 feat(spaces-vm): add TartCLIClient and VMWorkspaceManager (Phase 1)`
 
 ## Verification evidence (post-rework)
 
