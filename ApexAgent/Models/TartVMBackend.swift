@@ -32,7 +32,7 @@ public actor TartVMBackend {
     }
 
     public func runShell(command: String, timeout: Int = 30) async throws -> (stdout: String, stderr: String, exitCode: Int32) {
-        let full = "cd \(shellEscape(guestCheckout)) && \(command)"
+        let full = "cd \(guestCheckout) && \(command)"
         return try await runRaw(full)
     }
 
@@ -42,6 +42,7 @@ public actor TartVMBackend {
 
     public func seedIfNeeded(workspacePath: String? = nil) async throws {
         if seeded { return }
+        try await ensureReady()
         let name = VMWorkspaceManager.vmName(for: spaceID)
         let check = try? await client.exec(name: name, arguments: ["sh", "-c", "test -d ~/ApexAgent/.git && echo SEEDED"])
         if let c = check, c.exitCode == 0 && c.stdout.contains("SEEDED") {
@@ -70,11 +71,11 @@ public actor TartVMBackend {
 
         _ = try await client.execStdin(name: name, arguments: ["sh", "-c", "cat > /tmp/seed.bundle"], input: bundleData)
 
-        let verify = try await client.exec(name: name, arguments: ["sh", "-c", "git bundle verify /tmp/seed.bundle"])
+        let verify = try await client.exec(name: name, arguments: ["sh", "-c", "rm -rf /tmp/seed-verify && git init -q /tmp/seed-verify && git -C /tmp/seed-verify bundle verify /tmp/seed.bundle"])
         guard verify.exitCode == 0 else {
             throw NSError(domain: "TartVMBackend", code: 3, userInfo: [NSLocalizedDescriptionKey: "bundle verify failed: \(verify.stderr)"])
         }
-        let clone = try await client.exec(name: name, arguments: ["sh", "-c", "rm -rf ~/ApexAgent && git clone /tmp/seed.bundle ~/ApexAgent && cd ~/ApexAgent && git checkout \(branch)"])
+        let clone = try await client.exec(name: name, arguments: ["sh", "-c", "rm -rf ~/ApexAgent && git clone /tmp/seed.bundle ~/ApexAgent && cd ~/ApexAgent && git checkout -B \(branch)"])
         guard clone.exitCode == 0 else {
             throw NSError(domain: "TartVMBackend", code: 4, userInfo: [NSLocalizedDescriptionKey: "clone failed: \(clone.stderr)"])
         }
@@ -125,6 +126,6 @@ public actor TartVMBackend {
 
     public func git(arguments: [String]) async throws -> (stdout: String, stderr: String, exitCode: Int32) {
         let args = arguments.map { shellEscape($0) }.joined(separator: " ")
-        return try await runShell(command: "git -C \(shellEscape(guestCheckout)) \(args)")
+        return try await runShell(command: "git -C \(guestCheckout) \(args)")
     }
 }

@@ -118,6 +118,7 @@ public actor VMWorkspaceManager {
 
     public func destroy(spaceID: String) async throws {
         let name = Self.vmName(for: spaceID)
+        try? await client.stop(name: name)
         try await client.delete(name: name)
         runningSpaces.remove(spaceID)
         statuses.removeValue(forKey: spaceID)

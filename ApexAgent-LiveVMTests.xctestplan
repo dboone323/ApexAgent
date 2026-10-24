@@ -1,0 +1,81 @@
+{
+  "configurations" : [
+    {
+      "id" : "E2B7A75C-6239-44F0-A03C-726A284451DF",
+      "name" : "Default Configuration",
+      "options" : {
+        "environmentVariableEntries" : [
+          {
+            "enabled" : true,
+            "key" : "APEX_TEST_MODE",
+            "value" : "1"
+          },
+          {
+            "enabled" : true,
+            "key" : "APEX_LIVE_VM",
+            "value" : "1"
+          }
+        ]
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : {
+      "targets" : [
+        {
+          "containerPath" : "container:ApexAgent.xcodeproj",
+          "name" : "ApexAgentCore"
+        },
+        {
+          "containerPath" : "container:ApexAgent.xcodeproj",
+          "name" : "SharedKit"
+        },
+        {
+          "containerPath" : "container:ApexAgent.xcodeproj",
+          "name" : "MCPKit"
+        },
+        {
+          "containerPath" : "container:ApexAgent.xcodeproj",
+          "name" : "SharedModels"
+        },
+        {
+          "containerPath" : "container:ApexAgent.xcodeproj",
+          "name" : "SharedLogging"
+        },
+        {
+          "containerPath" : "container:ApexAgent.xcodeproj",
+          "name" : "ApexAgentIntents"
+        }
+      ]
+    },
+    "defaultTestExecutionTimeAllowance" : 60,
+    "maximumTestExecutionTimeAllowance" : 2700,
+    "testExecutionOrdering" : "random",
+    "testTimeoutsEnabled" : true,
+    "userAttachmentLifetime" : "deleteOnSuccess"
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:ApexAgent.xcodeproj",
+        "name" : "ApexAgentTests"
+      }
+    },
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:ApexAgent.xcodeproj",
+        "name" : "ApexAgentIntelligenceTests"
+      }
+    },
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:ApexAgent.xcodeproj",
+        "name" : "ApexAgentContainerTests"
+      }
+    }
+  ],
+  "version" : 1
+}

@@ -14,8 +14,8 @@ struct TartCLIClientPureTests {
     }
 
     @Test func runArguments() {
-        #expect(TartCLIClient.runArguments(name: "apex-shared", softnet: true) == ["--net-softnet", "apex-shared"])
-        #expect(TartCLIClient.runArguments(name: "apex-shared", softnet: false) == ["apex-shared"])
+        #expect(TartCLIClient.runArguments(name: "apex-shared", softnet: true) == ["run", "--net-softnet", "apex-shared"])
+        #expect(TartCLIClient.runArguments(name: "apex-shared", softnet: false) == ["run", "apex-shared"])
     }
 
     @Test func execArguments() {

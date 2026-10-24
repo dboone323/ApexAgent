@@ -97,12 +97,7 @@ public actor TartCLIClient: TartClientProtocol {
     }
 
     public static func runArguments(name: String, softnet: Bool) -> [String] {
-        var args: [String] = []
-        if softnet {
-            args.append("--net-softnet")
-        }
-        args.append(name)
-        return args
+        ["run"] + (softnet ? ["--net-softnet"] : []) + [name]
     }
 
     public static func execArguments(name: String, arguments: [String]) -> [String] {

@@ -33,7 +33,10 @@ actor FakeTartClient: TartClientProtocol {
         runCalled = true
     }
     func exec(name: String, arguments: [String]) async throws -> (stdout: String, stderr: String, exitCode: Int32) {
-        execResult
+        if arguments == ["echo", "ok"] {
+            return (stdout: "ok\n", stderr: "", exitCode: 0)
+        }
+        return execResult
     }
     func execStdin(name: String, arguments: [String], input: Data) async throws -> (stdout: String, stderr: String, exitCode: Int32) {
         execResult
