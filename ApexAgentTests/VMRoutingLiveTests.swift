@@ -4,8 +4,9 @@ import Foundation
 
 @Suite("VMRoutingLiveTests", .serialized)
 struct VMRoutingLiveTests {
-    @Test("vm routing smoke", .enabled(if: ProcessInfo.processInfo.environment["APEX_LIVE_VM"] == "1"))
+    @Test("vm routing smoke", .enabled(if: ProcessInfo.processInfo.environment["APEX_LIVE_VM"] == "1"), .timeLimit(.minutes(10)))
     func smoke() async throws {
+        TestLog.beginRun(test: "VMRoutingLiveTests-smoke", runID: UUID().uuidString)
         // scratch git repo
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("scratch-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
@@ -33,26 +34,42 @@ struct VMRoutingLiveTests {
         let manager = VMWorkspaceManager()
         let backend = TartVMBackend(spaceID: "smoke", manager: manager)
         defer { Task { try? await manager.destroy(spaceID: "smoke") } }
+        TestLog.append(test: "VMRoutingLiveTests-smoke", phase: "provision", message: "start")
+        let provisionStart = Date()
         try await manager.ensureProvisioned(spaceID: "smoke")
+        TestLog.append(test: "VMRoutingLiveTests-smoke", phase: "ready", message: "launch-to-ready \(String(format: "%.3f", Date().timeIntervalSince(provisionStart)))s")
+        TestLog.append(test: "VMRoutingLiveTests-smoke", phase: "provision", message: "end")
+        TestLog.append(test: "VMRoutingLiveTests-smoke", phase: "seed", message: "start")
+        let seedStart = Date()
         try await backend.seed(workspacePath: tmp.path)
+        TestLog.append(test: "VMRoutingLiveTests-smoke", phase: "seed", message: "end \(String(format: "%.3f", Date().timeIntervalSince(seedStart)))s")
 
+        TestLog.append(test: "VMRoutingLiveTests-smoke", phase: "shell", message: "start")
         let (out, _, code) = try await backend.runShell(command: "echo hi && pwd")
+        TestLog.append(test: "VMRoutingLiveTests-smoke", phase: "shell", message: "end code=\(code) out=\(out.trimmingCharacters(in: .whitespacesAndNewlines))")
         #expect(code == 0)
         #expect(out.contains("hi"))
 
+        TestLog.append(test: "VMRoutingLiveTests-smoke", phase: "file", message: "start")
         try await backend.writeFile(relativePath: "foo.txt", content: "bar")
         let read = try await backend.readFile(relativePath: "foo.txt")
+        TestLog.append(test: "VMRoutingLiveTests-smoke", phase: "file", message: "end read=\(read.trimmingCharacters(in: .whitespacesAndNewlines))")
         #expect(read.contains("bar"))
 
+        TestLog.append(test: "VMRoutingLiveTests-smoke", phase: "git", message: "start")
         let (gout, _, gcode) = try await backend.git(arguments: ["log", "--oneline"])
+        TestLog.append(test: "VMRoutingLiveTests-smoke", phase: "git", message: "end code=\(gcode)")
         #expect(gcode == 0)
         #expect(gout.contains("c1") || gout.contains("c2"))
 
+        TestLog.append(test: "VMRoutingLiveTests-smoke", phase: "destroy", message: "start")
         try await manager.destroy(spaceID: "smoke")
+        TestLog.append(test: "VMRoutingLiveTests-smoke", phase: "destroy", message: "end")
     }
 
-    @Test("tool-level routing smoke", .enabled(if: ProcessInfo.processInfo.environment["APEX_LIVE_VM"] == "1"))
+    @Test("tool-level routing smoke", .enabled(if: ProcessInfo.processInfo.environment["APEX_LIVE_VM"] == "1"), .timeLimit(.minutes(10)))
     func toolLevelRouting() async throws {
+        TestLog.beginRun(test: "VMRoutingLiveTests-toolLevelRouting", runID: UUID().uuidString)
         // scratch git repo
         let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("scratch-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
@@ -75,27 +92,40 @@ struct VMRoutingLiveTests {
         try runGit(["-c", "user.email=t@t.com", "-c", "user.name=t", "commit", "-m", "c1"], cwd: tmp)
 
         // Resolve a .tartVM environment through the SAME resolver the tools call.
+        TestLog.append(test: "VMRoutingLiveTests-toolLevelRouting", phase: "resolve", message: "start")
         let space = SpaceModel(name: "smoke", workspacePath: tmp.path, executionTargetRaw: "tartVM")
         let env = ExecutionEnvironmentResolver.resolve(space: space, containerEnabled: false)
         guard case .tartVM(let spaceID) = env else {
             throw NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "expected .tartVM"])
         }
         #expect(spaceID == space.id.uuidString)
+        TestLog.append(test: "VMRoutingLiveTests-toolLevelRouting", phase: "resolve", message: "end spaceID=\(spaceID)")
 
         // Exercise the shared routing layer the tools use: backend registry + seed + shell + file.
+        TestLog.append(test: "VMRoutingLiveTests-toolLevelRouting", phase: "registry", message: "start")
         let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
+        TestLog.append(test: "VMRoutingLiveTests-toolLevelRouting", phase: "registry", message: "end")
         defer { Task { try? await backend.manager.destroy(spaceID: spaceID) } }
+        TestLog.append(test: "VMRoutingLiveTests-toolLevelRouting", phase: "seed", message: "start")
+        let seedStart = Date()
         try await backend.seed(workspacePath: tmp.path)
+        TestLog.append(test: "VMRoutingLiveTests-toolLevelRouting", phase: "seed", message: "end \(String(format: "%.3f", Date().timeIntervalSince(seedStart)))s")
 
+        TestLog.append(test: "VMRoutingLiveTests-toolLevelRouting", phase: "shell", message: "start")
         let (out, _, code) = try await backend.runShell(command: "echo tool-level && pwd")
+        TestLog.append(test: "VMRoutingLiveTests-toolLevelRouting", phase: "shell", message: "end code=\(code)")
         #expect(code == 0)
         #expect(out.contains("tool-level"))
 
+        TestLog.append(test: "VMRoutingLiveTests-toolLevelRouting", phase: "file", message: "start")
         try await backend.writeFile(relativePath: "tool.txt", content: "routed")
         let read = try await backend.readFile(relativePath: "tool.txt")
+        TestLog.append(test: "VMRoutingLiveTests-toolLevelRouting", phase: "file", message: "end read=\(read.trimmingCharacters(in: .whitespacesAndNewlines))")
         #expect(read.contains("routed"))
 
+        TestLog.append(test: "VMRoutingLiveTests-toolLevelRouting", phase: "destroy", message: "start")
         try await backend.manager.destroy(spaceID: spaceID)
+        TestLog.append(test: "VMRoutingLiveTests-toolLevelRouting", phase: "destroy", message: "end")
     }
 }
 
