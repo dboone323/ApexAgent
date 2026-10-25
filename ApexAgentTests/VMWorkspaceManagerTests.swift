@@ -2,6 +2,8 @@ import Testing
 import Foundation
 @testable import ApexAgentCore
 
+struct TestError: Error {}
+
 actor OrderCollector {
     private var values: [Int] = []
     func append(_ value: Int) { values.append(value) }
@@ -17,24 +19,46 @@ actor FakeTartClient: TartClientProtocol {
     private(set) var deleteCalled = false
     var execResult: (stdout: String, stderr: String, exitCode: Int32) = ("ok\n", "", 0)
 
+    // Failure simulation
+    var cloneError: Error?
+    var setError: Error?
+    var runError: Error?
+    var stopError: Error?
+    var deleteError: Error?
+    var execError: Error?
+    var readyReturnsOk: Bool = true
+
     func setVMs(_ vms: [TartVMInfo]) { self.vms = vms }
     func setExecResult(_ r: (stdout: String, stderr: String, exitCode: Int32)) {
         self.execResult = r
     }
+    func setReadyReturnsOk(_ value: Bool) { self.readyReturnsOk = value }
+    func setCloneError(_ value: Error?) { self.cloneError = value }
+    func setSetError(_ value: Error?) { self.setError = value }
+    func setDeleteError(_ value: Error?) { self.deleteError = value }
 
     func clone(source: String, name: String) async throws {
+        if let e = cloneError { throw e }
         cloneCalled = true
         vms.append(TartVMInfo(name: name, source: "local", state: "stopped", running: false, diskSize: 10, size: 10))
     }
     func set(name: String, cpu: Int?, memoryMB: Int?) async throws {
+        if let e = setError { throw e }
         setCalled = true
     }
     func run(name: String, softnet: Bool) async throws {
+        if let e = runError { throw e }
         runCalled = true
     }
     func exec(name: String, arguments: [String]) async throws -> (stdout: String, stderr: String, exitCode: Int32) {
+        if let e = execError { throw e }
+        let joined = arguments.joined(separator: " ")
+        if joined.contains("xcresulttool") && joined.contains("summary") {
+            return (stdout: "{\"passedTests\":5,\"failedTests\":0,\"skippedTests\":0,\"totalTestCount\":5}\n", stderr: "", exitCode: 0)
+        }
         if arguments == ["echo", "ok"] {
-            return (stdout: "ok\n", stderr: "", exitCode: 0)
+            if readyReturnsOk { return (stdout: "ok\n", stderr: "", exitCode: 0) }
+            return (stdout: "", stderr: "", exitCode: 1)
         }
         return execResult
     }
@@ -47,9 +71,11 @@ actor FakeTartClient: TartClientProtocol {
     }
 
     func stop(name: String) async throws {
+        if let e = stopError { throw e }
         stopCalled = true
     }
     func delete(name: String) async throws {
+        if let e = deleteError { throw e }
         deleteCalled = true
         vms.removeAll { $0.name == name }
     }
@@ -126,6 +152,53 @@ struct VMWorkspaceManagerTests {
     }
 
 
+    @Test func startIfNeededTimeoutStopsAndDeletes() async throws {
+        let fake = FakeTartClient()
+        await fake.setVMs([TartVMInfo(name: "apex-space-alpha", source: "local", state: "stopped", running: false, diskSize: 10, size: 10)])
+        await fake.setReadyReturnsOk(false)
+        let mgr = VMWorkspaceManager(client: fake, readyTimeoutSeconds: 1)
+        try await mgr.ensureProvisioned(spaceID: "alpha")
+        do {
+            try await mgr.startIfNeeded(spaceID: "alpha")
+            #expect(Bool(false), "expected timeout")
+        } catch {
+            #expect(error is TartCLIClientError)
+        }
+        #expect(await fake.stopCalled)
+        #expect(await fake.deleteCalled)
+    }
+
+    @Test func ensureProvisionedSetFailureDeletesClone() async throws {
+        let fake = FakeTartClient()
+        await fake.setSetError(TestError())
+        let mgr = VMWorkspaceManager(client: fake, readyTimeoutSeconds: 1)
+        do {
+            try await mgr.ensureProvisioned(spaceID: "alpha")
+            #expect(Bool(false), "expected failure")
+        } catch {
+            #expect(error is TestError)
+        }
+        #expect(await fake.cloneCalled)
+        #expect(await fake.deleteCalled)
+    }
+
+    @Test func destroyDeleteFailureCleansBookkeeping() async throws {
+        let fake = FakeTartClient()
+        await fake.setVMs([TartVMInfo(name: "apex-space-alpha", source: "local", state: "stopped", running: false, diskSize: 10, size: 10)])
+        let mgr = VMWorkspaceManager(client: fake, readyTimeoutSeconds: 1)
+        try await mgr.ensureProvisioned(spaceID: "alpha")
+        try await mgr.startIfNeeded(spaceID: "alpha")
+        await fake.setDeleteError(TestError())
+        do {
+            try await mgr.destroy(spaceID: "alpha")
+            #expect(Bool(false), "expected failure")
+        } catch {
+            #expect(error is TestError)
+        }
+        #expect(await mgr.runningCount == 0)
+        #expect(await mgr.status(for: "alpha") == .notProvisioned)
+    }
+
     @Test func buildLockSerializes() async throws {
         let fake = FakeTartClient()
         let mgr = VMWorkspaceManager(client: fake, readyTimeoutSeconds: 1)
@@ -142,5 +215,20 @@ struct VMWorkspaceManagerTests {
         _ = try await (a, b)
         let order = await collector.snapshot()
         #expect(order == [1, 2, 3, 4])
+    }
+
+    @Test func reconcileStaleVMsDeletesUntrackedAndSparesBase() async throws {
+        let fake = FakeTartClient()
+        await fake.setVMs([
+            TartVMInfo(name: "apex-space-orphan", source: "local", state: "stopped", running: false, diskSize: 10, size: 10),
+            TartVMInfo(name: "apex-base", source: "local", state: "stopped", running: false, diskSize: 10, size: 10),
+            TartVMInfo(name: "other-vm", source: "local", state: "stopped", running: false, diskSize: 10, size: 10),
+        ])
+        let mgr = VMWorkspaceManager(client: fake, readyTimeoutSeconds: 1)
+        await mgr.reconcileStaleVMs()
+        let remaining = await fake.vms.map(\.name)
+        #expect(!remaining.contains("apex-space-orphan"))
+        #expect(remaining.contains("apex-base"))
+        #expect(remaining.contains("other-vm"))
     }
 }

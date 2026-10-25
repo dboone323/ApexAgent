@@ -56,16 +56,21 @@ public actor VMWorkspaceManager {
 
     public func ensureProvisioned(spaceID: String) async throws {
         let name = Self.vmName(for: spaceID)
+        var cloned = false
         do {
             let vms = try await client.list()
             if !vms.contains(where: { $0.name == name }) {
                 try await client.clone(source: sourceName, name: name)
+                cloned = true
             }
             try await client.set(name: name, cpu: cpu, memoryMB: memoryMB)
             if statuses[spaceID] == nil || statuses[spaceID] == .notProvisioned {
                 statuses[spaceID] = .stopped
             }
         } catch {
+            if cloned {
+                try? await client.delete(name: name)
+            }
             statuses[spaceID] = .error(String(describing: error))
             throw error
         }
@@ -99,6 +104,10 @@ public actor VMWorkspaceManager {
                 try await Task.sleep(nanoseconds: 2_000_000_000)
             }
             statuses[spaceID] = .error("VM did not become ready within \(Int(readyTimeoutSeconds))s")
+            // Best-effort teardown so the VM is not left running/untracked.
+            try? await client.stop(name: name)
+            try? await client.delete(name: name)
+            runningSpaces.remove(spaceID)
             throw TartCLIClientError.timeout
         } catch let error as TartCLIClientError {
             statuses[spaceID] = .error(String(describing: error))
@@ -119,9 +128,25 @@ public actor VMWorkspaceManager {
     public func destroy(spaceID: String) async throws {
         let name = Self.vmName(for: spaceID)
         try? await client.stop(name: name)
+        defer {
+            runningSpaces.remove(spaceID)
+            statuses.removeValue(forKey: spaceID)
+        }
         try await client.delete(name: name)
-        runningSpaces.remove(spaceID)
-        statuses.removeValue(forKey: spaceID)
+    }
+
+    // Reconcile VMs left on disk by a previous (crashed/timed-out) process.
+    // Stops + deletes any `apex-space-*` VM not currently tracked in runningSpaces.
+    // NEVER touches `apex-base` or any VM without the `apex-space-` prefix.
+    public func reconcileStaleVMs() async {
+        guard let vms = try? await client.list() else { return }
+        let trackedNames = Set(runningSpaces.map { Self.vmName(for: $0) })
+        for vm in vms {
+            guard vm.name.hasPrefix(Self.vmNamePrefix) else { continue }
+            guard !trackedNames.contains(vm.name) else { continue }
+            try? await client.stop(name: vm.name)
+            try? await client.delete(name: vm.name)
+        }
     }
 
     // MARK: Build lock

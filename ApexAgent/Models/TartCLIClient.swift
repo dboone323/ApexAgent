@@ -174,6 +174,12 @@ public actor TartCLIClient: TartClientProtocol {
 
     private var runningProcesses: [String: Process] = [:]
 
+    private func removeRunningProcess(named name: String, process: Process) {
+        if runningProcesses[name] === process {
+            runningProcesses.removeValue(forKey: name)
+        }
+    }
+
     public func clone(source: String, name: String) async throws {
         _ = try await execute(Self.cloneArguments(source: source, name: name))
     }
@@ -191,6 +197,10 @@ public actor TartCLIClient: TartClientProtocol {
         let errPipe = Pipe()
         process.standardOutput = outPipe
         process.standardError = errPipe
+
+        process.terminationHandler = { [weak self] proc in
+            Task { await self?.removeRunningProcess(named: name, process: proc) }
+        }
 
         do {
             try process.run()
@@ -264,16 +274,27 @@ public actor TartCLIClient: TartClientProtocol {
     }
 
     public func stop(name: String) async throws {
-        _ = try await execute(Self.stopArguments(name: name))
+        var thrown: Error?
+        do {
+            _ = try await execute(Self.stopArguments(name: name))
+        } catch {
+            thrown = error
+        }
         if let process = runningProcesses[name] {
             process.terminate()
             runningProcesses.removeValue(forKey: name)
         }
+        if let thrown { throw thrown }
     }
 
     public func delete(name: String) async throws {
         _ = try await execute(Self.deleteArguments(name: name))
-        runningProcesses.removeValue(forKey: name)
+        if let process = runningProcesses[name] {
+            process.terminate()
+            runningProcesses.removeValue(forKey: name)
+        } else {
+            runningProcesses.removeValue(forKey: name)
+        }
     }
 
     public func list() async throws -> [TartVMInfo] {
