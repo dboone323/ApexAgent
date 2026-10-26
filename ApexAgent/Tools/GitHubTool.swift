@@ -309,10 +309,9 @@ struct GitHubTool: Tool {
             if args.body != nil { cmd += ["--with-token"] } // body would be token via stdin - simplified
             return try await runCommand(ghPath, cmd)
         case "token":
-            let cmd = [ghPath, "auth", "token"]
-            return try await runCommand(ghPath, cmd)
+            throw NSError(domain: "GitHubTool", code: 4, userInfo: [NSLocalizedDescriptionKey: "The 'auth token' sub-action is disabled to prevent token leakage."])
         default:
-            throw NSError(domain: "GitHubTool", code: 4, userInfo: [NSLocalizedDescriptionKey: "Unknown auth sub-action '\(sub)'. Use: status, login, token"])
+            throw NSError(domain: "GitHubTool", code: 4, userInfo: [NSLocalizedDescriptionKey: "Unknown auth sub-action '\(sub)'. Use: status, login"])
         }
     }
 

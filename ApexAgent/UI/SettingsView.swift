@@ -122,7 +122,7 @@ struct SettingsView: View {
     @AppStorage("apex.collaborativeServerEnabled") private var collaborativeServerEnabled: Bool = false
     @AppStorage("apex.collaborativeServerPort") private var collaborativeServerPort: Int = 1340
     @AppStorage("apex.lanModeEnabled") private var lanModeEnabled: Bool = false
-    @AppStorage("apex.collabToken") private var collabToken: String = ""
+    @State private var collabToken: String = ""
     @AppStorage("apex.multiAgentModeEnabled") private var multiAgentModeEnabled: Bool = false
     @AppStorage("apex.voiceLocale") private var voiceLocale: String = "en-US"
     @AppStorage("apex.voiceSpeechRate") private var voiceSpeechRate: Double = 0.52
@@ -1064,7 +1064,7 @@ struct CollaborativeServerSettingsSection: View {
     // (AUDIT_2026-09-28 §3.2.19) — sharing the port caused silent bind failures.
     @AppStorage("apex.collaborativeServerPort") private var collaborativeServerPort: Int = 1340
     @AppStorage("apex.lanModeEnabled") private var lanModeEnabled: Bool = false
-    @AppStorage("apex.collabToken") private var collabToken: String = ""
+    @State private var collabToken: String = ""
     
     private var collaborativeServerURL: URL? {
         let serverURLString = lanModeEnabled 
@@ -1097,6 +1097,10 @@ struct CollaborativeServerSettingsSection: View {
             } else {
                 CollaborativeServer.shared.stop()
             }
+        }
+        .onAppear { collabToken = ModelRegistry.collabToken() }
+        .onChange(of: collabToken) { _, newValue in
+            ModelRegistry.setCollabToken(newValue)
         }
 
         if collaborativeServerEnabled {
