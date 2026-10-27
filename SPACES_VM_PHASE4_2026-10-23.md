@@ -48,7 +48,7 @@ tasks-ws6-mcp-resilience.md
 
 ## Commit
 
-Commit on `feat/spaces-vm`: `693482ea` — `Spaces-on-VM Phase 4: retire ApexSandbox harness, archive loop scripts, update docs`
+Commit on `feat/spaces-vm`: `f1869971` — `Spaces-on-VM Phase 4: retire ApexSandbox harness, archive loop scripts, update docs`
 
 Contains repo-side changes only: `TASK_MANIFEST.md`, `PROJECT.md`, `SECURITY.md`, `SPACES_VM_PHASE4_2026-10-23.md`. The archive moves (`run.sh`, `watcher.py`, `task-prompt.txt`, `stop.sh`, `proxy.py`, `allowlist.txt`) live outside the repo under `~/ApexSandbox/archive-2026-10-23/` and are not part of the commit.
 EOF

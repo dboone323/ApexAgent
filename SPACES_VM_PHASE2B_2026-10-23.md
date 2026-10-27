@@ -43,4 +43,4 @@
 
 ## Commit
 - Branch: `feat/spaces-vm` (no merge).
-- Commit hash: ccc5eb41
+- Commit hash: ccd927e7

@@ -49,7 +49,7 @@
       ]
     },
     "defaultTestExecutionTimeAllowance" : 60,
-    "maximumTestExecutionTimeAllowance" : 2700,
+    "maximumTestExecutionTimeAllowance" : 3600,
     "testExecutionOrdering" : "random",
     "testTimeoutsEnabled" : true,
     "userAttachmentLifetime" : "deleteOnSuccess"

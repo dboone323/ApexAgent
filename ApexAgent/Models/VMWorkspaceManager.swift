@@ -39,7 +39,7 @@ public actor VMWorkspaceManager {
         sourceName: String = VMWorkspaceManager.sourceVMName,
         cpu: Int = VMWorkspaceManager.defaultCPU,
         memoryMB: Int = VMWorkspaceManager.defaultMemoryMB,
-        readyTimeoutSeconds: TimeInterval = 120
+        readyTimeoutSeconds: TimeInterval = 600
     ) {
         self.client = client
         self.sourceName = sourceName

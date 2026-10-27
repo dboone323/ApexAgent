@@ -441,3 +441,96 @@ public final class SpacePageProposal: @unchecked Sendable {
     }
 }
 
+import Foundation
+
+public enum ChatAutocomplete {
+
+    public enum Trigger: Character, Sendable {
+        case mention = "@"
+        case command = "/"
+    }
+
+    public struct Suggestion: Identifiable, Hashable, Sendable {
+        public let id: UUID
+        public let display: String
+        public let insertion: String
+        public init(display: String, insertion: String) {
+            self.id = UUID()
+            self.display = display
+            self.insertion = insertion
+        }
+    }
+
+    public static func currentToken(in text: String) -> String? {
+        if text.isEmpty { return nil }
+        var start = text.endIndex
+        while start > text.startIndex {
+            let prev = text.index(before: start)
+            if text[prev].isWhitespace { break }
+            start = prev
+        }
+        if start == text.endIndex { return nil }
+        return String(text[start..<text.endIndex])
+    }
+
+    public static func trigger(for token: String) -> Trigger? {
+        guard let first = token.first else { return nil }
+        switch first {
+        case "@": return .mention
+        case "/": return .command
+        default: return nil
+        }
+    }
+
+    public static func isActiveTrigger(in text: String) -> Bool {
+        guard let token = currentToken(in: text) else { return false }
+        return trigger(for: token) != nil
+    }
+
+    public static func query(for token: String) -> String {
+        guard token.count > 1 else { return "" }
+        return String(token.dropFirst())
+    }
+
+    public static func mentionSuggestions(botNames: [String], query: String) -> [Suggestion] {
+        let q = query.lowercased()
+        return botNames
+            .filter { bot in
+                if q.isEmpty { return true }
+                if bot.localizedCaseInsensitiveContains(q) { return true }
+                return handle(for: bot).localizedCaseInsensitiveContains(q)
+            }
+            .map { name in
+                Suggestion(display: name, insertion: "@" + handle(for: name))
+            }
+    }
+
+    public static func commandSuggestions(commands: [String], query: String) -> [Suggestion] {
+        let q = query.lowercased()
+        return commands
+            .filter { q.isEmpty || $0.localizedCaseInsensitiveContains(q) }
+            .map { Suggestion(display: $0, insertion: "/" + $0) }
+    }
+
+    public static func applyInsertion(_ insertion: String, to text: String) -> String {
+        guard let token = currentToken(in: text) else {
+            var result = text + insertion
+            if !result.hasSuffix(" ") { result += " " }
+            return result
+        }
+        let tokenStart = text.index(text.endIndex, offsetBy: -token.count)
+        var result = String(text[..<tokenStart]) + insertion
+        if !result.hasSuffix(" ") { result += " " }
+        return result
+    }
+
+    private static func handle(for raw: String) -> String {
+        let cleaned = raw
+            .lowercased()
+            .replacingOccurrences(of: "@", with: "")
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "-")
+        return cleaned.isEmpty ? "member" : cleaned
+    }
+}
