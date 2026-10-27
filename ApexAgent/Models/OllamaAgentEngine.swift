@@ -81,7 +81,9 @@ final class OllamaAgentEngine: AgentEngine {
             toolCallingMode: toolCallingMode,
             orchestrator: orch,
             onUpdate: { str in
+                guard !Task.isCancelled else { return }
                 Task { @MainActor in
+                    guard !Task.isCancelled else { return }
                     onUpdate(str)
                 }
             }
@@ -308,7 +310,9 @@ struct OllamaStreamingEngine: AgentEngine {
             toolCallingMode: toolCallingMode,
             orchestrator: orchestrator,
             onUpdate: { str in
+                guard !Task.isCancelled else { return }
                 Task { @MainActor in
+                    guard !Task.isCancelled else { return }
                     onUpdate(str)
                 }
             }

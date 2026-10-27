@@ -65,13 +65,21 @@ struct SpotlightSearchTool: Tool {
     /// is local to the notification closure, and results are returned via the
     /// continuation rather than a shared mutable `var`.
     static func runSpotlightQuery(query: String, maxResults: Int, contentType: String?) async -> [SpotlightHit] {
-        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
+        let sanitizedQuery = query
+            .replacingOccurrences(of: "\\", with: "")
+            .replacingOccurrences(of: "'", with: "")
+            .replacingOccurrences(of: "\"", with: "")
+        guard !sanitizedQuery.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
 
         let queryString: String
         if let contentType {
-            queryString = "kMDItemTextContent == '*\(query)*'c && kMDItemContentType == '\(contentType)'"
+            let sanitizedContentType = contentType
+                .replacingOccurrences(of: "\\", with: "")
+                .replacingOccurrences(of: "'", with: "")
+                .replacingOccurrences(of: "\"", with: "")
+            queryString = "kMDItemTextContent == '*\(sanitizedQuery)*'c && kMDItemContentType == '\(sanitizedContentType)'"
         } else {
-            queryString = "kMDItemTextContent == '*\(query)*'c"
+            queryString = "kMDItemTextContent == '*\(sanitizedQuery)*'c"
         }
 
         return await withCheckedContinuation { continuation in
@@ -136,31 +144,7 @@ struct SpotlightSearchTool: Tool {
     }
 }
 
-/// Sendable gate that guarantees `leave()` is called at most once, so the
-/// DispatchGroup wait cannot over-leave if both the gather callback and the
-/// watchdog fire.
-final class SpotlightQueryGate: @unchecked Sendable {
-    let group = DispatchGroup()
-    private var hasLeft = false
-    private let lock = NSLock()
 
-    func enter() { group.enter() }
-    func leave() {
-        lock.lock()
-        defer { lock.unlock() }
-        if !hasLeft {
-            hasLeft = true
-            group.leave()
-        }
-    }
-    func wait() { group.wait() }
-    /// Bounded wait — returns on gather/watchdog leave() or after `timeout`
-    /// seconds, whichever comes first. Never blocks the caller forever.
-    @discardableResult
-    func wait(timeout seconds: TimeInterval) -> DispatchTimeoutResult {
-        group.wait(timeout: .now() + seconds)
-    }
-}
 
 struct SpotlightHit: Sendable {
     let title: String

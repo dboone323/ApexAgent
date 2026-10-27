@@ -88,6 +88,8 @@ let package = Package(
             path: "ApexAgent",
             exclude: [
                 "ApexAgent.entitlements",
+                "ApexAgent-Debug.entitlements",
+                "ApexAgent-Release.entitlements",
                 "Info.plist",
                 "Assets.xcassets",
             ],
