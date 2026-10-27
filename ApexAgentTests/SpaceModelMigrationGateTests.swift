@@ -83,4 +83,22 @@ final class SpaceModelMigrationGateTests: XCTestCase {
 
         XCTAssertEqual(report, decoded)
     }
+
+    func testSpaceModelAndProposalSendableCompliance() {
+        let space = SpaceModel(
+            name: "Compliance Space",
+            summary: "Verifying macro Sendable synthesis without unchecked annotation"
+        )
+        XCTAssertEqual(space.name, "Compliance Space")
+
+        let proposal = SpacePageProposal(
+            pageId: UUID(),
+            pageTitle: "Architecture Proposal",
+            summary: "Hardening test",
+            originalContent: "# Old",
+            proposedContent: "# New"
+        )
+        XCTAssertEqual(proposal.pageTitle, "Architecture Proposal")
+        XCTAssertEqual(proposal.proposedContent, "# New")
+    }
 }

@@ -6,9 +6,11 @@ import AppKit
 
 struct AppleScriptTool: Tool {
     let orchestrator: OrchestratorProvider
+    var timeoutNanoseconds: UInt64
 
-    init(orchestrator: OrchestratorProvider) {
+    init(orchestrator: OrchestratorProvider, timeoutNanoseconds: UInt64 = 30_000_000_000) {
         self.orchestrator = orchestrator
+        self.timeoutNanoseconds = timeoutNanoseconds
     }
 
     let name = "run_applescript"
@@ -32,23 +34,41 @@ struct AppleScriptTool: Tool {
                 return "ERROR: Access to restricted directories (Desktop, Documents, Downloads, or Music) is disabled by system security settings."
             }
             
-            return await withCheckedContinuation { continuation in
-                DispatchQueue.global(qos: .userInitiated).async {
-                    var error: NSDictionary?
-                    let appleScript = NSAppleScript(source: arguments.script)
-                    let result = appleScript?.executeAndReturnError(&error)
+            let timeoutNanos = self.timeoutNanoseconds
+            do {
+                return try await withThrowingTaskGroup(of: String.self) { group in
+                    group.addTask {
+                        await withCheckedContinuation { continuation in
+                            DispatchQueue.global(qos: .userInitiated).async {
+                                var error: NSDictionary?
+                                let appleScript = NSAppleScript(source: arguments.script)
+                                let result = appleScript?.executeAndReturnError(&error)
 
-                    if let error = error {
-                        let errorMsg = error[NSAppleScript.errorMessage] as? String
-                            ?? error[NSAppleScript.errorNumber].map { "Error \($0)" }
-                            ?? "Unknown AppleScript error"
-                        continuation.resume(returning: "ERROR: \(errorMsg)")
-                    } else if let result = result {
-                        continuation.resume(returning: result.stringValue ?? "Script executed successfully (no return value)")
-                    } else {
-                        continuation.resume(returning: "Script executed successfully")
+                                if let error = error {
+                                    let errorMsg = error[NSAppleScript.errorMessage] as? String
+                                        ?? error[NSAppleScript.errorNumber].map { "Error \($0)" }
+                                        ?? "Unknown AppleScript error"
+                                    continuation.resume(returning: "ERROR: \(errorMsg)")
+                                } else if let result = result {
+                                    continuation.resume(returning: result.stringValue ?? "Script executed successfully (no return value)")
+                                } else {
+                                    continuation.resume(returning: "Script executed successfully")
+                                }
+                            }
+                        }
                     }
+
+                    group.addTask {
+                        try await Task.sleep(nanoseconds: timeoutNanos)
+                        return "ERROR: AppleScript execution timed out after 30 seconds."
+                    }
+
+                    let first = try await group.next() ?? "Script executed successfully"
+                    group.cancelAll()
+                    return first
                 }
+            } catch {
+                return "ERROR: AppleScript execution timed out after 30 seconds."
             }
         }
     }

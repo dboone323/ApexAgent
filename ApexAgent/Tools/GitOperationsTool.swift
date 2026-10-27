@@ -46,8 +46,7 @@ struct GitOperationsTool: Tool {
             let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
             do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
             let repoRaw: String = arguments.repoPath ?? (UserDefaults.standard.string(forKey: "apex.workspacePath") ?? wp)
-            let guestRepo: String
-            do { guestRepo = try ExecutionEnvironmentResolver.mapPath(repoRaw, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do { _ = try ExecutionEnvironmentResolver.mapPath(repoRaw, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
             let action = arguments.action.lowercased()
             let cmdArgs: [String]
             switch action {
@@ -232,13 +231,42 @@ struct GitOperationsTool: Tool {
         process.standardError = errPipe
 
         try process.run()
+
+        final class PipeDrainer: @unchecked Sendable {
+            var data = Data()
+            func drain(handle: FileHandle) {
+                data = handle.readDataToEndOfFile()
+            }
+        }
+        let outDrainer = PipeDrainer()
+        let errDrainer = PipeDrainer()
+        let group = DispatchGroup()
+
+        group.enter()
+        DispatchQueue.global().async {
+            outDrainer.drain(handle: outPipe.fileHandleForReading)
+            group.leave()
+        }
+
+        group.enter()
+        DispatchQueue.global().async {
+            errDrainer.drain(handle: errPipe.fileHandleForReading)
+            group.leave()
+        }
+
+        if group.wait(timeout: .now() + 30) == .timedOut {
+            if process.isRunning {
+                process.terminate()
+            }
+            throw NSError(domain: "GitOperationsTool", code: -2, userInfo: [
+                NSLocalizedDescriptionKey: "Git command timed out after 30 seconds."
+            ])
+        }
+
         process.waitUntilExit()
 
-        let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
-        let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
-
-        let stdout = String(data: outData, encoding: .utf8) ?? ""
-        let stderr = String(data: errData, encoding: .utf8) ?? ""
+        let stdout = String(data: outDrainer.data, encoding: .utf8) ?? ""
+        let stderr = String(data: errDrainer.data, encoding: .utf8) ?? ""
 
         if process.terminationStatus != 0 && stdout.isEmpty {
             throw NSError(domain: "GitOperationsTool", code: Int(process.terminationStatus), userInfo: [

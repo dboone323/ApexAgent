@@ -1,4 +1,3 @@
-
 public struct ContextBudgetBreakdown: Sendable, Equatable {
     public let systemPromptTokens: Int
     public let userTokens: Int
@@ -65,9 +64,9 @@ public actor ContextCompactor {
     
     private init() {}
     
-    // Approximate token count (chars / 4 heuristic for English + code)
+    // Approximate token count (calibrated multiplier for English + code payloads)
     public func approximateTokenCount(_ text: String) -> Int {
-        return max(1, text.count / 4)
+        return max(1, Int(ceil(Double(text.count) * 0.35)))
     }
     
     // Compact a message sequence to stay within budget

@@ -1,5 +1,6 @@
 import Foundation
 import FoundationModels
+import Darwin
 
 // MARK: - Shell Tool
 
@@ -188,6 +189,10 @@ struct ShellTool: Tool {
                         }
                         group.addTask {
                             try await Task.sleep(for: .seconds(timeout))
+                            let pid = process.processIdentifier
+                            if pid > 0 {
+                                kill(-pid, SIGTERM)
+                            }
                             if process.isRunning {
                                 process.terminate()
                             }
@@ -209,6 +214,10 @@ struct ShellTool: Tool {
                     }
                     return output
                 } catch {
+                    let pid = process.processIdentifier
+                    if pid > 0 {
+                        kill(-pid, SIGTERM)
+                    }
                     if process.isRunning {
                         process.terminate()
                     }

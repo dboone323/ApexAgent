@@ -441,8 +441,6 @@ public final class SpacePageProposal: @unchecked Sendable {
     }
 }
 
-import Foundation
-
 public enum ChatAutocomplete {
 
     public enum Trigger: Character, Sendable {

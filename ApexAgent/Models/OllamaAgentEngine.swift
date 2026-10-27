@@ -200,6 +200,7 @@ final class OllamaAgentEngine: AgentEngine {
             var toolCalls: [[String: Any]] = []
 
             for try await line in stream.lines {
+                try Task.checkCancellation()
                 let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty,
                       let data = trimmed.data(using: .utf8),

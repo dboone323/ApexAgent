@@ -42,9 +42,13 @@ struct FileSearchTool: Tool {
             let guestDir: String
             do { guestDir = try ExecutionEnvironmentResolver.mapPath(dir, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
             var cmd = "grep -rnI --exclude-dir=.git --exclude-dir=.build --exclude-dir=.swiftpm"
-            if let pattern = arguments.filePattern { cmd += " --include=\(pattern)" }
+            if let pattern = arguments.filePattern {
+                let sanitized = pattern.replacingOccurrences(of: "'", with: "'\\''")
+                cmd += " --include='\(sanitized)'"
+            }
             cmd += " -e '\(arguments.query.replacingOccurrences(of: "'", with: "'\\''"))' '\(guestDir.replacingOccurrences(of: "'", with: "'\\''"))'"
             let maxCount = arguments.maxResults ?? 50
+            cmd += " -m \(maxCount)"
             do {
                 let res = try await backend.runShell(command: cmd)
                 let out = res.stdout.isEmpty ? res.stderr : res.stdout

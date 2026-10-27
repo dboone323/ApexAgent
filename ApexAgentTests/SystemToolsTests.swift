@@ -111,4 +111,24 @@ struct SystemToolsTests {
         let result = try await tool.call(arguments: listArgs)
         #expect(!result.isEmpty)
     }
+
+    @Test("AppleScriptTool returns error message on timeout rather than hanging")
+    func testAppleScriptToolTimeout() async throws {
+        let orchestrator = AgentOrchestrator()
+        orchestrator.permissions = AppPermissions()
+        let tool = AppleScriptTool(orchestrator: orchestrator, timeoutNanoseconds: 50_000_000)
+        let args = AppleScriptTool.Arguments(script: "delay 2")
+        let result = try await tool.call(arguments: args)
+        #expect(result == "ERROR: AppleScript execution timed out after 30 seconds.")
+    }
+
+    @Test("AppleScriptTool executes valid benign script cleanly")
+    func testAppleScriptToolExecution() async throws {
+        let orchestrator = AgentOrchestrator()
+        orchestrator.permissions = AppPermissions()
+        let tool = AppleScriptTool(orchestrator: orchestrator)
+        let args = AppleScriptTool.Arguments(script: "return \"apex_applescript_ok\"")
+        let result = try await tool.call(arguments: args)
+        #expect(result == "apex_applescript_ok")
+    }
 }
