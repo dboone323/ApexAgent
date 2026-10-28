@@ -281,7 +281,7 @@ struct ContainerIsolationSecurityTests {
             summary: "apt-get install -y clang build-essential",
             governanceProfile: .containerStandard
         )
-        #expect(contStdVerdict.approve != nil)
+        #expect(contStdVerdict.approve == "auto-approved in Apple Container sandbox")
         #expect(contStdVerdict.source == .containerSandbox)
 
         // 3. Container Standard Governance Profile blocks host disk destruction

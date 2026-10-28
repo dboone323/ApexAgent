@@ -137,6 +137,7 @@
 		3079879C43DE85BBF013429D /* DurableAutomationReceiptTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F45650A19B4D58517B1E5D0A /* DurableAutomationReceiptTests.swift */; };
 		30C16922DAA1B9CED8C965A7 /* ScreenPerceptionContractAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 566CEADE79DE03597312F69A /* ScreenPerceptionContractAuditorTests.swift */; };
 		30FEF68A5FE68D46DF83D851 /* ScreenStreamerResilienceAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E959EB84D2835D45DBD9FE /* ScreenStreamerResilienceAuditor.swift */; };
+		3121FD12996FF662A9FAA8E8 /* ApexAgentIntentsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 190C734DA9F8201C3C0301DB /* ApexAgentIntentsTests.swift */; };
 		32A8413C79A55EDDBA5196F6 /* ANSIColorParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89FB6833BB17F9CF840D12D3 /* ANSIColorParser.swift */; };
 		335271F96C231C6E46E09F75 /* SkillManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1029F45266243C1D9237A2C /* SkillManager.swift */; };
 		335576BD55175117943481DA /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A92F5162C8780BEFB5CB9E9 /* ContentView.swift */; };
@@ -568,6 +569,7 @@
 		D8DD68ED916D484C832CD003 /* GitHubIntegrationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44752C1860D5B93EC7CE3A49 /* GitHubIntegrationAuditorTests.swift */; };
 		D9C41173B853FC277273505D /* DynamicToolboxManagerSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484D3337A879FB654CB4F1E4 /* DynamicToolboxManagerSection.swift */; };
 		DA0754CC874FECA3DE75B511 /* AutomationWorkflowEngines2.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08ABC70EBEA2A9EC1D0DBE44 /* AutomationWorkflowEngines2.swift */; };
+		DA286AE771C622CBA3852C66 /* SandboxCtlTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331EF43AC6708AAF1400969F /* SandboxCtlTests.swift */; };
 		DA7847C8C8446912656B914E /* SystemToolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FA7E397A7B6A3180EA5ABD8 /* SystemToolsTests.swift */; };
 		DAAEA444B41CDE6A1F4A22F6 /* AppLogTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C48569E5C970D8F839A572F6 /* AppLogTests.swift */; };
 		DAB88DE31FE526F73B4DCB09 /* SessionCoordinationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA2713EA3FCA2EFE8C123A44 /* SessionCoordinationAuditorTests.swift */; };
@@ -942,6 +944,7 @@
 		183F7E48970071163B09035D /* RoadmapHardeningTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoadmapHardeningTests.swift; sourceTree = "<group>"; };
 		187F5B88F1A54FDA38F5C67E /* ApexWorkflowsExpansionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexWorkflowsExpansionTests.swift; sourceTree = "<group>"; };
 		18BCC47E55D126E1283063EE /* NetworkResilienceAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkResilienceAuditorTests.swift; sourceTree = "<group>"; };
+		190C734DA9F8201C3C0301DB /* ApexAgentIntentsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexAgentIntentsTests.swift; sourceTree = "<group>"; };
 		195629AFA6E5EA5BA76B6876 /* WebhookReceiverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebhookReceiverTests.swift; sourceTree = "<group>"; };
 		19627F34476962E41468F7D2 /* ShortcutRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutRegistry.swift; sourceTree = "<group>"; };
 		19D8D4BF60AD045D87D922EF /* MemoryCompactionAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryCompactionAuditorTests.swift; sourceTree = "<group>"; };
@@ -1019,6 +1022,7 @@
 		32BFC024C7CA5AB30C9D44BA /* CompanionPairingSecurityAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionPairingSecurityAuditor.swift; sourceTree = "<group>"; };
 		32D587EE7A234A23FC67769E /* ConfirmationOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmationOverlay.swift; sourceTree = "<group>"; };
 		32EC4147099FDB775911CD07 /* AppleScriptSecurityAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptSecurityAuditor.swift; sourceTree = "<group>"; };
+		331EF43AC6708AAF1400969F /* SandboxCtlTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxCtlTests.swift; sourceTree = "<group>"; };
 		339BDB40BF0023CA16612BE0 /* CompanionSensorConsentGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionSensorConsentGateTests.swift; sourceTree = "<group>"; };
 		340A68F208D0CFF1B82BE992 /* CompanionApprovalCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionApprovalCardView.swift; sourceTree = "<group>"; };
 		3411229BCFE6CB8EF616EA44 /* ApprovalPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalPolicyTests.swift; sourceTree = "<group>"; };
@@ -2258,6 +2262,7 @@
 				7868F437087C7B22AB969C42 /* AgentEvaluationRatingTests.swift */,
 				BB8480BA47D6667188C87338 /* AgentRegistryTests.swift */,
 				D83DBAE17C5F514D3048C7A5 /* AnthropicLanguageModelTests.swift */,
+				190C734DA9F8201C3C0301DB /* ApexAgentIntentsTests.swift */,
 				3CA7F601E86FD17476FCD003 /* ApexAgentTests.swift */,
 				6D6DA119E9AA14FA498904C9 /* ApexCLIRouterTests.swift */,
 				55BA5085CF2D6C1E59916D61 /* ApexCompanionAppTests.swift */,
@@ -2427,6 +2432,7 @@
 				B48A3E3BBF50F34BE93E678D /* RoutineReplayAuditorTests.swift */,
 				D6049722417408EC2DBEC890 /* RoutineTests.swift */,
 				C27748CB407EBA5F59F72068 /* RoutineWebhookAndRunTests.swift */,
+				331EF43AC6708AAF1400969F /* SandboxCtlTests.swift */,
 				9B13DBA979D085D47B5CB8AC /* SandboxTests.swift */,
 				514DADE990F05C6E631E1E85 /* SARIFReportExporterTests.swift */,
 				566CEADE79DE03597312F69A /* ScreenPerceptionContractAuditorTests.swift */,
@@ -3329,6 +3335,7 @@
 				CCD0687C04A0B8230F897903 /* AgentEvaluationRatingTests.swift in Sources */,
 				406814A2ABAD8BB5F4544BB7 /* AgentRegistryTests.swift in Sources */,
 				619EC6F7DAC98BEB146F37C5 /* AnthropicLanguageModelTests.swift in Sources */,
+				3121FD12996FF662A9FAA8E8 /* ApexAgentIntentsTests.swift in Sources */,
 				9B62C3A139076FC6BA0E0F58 /* ApexAgentTests.swift in Sources */,
 				D71F13544C5689BD6AAC9A0C /* ApexCLIRouterTests.swift in Sources */,
 				BCD0090BC7F4C2C3F60D3347 /* ApexCompanionAppTests.swift in Sources */,
@@ -3499,6 +3506,7 @@
 				6FF331B55FCC8363DA1DB6F0 /* RoutineTests.swift in Sources */,
 				90F4A95681A4533D0DAFCBAF /* RoutineWebhookAndRunTests.swift in Sources */,
 				D6140FE2BE082E40D64AEF69 /* SARIFReportExporterTests.swift in Sources */,
+				DA286AE771C622CBA3852C66 /* SandboxCtlTests.swift in Sources */,
 				9D8EF53FDC812E58FBC04C59 /* SandboxTests.swift in Sources */,
 				30C16922DAA1B9CED8C965A7 /* ScreenPerceptionContractAuditorTests.swift in Sources */,
 				FB3C5742ABF1AB0C38B58EF5 /* ScreenStreamerResilienceAuditorTests.swift in Sources */,

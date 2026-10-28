@@ -19,6 +19,7 @@ struct AgentRegistryTests {
         let agent = AgentRegistry.shared.resolve(name: "Developer")
         #expect(agent != nil)
         #expect(agent?.name == "developer")
+        #expect(agent?.allowedTools.contains("run_command") == true || agent?.allowedTools.contains("read_file") == true)
     }
 
     @Test func testResolveUnknownAgentReturnsNil() {
@@ -30,6 +31,7 @@ struct AgentRegistryTests {
         let agent = AgentRegistry.shared.resolve(name: "  Developer  ")
         #expect(agent != nil)
         #expect(agent?.name == "developer")
+        #expect(agent?.systemPrompt.isEmpty == false)
     }
 
     @Test func testRegisterAndResolveCustomAgent() {

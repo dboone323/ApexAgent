@@ -69,6 +69,7 @@ struct TurnWatchdogAuditorTests {
         let violation = TurnWatchdogAuditor.detectRunawayToolLoop(toolCalls: calls, consecutiveThreshold: 3)
         #expect(violation != nil)
         #expect(violation?.code == "RUNAWAY_TOOL_LOOP_DETECTED")
+        #expect(violation?.isFatal == true)
     }
 
     @Test("Alternating tool calls do not trigger runaway tool loop")

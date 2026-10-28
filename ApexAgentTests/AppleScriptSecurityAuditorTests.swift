@@ -74,5 +74,6 @@ struct AppleScriptSecurityAuditorTests {
 
         #expect(!isCompiled)
         #expect(err != nil)
+        #expect(err?.isEmpty == false)
     }
 }

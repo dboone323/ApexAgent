@@ -19,8 +19,10 @@ struct RoutineWebhookAndRunTests {
         #expect(run.status.isActive)
         run.status = .completed
         #expect(!run.status.isActive)
+        #expect(run.status == .completed)
         run.finishedAt = Date()
         #expect(run.finishedAt != nil)
+        #expect(run.finishedAt! >= run.startedAt)
     }
 
     @Test func routineRunCodableRoundTrip() throws {
