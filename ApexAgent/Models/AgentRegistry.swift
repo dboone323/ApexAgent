@@ -79,6 +79,16 @@ public actor AgentRegistry {
             systemPrompt: AgentType.planner.systemPrompt,
             allowedTools: ["read_file", "write_file", "list_directory", "update_plan", "store_memory", "search_memory", "calendar", "reminders", "extract_entities", "deep_link"]
         ),
+        "automator": RegisteredAgent(
+            name: "automator",
+            systemPrompt: AgentType.automator.systemPrompt,
+            allowedTools: ["read_file", "write_file", "patch_file", "git_operation", "list_directory", "file_search", "web_search", "send_notification", "get_system_info", "search_memory", "store_memory"]
+        ),
+        "strategist": RegisteredAgent(
+            name: "strategist",
+            systemPrompt: AgentType.strategist.systemPrompt,
+            allowedTools: ["read_file", "write_file", "list_directory", "update_plan", "send_notification"]
+        ),
         "supervisor": RegisteredAgent(
             name: "supervisor",
             systemPrompt: SupervisorPrompt.system,
@@ -135,24 +145,30 @@ public actor AgentRegistry {
         switch clean {
         case "codex", "code architect", "architect", "coder", "dev", "developer":
             return registeredAgents["developer"]
-        case "nexus", "automator", "system automator", "exec", "executor":
+        case "nexus", "exec", "executor":
             return registeredAgents["executor"]
+        case "automator", "system automator":
+            return registeredAgents["automator"]
         case "pilot", "ui", "controller":
             return registeredAgents["controller"]
         case "oracle", "research", "researcher":
             return registeredAgents["researcher"]
+        case "strategist", "chief of staff", "cos":
+            return registeredAgents["strategist"]
         case "auditor", "linter", "lint", "critic", "reviewer", "security":
             return registeredAgents["linter"]
         case "aura", "uidesigner", "designer", "design", "ui designer":
             return registeredAgents["uiDesigner"] ?? registeredAgents["uidesigner"]
         case "chronos", "planner", "plan":
             return registeredAgents["planner"]
-        case "apex", "supervisor", "apex prime", "prime", "chief of staff", "cos":
+        case "apex", "supervisor", "apex prime", "prime":
             return registeredAgents["supervisor"]
         default:
             // Fuzzy substring match for composite names (e.g. "Codex (Developer)", "Nexus (Executor)")
             if clean.contains("codex") || clean.contains("dev") { return registeredAgents["developer"] }
-            if clean.contains("nexus") || clean.contains("exec") || clean.contains("auto") { return registeredAgents["executor"] }
+            if clean.contains("nexus") || clean.contains("exec") { return registeredAgents["executor"] }
+            if clean.contains("automator") { return registeredAgents["automator"] }
+            if clean.contains("strategist") || clean.contains("chief") { return registeredAgents["strategist"] }
             if clean.contains("pilot") || clean.contains("control") { return registeredAgents["controller"] }
             if clean.contains("oracle") || clean.contains("research") { return registeredAgents["researcher"] }
             if clean.contains("audit") || clean.contains("lint") || clean.contains("critic") || clean.contains("review") { return registeredAgents["linter"] }

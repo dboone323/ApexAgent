@@ -19,6 +19,7 @@ struct AgentRegistryTests {
         let agent = AgentRegistry.shared.resolve(name: "Developer")
         #expect(agent != nil)
         #expect(agent?.name == "developer")
+        #expect(agent?.allowedTools.contains("run_command") == true || agent?.allowedTools.contains("read_file") == true)
     }
 
     @Test func testResolveUnknownAgentReturnsNil() {
@@ -30,6 +31,7 @@ struct AgentRegistryTests {
         let agent = AgentRegistry.shared.resolve(name: "  Developer  ")
         #expect(agent != nil)
         #expect(agent?.name == "developer")
+        #expect(agent?.systemPrompt.isEmpty == false)
     }
 
     @Test func testRegisterAndResolveCustomAgent() {
@@ -168,5 +170,78 @@ struct RegisteredAgentMarkdownTests {
         let md = agent.formatAsMarkdown()
         #expect(md.contains("developer"))
         #expect(md.contains("read_file"))
+    }
+}
+
+
+// MARK: - Hardening Phase 1 follow-up: pending delegation + SupervisorPrompt
+extension AgentRegistryTests {
+    @Test @MainActor func testHardeningPhase1DelegationSurvivesConfirmation() {
+        let orch = AgentOrchestrator()
+        orch.setPendingDelegation(specialist: "developer", task: "write a Swift function that reverses a string")
+        #expect(orch.pendingDelegation != nil)
+        #expect(orch.pendingDelegation?.specialist == "developer")
+        // Confirming must NOT clear the pending delegation.
+        let consumed = orch.resolvePendingDelegationIfConfirmed("Yes, proceed")
+        #expect(consumed == true)
+        #expect(orch.pendingDelegation != nil, "pending delegation must survive the confirmation turn")
+    }
+
+    @Test @MainActor func testHardeningPhase1DeclineClearsPendingDelegation() {
+        let orch = AgentOrchestrator()
+        orch.setPendingDelegation(specialist: "developer", task: "some task")
+        #expect(orch.pendingDelegation != nil)
+        let consumed = orch.resolvePendingDelegationIfConfirmed("no")
+        #expect(consumed == true)
+        #expect(orch.pendingDelegation == nil, "declining must clear the pending delegation")
+        // A later unrelated message must not resurrect a stale delegation.
+        _ = orch.resolvePendingDelegationIfConfirmed("hello")
+        #expect(orch.pendingDelegation == nil)
+    }
+
+    @Test func testHardeningPhase1AutomatorRoutingProducesDelegation() {
+        let registry = AgentRegistry.shared
+        let agent = registry.resolve(name: "Automator")
+        #expect(agent != nil)
+        #expect(agent?.allowedTools.contains("list_directory") == true)
+        // Supervisor must advertise Automator as a delegation target.
+        #expect(SupervisorPrompt.system.contains("Automator"))
+    }
+}
+extension AgentRegistryTests {
+    @Test func testHardeningPhase1MentionMapping() {
+        let registry = AgentRegistry.shared
+        #expect(registry.resolve(name: "Code Architect")?.name == "developer")
+        #expect(registry.resolve(name: "Researcher")?.name == "researcher")
+        #expect(registry.resolve(name: "Automator")?.name == "automator")
+        #expect(registry.resolve(name: "Chief of Staff")?.name == "strategist")
+    }
+
+    @Test func testHardeningPhase1AutomatorCapabilities() {
+        let registry = AgentRegistry.shared
+        let agent = registry.resolve(name: "Automator")
+        #expect(agent != nil)
+        #expect(agent?.allowedTools.contains("list_directory") == true)
+    }
+
+    @Test @MainActor func testHardeningPhase1EndToEndConfirmationExecutes() async {
+        let orch = AgentOrchestrator()
+        orch.setPendingDelegation(specialist: "researcher", task: "three largest moons of Jupiter")
+        let beforeCount = orch.messages.count
+        let consumed = await orch.handlePendingDelegationConfirmation("Yes, proceed")
+        #expect(consumed == true)
+        #expect(orch.pendingDelegation == nil, "pending delegation cleared after execution")
+        #expect(orch.messages.count > beforeCount, "specialist result returned in #general")
+    }
+
+    @Test @MainActor func testHardeningPhase1DeclineThenUnrelatedNoStaleFire() async {
+        let orch = AgentOrchestrator()
+        orch.setPendingDelegation(specialist: "developer", task: "some task")
+        let consumedDecline = await orch.handlePendingDelegationConfirmation("no")
+        #expect(consumedDecline == true)
+        #expect(orch.pendingDelegation == nil)
+        let consumedLater = await orch.handlePendingDelegationConfirmation("hello unrelated")
+        #expect(consumedLater == false)
+        #expect(orch.pendingDelegation == nil)
     }
 }

@@ -74,6 +74,7 @@ struct SecurityTests {
         // Snapshot then overwrite.
         let snap = FileRollback.snapshot(path: file)
         #expect(snap != nil)
+        #expect(snap?.lastPathComponent == "note.txt.apex-bak")
         #expect(FileRollback.hasSnapshot(path: file))
 
         try "new content".write(toFile: file, atomically: true, encoding: .utf8)

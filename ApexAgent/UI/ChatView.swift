@@ -267,6 +267,84 @@ struct SuggestionChip: View {
     }
 }
 
+// MARK: - Autocomplete Suggestions Overlay
+
+struct AutocompleteSuggestionsOverlay: View {
+    let suggestions: [ChatAutocomplete.Suggestion]
+    let trigger: ChatAutocomplete.Trigger
+    let selectedIndex: Int
+    let onSelect: (ChatAutocomplete.Suggestion) -> Void
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: suggestions.count > 5) {
+                VStack(alignment: .leading, spacing: 2) {
+                    ForEach(Array(suggestions.enumerated()), id: \.element.id) { index, item in
+                        let isSelected = index == selectedIndex
+                        Button {
+                            onSelect(item)
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: trigger == .mention ? "at" : "command")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(isSelected ? Color.white : AppTheme.Palette.accent)
+                                    .frame(width: 20, height: 20)
+                                    .background(
+                                        isSelected
+                                            ? Color.white.opacity(0.2)
+                                            : Color(nsColor: .controlBackgroundColor),
+                                        in: RoundedRectangle(cornerRadius: 4)
+                                    )
+
+                                Text(item.display)
+                                    .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
+                                    .foregroundStyle(isSelected ? Color.white : Color.primary)
+                                    .lineLimit(1)
+
+                                Spacer()
+
+                                Text(item.insertion)
+                                    .font(.system(size: 10, design: .monospaced))
+                                    .foregroundStyle(isSelected ? Color.white.opacity(0.8) : Color.secondary)
+                                    .lineLimit(1)
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(isSelected ? AppTheme.Palette.accent : Color.clear)
+                            )
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .id(item.id)
+                        .accessibilityIdentifier("autocompleteItem_\(item.display)")
+                        .accessibilityLabel("\(trigger == .mention ? "Mention" : "Command"): \(item.display)")
+                    }
+                }
+                .padding(4)
+            }
+            .frame(maxHeight: min(CGFloat(suggestions.count * 32 + 8), 180))
+            .onChange(of: selectedIndex) { _, newIndex in
+                if newIndex >= 0 && newIndex < suggestions.count {
+                    withAnimation(.easeInOut(duration: 0.1)) {
+                        proxy.scrollTo(suggestions[newIndex].id, anchor: .center)
+                    }
+                }
+            }
+        }
+        .frame(minWidth: 260, maxWidth: 360)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 3)
+        .accessibilityIdentifier("autocompleteSuggestionsOverlay")
+    }
+}
+
 // MARK: - Chat Input Bar
 
 struct ChatInputBar: View {
@@ -274,6 +352,9 @@ struct ChatInputBar: View {
     @Binding var inputText: String
     @FocusState.Binding var isInputFocused: Bool
     @State private var isHovered = false
+    @State private var selectedIndex = 0
+    @State private var isAutocompleteDismissed = false
+    @State private var lastToken: String?
     private var voiceController: VoiceController { VoiceController.shared }
     
     private var gatewayClient: ApexGatewayClient { ApexGatewayClient.shared }
@@ -288,6 +369,47 @@ struct ChatInputBar: View {
 
     private var hasInputContent: Bool {
         !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !orchestrator.pendingAttachments.isEmpty
+    }
+
+    private var currentToken: String? {
+        ChatAutocomplete.currentToken(in: inputText)
+    }
+
+    private var activeTrigger: ChatAutocomplete.Trigger? {
+        guard let token = currentToken else { return nil }
+        return ChatAutocomplete.trigger(for: token)
+    }
+
+    private var currentQuery: String {
+        guard let token = currentToken else { return "" }
+        return ChatAutocomplete.query(for: token)
+    }
+
+    private var availableBotNames: [String] {
+        if let bots = orchestrator.botManager?.allBots, !bots.isEmpty {
+            return bots.map(\.name)
+        }
+        return ["Apex", "Chief of Staff", "Code Architect", "Researcher", "Automator"]
+    }
+
+    private var availableCommands: [String] {
+        BuiltinSlashCommandName.allCases.map(\.rawValue)
+    }
+
+    private var suggestions: [ChatAutocomplete.Suggestion] {
+        guard isInputFocused, !isAutocompleteDismissed, let trigger = activeTrigger else { return [] }
+        switch trigger {
+        case .mention:
+            return ChatAutocomplete.mentionSuggestions(botNames: availableBotNames, query: currentQuery)
+        case .command:
+            return ChatAutocomplete.commandSuggestions(commands: availableCommands, query: currentQuery)
+        }
+    }
+
+    private func applySuggestion(_ suggestion: ChatAutocomplete.Suggestion) {
+        inputText = ChatAutocomplete.applyInsertion(suggestion.insertion, to: inputText)
+        selectedIndex = 0
+        isAutocompleteDismissed = false
     }
 
     var body: some View {
@@ -385,6 +507,20 @@ struct ChatInputBar: View {
                 .frame(height: 62)
             }
 
+            // Autocomplete suggestions dropdown overlay
+            if !suggestions.isEmpty, let trigger = activeTrigger {
+                AutocompleteSuggestionsOverlay(
+                    suggestions: suggestions,
+                    trigger: trigger,
+                    selectedIndex: selectedIndex,
+                    onSelect: { item in
+                        applySuggestion(item)
+                    }
+                )
+                .padding(.horizontal, 4)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
+
             HStack(alignment: .bottom, spacing: 10) {
                 // Attachments button
                 HStack(spacing: 6) {
@@ -457,8 +593,39 @@ struct ChatInputBar: View {
                         .accessibilityIdentifier("chatInputField")
                         .accessibilityLabel("Message input")
                         .accessibilityHint("Type a message or slash command and press Return to send")
+                        .onKeyPress(.upArrow) {
+                            if !suggestions.isEmpty {
+                                selectedIndex = (selectedIndex - 1 + suggestions.count) % suggestions.count
+                                return .handled
+                            }
+                            return .ignored
+                        }
+                        .onKeyPress(.downArrow) {
+                            if !suggestions.isEmpty {
+                                selectedIndex = (selectedIndex + 1) % suggestions.count
+                                return .handled
+                            }
+                            return .ignored
+                        }
+                        .onKeyPress(.tab) {
+                            if !suggestions.isEmpty, selectedIndex >= 0 && selectedIndex < suggestions.count {
+                                applySuggestion(suggestions[selectedIndex])
+                                return .handled
+                            }
+                            return .ignored
+                        }
+                        .onKeyPress(.escape) {
+                            if !suggestions.isEmpty {
+                                isAutocompleteDismissed = true
+                                return .handled
+                            }
+                            return .ignored
+                        }
                         .onKeyPress(.return) {
-                            if NSEvent.modifierFlags.contains(.shift) {
+                            if !suggestions.isEmpty, selectedIndex >= 0 && selectedIndex < suggestions.count, !NSEvent.modifierFlags.contains(.shift) {
+                                applySuggestion(suggestions[selectedIndex])
+                                return .handled
+                            } else if NSEvent.modifierFlags.contains(.shift) {
                                 Task { @MainActor in
                                     inputText += "\n"
                                 }
@@ -606,6 +773,14 @@ struct ChatInputBar: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color(nsColor: .windowBackgroundColor).opacity(0.95))
+        .onChange(of: inputText) { _, newValue in
+            let token = ChatAutocomplete.currentToken(in: newValue)
+            if token != lastToken {
+                lastToken = token
+                isAutocompleteDismissed = false
+                selectedIndex = 0
+            }
+        }
     }
 
     private func send() {

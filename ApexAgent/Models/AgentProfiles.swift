@@ -13,9 +13,11 @@ public enum AgentType: String, Codable, CaseIterable, Identifiable, Sendable {
     case linter = "linter"
     case uiDesigner = "uiDesigner"
     case planner = "planner"
-    
+    case automator = "automator"
+    case strategist = "strategist"
+
     public var id: String { self.rawValue }
-    
+
     public var displayName: String {
         switch self {
         case .supervisor: return "Apex Prime"
@@ -26,6 +28,8 @@ public enum AgentType: String, Codable, CaseIterable, Identifiable, Sendable {
         case .linter: return "Auditor"
         case .uiDesigner: return "Aura"
         case .planner: return "Chronos"
+        case .automator: return "Automator"
+        case .strategist: return "Chief of Staff"
         }
     }
     
@@ -80,6 +84,19 @@ public enum AgentType: String, Codable, CaseIterable, Identifiable, Sendable {
             Use tools like `read_file`, `write_file`, `list_directory`, `update_plan`, `store_memory`, and `search_memory` to structure execution plans. Return concrete findings to Apex Prime. \
             Only report operational readiness if the task explicitly asks for a bot check or status check.
             """
+        case .automator:
+            return """
+            You are the Automator Agent. Your role is to manage files, run terminal commands, perform git operations, search files, and automate desktop tasks. \
+            Use tools like `read_file`, `write_file`, `list_directory`, `file_search`, `patch_file`, `git_operation`, `web_search`, `send_notification`, `get_system_info`, `search_memory`, and `store_memory`. \
+            Execute the delegated task directly and return concrete findings to Apex Prime. \
+            Only report operational readiness if the task explicitly asks for a bot check or status check.
+            """
+        case .strategist:
+            return """
+            You are the Chief of Staff (Strategist). Your role is to prioritize tasks, coordinate multi-agent workflows, and synthesize outcomes. \
+            Execute the delegated task directly and return concrete findings to Apex Prime. \
+            Only report operational readiness if the task explicitly asks for a bot check or status check.
+            """
         }
     }
 }
@@ -98,6 +115,8 @@ enum SupervisorPrompt {
     5. Auditor (Linter): For code style reviews, SwiftLint cleanup, and formatting.
     6. Aura (UI Designer): For SwiftUI design audits and colors.
     7. Chronos (Planner): For structured task sheets and roadmaps.
+    8. Automator (Automator): For file system tasks — listing, reading, writing, searching files, git operations, and patching.
+    9. Strategist (Chief of Staff): For prioritization, planning, and leadership coordination.
 
     CRITICAL RULES FOR DELEGATION AND ACTION:
     - When the user asks to perform concrete tasks on files/system, check bots, verify systems, run actions, or audit the project across multiple areas, invoke `dispatch_swarm`, `delegate_task`, or `convene_meeting` immediately.

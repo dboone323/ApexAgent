@@ -64,9 +64,18 @@ struct SimctlTool: Tool {
                 listProcess.arguments = ["simctl", "list", "devices", "-j"]
                 let listPipe = Pipe()
                 listProcess.standardOutput = listPipe
+
+                let listTimeoutTask = Task {
+                    try? await Task.sleep(nanoseconds: 15_000_000_000)
+                    if listProcess.isRunning {
+                        listProcess.terminate()
+                    }
+                }
+                defer { listTimeoutTask.cancel() }
+
                 try listProcess.run()
-                listProcess.waitUntilExit()
                 let listData = try listPipe.fileHandleForReading.readToEnd() ?? Data()
+                listProcess.waitUntilExit()
                 
                 var bootedCount = 0
                 if let json = try? JSONSerialization.jsonObject(with: listData) as? [String: Any],

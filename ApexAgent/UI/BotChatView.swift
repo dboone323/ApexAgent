@@ -9,6 +9,9 @@ struct BotChatView: View {
     var session: BotSession
     @Environment(BotManager.self) private var botManager
     @State private var inputText = ""
+    @State private var acVisible = false
+    @State private var acItems: [ChatAutocomplete.Suggestion] = []
+    @State private var acSelection = 0
     @FocusState private var isInputFocused: Bool
     
     var body: some View {

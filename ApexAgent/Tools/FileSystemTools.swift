@@ -100,7 +100,22 @@ struct FileReadTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+        let orchestrator = await self.orchestrator.orchestrator
+        let (env, spaceWs) = await ExecutionEnvironmentResolver.resolveCurrent(orchestrator: orchestrator)
+        if case .tartVM(let spaceID) = env {
+            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+            let wp = spaceWs ?? mainWs
+            guard !wp.isEmpty else { return "ERROR: No workspace path for VM seeding." }
+            let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
+            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            let guest: String
+            do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do {
+                let content = try await backend.readFile(relativePath: guest == "." ? "" : guest)
+                return content
+            } catch { return "ERROR: \(error.localizedDescription)" }
+        }
+        return try await executeWithLogging(arguments: arguments, orchestrator: self.orchestrator) {
             let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
             let effectivePath = resolveExistingFilePath(arguments.path) ?? resolveToWorkspace(rawPath: arguments.path, workspacePath: wsPath)
             let isAllowed = await MainActor.run { self.orchestrator.orchestrator.isPathAllowed(effectivePath) }
@@ -184,6 +199,21 @@ struct FileWriteTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
+        let orchestrator = await self.orchestrator.orchestrator
+        let (env, spaceWs) = await ExecutionEnvironmentResolver.resolveCurrent(orchestrator: orchestrator)
+        if case .tartVM(let spaceID) = env {
+            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+            let wp = spaceWs ?? mainWs
+            guard !wp.isEmpty else { return "ERROR: No workspace path for VM seeding." }
+            let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
+            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            let guest: String
+            do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do {
+                try await backend.writeFile(relativePath: guest == "." ? "" : guest, content: arguments.content)
+                return "✅ Written \(arguments.content.count) characters to \(guest)"
+            } catch { return "ERROR: \(error.localizedDescription)" }
+        }
         let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
         let expanded = NSString(string: arguments.path).expandingTildeInPath
         let expandedPath: String
@@ -272,7 +302,20 @@ struct ListDirectoryTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+        let orchestrator = await self.orchestrator.orchestrator
+        let (env, spaceWs) = await ExecutionEnvironmentResolver.resolveCurrent(orchestrator: orchestrator)
+        if case .tartVM(let spaceID) = env {
+            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+            let wp = spaceWs ?? mainWs
+            guard !wp.isEmpty else { return "ERROR: No workspace path for VM seeding." }
+            let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
+            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            let guest: String
+            do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do { return try await backend.listDirectory(relativePath: guest == "." ? "" : guest) }
+            catch { return "ERROR: \(error.localizedDescription)" }
+        }
+        return try await executeWithLogging(arguments: arguments, orchestrator: self.orchestrator) {
             let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
             let effectivePath = resolveToWorkspace(rawPath: arguments.path, workspacePath: wsPath)
 
@@ -356,6 +399,21 @@ struct CreateDirectoryTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
+        let orchestrator = await self.orchestrator.orchestrator
+        let (env, spaceWs) = await ExecutionEnvironmentResolver.resolveCurrent(orchestrator: orchestrator)
+        if case .tartVM(let spaceID) = env {
+            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+            let wp = spaceWs ?? mainWs
+            guard !wp.isEmpty else { return "ERROR: No workspace path for VM seeding." }
+            let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
+            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            let guest: String
+            do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do {
+                try await backend.createDirectory(relativePath: guest == "." ? "" : guest)
+                return "✅ Created directory: \(guest)"
+            } catch { return "ERROR: \(error.localizedDescription)" }
+        }
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
             let raw = NSString(string: arguments.path).expandingTildeInPath
@@ -395,7 +453,20 @@ struct DeleteFileTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Deleting a file or directory on your system") {
+        let orchestrator = await self.orchestrator.orchestrator
+        let (env, spaceWs) = await ExecutionEnvironmentResolver.resolveCurrent(orchestrator: orchestrator)
+        if case .tartVM(let spaceID) = env {
+            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+            let wp = spaceWs ?? mainWs
+            guard !wp.isEmpty else { return "ERROR: No workspace path for VM seeding." }
+            let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
+            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            let guest: String
+            do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do { try await backend.deleteFile(relativePath: guest); return "✅ Deleted: \(guest)" }
+            catch { return "ERROR: \(error.localizedDescription)" }
+        }
+        return try await executeWithLogging(arguments: arguments, orchestrator: self.orchestrator, riskDescription: "Deleting a file or directory on your system") {
             let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
             let raw = NSString(string: arguments.path).expandingTildeInPath
             let expandedPath = raw.hasPrefix("/") ? raw : (wsPath as NSString).appendingPathComponent(raw)
@@ -449,7 +520,21 @@ struct MoveFileTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Moving or renaming a file or directory on your system") {
+        let orchestrator = await self.orchestrator.orchestrator
+        let (env, spaceWs) = await ExecutionEnvironmentResolver.resolveCurrent(orchestrator: orchestrator)
+        if case .tartVM(let spaceID) = env {
+            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+            let wp = spaceWs ?? mainWs
+            guard !wp.isEmpty else { return "ERROR: No workspace path for VM seeding." }
+            let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
+            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            let src: String; let dst: String
+            do { src = try ExecutionEnvironmentResolver.mapPath(arguments.sourcePath, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do { dst = try ExecutionEnvironmentResolver.mapPath(arguments.destinationPath, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do { try await backend.moveFile(from: src, to: dst); return "✅ Moved: \(src) → \(dst)" }
+            catch { return "ERROR: \(error.localizedDescription)" }
+        }
+        return try await executeWithLogging(arguments: arguments, orchestrator: self.orchestrator, riskDescription: "Moving or renaming a file or directory on your system") {
             let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
             let srcRaw = NSString(string: arguments.sourcePath).expandingTildeInPath
             let dstRaw = NSString(string: arguments.destinationPath).expandingTildeInPath

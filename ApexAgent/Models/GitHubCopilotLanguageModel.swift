@@ -41,9 +41,9 @@ public actor GitHubCopilotTokenManager {
 
     /// Resolves the underlying GitHub token from various local sources.
     public func resolveGitHubToken() async throws -> String {
-        // 1. Check user-configured token in UserDefaults
-        if let manualToken = UserDefaults.standard.string(forKey: "apex.model.copilotToken")?
-            .trimmingCharacters(in: .whitespacesAndNewlines), !manualToken.isEmpty {
+        // 1. Check user-configured token in Keychain (via ModelRegistry)
+        let manualToken = ModelRegistry.copilotToken().trimmingCharacters(in: .whitespacesAndNewlines)
+        if !manualToken.isEmpty {
             return manualToken
         }
 

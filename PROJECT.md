@@ -128,3 +128,7 @@ Every feature from the Survey phase is mapped to an assigned milestone:
 - `Tools/sandboxctl/main.swift` (sandboxctl CLI harness)
 - `ApexAgentTests/` (Unit, integration, and E2E tests for R1-R4)
 - `ApexAgentContainerTests/` (Container and sandbox isolation tests)
+
+## Spaces-on-VM architecture (Phase 4, 2026-10-23)
+
+Spaces provision per-Space Tart VMs (`apex-space-<spaceID>`, clones of pristine `apex-base`, max 2 running). Host bots drive via `tart exec`; work lands only through the host-side landing gate (in-VM gate → additions-only test-integrity → bundle verify → quarantine branch `space/<name>-review` in `~/ApexSandbox/review-clone` → host pristine re-run → manual merge). The legacy `~/ApexSandbox` driver loop (`run.sh`, `watcher.py`, `task-prompt.txt`, `stop.sh`) is archived at `~/ApexSandbox/archive-2026-10-23/`; `proxy.py` + `allowlist.txt` archived alongside it (no longer referenced by the app flow).

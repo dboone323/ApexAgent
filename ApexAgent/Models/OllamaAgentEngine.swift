@@ -81,7 +81,9 @@ final class OllamaAgentEngine: AgentEngine {
             toolCallingMode: toolCallingMode,
             orchestrator: orch,
             onUpdate: { str in
+                guard !Task.isCancelled else { return }
                 Task { @MainActor in
+                    guard !Task.isCancelled else { return }
                     onUpdate(str)
                 }
             }
@@ -198,6 +200,7 @@ final class OllamaAgentEngine: AgentEngine {
             var toolCalls: [[String: Any]] = []
 
             for try await line in stream.lines {
+                try Task.checkCancellation()
                 let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty,
                       let data = trimmed.data(using: .utf8),
@@ -308,7 +311,9 @@ struct OllamaStreamingEngine: AgentEngine {
             toolCallingMode: toolCallingMode,
             orchestrator: orchestrator,
             onUpdate: { str in
+                guard !Task.isCancelled else { return }
                 Task { @MainActor in
+                    guard !Task.isCancelled else { return }
                     onUpdate(str)
                 }
             }

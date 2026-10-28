@@ -38,6 +38,9 @@
          <TestPlanReference
             reference = "container:ApexAgent-UITests.xctestplan">
          </TestPlanReference>
+         <TestPlanReference
+            reference = "container:ApexAgent-LiveVMTests.xctestplan">
+         </TestPlanReference>
       </TestPlans>
       <MacroExpansion>
          <BuildableReference

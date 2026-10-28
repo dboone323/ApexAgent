@@ -328,12 +328,58 @@ public struct ModelRegistry: Sendable {
 
     /// Returns the configured GitHub Copilot personal / oauth token.
     public static func copilotToken() -> String {
-        UserDefaults.standard.string(forKey: copilotTokenKey) ?? ""
+        migrateCopilotTokenIfNeeded()
+        return KeychainManager.get(key: "githubToken") ?? ""
     }
 
     /// Sets the GitHub Copilot personal / oauth token.
     public static func setCopilotToken(_ token: String) {
-        UserDefaults.standard.set(token, forKey: copilotTokenKey)
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            _ = KeychainManager.delete(key: "githubToken")
+        } else {
+            _ = KeychainManager.save(key: "githubToken", value: trimmed)
+        }
+        UserDefaults.standard.removeObject(forKey: copilotTokenKey)
+    }
+
+    private static func migrateCopilotTokenIfNeeded() {
+        let defaults = UserDefaults.standard
+        let legacyKey = copilotTokenKey
+        if let legacy = defaults.string(forKey: legacyKey)?.trimmingCharacters(in: .whitespacesAndNewlines), !legacy.isEmpty {
+            if (KeychainManager.get(key: "githubToken") ?? "").isEmpty {
+                _ = KeychainManager.save(key: "githubToken", value: legacy)
+            }
+            defaults.removeObject(forKey: legacyKey)
+        }
+    }
+
+    /// Returns the configured collaboration (LAN) token.
+    public static func collabToken() -> String {
+        migrateCollabTokenIfNeeded()
+        return KeychainManager.get(key: "collabToken") ?? ""
+    }
+
+    /// Sets the collaboration (LAN) token.
+    public static func setCollabToken(_ token: String) {
+        let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            _ = KeychainManager.delete(key: "collabToken")
+        } else {
+            _ = KeychainManager.save(key: "collabToken", value: trimmed)
+        }
+        UserDefaults.standard.removeObject(forKey: "apex.collabToken")
+    }
+
+    private static func migrateCollabTokenIfNeeded() {
+        let defaults = UserDefaults.standard
+        let legacyKey = "apex.collabToken"
+        if let legacy = defaults.string(forKey: legacyKey)?.trimmingCharacters(in: .whitespacesAndNewlines), !legacy.isEmpty {
+            if (KeychainManager.get(key: "collabToken") ?? "").isEmpty {
+                _ = KeychainManager.save(key: "collabToken", value: legacy)
+            }
+            defaults.removeObject(forKey: legacyKey)
+        }
     }
 
     /// Returns the configured Ollama host URL.

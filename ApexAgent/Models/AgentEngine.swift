@@ -100,7 +100,30 @@ struct NativeAppleEngine: AgentEngine {
                     "\n" + attachments.map { _ in "[image attachment]" }.joined(separator: "\n")
                 }
                 let multimodalPrompt = Prompt("\(promptWithContext)\(attachmentNotes)")
-                let response = try await session.respond(to: multimodalPrompt, options: options)
+                let timeoutSeconds = 90
+                let responseTask = Task { @MainActor in
+                    try await session.respond(to: multimodalPrompt, options: options)
+                }
+                defer { responseTask.cancel() }
+                let response = try await withThrowingTaskGroup(of: LanguageModelSession.Response.self) { group in
+                    group.addTask {
+                        try await responseTask.value
+                    }
+                    group.addTask {
+                        try await Task.sleep(for: .seconds(timeoutSeconds))
+                        throw NSError(
+                            domain: "NativeAppleEngine",
+                            code: timeoutSeconds,
+                            userInfo: [NSLocalizedDescriptionKey: "On-device multimodal response timed out after \(timeoutSeconds) seconds."]
+                        )
+                    }
+
+                    guard let response = try await group.next() else {
+                        throw CancellationError()
+                    }
+                    group.cancelAll()
+                    return response
+                }
                 let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !text.isEmpty {
                     onUpdate(text)

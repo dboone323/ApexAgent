@@ -30,4 +30,20 @@ struct ContextCompactorTests {
         #expect(!bad.isValid)
         #expect(bad.validationError() != nil)
     }
+
+    @Test func calibratedTokenMultiplierProducesHigherTokenCounts() async {
+        let codeSample = """
+        func executeTask(command: String, options: [String: Any]) async throws -> ExecutionResult {
+            guard !command.isEmpty else { throw TaskError.invalidCommand }
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            process.arguments = ["-c", command]
+            return try await run(process)
+        }
+        """
+        let legacyCount = max(1, codeSample.count / 4)
+        let calibratedCount = await ContextCompactor.shared.approximateTokenCount(codeSample)
+        #expect(calibratedCount > legacyCount)
+        #expect(calibratedCount == Int(ceil(Double(codeSample.count) * 0.35)))
+    }
 }

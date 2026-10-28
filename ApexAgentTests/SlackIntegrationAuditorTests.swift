@@ -126,6 +126,8 @@ struct SlackIntegrationAuditorTests {
         #expect(actions != nil)
         let elements = actions?["elements"] as? [[String: Any]]
         #expect(elements?.count == 2)
+        #expect(elements?.first?["action_id"] as? String == "approve_action")
+        #expect(elements?.last?["action_id"] as? String == "deny_action")
         #expect(elements?.first?["value"] as? String == "appr_12345")
         #expect(elements?.first?["style"] as? String == "primary")
         #expect(elements?.last?["style"] as? String == "danger")

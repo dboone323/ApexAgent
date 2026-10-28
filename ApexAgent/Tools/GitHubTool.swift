@@ -96,17 +96,26 @@ struct GitHubTool: Tool {
     private func runCommand(_ path: String, _ args: [String]) async throws -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
-        process.arguments = args
+        let cleanArgs = args.first == path ? Array(args.dropFirst()) : args
+        process.arguments = cleanArgs
         process.environment = ProcessInfo.processInfo.environment
 
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
 
+        let timeoutTask = Task {
+            try? await Task.sleep(nanoseconds: 30_000_000_000)
+            if process.isRunning {
+                process.terminate()
+            }
+        }
+        defer { timeoutTask.cancel() }
+
         try process.run()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
 
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
         let output = String(data: data, encoding: .utf8) ?? ""
 
         if process.terminationStatus != 0 {
@@ -309,10 +318,9 @@ struct GitHubTool: Tool {
             if args.body != nil { cmd += ["--with-token"] } // body would be token via stdin - simplified
             return try await runCommand(ghPath, cmd)
         case "token":
-            let cmd = [ghPath, "auth", "token"]
-            return try await runCommand(ghPath, cmd)
+            throw NSError(domain: "GitHubTool", code: 4, userInfo: [NSLocalizedDescriptionKey: "The 'auth token' sub-action is disabled to prevent token leakage."])
         default:
-            throw NSError(domain: "GitHubTool", code: 4, userInfo: [NSLocalizedDescriptionKey: "Unknown auth sub-action '\(sub)'. Use: status, login, token"])
+            throw NSError(domain: "GitHubTool", code: 4, userInfo: [NSLocalizedDescriptionKey: "Unknown auth sub-action '\(sub)'. Use: status, login"])
         }
     }
 

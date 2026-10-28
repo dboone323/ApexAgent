@@ -91,6 +91,11 @@ public enum PrivacyManifestInspector {
 
     /// Locates `PrivacyInfo.xcprivacy` in the `ApexAgentCore` framework bundle or main bundle.
     public static func bundledManifestURL() -> URL? {
+        #if SWIFT_PACKAGE
+        if let url = Bundle.module.url(forResource: "PrivacyInfo", withExtension: "xcprivacy") {
+            return url
+        }
+        #endif
         let frameworkBundle = Bundle(for: PrivacyManifestBundleAnchor.self)
         if let url = frameworkBundle.url(forResource: "PrivacyInfo", withExtension: "xcprivacy") {
             return url
@@ -101,6 +106,16 @@ public enum PrivacyManifestInspector {
         for bundle in Bundle.allBundles {
             if let url = bundle.url(forResource: "PrivacyInfo", withExtension: "xcprivacy") {
                 return url
+            }
+        }
+        let fallbackCandidates = [
+            URL(fileURLWithPath: "ApexAgent/Resources/PrivacyInfo.xcprivacy"),
+            URL(fileURLWithPath: "../ApexAgent/Resources/PrivacyInfo.xcprivacy"),
+            URL(fileURLWithPath: "../../ApexAgent/Resources/PrivacyInfo.xcprivacy")
+        ]
+        for candidate in fallbackCandidates {
+            if FileManager.default.fileExists(atPath: candidate.path) {
+                return candidate
             }
         }
         return nil

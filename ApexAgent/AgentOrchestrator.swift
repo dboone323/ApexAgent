@@ -243,6 +243,13 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     // to drive ConfirmationOverlay's populated branch — requestConfirmation()
     // auto-approves in DEBUG builds so tests can't reach it otherwise.
     var pendingConfirmation: ConfirmationRequest?
+    /// Pending delegation retained after Apex Prime asks for confirmation.
+    /// Survives at least the confirmation turn so "Yes, proceed" executes it.
+    struct PendingDelegation: Equatable, Sendable {
+        let specialist: String
+        let task: String
+    }
+    var pendingDelegation: PendingDelegation? = nil
     var modelAvailability: SystemLanguageModel.Availability = .available
     var currentConversationTitle: String = "New Conversation"
     var requireConfirmationForAll: Bool = false
@@ -811,6 +818,62 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         queuedPrompts.removeAll()
     }
 
+// MARK: - Pending Delegation
+
+    func setPendingDelegation(specialist: String, task: String) {
+        pendingDelegation = PendingDelegation(specialist: specialist, task: task)
+    }
+
+    func clearPendingDelegation() {
+        pendingDelegation = nil
+    }
+
+    nonisolated static func isAffirmativeConfirmation(_ text: String) -> Bool {
+        let normalized = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        let affirmatives: Set<String> = ["yes", "yes proceed", "yes, proceed", "go ahead", "confirm", "please proceed", "yep", "yeah", "ok", "okay"]
+        return affirmatives.contains(normalized) || normalized.hasPrefix("yes") || normalized.hasPrefix("go ahead") || normalized.hasPrefix("please proceed") || normalized.hasPrefix("confirm")
+    }
+
+    nonisolated static func isDeclineConfirmation(_ text: String) -> Bool {
+        let normalized = text.lowercased().trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        return normalized == "no" || normalized == "cancel" || normalized == "never mind" || normalized.hasPrefix("no ") || normalized.hasPrefix("cancel") || normalized.hasPrefix("never mind")
+    }
+
+    /// Called at the start of a turn to resolve a pending delegation based on the
+    /// user's confirmation. Returns true if the turn was consumed by the
+    /// confirmation flow.
+    func resolvePendingDelegationIfConfirmed(_ text: String) -> Bool {
+        guard let pending = pendingDelegation else { return false }
+        if Self.isAffirmativeConfirmation(text) {
+            _ = pending
+            return true
+        }
+        if Self.isDeclineConfirmation(text) {
+            clearPendingDelegation()
+            return true
+        }
+        return false
+    }
+
+    @MainActor
+    func handlePendingDelegationConfirmation(_ text: String) async -> Bool {
+        guard resolvePendingDelegationIfConfirmed(text) else { return false }
+        if Self.isAffirmativeConfirmation(text) {
+            guard let pending = pendingDelegation else { return true }
+            clearPendingDelegation()
+            let tool = DelegateTaskTool(orchestrator: self)
+            let args = DelegateTaskTool.Arguments(agentType: pending.specialist, taskDescription: pending.task)
+            do {
+                _ = try await tool.call(arguments: args)
+            } catch {
+                appendMessage(ChatMessage(role: .assistant, content: "Delegation failed: \(error.localizedDescription)"))
+            }
+            return true
+        }
+        appendMessage(ChatMessage(role: .assistant, content: "Delegation cancelled."))
+        return true
+    }
+
     private func processNextQueuedPromptIfNeeded() {
         guard !queuedPrompts.isEmpty, !isGenerating else { return }
         let next = queuedPrompts.removeFirst()
@@ -1025,6 +1088,14 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             saveContext(context)
         }
 
+        // Pending delegation confirmation handling (wiring round).
+        if self.pendingDelegation != nil {
+            let consumed = await self.handlePendingDelegationConfirmation(text)
+            if consumed {
+                return
+            }
+        }
+
         // Add placeholder assistant message
         let assistantMsg = ChatMessage(role: .assistant, content: "", isStreaming: true)
         messages.append(assistantMsg)
@@ -1175,6 +1246,13 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                         updatedAt: conv.updatedAt
                     )
                 }
+            }
+
+            // Retain the delegation if the supervisor asked for confirmation.
+            if isDirectMention, let bot = targetBot,
+               terminalContent.lowercased().contains("please confirm") {
+                let specialist = AgentRegistry.shared.resolve(name: bot.name)?.name ?? bot.name.lowercased()
+                self.setPendingDelegation(specialist: specialist, task: text)
             }
 
             // Trigger procedural skill reflection if an error was resolved in this turn
