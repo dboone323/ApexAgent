@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -98,7 +98,6 @@
 		2310E4A50359E755CDB0F9DB /* ApplicationControlSecurityAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01BDBBE1CA1510F06B24B632 /* ApplicationControlSecurityAuditorTests.swift */; };
 		232250210200209052A9070C /* CompanionSensorConsentGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 339BDB40BF0023CA16612BE0 /* CompanionSensorConsentGateTests.swift */; };
 		23D941FDAD9B7AC9642BED7C /* SpacesVMRealWorldTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 981F2CBDD3D0D6F3330AB13C /* SpacesVMRealWorldTests.swift */; };
-		640E78FCEF154414B5C29E39 /* ChatAutocompleteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 813EAB6438E94973AF44214F /* ChatAutocompleteTests.swift */; };
 		23FAFF6C267E5C9EE5923F91 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE8992734C7E9BF8AFAFA586 /* ChatView.swift */; };
 		251E8477AE7B48D1B433396B /* DiagnosticQuerySecurityAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55BFF8A7AF610EF83C0567B4 /* DiagnosticQuerySecurityAuditor.swift */; };
 		26046515DD4B085F6E6981B5 /* ApexGatewayServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4055FADE6D6667211786A437 /* ApexGatewayServerTests.swift */; };
@@ -122,6 +121,8 @@
 		2B43B3E34ECF66CCA720B944 /* ToolSchemasTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14A1A8D9441E12BD463B4C12 /* ToolSchemasTests.swift */; };
 		2B5805BABD0A132E35C1E26C /* CIPipelineValidatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9911FB5BB53F44C7097D5C /* CIPipelineValidatorTests.swift */; };
 		2B7203522605F9C5CA203A23 /* ApexAgentCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = BF959C9824A399A7C6398153 /* ApexAgentCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		2B7467FB900332B92C1BC89C /* MCPKitClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED0D7F73810AAB298E304A9 /* MCPKitClientTests.swift */; };
+		2BEA3EB69C2A66477095C7BC /* SharedLoggingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75E0ABABE005891F41F0429B /* SharedLoggingTests.swift */; };
 		2D3186492581119B7BF91EBF /* ProviderFallbackExecutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81BC29C5044A80EF656E2425 /* ProviderFallbackExecutor.swift */; };
 		2D6E731080CC761BABEBC9BA /* NativeToolsP0Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DF09B13707FBA1B8A16A88B /* NativeToolsP0Tests.swift */; };
 		2D83D18ECF411807188495D2 /* IntentToolSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27416A7D6D7178263246418 /* IntentToolSelectorTests.swift */; };
@@ -250,6 +251,7 @@
 		5EE819D3D20980174115F79B /* AgentSignposts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20A5CFA74AD14376E46D0926 /* AgentSignposts.swift */; };
 		5F2027FE177192DD16DD4A73 /* BrowserSecurityAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B855D5AD1936728BF74FB0A /* BrowserSecurityAuditorTests.swift */; };
 		5F8733259A116392403AB283 /* OverlayGeometryAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F90D3619B6C39CBF200A1E7 /* OverlayGeometryAuditorTests.swift */; };
+		5FA1B49FFBC53F303508A62D /* AppGroupDataBusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93F41709968BADEE7F40DA25 /* AppGroupDataBusTests.swift */; };
 		5FD8B30AD981607A38B7BA61 /* AutomationWorkflows+31to40.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47661CE2C39E2F01AF30A9AF /* AutomationWorkflows+31to40.swift */; };
 		600CCDB2BFD21515635F3CBE /* KeychainIntegrityAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89F3FA05DE29FE11B0170D66 /* KeychainIntegrityAuditor.swift */; };
 		604024AAA9F20620F0B07EA4 /* AnthropicLanguageModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6994694E8F990C544A512C9 /* AnthropicLanguageModel.swift */; };
@@ -275,6 +277,7 @@
 		68C13A46F80C9C4E0F3F9C44 /* OrchestratorProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22C56DD46ADBA07AD7080570 /* OrchestratorProvider.swift */; };
 		68E0D0EBBF87EB2D2A53EE7F /* Logging in Frameworks */ = {isa = PBXBuildFile; productRef = 2DFCDCE30F5EDBC8DDF0AD14 /* Logging */; };
 		6938BC4D1E8018DAC9ADFD72 /* DirectMentionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EEF6F62F954A7DB43C31D14 /* DirectMentionTests.swift */; };
+		694F2E86DDB9565ED5DAEC0F /* ChatAutocompleteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBF01AEBCF46FEAC97FEDC05 /* ChatAutocompleteTests.swift */; };
 		6A0C021BB1BE563B85621EC5 /* GitHookGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FF21463C13F3697207BE1D5 /* GitHookGate.swift */; };
 		6A48B8320BE9B88FB558373B /* DirectionsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDAC038EC7583710C624A8C4 /* DirectionsTool.swift */; };
 		6B81227031AEEA663A067210 /* CreationSheetsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 569D5F33DFA1968F20C976C7 /* CreationSheetsTests.swift */; };
@@ -1145,6 +1148,7 @@
 		7566A84DCC9B49188FD67BAD /* FilePatchResilienceAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePatchResilienceAuditorTests.swift; sourceTree = "<group>"; };
 		759CF2D90E843E4E6DED99EC /* NativeToolsP2Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeToolsP2Tests.swift; sourceTree = "<group>"; };
 		75C1A7222124F7A13047F876 /* SharedTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedTask.swift; sourceTree = "<group>"; };
+		75E0ABABE005891F41F0429B /* SharedLoggingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedLoggingTests.swift; sourceTree = "<group>"; };
 		764931B33734D6FD77036F50 /* DifferentialScreenPerception.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DifferentialScreenPerception.swift; sourceTree = "<group>"; };
 		768AAA702A1F7D6BE24BCB56 /* DiscordWebhookSecurityAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscordWebhookSecurityAuditor.swift; sourceTree = "<group>"; };
 		77D6EF0C4DB4AD31E1B4D4D0 /* MCPWireProtocolAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPWireProtocolAuditorTests.swift; sourceTree = "<group>"; };
@@ -1224,6 +1228,7 @@
 		92FD5D9CAEAE94E7CD483478 /* SecuritySandboxError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecuritySandboxError.swift; sourceTree = "<group>"; };
 		9339DA69FCF40209669906C3 /* SharedKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedKit.swift; sourceTree = "<group>"; };
 		938D73C7540BD48B4FF78EB3 /* BotMessageSender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotMessageSender.swift; sourceTree = "<group>"; };
+		93F41709968BADEE7F40DA25 /* AppGroupDataBusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupDataBusTests.swift; sourceTree = "<group>"; };
 		944559FAAD58B407A4886E1A /* ShellTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellTool.swift; sourceTree = "<group>"; };
 		9474D458072CA8BE7F37D631 /* WorkspaceProactiveAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceProactiveAuditorTests.swift; sourceTree = "<group>"; };
 		94F7A6D8BD96CCBCA6C43C3D /* ToolActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolActivityView.swift; sourceTree = "<group>"; };
@@ -1235,7 +1240,6 @@
 		9780424108D8776C2E5184C5 /* BotManagerPlaybookTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotManagerPlaybookTests.swift; sourceTree = "<group>"; };
 		980CC914BF41DD3525D24ECB /* E2EFeatureMatrixTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = E2EFeatureMatrixTests.swift; sourceTree = "<group>"; };
 		981F2CBDD3D0D6F3330AB13C /* SpacesVMRealWorldTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesVMRealWorldTests.swift; sourceTree = "<group>"; };
-		813EAB6438E94973AF44214F /* ChatAutocompleteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAutocompleteTests.swift; sourceTree = "<group>"; };
 		982BA13520392C15847BFA33 /* ReflectionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionManager.swift; sourceTree = "<group>"; };
 		98F17ED2F1596D4507BECD44 /* SkillCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillCatalog.swift; sourceTree = "<group>"; };
 		9937A31F0090A25A173C2944 /* TraceSpanExporterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraceSpanExporterTests.swift; sourceTree = "<group>"; };
@@ -1444,6 +1448,7 @@
 		EB444CB55101CE2B631AF69F /* SpacesViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpacesViews.swift; sourceTree = "<group>"; };
 		EB46EF2F8A2A2739DAAE4022 /* GlobalCommandPaletteHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalCommandPaletteHUD.swift; sourceTree = "<group>"; };
 		EB7AFC7AB5F65C32B71A79A9 /* VoiceSessionAudioAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceSessionAudioAuditor.swift; sourceTree = "<group>"; };
+		EBF01AEBCF46FEAC97FEDC05 /* ChatAutocompleteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAutocompleteTests.swift; sourceTree = "<group>"; };
 		EBF522A69E62EA8D6FEA005F /* BundleIntegrityVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleIntegrityVerifier.swift; sourceTree = "<group>"; };
 		EC199E307BD6D61342D60EC8 /* ModelCapacityRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCapacityRoutingTests.swift; sourceTree = "<group>"; };
 		EC6DB015FFE58935502E7FF5 /* AutomationWorkflows+1to3.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+1to3.swift"; sourceTree = "<group>"; };
@@ -1455,6 +1460,7 @@
 		EDF3EA5EA19B9E8380047A46 /* VisualPerceptionAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualPerceptionAuditorTests.swift; sourceTree = "<group>"; };
 		EE028F6E31492ECDF4117C22 /* AgentPrecedenceResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentPrecedenceResolver.swift; sourceTree = "<group>"; };
 		EE35AAF4587FFAF6F0E0447D /* DependencyLockAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DependencyLockAuditorTests.swift; sourceTree = "<group>"; };
+		EED0D7F73810AAB298E304A9 /* MCPKitClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPKitClientTests.swift; sourceTree = "<group>"; };
 		EF3EBC6C7029E08C8ED7200C /* BotManagerDuplicateModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotManagerDuplicateModelTests.swift; sourceTree = "<group>"; };
 		EF48EBF7067949B2BC247A27 /* DynamicToolRoutingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicToolRoutingTests.swift; sourceTree = "<group>"; };
 		EF51C41BE7F9054DF64DDE4B /* WorkspaceSecurityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkspaceSecurityManager.swift; sourceTree = "<group>"; };
@@ -2240,6 +2246,7 @@
 				385313E98181D152D76E2164 /* ApexGatewayClientTests.swift */,
 				4055FADE6D6667211786A437 /* ApexGatewayServerTests.swift */,
 				187F5B88F1A54FDA38F5C67E /* ApexWorkflowsExpansionTests.swift */,
+				93F41709968BADEE7F40DA25 /* AppGroupDataBusTests.swift */,
 				01F6B6D4B696148853346579 /* AppIntentsContractAuditorTests.swift */,
 				1DC8606413DFBC7FBA7868BD /* AppIntentsTests.swift */,
 				BFC38BDD12BCC176634A71E8 /* AppleScriptSecurityAuditorTests.swift */,
@@ -2261,6 +2268,7 @@
 				A754522EFF736ED8FC78E7B4 /* BundleIntegrityVerifierTests.swift */,
 				CA2A493A982F6E90B478B411 /* CanonicalDirectMentionTests.swift */,
 				1679AE79F5A09183D1FA63B3 /* CenturionMilestoneTests.swift */,
+				EBF01AEBCF46FEAC97FEDC05 /* ChatAutocompleteTests.swift */,
 				7B8EEE62CAC123B5B1DF50EE /* ChatProbeTests.swift */,
 				6906ABEDBEEA5DEF3BA1FD16 /* ChiefOfStaffTests.swift */,
 				CA9911FB5BB53F44C7097D5C /* CIPipelineValidatorTests.swift */,
@@ -2331,6 +2339,7 @@
 				093B0E7433BF91D55EB95A4F /* LiveMCPSupport.swift */,
 				57E6A9A66CF3C285CD98595E /* LogicGapFillTests.swift */,
 				DDE9616416245E4CD1D50E46 /* MCPConfigImportAuditorTests.swift */,
+				EED0D7F73810AAB298E304A9 /* MCPKitClientTests.swift */,
 				FAA7828EB7439A5656C74381 /* MCPPolicyAuditorTests.swift */,
 				6DBE3D471AD6F71EF20F7CB4 /* MCPProtocolModernizationTests.swift */,
 				114077595910764FA106DE3F /* MCPResilienceTests.swift */,
@@ -2401,6 +2410,7 @@
 				FE26C15832A4BFACD5769FAF /* SecurityTests.swift */,
 				BA2713EA3FCA2EFE8C123A44 /* SessionCoordinationAuditorTests.swift */,
 				15D8D0712357A20B85E5AAB1 /* SharedContainerIntegrityAuditorTests.swift */,
+				75E0ABABE005891F41F0429B /* SharedLoggingTests.swift */,
 				C02D211273AA535A3E03156C /* ShortcutRegistryTests.swift */,
 				E1682A6FFC2AC1FE97FC890C /* SimctlSecurityAuditorTests.swift */,
 				571C65734C866241FE54474B /* SkillCatalogTests.swift */,
@@ -2413,7 +2423,6 @@
 				A4318CA99B1B1222A14C3807 /* SpaceRoutingMatrixTests.swift */,
 				921C70B3C81800A1DD827D3B /* SpaceSecurityAuditorTests.swift */,
 				981F2CBDD3D0D6F3330AB13C /* SpacesVMRealWorldTests.swift */,
-				813EAB6438E94973AF44214F /* ChatAutocompleteTests.swift */,
 				7831D06C9B4410ACCEC74473 /* SpaceThreadDispatcherTests.swift */,
 				ECDCA0165D88BBE48B8032D2 /* SpeculativeExecutionAuditorTests.swift */,
 				B75BFD972A5DC0BE6D97B86D /* SpotlightContractAuditorTests.swift */,
@@ -2769,6 +2778,7 @@
 				};
 			};
 			buildConfigurationList = B5DF8715126EEFAF7BE300E4 /* Build configuration list for PBXProject "ApexAgent" */;
+			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -2781,25 +2791,24 @@
 				121559BD91AD56CCE9B773AB /* XCRemoteSwiftPackageReference "containerization" */,
 				59809C23920A99AA03E92B38 /* XCRemoteSwiftPackageReference "swift-log" */,
 			);
-			preferredProjectObjectVersion = 77;
-			productRefGroup = 103EB7B3CB5C42B63BD8313B /* Products */;
+			preferredProjectObjectVersion = 54;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				7400E4C22122E116AC217727 /* ApexAgent */,
+				5561F9DCCB9020F75A84ACCB /* ApexAgentContainerTests */,
+				61AFB82B28D8753880168205 /* ApexAgentCore */,
+				504A0D56914CD197196A441B /* ApexAgentIntelligenceTests */,
+				87E10F15DEB270B43244F465 /* ApexAgentIntents */,
+				0FE45CD6604AF6C5292FD0E9 /* ApexAgentTests */,
+				D25CDE11C75690193CF44814 /* ApexAgentUITests */,
+				6AC26794B772FA676E01431C /* MCPKit */,
+				710DB0A38ABD315DC5A62AB7 /* SharedKit */,
 				C37B666F31167FFF8C868DE1 /* SharedLogging */,
 				CA97686619E38162FB15F139 /* SharedModels */,
-				710DB0A38ABD315DC5A62AB7 /* SharedKit */,
-				6AC26794B772FA676E01431C /* MCPKit */,
-				61AFB82B28D8753880168205 /* ApexAgentCore */,
-				7400E4C22122E116AC217727 /* ApexAgent */,
-				87E10F15DEB270B43244F465 /* ApexAgentIntents */,
-				6419E72010128DADB58FAA8F /* sandboxctl */,
 				D48EC83BD34945ED3DBA9E71 /* apexflow */,
 				2C1DA680D47478F5589B7501 /* benchmark-repro */,
-				0FE45CD6604AF6C5292FD0E9 /* ApexAgentTests */,
-				504A0D56914CD197196A441B /* ApexAgentIntelligenceTests */,
-				5561F9DCCB9020F75A84ACCB /* ApexAgentContainerTests */,
-				D25CDE11C75690193CF44814 /* ApexAgentUITests */,
+				6419E72010128DADB58FAA8F /* sandboxctl */,
 			);
 		};
 /* End PBXProject section */
@@ -3299,6 +3308,7 @@
 				3EAA55A2DE50E67ED99B9C90 /* ApexGatewayClientTests.swift in Sources */,
 				26046515DD4B085F6E6981B5 /* ApexGatewayServerTests.swift in Sources */,
 				7A3D6265E8C7E5753FA0A339 /* ApexWorkflowsExpansionTests.swift in Sources */,
+				5FA1B49FFBC53F303508A62D /* AppGroupDataBusTests.swift in Sources */,
 				128D7CC8EE9DA4189D37F532 /* AppIntentsContractAuditorTests.swift in Sources */,
 				C08859B139F56AEEB74F4F45 /* AppIntentsTests.swift in Sources */,
 				DAAEA444B41CDE6A1F4A22F6 /* AppLogTests.swift in Sources */,
@@ -3323,6 +3333,7 @@
 				7B88D757AC9DDC230726364B /* CLISmokeTestHarnessTests.swift in Sources */,
 				A218F33E3ECFFCFA221F3E20 /* CanonicalDirectMentionTests.swift in Sources */,
 				6CB6751B941A0F14FB52EF62 /* CenturionMilestoneTests.swift in Sources */,
+				694F2E86DDB9565ED5DAEC0F /* ChatAutocompleteTests.swift in Sources */,
 				D3C4628E33DFBBB8B41D2DF6 /* ChatProbeTests.swift in Sources */,
 				E6588C2695BD05649340E2E8 /* ChiefOfStaffTests.swift in Sources */,
 				90B4148CEC874F5B3C06182A /* CloudStorageAuditorTests.swift in Sources */,
@@ -3390,6 +3401,7 @@
 				EF2C2609C244D385558579B0 /* LiveMCPSupport.swift in Sources */,
 				A9249DBFEA92A09DF690FB74 /* LogicGapFillTests.swift in Sources */,
 				8E26604746E3EBDCCA572305 /* MCPConfigImportAuditorTests.swift in Sources */,
+				2B7467FB900332B92C1BC89C /* MCPKitClientTests.swift in Sources */,
 				59D645E7842DD6E13F4AD753 /* MCPPolicyAuditorTests.swift in Sources */,
 				4FDD1576E8DF47241492B95C /* MCPProtocolModernizationTests.swift in Sources */,
 				54555F8F16D560142FD7E80F /* MCPResilienceTests.swift in Sources */,
@@ -3460,6 +3472,7 @@
 				549F3BA9085BF5E876BC3972 /* SecurityTests.swift in Sources */,
 				DAB88DE31FE526F73B4DCB09 /* SessionCoordinationAuditorTests.swift in Sources */,
 				6CB3412BDA3FDD0E8179A1E6 /* SharedContainerIntegrityAuditorTests.swift in Sources */,
+				2BEA3EB69C2A66477095C7BC /* SharedLoggingTests.swift in Sources */,
 				E8B5AE8AD74EFB0778796A68 /* ShortcutRegistryTests.swift in Sources */,
 				6E5D8841DC934E3A1F6C26A6 /* SimctlSecurityAuditorTests.swift in Sources */,
 				E067D25BBA484B541AB97BA3 /* SkillCatalogTests.swift in Sources */,
@@ -3473,7 +3486,6 @@
 				C211571FAD50AF2445AE425A /* SpaceSecurityAuditorTests.swift in Sources */,
 				AFFBAA806FD276862498EDF4 /* SpaceThreadDispatcherTests.swift in Sources */,
 				23D941FDAD9B7AC9642BED7C /* SpacesVMRealWorldTests.swift in Sources */,
-				640E78FCEF154414B5C29E39 /* ChatAutocompleteTests.swift in Sources */,
 				C206EC3B3C5ED2C33FB95E59 /* SpeculativeExecutionAuditorTests.swift in Sources */,
 				B15293A4CAF3E3C85967BB61 /* SpotlightContractAuditorTests.swift in Sources */,
 				929CAE5F83ADDF22662F515D /* SpotlightExpansionTests.swift in Sources */,
@@ -3648,27 +3660,12 @@
 		03042C77C7CA881CB5FB2898 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
 				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedModels;
 				PRODUCT_NAME = SharedModels;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
@@ -3678,49 +3675,30 @@
 				CODE_SIGNING_ALLOWED = YES;
 				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
 				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.apexflow;
 				PRODUCT_NAME = apexflow;
-				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
 		1F5D17916ADA99014963BA7F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
 				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.MCPKit;
 				PRODUCT_NAME = MCPKit;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
 		3A577BAE596E562E933F886A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
-				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = ApexAgent/Info.plist;
@@ -3729,34 +3707,18 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgent;
 				PRODUCT_MODULE_NAME = ApexAgent;
 				PRODUCT_NAME = ApexAgent;
-				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
 		3EF48E4CEE3DD52C403CAB52 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
 				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedKit;
 				PRODUCT_NAME = SharedKit;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
 		};
@@ -3765,59 +3727,15 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGNING_ALLOWED = YES;
 				CODE_SIGN_IDENTITY = "-";
-				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
 				OTHER_LDFLAGS = "-weak_framework FoundationModels -weak_framework _FoundationModels_AppKit -weak_framework _FoundationModels_SwiftUI -weak_framework _Vision_FoundationModels -weak_framework _CoreSpotlight_FoundationModels";
 				OTHER_SWIFT_FLAGS = "$(inherited)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
-				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_VERSION = 6.4;
@@ -3827,27 +3745,12 @@
 		53596B5377E7552D1594D701 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
 				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedLogging;
 				PRODUCT_NAME = SharedLogging;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
@@ -3857,13 +3760,11 @@
 				CODE_SIGNING_ALLOWED = YES;
 				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
 				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.sandboxctl;
 				PRODUCT_NAME = sandboxctl;
-				SDKROOT = macosx;
 			};
 			name = Release;
 		};
@@ -3873,13 +3774,11 @@
 				CODE_SIGNING_ALLOWED = YES;
 				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
 				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.apexflow;
 				PRODUCT_NAME = apexflow;
-				SDKROOT = macosx;
 			};
 			name = Release;
 		};
@@ -3889,54 +3788,34 @@
 				CODE_SIGNING_ALLOWED = YES;
 				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
 				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.sandboxctl;
 				PRODUCT_NAME = sandboxctl;
-				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
 		702E7691B223CA106206F685 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(BUILD_DIR)/Products/Debug";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentTests;
 				PRODUCT_NAME = ApexAgentTests;
-				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
 		76F3D7D431941316BF3E174F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
 				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedLogging;
 				PRODUCT_NAME = SharedLogging;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
 		};
@@ -3946,44 +3825,31 @@
 				CODE_SIGNING_ALLOWED = YES;
 				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
 				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.apexagent.benchmark-repro";
 				PRODUCT_NAME = "benchmark-repro";
-				SDKROOT = macosx;
 			};
 			name = Release;
 		};
 		8347D7E8789BE9B58D116EBA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(BUILD_DIR)/Products/Debug";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentContainerTests;
 				PRODUCT_NAME = ApexAgentContainerTests;
-				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
 		87CCDFB0FC4EDE49A9EBF327 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentUITests;
 				PRODUCT_NAME = ApexAgentUITests;
-				SDKROOT = macosx;
 				TEST_TARGET_NAME = ApexAgent;
 			};
 			name = Debug;
@@ -3991,54 +3857,24 @@
 		8D9393AD08374B21DDDC95E4 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
 				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedModels;
 				PRODUCT_NAME = SharedModels;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
 		};
 		93E90953DF8C1B863C9C67FA /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
 				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.MCPKit;
 				PRODUCT_NAME = MCPKit;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
 		};
@@ -4047,64 +3883,15 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGNING_ALLOWED = YES;
 				CODE_SIGN_IDENTITY = "-";
-				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
-				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					"DEBUG=1",
-				);
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-				MTL_FAST_MATH = YES;
-				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = "-weak_framework FoundationModels -weak_framework _FoundationModels_AppKit -weak_framework _FoundationModels_SwiftUI -weak_framework _Vision_FoundationModels -weak_framework _CoreSpotlight_FoundationModels";
 				OTHER_SWIFT_FLAGS = "$(inherited)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -4119,144 +3906,86 @@
 				CODE_SIGNING_ALLOWED = YES;
 				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Debug.entitlements";
 				CODE_SIGN_IDENTITY = "-";
-				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.apexagent.benchmark-repro";
 				PRODUCT_NAME = "benchmark-repro";
-				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
 		AF274A8E3E5BED23B02CD9B8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(BUILD_DIR)/Products/Debug";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentContainerTests;
 				PRODUCT_NAME = ApexAgentContainerTests;
-				SDKROOT = macosx;
 			};
 			name = Release;
 		};
 		B62BAB4C558DFDF7E27EFB9B /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(BUILD_DIR)/Products/Debug";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentIntelligenceTests;
 				PRODUCT_NAME = ApexAgentIntelligenceTests;
-				SDKROOT = macosx;
 			};
 			name = Release;
 		};
 		B691AD123880C2620D077F1B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
 				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentIntents;
 				PRODUCT_NAME = ApexAgentIntents;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
 		C242EBF114ABFBEB9B3D1595 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
 				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentIntents;
 				PRODUCT_NAME = ApexAgentIntents;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
 		};
 		C3B27C33EE4F6242920578B2 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
 				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.SharedKit;
 				PRODUCT_NAME = SharedKit;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
 		D5339B6EEB405878490C1414 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(BUILD_DIR)/Products/Debug";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentTests;
 				PRODUCT_NAME = ApexAgentTests;
-				SDKROOT = macosx;
 			};
 			name = Release;
 		};
 		E67C3D168A3D550553D0EE0A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = "ApexAgent/ApexAgent-Release.entitlements";
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
-				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_TEAM = TEAM_ID_PLACEHOLDER;
 				ENABLE_APPINTENTS_METADATA_PROCESSING = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -4267,92 +3996,50 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgent;
 				PRODUCT_MODULE_NAME = ApexAgent;
 				PRODUCT_NAME = ApexAgent;
-				SDKROOT = macosx;
 			};
 			name = Release;
 		};
 		E837F0FF07AAE2C72C14A938 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ApexAgent/Info.plist;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
 				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentCore;
 				PRODUCT_NAME = ApexAgentCore;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
 		};
 		EA848F71A4D20126C4EB7C29 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_IDENTITY = "";
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ApexAgent/Info.plist;
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
 				OTHER_LDFLAGS = "-framework AppIntents";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentCore;
 				PRODUCT_NAME = ApexAgentCore;
-				SDKROOT = macosx;
-				SKIP_INSTALL = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
-				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
 		F16C022F586A3D548234220F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				COMBINE_HIDPI_IMAGES = YES;
 				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) $(BUILD_DIR)/Products/Debug";
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentIntelligenceTests;
 				PRODUCT_NAME = ApexAgentIntelligenceTests;
-				SDKROOT = macosx;
 			};
 			name = Debug;
 		};
 		F25264E462D2564367D8BAB8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				COMBINE_HIDPI_IMAGES = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.apexagent.ApexAgentUITests;
 				PRODUCT_NAME = ApexAgentUITests;
-				SDKROOT = macosx;
 				TEST_TARGET_NAME = ApexAgent;
 			};
 			name = Release;
