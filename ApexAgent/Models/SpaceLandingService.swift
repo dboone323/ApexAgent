@@ -122,12 +122,12 @@ public actor SpaceLandingService {
             stages.append(LandingStageResult(name: "In-VM gate", status: .passed, detail: "clean build + unit plan (\(guestTotals.0) run / \(guestTotals.1) passed / \(guestTotals.2) failed / \(guestTotals.3) skipped) + lint passed in guest", run: guestTotals.0, passed: guestTotals.1, failed: guestTotals.2, skipped: guestTotals.3))
         }
 
-        let baseCommitProc = Process()
-        baseCommitProc.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        baseCommitProc.arguments = ["-C", input.workspacePath, "rev-parse", "HEAD"]
-        let bp = Pipe(); baseCommitProc.standardOutput = bp; baseCommitProc.standardError = Pipe()
-        try? baseCommitProc.run(); baseCommitProc.waitUntilExit()
-        let baseCommit = String(data: bp.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let baseCommitRes = await Self.runProcessSafely(
+            executableURL: URL(fileURLWithPath: "/usr/bin/git"),
+            arguments: ["-C", input.workspacePath, "rev-parse", "HEAD"],
+            timeoutSeconds: 30
+        )
+        let baseCommit = baseCommitRes.stdout.trimmingCharacters(in: .whitespacesAndNewlines)
         let diffCmd = "cd ~/ApexAgent && git diff --name-status \(baseCommit)..HEAD"
         let diffRes = try? await client.exec(name: vmName, arguments: ["sh", "-c", diffCmd])
         let diffOut = diffRes?.stdout ?? ""
@@ -184,45 +184,46 @@ public actor SpaceLandingService {
         do { try data.write(to: tmpBundle) } catch {
             return fail("Transfer + verify", "write bundle failed: \(error)")
         }
-        let verifyProc = Process()
-        verifyProc.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        verifyProc.arguments = ["-C", input.workspacePath, "bundle", "verify", tmpBundle.path]
-        let vp = Pipe(); verifyProc.standardOutput = vp; verifyProc.standardError = Pipe()
-        try? verifyProc.run(); verifyProc.waitUntilExit()
-        if verifyProc.terminationStatus != 0 {
+        let verifyRes = await Self.runProcessSafely(
+            executableURL: URL(fileURLWithPath: "/usr/bin/git"),
+            arguments: ["-C", input.workspacePath, "bundle", "verify", tmpBundle.path],
+            timeoutSeconds: 60
+        )
+        if verifyRes.exitCode != 0 {
             try? FileManager.default.removeItem(at: tmpBundle)
-            return fail("Transfer + verify", "git bundle verify failed")
+            return fail("Transfer + verify", "git bundle verify failed: \(verifyRes.stderr)")
         }
         stages.append(LandingStageResult(name: "Transfer + verify", status: .passed, detail: "bundle created in guest, transferred via base64, git bundle verify passed"))
 
         let fm = FileManager.default
         if !fm.fileExists(atPath: reviewClonePath) {
-            let cloneProc = Process()
-            cloneProc.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-            cloneProc.arguments = ["clone", input.workspacePath, reviewClonePath]
-            try? cloneProc.run(); cloneProc.waitUntilExit()
-            if cloneProc.terminationStatus != 0 {
+            let cloneRes = await Self.runProcessSafely(
+                executableURL: URL(fileURLWithPath: "/usr/bin/git"),
+                arguments: ["clone", input.workspacePath, reviewClonePath],
+                timeoutSeconds: 120
+            )
+            if cloneRes.exitCode != 0 {
                 try? FileManager.default.removeItem(at: tmpBundle)
-                return fail("Quarantine landing", "failed to create review clone")
+                return fail("Quarantine landing", "failed to create review clone: \(cloneRes.stderr)")
             }
         }
-        let fetchProc = Process()
-        fetchProc.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        fetchProc.arguments = ["-C", reviewClonePath, "fetch", tmpBundle.path, "HEAD"]
-        let fp = Pipe(); fetchProc.standardOutput = fp; let fe = Pipe(); fetchProc.standardError = fe
-        try? fetchProc.run(); fetchProc.waitUntilExit()
-        if fetchProc.terminationStatus != 0 {
-            let err = String(data: fe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let fetchRes = await Self.runProcessSafely(
+            executableURL: URL(fileURLWithPath: "/usr/bin/git"),
+            arguments: ["-C", reviewClonePath, "fetch", tmpBundle.path, "HEAD"],
+            timeoutSeconds: 60
+        )
+        if fetchRes.exitCode != 0 {
             try? FileManager.default.removeItem(at: tmpBundle)
-            return fail("Quarantine landing", "fetch bundle failed (exit \(fetchProc.terminationStatus)): \(err)")
+            return fail("Quarantine landing", "fetch bundle failed (exit \(fetchRes.exitCode)): \(fetchRes.stderr)")
         }
-        let updProc = Process()
-        updProc.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        updProc.arguments = ["-C", reviewClonePath, "update-ref", "refs/heads/\(branchName)", "FETCH_HEAD"]
-        try? updProc.run(); updProc.waitUntilExit()
-        if updProc.terminationStatus != 0 {
+        let updRes = await Self.runProcessSafely(
+            executableURL: URL(fileURLWithPath: "/usr/bin/git"),
+            arguments: ["-C", reviewClonePath, "update-ref", "refs/heads/\(branchName)", "FETCH_HEAD"],
+            timeoutSeconds: 30
+        )
+        if updRes.exitCode != 0 {
             try? FileManager.default.removeItem(at: tmpBundle)
-            return fail("Quarantine landing", "update-ref failed")
+            return fail("Quarantine landing", "update-ref failed: \(updRes.stderr)")
         }
         try? FileManager.default.removeItem(at: tmpBundle)
         stages.append(LandingStageResult(name: "Quarantine landing", status: .passed, detail: "review clone \(reviewClonePath): branch \(branchName) set to bundle HEAD"))
@@ -310,32 +311,93 @@ public actor SpaceLandingService {
     }
 
 
+    internal static func runProcessSafely(
+        executableURL: URL,
+        arguments: [String],
+        timeoutSeconds: TimeInterval = 600
+    ) async -> (exitCode: Int32, stdout: String, stderr: String) {
+        let process = Process()
+        process.executableURL = executableURL
+        process.arguments = arguments
+
+        let outPipe = Pipe()
+        let errPipe = Pipe()
+        process.standardOutput = outPipe
+        process.standardError = errPipe
+
+        do {
+            try process.run()
+        } catch {
+            return (-1, "", error.localizedDescription)
+        }
+
+        let timeoutTask = Task {
+            try? await Task.sleep(for: .seconds(timeoutSeconds))
+            if process.isRunning {
+                process.terminate()
+            }
+        }
+        defer { timeoutTask.cancel() }
+
+        // Concurrently drain stdout and stderr using detached worker tasks
+        async let stdoutData: Data = Task.detached {
+            let handle = outPipe.fileHandleForReading
+            let data = handle.readDataToEndOfFile()
+            try? handle.close()
+            return data
+        }.value
+
+        async let stderrData: Data = Task.detached {
+            let handle = errPipe.fileHandleForReading
+            let data = handle.readDataToEndOfFile()
+            try? handle.close()
+            return data
+        }.value
+
+        let (outData, errData) = await (stdoutData, stderrData)
+        process.waitUntilExit()
+
+        let stdout = String(data: outData, encoding: .utf8) ?? ""
+        let stderr = String(data: errData, encoding: .utf8) ?? ""
+
+        return (process.terminationStatus, stdout, stderr)
+    }
+
     private func defaultHostRun(reviewClonePath: String, branchName: String) async -> (Bool, Int, Int, Int, Int, String) {
-        let co = Process()
-        co.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        co.arguments = ["-C", reviewClonePath, "checkout", branchName]
-        try? co.run(); co.waitUntilExit()
-        let build = Process()
-        build.executableURL = URL(fileURLWithPath: "/usr/bin/xcodebuild")
-        build.arguments = ["-project", "\(reviewClonePath)/ApexAgent.xcodeproj", "-scheme", "ApexAgent", "-configuration", "Debug", "build"]
-        let bp = Pipe(); build.standardOutput = bp; build.standardError = Pipe()
-        try? build.run(); build.waitUntilExit()
-        if build.terminationStatus != 0 { return (false, 0, 0, 0, 0, "host build failed") }
-        let test = Process()
-        test.executableURL = URL(fileURLWithPath: "/usr/bin/xcodebuild")
+        let coRes = await Self.runProcessSafely(
+            executableURL: URL(fileURLWithPath: "/usr/bin/git"),
+            arguments: ["-C", reviewClonePath, "checkout", branchName],
+            timeoutSeconds: 60
+        )
+        if coRes.exitCode != 0 {
+            return (false, 0, 0, 0, 0, "git checkout failed: \(coRes.stderr)")
+        }
+
+        let buildRes = await Self.runProcessSafely(
+            executableURL: URL(fileURLWithPath: "/usr/bin/xcodebuild"),
+            arguments: ["-project", "\(reviewClonePath)/ApexAgent.xcodeproj", "-scheme", "ApexAgent", "-configuration", "Debug", "build"],
+            timeoutSeconds: 600
+        )
+        if buildRes.exitCode != 0 {
+            return (false, 0, 0, 0, 0, "host build failed: \(buildRes.stderr)")
+        }
+
         let hostBundle = "/tmp/host-rerun.xcresult"
         try? FileManager.default.removeItem(atPath: hostBundle)
-        test.arguments = ["-project", "\(reviewClonePath)/ApexAgent.xcodeproj", "-scheme", "ApexAgent", "-testPlan", "ApexAgent-UnitTests", "-resultBundlePath", hostBundle, "test"]
-        let tp = Pipe(); test.standardOutput = tp; test.standardError = Pipe()
-        try? test.run(); test.waitUntilExit()
-        var totals = (0,0,0,0)
-        let summaryProc = Process()
-        summaryProc.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
-        summaryProc.arguments = ["xcresulttool", "get", "test-results", "summary", "--path", hostBundle]
-        let sp = Pipe(); summaryProc.standardOutput = sp; summaryProc.standardError = Pipe()
-        try? summaryProc.run(); summaryProc.waitUntilExit()
-        let summaryOut = String(data: sp.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        totals = parseTotals(summaryOut)
-        return (test.terminationStatus == 0, totals.0, totals.1, totals.2, totals.3, "host re-run completed")
+
+        let testRes = await Self.runProcessSafely(
+            executableURL: URL(fileURLWithPath: "/usr/bin/xcodebuild"),
+            arguments: ["-project", "\(reviewClonePath)/ApexAgent.xcodeproj", "-scheme", "ApexAgent", "-testPlan", "ApexAgent-UnitTests", "-resultBundlePath", hostBundle, "test"],
+            timeoutSeconds: 600
+        )
+
+        let summaryRes = await Self.runProcessSafely(
+            executableURL: URL(fileURLWithPath: "/usr/bin/xcrun"),
+            arguments: ["xcresulttool", "get", "test-results", "summary", "--path", hostBundle],
+            timeoutSeconds: 60
+        )
+
+        let totals = parseTotals(summaryRes.stdout)
+        return (testRes.exitCode == 0, totals.0, totals.1, totals.2, totals.3, "host re-run completed")
     }
 }

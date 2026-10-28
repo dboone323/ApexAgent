@@ -24,11 +24,24 @@ public protocol ToolEventLogger: Sendable {
 /// Must be @MainActor: the ToolEventLogger protocol is @MainActor-isolated.
 @MainActor
 final class ToolEventLoggerImpl: ToolEventLogger {
-    public func logToolStart(name: String, arguments: String) {}
-    public func logToolEnd(name: String, result: String, status: ToolStatus) {}
-    public func logToolEvent(_ event: ToolEvent) {}
-    public func updateToolStatus(name: String, status: ToolStatus) {}
+    public func logToolStart(name: String, arguments: String) {
+        AppLog.debug(.toolbox, "Tool '\(name)' started with arguments: \(arguments)")
+    }
+
+    public func logToolEnd(name: String, result: String, status: ToolStatus) {
+        AppLog.debug(.toolbox, "Tool '\(name)' ended with status: \(status), result: \(result)")
+    }
+
+    public func logToolEvent(_ event: ToolEvent) {
+        AppLog.debug(.toolbox, "ToolEvent logged: tool=\(event.toolName) status=\(event.status) timestamp=\(event.timestamp)")
+    }
+
+    public func updateToolStatus(name: String, status: ToolStatus) {
+        AppLog.debug(.toolbox, "Tool '\(name)' status updated to: \(status)")
+    }
+
     public func shouldConfirmTool(name: String) -> Bool { false }
+
     public func requestConfirmation(
         toolName: String,
         arguments: String,
@@ -38,9 +51,13 @@ final class ToolEventLoggerImpl: ToolEventLogger {
         filePath: String?
     ) async -> Bool {
         // Default: deny dangerous actions when no orchestrator is wired for user confirmation
+        AppLog.debug(.toolbox, "Confirmation requested for tool '\(toolName)' without active orchestrator; defaulting to deny.")
         return false
     }
-    public func resolveConfirmation(approved: Bool) {}
+
+    public func resolveConfirmation(approved: Bool) {
+        AppLog.debug(.toolbox, "Confirmation resolved: approved=\(approved)")
+    }
 }
 
 public enum ToolStatus: Sendable, Equatable {

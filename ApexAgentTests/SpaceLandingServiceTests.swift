@@ -39,7 +39,8 @@ struct SpaceLandingServiceTests {
         try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
         _ = try? runGit(["init"], cwd: tmp)
         _ = try? runGit(["-c", "user.email=t@t.com", "-c", "user.name=t", "commit", "--allow-empty", "-m", "base"], cwd: tmp)
-        let report = await svc.land(input: .init(spaceID: "smoke", spaceName: "smoke", workspacePath: tmp.path))
+        let spaceID = "smoke-stage1-\(UUID().uuidString.prefix(8))"
+        let report = await svc.land(input: .init(spaceID: spaceID, spaceName: "smoke", workspacePath: tmp.path))
         #expect(!report.succeeded)
         #expect(report.failedStage == "In-VM gate")
         // no quarantine branch created
@@ -58,10 +59,54 @@ struct SpaceLandingServiceTests {
         _ = try? runGit(["init"], cwd: tmp)
         _ = try? runGit(["-c", "user.email=t@t.com", "-c", "user.name=t", "commit", "--allow-empty", "-m", "base"], cwd: tmp)
         let svc = SpaceLandingService(client: fake, manager: mgr, reviewClonePath: tmpRC, isApexAgent: true, hostTestRunner: { (true,0,0,0,0,"ok") })
-        let report = await svc.land(input: .init(spaceID: "smoke", spaceName: "smoke", workspacePath: tmp.path))
+        let spaceID = "smoke-tamper-\(UUID().uuidString.prefix(8))"
+        let report = await svc.land(input: .init(spaceID: spaceID, spaceName: "smoke", workspacePath: tmp.path))
         #expect(!report.succeeded)
         #expect(report.failedStage == "Test-integrity check")
         try? FileManager.default.removeItem(at: tmp)
+    }
+
+    @Test func runProcessSafelyHandlesLargeOutputWithoutDeadlock() async {
+        let script = "print('A' * 200000)"
+        let res = await SpaceLandingService.runProcessSafely(
+            executableURL: URL(fileURLWithPath: "/usr/bin/python3"),
+            arguments: ["-c", script],
+            timeoutSeconds: 15
+        )
+        #expect(res.exitCode == 0)
+        #expect(res.stdout.count >= 200000)
+        #expect(res.stderr.isEmpty)
+    }
+
+    @Test func runProcessSafelyPropagatesExitCodeAndStderrOnFailure() async {
+        let res = await SpaceLandingService.runProcessSafely(
+            executableURL: URL(fileURLWithPath: "/usr/bin/git"),
+            arguments: ["-C", "/nonexistent-path-for-apex-test", "status"],
+            timeoutSeconds: 10
+        )
+        #expect(res.exitCode != 0)
+        #expect(res.stdout.isEmpty)
+        #expect(!res.stderr.isEmpty)
+    }
+
+    @Test func toolEventLoggerImplEmitsStructuredDiagnosticsToAppLog() async {
+        let logger = await MainActor.run { ToolEventLoggerImpl() }
+        let toolName = "test_pipe_diagnostic_tool_\(UUID().uuidString.prefix(8))"
+        let args = "{\"query\": \"safe-pipe-test\"}"
+
+        await MainActor.run {
+            logger.logToolStart(name: toolName, arguments: args)
+            logger.updateToolStatus(name: toolName, status: .running)
+            logger.logToolEnd(name: toolName, result: "pipe drain ok", status: .success)
+            logger.resolveConfirmation(approved: true)
+        }
+
+        let entries = AppLog.recentEntries(limit: 50)
+        let relevant = entries.filter { $0.category == .toolbox && $0.message.contains(toolName) }
+        #expect(!relevant.isEmpty)
+        #expect(relevant.contains { $0.message.contains("started with arguments") })
+        #expect(relevant.contains { $0.message.contains("status updated to: running") })
+        #expect(relevant.contains { $0.message.contains("ended with status: success") })
     }
 }
 

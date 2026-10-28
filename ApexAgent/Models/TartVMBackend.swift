@@ -52,7 +52,13 @@ public actor TartVMBackend {
         guard let wp = workspacePath, !wp.isEmpty else {
             throw NSError(domain: "TartVMBackend", code: 1, userInfo: [NSLocalizedDescriptionKey: "workspacePath required for seeding"])
         }
-        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("seed-\(spaceID).bundle")
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("seed-\(spaceID)-\(UUID().uuidString).bundle")
+        try? FileManager.default.removeItem(at: tmp)
+        try? FileManager.default.removeItem(atPath: tmp.path + ".lock")
+        defer {
+            try? FileManager.default.removeItem(at: tmp)
+            try? FileManager.default.removeItem(atPath: tmp.path + ".lock")
+        }
         let branchProc = Process()
         branchProc.executableURL = URL(fileURLWithPath: "/usr/bin/git")
         branchProc.arguments = ["-C", wp, "rev-parse", "--abbrev-ref", "HEAD"]
