@@ -126,10 +126,10 @@ struct ChatView: View {
                 .accessibilityLabel("Conversation messages list")
                 .accessibilityIdentifier("conversationScrollView")
                 .onChange(of: displayMessages.count) {
-                    scrollToBottom(proxy: proxy)
+                    scrollToBottom(proxy: proxy, animated: true)
                 }
                 .onChange(of: displayMessages.last?.content) {
-                    scrollToBottom(proxy: proxy)
+                    scrollToBottom(proxy: proxy, animated: false)
                 }
             }
 
@@ -155,10 +155,14 @@ struct ChatView: View {
         }
     }
 
-    private func scrollToBottom(proxy: ScrollViewProxy) {
+    private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool) {
         // Defer scrolling to avoid layout recursion when the view is already being laid out.
         DispatchQueue.main.async {
-            withAnimation(.easeOut(duration: 0.2)) {
+            if animated {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+            } else {
                 proxy.scrollTo("bottom", anchor: .bottom)
             }
         }
