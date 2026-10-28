@@ -86,4 +86,10 @@ TART_PERMS_CHECK*.md
 TM_DRIVE_SPLIT*.md
 DISK_SPACE*.md
 
+# PR drafts and descriptions
+PULL_REQUEST_*.md
+
+# Git bundles and seed locks
+*.bundle
+*.bundle.lock
 
