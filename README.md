@@ -150,8 +150,8 @@ Or edit the **System Prompt** directly in Settings to customize Apex's behavior.
 
 ## 🧪 Testing
 
-Current verified test-target inventory (**103 test files · 669 `@Test` functions · 23 `XCTestCase` classes**):
-- `ApexAgentTests`: 85 files (591 `@Test` + 17 `XCTestCase`) — covering M1–M4 (`CreationSheetsTests`, `PlaybookCollaborationTests`, `R1R2AdversarialStressTests`, `ContainerIsolationSecurityTests`, `MCPServerDashboardTests`, `E2EFeatureMatrixTests`, `CognitiveMemoryTests`)
+Current verified test-target inventory (as of 2026-10-30 — 272 test files · 1543 `@Test` functions · 44 `XCTestCase` classes):
+- `ApexAgentTests`: 254 files (1465 `@Test` + 38 `XCTestCase`) — covering M1–M4 (`CreationSheetsTests`, `PlaybookCollaborationTests`, `R1R2AdversarialStressTests`, `ContainerIsolationSecurityTests`, `MCPServerDashboardTests`, `E2EFeatureMatrixTests`, `CognitiveMemoryTests`)
 - `ApexAgentContainerTests`: 1 file (7 `@Test`) — `ContainerManagerTests`
 - `ApexAgentIntelligenceTests`: 10 files (71 `@Test`) — on-device intelligence, vision, and runtime contracts
 - `ApexAgentUITests`: 7 files (6 `XCTestCase`) — real macOS UI e2e via XCUITest

@@ -1615,6 +1615,10 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         // #if DEBUG instead: tests run in DEBUG (the xctestplans set
         // APEX_TEST_MODE=1), so test behavior is preserved while the
         // production bypass is gone.
+        if getenv("APEX_FORCE_DENY") != nil {
+            return false
+        }
+
         #if DEBUG
         if NSClassFromString("XCTestCase") != nil
             || getenv("APEX_TEST_MODE") != nil

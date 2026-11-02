@@ -130,6 +130,7 @@ public final class UserAccountManager: ObservableObject {
     /// Synchronize settings across instances using NSUbiquitousKeyValueStore (iCloud)
     public func syncSettings() {
         guard syncSettingsAcrossInstances else { return }
+        if ContactsOptInManager.shared.isTestMode { return }
         let store = NSUbiquitousKeyValueStore.default
         let defaults = UserDefaults.standard
 
@@ -152,6 +153,7 @@ public final class UserAccountManager: ObservableObject {
     /// Import synced settings from iCloud into local UserDefaults
     public func pullSyncedSettings() {
         guard syncSettingsAcrossInstances else { return }
+        if ContactsOptInManager.shared.isTestMode { return }
         let store = NSUbiquitousKeyValueStore.default
         let defaults = UserDefaults.standard
 

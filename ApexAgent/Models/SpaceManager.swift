@@ -230,7 +230,7 @@ public final class SpaceManager {
 
         if seedDefaults {
             // 1. Add Local Human Owner
-            let fullUserName = NSFullUserName().isEmpty ? NSUserName() : NSFullUserName()
+            let fullUserName = ContactsOptInManager.shared.safeFullUserName
             let humanDisplay = fullUserName.isEmpty ? "Admin" : fullUserName
             let owner = SpaceParticipant(
                 displayName: humanDisplay,
@@ -764,7 +764,7 @@ public final class SpaceManager {
 
         let resolvedSender = sender ?? activeHumanSender ?? addHumanParticipant(
             to: space,
-            displayName: NSFullUserName().isEmpty ? "User" : NSFullUserName(),
+            displayName: ContactsOptInManager.shared.safeFullUserName,
             isRemote: false
         )
 
