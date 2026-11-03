@@ -324,10 +324,10 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
             if allowedTools.contains("get_directions") {
                 DirectionsTool(orchestrator: orchestrator)
             }
-            if allowedTools.contains("calendar") {
+            if allowedTools.contains("calendar") && (ContactsOptInManager.shared.isOptedIn || !ContactsOptInManager.shared.isTestMode) {
                 CalendarTool(orchestrator: orchestrator)
             }
-            if allowedTools.contains("reminders") {
+            if allowedTools.contains("reminders") && (ContactsOptInManager.shared.isOptedIn || !ContactsOptInManager.shared.isTestMode) {
                 ReminderTool(orchestrator: orchestrator)
             }
             if allowedTools.contains("translate") {

@@ -54,6 +54,12 @@
 	<string>Apex Agent can read and create reminders to help track your tasks.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Apex Agent uses speech recognition for voice commands.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Apex Agent accesses contacts only with your explicit permission to help you find contact details and schedule events.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Apex Agent uses the microphone for real-time voice conversations and voice commands.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Apex Agent uses the local network to communicate with local model backends, sidecars, and collaborative server instances.</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

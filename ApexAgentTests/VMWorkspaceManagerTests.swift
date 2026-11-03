@@ -214,7 +214,10 @@ struct VMWorkspaceManagerTests {
         }
         _ = try await (a, b)
         let order = await collector.snapshot()
-        #expect(order == [1, 2, 3, 4])
+        // The lock guarantees the two blocks never interleave, but not which
+        // async-let caller acquires first — so exactly two orders are valid.
+        // Any interleaved order (e.g. [1, 3, 2, 4]) must still fail.
+        #expect(order == [1, 2, 3, 4] || order == [3, 4, 1, 2])
     }
 
     @Test func reconcileStaleVMsDeletesUntrackedAndSparesBase() async throws {

@@ -44,6 +44,13 @@ struct ReminderTool: Tool {
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let action = arguments.action.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+
+            // In headless test mode or if user has not opted into contacts/calendar integration,
+            // return graceful non-granted guidance without instantiating EKEventStore to avoid 4097 errors.
+            if ContactsOptInManager.shared.isTestMode && !ContactsOptInManager.shared.isOptedIn {
+                return "🔒 Reminders access was not granted. Please allow Reminders access in macOS System Settings > Privacy & Security > Reminders."
+            }
+
             let store = EKEventStore()
 
             // Request authorization
