@@ -18,6 +18,11 @@ public final class ApexGatewayServer {
     
     private let authenticationToken: String
     private var lastTerminalMessageId: UUID?
+
+    /// The actual port on which the server is currently listening, or nil if not listening.
+    var listeningPort: UInt16? {
+        listener?.port?.rawValue
+    }
     
     public convenience init(port: UInt16 = 1337, orchestrator: AgentOrchestrator) {
         self.init(port: port, orchestrator: orchestrator, authenticationToken: Self.gatewayToken())
@@ -84,7 +89,7 @@ public final class ApexGatewayServer {
         listener.stateUpdateHandler = { [weak self] state in
             switch state {
             case .ready:
-                AppLog.info(.gateway, "📡 Daemon ready and listening on port \(self?.port ?? 0)")
+                AppLog.info(.gateway, "📡 Daemon ready and listening on port \(listener.port?.rawValue ?? self?.port ?? 0)")
                 started.signal()
             case .failed(let error):
                 AppLog.error(.gateway, "⚠️ Listener failed: \(error)")
