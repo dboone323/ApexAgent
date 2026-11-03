@@ -4,7 +4,7 @@ SWIFT       ?= xcrun swift
 BUILD_FLAGS := -c release
 TEST_FLAGS  := --parallel --enable-code-coverage
 
-.PHONY: build test coverage ci clean test-deep test-ui xcresult-summary hygiene lint syntax-check format pre-push full audit-deps sbom changelog release-check provenance sarif cli-smoke traces install-hooks
+.PHONY: build test coverage ci clean test-deep test-ui xcresult-summary hygiene lint syntax-check format pre-push full audit-deps sbom changelog release-check provenance sarif cli-smoke traces install-hooks gate-report
 hygiene:
 	@chmod +x ./Tools/scripts/pre-push-hygiene.sh
 	@./Tools/scripts/pre-push-hygiene.sh
@@ -86,3 +86,29 @@ test-ui:
 # Inspect latest test results bundle
 xcresult-summary:
 	@./Tools/scripts/xcresult-report.sh
+
+# Canonical gate runner with automatic issue reporting and deduplication
+gate-report:
+	@chmod +x ./scripts/gate-report.sh
+	@bash -c '\
+		set -uo pipefail; \
+		overall_exit=0; \
+		echo "=== [gate-report] Running step: lint ==="; \
+		set +e; \
+		$(MAKE) lint 2>&1 | tee gate-lint.log; \
+		lint_exit=$${PIPESTATUS[0]}; \
+		set -e; \
+		./scripts/gate-report.sh gate-lint.log lint "$$lint_exit"; \
+		if [ "$$lint_exit" -ne 0 ]; then \
+			overall_exit=$$lint_exit; \
+		fi; \
+		echo "=== [gate-report] Running step: test-deep ==="; \
+		set +e; \
+		$(MAKE) test-deep 2>&1 | tee gate-test-deep.log; \
+		test_exit=$${PIPESTATUS[0]}; \
+		set -e; \
+		./scripts/gate-report.sh gate-test-deep.log test-deep "$$test_exit"; \
+		if [ "$$test_exit" -ne 0 ]; then \
+			overall_exit=$$test_exit; \
+		fi; \
+		exit "$$overall_exit"'
