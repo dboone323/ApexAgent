@@ -1478,3 +1478,24 @@ struct FileRollbackReportingTests {
         #expect(!empty.isNonEmpty)
     }
 }
+
+// MARK: - Issue #38 ask_bot risk regression tests
+
+@Suite("AskBotRiskSecurityTests")
+struct AskBotRiskSecurityTests {
+    @Test func askBotRiskLevelAndConfirmationGate() {
+        #expect(AgentSecurity.riskLevel(for: "ask_bot") == .medium)
+        #expect(AgentSecurity.requiresConfirmation("ask_bot") == false)
+    }
+
+    @Test func dispatchSwarmRiskLevelAndConfirmationGate() {
+        #expect(AgentSecurity.riskLevel(for: "dispatch_swarm") == .high)
+        #expect(AgentSecurity.requiresConfirmation("dispatch_swarm") == true)
+    }
+
+    @Test @MainActor func toolDispatchEngineConfirmationGate() {
+        let engine = ToolDispatchEngine()
+        #expect(engine.shouldConfirmTool(name: "ask_bot") == false)
+        #expect(engine.shouldConfirmTool(name: "dispatch_swarm") == true)
+    }
+}
