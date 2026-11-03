@@ -16,17 +16,24 @@ import os
         let container = try ModelContainer(for: schema, configurations: config)
         orchestrator.modelContext = ModelContext(container)
         
-        let server = ApexGatewayServer(port: UInt16.random(in: 30_000...60_000), orchestrator: orchestrator)
+        let server = ApexGatewayServer(port: 0, orchestrator: orchestrator)
         _ = server // non-optional value type
         
         // Start the server
         try server.start()
+        
+        guard let boundPort = server.listeningPort else {
+            Issue.record("Server failed to bind an ephemeral port")
+            return
+        }
+        #expect(boundPort > 0, "Bound ephemeral port should be non-zero")
         
         // Trigger a state change to exercise the broadcast state routing
         orchestrator.onStateChanged?()
         
         // Stop the server
         server.stop()
+        #expect(server.listeningPort == nil, "Server listeningPort should be nil after stop()")
     }
 
     @Test func testTerminalResultRoundTrip() throws {
