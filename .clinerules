@@ -1,0 +1,30 @@
+# ApexAgent — Cline rules
+# Source of truth: AGENTS.md in this repo root. Read it before starting any task.
+# The non-negotiables below apply even if you read nothing else.
+
+- Canonical gate: `make lint` then `make test-deep`. Gates run SOLO — check
+  for running builds/gates first and wait. ALWAYS tee gate output to a fixed
+  repo-root log file; report totals from the log, never from terminal banners.
+  Log counts must explicitly declare lines vs occurrences method.
+- Never skip the gate (never PUSH_CI_SKIP or --no-verify), and never weaken,
+  delete, skip, or gate a test or bump timeouts. Tests are add-only.
+- Every task and issue is typed: [Goal], [Problem], or [Feature], with an
+  objective and done criteria. Problems require red/green proof plus a
+  regression test. Features must be verified live in the real product.
+- Branch per task (`feat/`, `fix/`, `chore/` + slug). Open PR on the first
+  commit; update the same PR afterwards. NEVER merge a PR — merges are
+  Daniel's only (chat exception only).
+- A failure or out-of-scope problem becomes a GitHub issue: one per distinct
+  failure signature, search open issues first, evidence + log excerpt
+  required. Follow lane triage WIP limits (1 spine, max 2 targeted-fixes).
+  Lint warnings roll into the standing tech-debt issue only.
+- Contacts privacy fence: access Contacts only via ContactsOptInManager.
+- Swift 6 patterns: nonisolated methods on @MainActor cannot touch isolated
+  lets; [weak self] is illegal in @Sendable closures for non-Sendable Self;
+  blocking work in Task.detached with Sendable captures, publish via MainActor.run.
+- App sandbox is FALSE (standing fence, never change). Local gates are the CI
+  (GitHub Actions cannot execute on this account; appeal pending).
+- Free models only (cline-free/ or reflection/). Never enable usage-based billing.
+- Git: always `git --no-pager`, bounded output, bounded-timeout pushes.
+- Verify from files, logs, and live product — never from delegate summaries.
+  Re-read anything you claim to have written.
