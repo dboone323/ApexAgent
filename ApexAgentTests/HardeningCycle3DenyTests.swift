@@ -9,6 +9,7 @@ struct HardeningCycle3DenyTests {
         setenv("APEX_FORCE_DENY", "1", 1)
         defer { unsetenv("APEX_FORCE_DENY") }
         let orch = AgentOrchestrator()
+        orch.requireConfirmationForAll = true
         let tool = AskBotTool(orchestrator: orch)
         let result = try await tool.call(arguments: .init(targetBot: "Nobody", message: "hi"))
         #expect(result == "ERROR: Operation denied by user.")
