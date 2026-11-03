@@ -9,6 +9,11 @@
             "enabled" : true,
             "key" : "APEX_TEST_MODE",
             "value" : "1"
+          },
+          {
+            "enabled" : true,
+            "key" : "NODE_EXTRA_CA_CERTS",
+            "value" : "/etc/ssl/cert.pem"
           }
         ]
       }
