@@ -108,6 +108,30 @@ struct SpaceLandingServiceTests {
         #expect(relevant.contains { $0.message.contains("status updated to: running") })
         #expect(relevant.contains { $0.message.contains("ended with status: success") })
     }
+
+    @Test func runProcessSafelyKillsSIGTERMIgnoringChild() async {
+        let start = Date()
+        let res = await SpaceLandingService.runProcessSafely(
+            executableURL: URL(fileURLWithPath: "/bin/sh"),
+            arguments: ["-c", "trap \"\" TERM; sleep 120"],
+            timeoutSeconds: 2
+        )
+        let elapsed = Date().timeIntervalSince(start)
+        #expect(elapsed < 20)
+        #expect(res.exitCode != 0)
+    }
+
+    @Test func runProcessSafelyReturnsWhenGrandchildHoldsPipes() async {
+        let start = Date()
+        let res = await SpaceLandingService.runProcessSafely(
+            executableURL: URL(fileURLWithPath: "/bin/sh"),
+            arguments: ["-c", "(sleep 120 &) ; echo done"],
+            timeoutSeconds: 2
+        )
+        let elapsed = Date().timeIntervalSince(start)
+        #expect(elapsed < 20)
+        #expect(res.stdout.contains("done"))
+    }
 }
 
 // helper
