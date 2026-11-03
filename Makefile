@@ -1,5 +1,5 @@
 # ApexAgent — local CI mirror & deep test runners
-export DEVELOPER_DIR ?= /Applications/Xcode-beta.app/Contents/Developer
+export DEVELOPER_DIR ?= /Applications/Xcode.app/Contents/Developer
 SWIFT       ?= xcrun swift
 BUILD_FLAGS := -c release
 TEST_FLAGS  := --parallel --enable-code-coverage
