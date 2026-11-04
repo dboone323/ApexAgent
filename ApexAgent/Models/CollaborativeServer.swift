@@ -260,17 +260,9 @@ class CollaborativeServer: NSObject, ObservableObject {
             }
         }
 
-        // 2. Token Auth Extraction (from query params or header)
-        var queryToken: String?
-        if let url = URL(string: "http://localhost" + path),
-           let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-           let tokenQuery = components.queryItems?.first(where: { $0.name == "token" }) {
-            queryToken = tokenQuery.value
-        }
-
         // F10: invite redemption endpoint — exchanges a single-use code for
-        // the session token over the header channel. No pre-existing token
-        // required (the code IS the credential). Handled before auth gate.
+        // the session token over the header channel and sets the apex_session cookie.
+        // No pre-existing token required (the code IS the credential). Handled before auth gate.
         if plainPath == "/api/redeem" || plainPath == "/api/invite/redeem" {
             var code = headers["x-invite-code"] ?? ""
             if code.isEmpty, let url = URL(string: "http://localhost" + path),
@@ -286,27 +278,40 @@ class CollaborativeServer: NSObject, ObservableObject {
             }
             if let token = Self.redeemInviteCode(code) {
                 let resp = "{\"token\":\"\(token)\"}"
-                sendHTTPResponse(html: resp, status: "200 OK", contentType: "application/json", connection: connection)
+                sendHTTPResponse(
+                    html: resp,
+                    status: "200 OK",
+                    contentType: "application/json",
+                    extraHeaders: [
+                        "Set-Cookie": "apex_session=\(token); HttpOnly; Path=/; SameSite=Lax"
+                    ],
+                    connection: connection
+                )
             } else {
                 sendHTTPResponse(html: "{\"error\":\"Invalid or expired invite code\"}", status: "403 Forbidden", contentType: "application/json", connection: connection)
             }
             return
         }
-        // 3. Authorization Check
-        let authorized = isAuthorized(headers: headers, queryToken: queryToken, connection: connection)
+
+        // 2. Authorization Check
+        let authorized = isAuthorized(headers: headers, connection: connection)
         guard authorized else {
             logAccess(clientIP: clientIP, endpoint: plainPath, isAuthorized: false, decision: "Unauthorized (401)")
             sendHTTPResponse(html: "Unauthorized: Invalid or missing token", status: "401 Unauthorized", contentType: "text/plain", connection: connection)
             return
         }
 
-        // 4. RBAC Policy Check
+        // 3. RBAC Policy Check
         let rule = policy.rules.first(where: { $0.endpoint == plainPath })
         let requiredPermission = rule?.requiredPermission
 
         if let requiredPerm = requiredPermission,
            !isLoopbackClient(connection) {
-            let requestToken = queryToken ?? headers["authorization"]?.dropFirst(7).trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let bearerToken = headers["authorization"].flatMap { auth -> String? in
+                guard auth.lowercased().starts(with: "bearer ") else { return nil }
+                return String(auth.dropFirst(7).trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+            let requestToken = bearerToken ?? extractSessionCookie(from: headers) ?? ""
             if !hasPermission(token: requestToken, requiredPermission: requiredPerm) {
                 logAccess(clientIP: clientIP, endpoint: plainPath, isAuthorized: true, decision: "Forbidden (403): Missing permission \(requiredPerm)")
                 sendHTTPResponse(html: "Forbidden: Missing required permission \(requiredPerm)", status: "403 Forbidden", contentType: "text/plain", connection: connection)
@@ -414,7 +419,7 @@ class CollaborativeServer: NSObject, ObservableObject {
         }
     }
 
-    func isAuthorized(headers: [String: String], queryToken: String?, connection: NWConnection) -> Bool {
+    func isAuthorized(headers: [String: String], connection: NWConnection) -> Bool {
         let isLoopback = isLoopbackClient(connection)
         let lanModeEnabled = UserDefaults.standard.bool(forKey: "apex.lanModeEnabled")
 
@@ -437,14 +442,31 @@ class CollaborativeServer: NSObject, ObservableObject {
         if let authHeader = headers["authorization"],
            authHeader.lowercased().starts(with: "bearer ") {
             let requestToken = authHeader.dropFirst(7).trimmingCharacters(in: .whitespacesAndNewlines)
-            return constantTimeCompare(requestToken, token)
+            if constantTimeCompare(requestToken, token) {
+                return true
+            }
         }
 
-        if let qToken = queryToken {
-            return constantTimeCompare(qToken, token)
+        if let sessionToken = extractSessionCookie(from: headers) {
+            if constantTimeCompare(sessionToken, token) {
+                return true
+            }
         }
 
         return false
+    }
+
+    private func extractSessionCookie(from headers: [String: String]) -> String? {
+        guard let cookieHeader = headers["cookie"] else { return nil }
+        let cookies = cookieHeader.split(separator: ";")
+        for cookie in cookies {
+            let pair = cookie.split(separator: "=", maxSplits: 1).map { String($0).trimmingCharacters(in: .whitespaces) }
+            if pair.count == 2 && pair[0] == "apex_session" {
+                let value = pair[1].trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+                return value
+            }
+        }
+        return nil
     }
 
     private func isLoopbackClient(_ connection: NWConnection) -> Bool {
@@ -509,23 +531,29 @@ class CollaborativeServer: NSObject, ObservableObject {
         }
     }
 
-    private func sendHTTPResponse(html: String, status: String, contentType: String, connection: NWConnection) {
+    private func sendHTTPResponse(html: String, status: String, contentType: String, extraHeaders: [String: String] = [:], connection: NWConnection) {
         guard let data = html.data(using: .utf8) else {
             connection.cancel()
             return
         }
-        sendHTTPDataResponse(data: data, status: status, contentType: contentType, connection: connection)
+        sendHTTPDataResponse(data: data, status: status, contentType: contentType, extraHeaders: extraHeaders, connection: connection)
     }
 
-    private func sendHTTPDataResponse(data: Data, status: String, contentType: String, connection: NWConnection) {
-        let headers = "HTTP/1.1 \(status)\r\n" +
-                      "Content-Type: \(contentType)\r\n" +
-                      "Content-Length: \(data.count)\r\n" +
-                      "Connection: close\r\n" +
-                      "X-Content-Type-Options: nosniff\r\n" +
-                      "X-Frame-Options: DENY\r\n" +
-                      "Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'\r\n" +
-                      "Server: ApexAgent\r\n\r\n"
+    private func sendHTTPDataResponse(data: Data, status: String, contentType: String, extraHeaders: [String: String] = [:], connection: NWConnection) {
+        var headerLines = [
+            "HTTP/1.1 \(status)",
+            "Content-Type: \(contentType)",
+            "Content-Length: \(data.count)",
+            "Connection: close",
+            "X-Content-Type-Options: nosniff",
+            "X-Frame-Options: DENY",
+            "Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'",
+            "Server: ApexAgent"
+        ]
+        for (k, v) in extraHeaders {
+            headerLines.append("\(k): \(v)")
+        }
+        let headers = headerLines.joined(separator: "\r\n") + "\r\n\r\n"
 
         guard var responseData = headers.data(using: .utf8) else {
             connection.cancel()
