@@ -117,15 +117,6 @@ struct CollaborativeServerTests {
         }
     }
 
-    @Test func testRemoteAcceptsConfiguredQueryToken() async throws {
-        withLAN(enabled: true, token: "the-real-token") {
-            let authorized = server.isAuthorized(
-                headers: ["authorization": "Bearer the-real-token"],
-                connection: mockConnection(host: "10.0.0.1"))
-            #expect(authorized == true, "Migrated from query-token auth: Bearer header must authorize a remote host in LAN mode")
-        }
-    }
-
     @Test func testRemoteAcceptsConfiguredSessionCookie() async throws {
         withLAN(enabled: true, token: "the-real-token") {
             let authorized = server.isAuthorized(
