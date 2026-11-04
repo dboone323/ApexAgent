@@ -64,7 +64,7 @@ enum AgentSecurity {
         "convene_meeting": .medium,
         "run_workflow": .medium,
         "confirm_completion": .medium,
-        "ask_bot": .high,
+        "ask_bot": .medium,
         "get_weather": .medium,
         "map_search": .medium,
         "get_directions": .medium,

@@ -17,6 +17,7 @@ struct HardeningCycle3F2Tests {
         setenv("APEX_FORCE_DENY", "1", 1)
         defer { unsetenv("APEX_FORCE_DENY") }
         let orch = AgentOrchestrator()
+        orch.requireConfirmationForAll = true
         orch.modelPreference = .localSystem
         let tool = AskBotTool(orchestrator: orch)
         let first = try await tool.call(arguments: .init(targetBot: "Nobody", message: "hi"))
