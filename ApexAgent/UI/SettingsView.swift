@@ -1065,11 +1065,16 @@ struct CollaborativeServerSettingsSection: View {
     @AppStorage("apex.collaborativeServerPort") private var collaborativeServerPort: Int = 1340
     @AppStorage("apex.lanModeEnabled") private var lanModeEnabled: Bool = false
     @State private var collabToken: String = ""
+    @State private var activeInviteCode: String = ""
     
     private var collaborativeServerURL: URL? {
-        let serverURLString = lanModeEnabled 
-            ? "http://localhost:\(collaborativeServerPort)/?token=\(collabToken)"
-            : "http://localhost:\(collaborativeServerPort)"
+        let serverURLString: String
+        if lanModeEnabled {
+            let code = activeInviteCode.isEmpty ? CollaborativeServer.issueInviteCode() : activeInviteCode
+            serverURLString = "http://localhost:\(collaborativeServerPort)/api/redeem?code=\(code)"
+        } else {
+            serverURLString = "http://localhost:\(collaborativeServerPort)"
+        }
         return URL(string: serverURLString)
     }
 
@@ -1098,7 +1103,12 @@ struct CollaborativeServerSettingsSection: View {
                 CollaborativeServer.shared.stop()
             }
         }
-        .onAppear { collabToken = ModelRegistry.collabToken() }
+        .onAppear {
+            collabToken = ModelRegistry.collabToken()
+            if lanModeEnabled && activeInviteCode.isEmpty {
+                activeInviteCode = CollaborativeServer.issueInviteCode()
+            }
+        }
         .onChange(of: collabToken) { _, newValue in
             ModelRegistry.setCollabToken(newValue)
         }
@@ -1126,6 +1136,11 @@ struct CollaborativeServerSettingsSection: View {
                         .foregroundStyle(AppTheme.Palette.textSecondary)
                 }
             }
+            .onChange(of: lanModeEnabled) { _, newValue in
+                if newValue {
+                    activeInviteCode = CollaborativeServer.issueInviteCode()
+                }
+            }
 
             if lanModeEnabled {
                 HStack {
@@ -1144,6 +1159,9 @@ struct CollaborativeServerSettingsSection: View {
                     Button(action: {
                         let newToken = UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(16).lowercased()
                         collabToken = String(newToken)
+                        if lanModeEnabled {
+                            activeInviteCode = CollaborativeServer.issueInviteCode()
+                        }
                         if collaborativeServerEnabled {
                             CollaborativeServer.shared.stop()
                             CollaborativeServer.shared.start(port: UInt16(collaborativeServerPort))
@@ -1165,6 +1183,11 @@ struct CollaborativeServerSettingsSection: View {
                             .font(.system(size: 10))
                     }
                 }
+                .simultaneousGesture(TapGesture().onEnded {
+                    if lanModeEnabled {
+                        activeInviteCode = CollaborativeServer.issueInviteCode()
+                    }
+                })
             }
 
             Button(action: openAccessAuditLog) {
