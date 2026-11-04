@@ -85,3 +85,12 @@ Titles read `[Goal] ...`, `[Problem] ...`, `[Feature] ...` with matching labels 
 | Ollama sessions | via Cline or CLI | Uses Cline's `.clinerules` or repo CLI directly |
 
 Task briefs follow `docs/agent/task-template.md`; failure handling and issue filing rules live in `docs/agent/failure-handling.md`.
+
+## Long-run protocol (no timer polling)
+
+Runs that take minutes (gates, builds, deploys) are never watched on a timer.
+
+1. **Sentinel + exit code.** Every long-running command writes its log to a fixed path AND, on completion, a sentinel file beside it (`<log-name>.done`) containing the exit code and a completion timestamp. The gate/report scripts write the sentinel themselves; ad-hoc runs wrap the command so the sentinel is written on both success and failure.
+2. **Blocking waits only.** A supervisor that must wait makes ONE blocking wait for the sentinel, sized to the run's expected duration (gates: ~7–10 min). Polling on a 30-second (or any short) timer across model turns is prohibited — each poll burns a full model turn to learn nothing.
+3. **Checkpointed reports.** The worker writes a checkpoint line to the task's report file at each phase boundary (RED done / implementation done / gate started / gate done with totals) and the completion section as its final action. The supervisor reads the report when the worker's turn ends — the turn ending is the completion event.
+4. **Failure reading.** If a run dies mid-phase, diagnose from the last checkpoint + the log tail. Never re-run just to watch it.
