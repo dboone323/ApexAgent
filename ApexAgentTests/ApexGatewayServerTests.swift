@@ -54,9 +54,8 @@ import os
         let orchestrator = AgentOrchestrator()
         orchestrator.appendMessage(ChatMessage(role: .user, content: "Gateway connectivity test"))
 
-        let port = UInt16.random(in: 30_000...60_000)
         let server = ApexGatewayServer(
-            port: port,
+            port: 0,
             orchestrator: orchestrator,
             authenticationToken: gatewayToken
         )
@@ -66,7 +65,7 @@ import os
         // Give listener brief setup moment
         try await Task.sleep(for: .milliseconds(200))
 
-        guard let nwPort = NWEndpoint.Port(rawValue: port) else {
+        guard let boundPort = server.listeningPort, let nwPort = NWEndpoint.Port(rawValue: boundPort) else {
             Issue.record("Invalid port")
             return
         }
