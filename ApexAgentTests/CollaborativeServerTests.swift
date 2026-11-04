@@ -40,6 +40,17 @@ struct CollaborativeServerTests {
         body()
     }
 
+    private func withLANAsync(enabled: Bool, token: String?, _ body: () async throws -> Void) async rethrows {
+        let defaults = UserDefaults.standard
+        defaults.set(enabled, forKey: Self.lanKey)
+        if let token { KeychainManager.save(key: Self.tokenKey, value: token) }
+        defer {
+            defaults.removeObject(forKey: Self.lanKey)
+            KeychainManager.delete(key: Self.tokenKey)
+        }
+        try await body()
+    }
+
     // MARK: - Defaults
 
     @Test func testDefaultBindsToLocalhost() async throws {
@@ -112,6 +123,29 @@ struct CollaborativeServerTests {
                 headers: [:], queryToken: "the-real-token",
                 connection: mockConnection(host: "10.0.0.1"))
             #expect(authorized == true)
+        }
+    }
+
+    /// RED proof test: a request carrying ONLY ?token=<valid token> must be rejected with 401.
+    @Test func testRequestWithOnlyQueryTokenIsRejected() async throws {
+        try await withLANAsync(enabled: true, token: "test-auth-token") {
+            let serverInstance = CollaborativeServer()
+            serverInstance.start(port: 0)
+            defer { serverInstance.stop() }
+
+            var waited = 0
+            while !serverInstance.isRunning && waited < 3_000 {
+                try? await Task.sleep(for: .milliseconds(50))
+                waited += 50
+            }
+            #expect(serverInstance.isRunning)
+            let port = serverInstance.port
+
+            let url = URL(string: "http://127.0.0.1:\(port)/api/state?token=test-auth-token")!
+            let request = URLRequest(url: url)
+            let (_, response) = try await URLSession.shared.data(for: request)
+            let httpResponse = try #require(response as? HTTPURLResponse)
+            #expect(httpResponse.statusCode == 401, "A request carrying only ?token= must be rejected with 401")
         }
     }
 
