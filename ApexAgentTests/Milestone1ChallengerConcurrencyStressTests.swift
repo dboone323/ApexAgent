@@ -262,8 +262,7 @@ final class Milestone1ChallengerConcurrencyStressTests {
     @MainActor
     @Test func testGatewayServerCleanStartStopAndPendingContinuationResume() throws {
         let orchestrator = AgentOrchestrator()
-        let port: UInt16 = 29990
-        let server = ApexGatewayServer(port: port, orchestrator: orchestrator)
+        let server = ApexGatewayServer(port: 0, orchestrator: orchestrator)
 
         try server.start()
 
