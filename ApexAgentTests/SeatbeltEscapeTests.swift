@@ -133,4 +133,24 @@ struct SeatbeltEscapeTests {
         #expect(res.exitCode == 0)
         #expect(res.stdout.contains("seatbelt confinement confirmed"))
     }
+
+    @Test func escapeTestF_writeToPrivateVarFoldersOutsideWorkspaceDenied() throws {
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("sb-test-var-folders-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+
+        let profile = SeatbeltProfile(workspacePath: tmp.path, allowNetwork: true).generate()
+        var buf = [CChar](repeating: 0, count: 1024)
+        _ = confstr(_CS_DARWIN_USER_CACHE_DIR, &buf, 1024)
+        let cacheDir = String(decoding: buf.prefix(while: { $0 != 0 }).map { UInt8(bitPattern: $0) }, as: UTF8.self)
+        let probeName = ".apex_seatbelt_var_folders_escape_\(UUID().uuidString).txt"
+        let targetPath = (cacheDir as NSString).appendingPathComponent(probeName)
+        defer { try? FileManager.default.removeItem(atPath: targetPath) }
+
+        let res = runSandbox(profile: profile, command: "echo 'forbidden' > '\(targetPath)'")
+
+        #expect(res.exitCode != 0)
+        #expect(res.stderr.contains("Operation not permitted") || res.stderr.contains("Permission denied"))
+        #expect(!FileManager.default.fileExists(atPath: targetPath))
+    }
 }

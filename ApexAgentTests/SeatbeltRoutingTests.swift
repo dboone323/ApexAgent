@@ -71,4 +71,13 @@ struct SeatbeltRoutingTests {
         let p2 = SeatbeltProfile(workspacePath: ws, allowNetwork: true).generate()
         #expect(p1 == p2)
     }
+
+    @Test func profileDoesNotContainBroadVarFoldersAllowance() {
+        let ws = "/tmp/test-seatbelt-ws"
+        let profile = SeatbeltProfile(workspacePath: ws, allowNetwork: true)
+        let generated = profile.generate()
+
+        #expect(!generated.contains("(subpath \"/private/var/folders\")"))
+        #expect(!generated.contains("(subpath \"/var/folders\")"))
+    }
 }
