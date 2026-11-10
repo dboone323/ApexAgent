@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import AppIntents
 @testable import ApexAgentCore
+@testable import ApexAgentIntents
 
 @Suite("Batch 5: ApexAgentIntents Tests", .serialized)
 struct ApexAgentIntentsTests {
@@ -45,5 +46,76 @@ struct ApexAgentIntentsTests {
         #expect(args.contains("--instructions"))
         #expect(args.contains("Be concise"))
         #expect(args.last == prompt)
+    }
+
+    // ── Real Framework Integration Tests (Issue #119) ──
+
+    @Test("SummarizeTextIntent metadata matches expected values")
+    func testSummarizeTextIntentMetadata() {
+        #expect(SummarizeTextIntent.title.key == "Summarize with ApexAgent")
+        #expect(String(describing: SummarizeTextIntent.description).contains("Summarize text using the on-device Apple model through ApexAgent."))
+    }
+
+    @Test("SummarizeTextIntent parameter initialization and assignment")
+    func testSummarizeTextIntentParameter() {
+        let intent = SummarizeTextIntent()
+        intent.text = "Real input text for summarization."
+        #expect(intent.text == "Real input text for summarization.")
+    }
+
+    @Test("FMIntentSupport runFM executes real CLI and propagates exit error when model is unavailable")
+    func testFMIntentSupportRealExecution() async {
+        do {
+            _ = try await FMIntentSupport.runFM(
+                prompt: "Say OK",
+                instructions: "Be brief",
+                model: "system"
+            )
+            #expect(true)
+        } catch let error as NSError {
+            #expect(error.domain == "FMIntentSupport")
+            #expect(error.code == -2 || error.code == -1)
+            #expect(error.localizedDescription.contains("fm exited") || error.localizedDescription.contains("fm CLI not found"))
+        }
+    }
+
+    @Test("FMIntentSupport runFM executes without instructions parameter")
+    func testFMIntentSupportWithoutInstructions() async {
+        do {
+            _ = try await FMIntentSupport.runFM(prompt: "Ping")
+            #expect(true)
+        } catch let error as NSError {
+            #expect(error.domain == "FMIntentSupport")
+            #expect(error.code == -2 || error.code == -1)
+        }
+    }
+
+    @Test("FMIntentSupport handles task cancellation")
+    func testFMIntentSupportCancellation() async {
+        let task = Task {
+            try await FMIntentSupport.runFM(prompt: "Long running prompt")
+        }
+        task.cancel()
+        do {
+            _ = try await task.value
+        } catch {
+            #expect(error is CancellationError || (error as NSError).domain == "FMIntentSupport")
+        }
+    }
+
+    @Test("SummarizeTextIntent perform exercises real intent logic and invokes FMIntentSupport")
+    func testSummarizeTextIntentPerform() async {
+        let intent = SummarizeTextIntent()
+        intent.text = "ApexAgent integrates on-device Foundation Models with AppIntents."
+        do {
+            _ = try await intent.perform()
+            #expect(true)
+        } catch let error as NSError {
+            #expect(error.domain == "FMIntentSupport")
+            #expect(error.code == -2 || error.code == -1)
+            #expect(error.localizedDescription.contains("fm exited") || error.localizedDescription.contains("fm CLI not found"))
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
     }
 }

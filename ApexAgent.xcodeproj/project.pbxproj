@@ -359,6 +359,7 @@
 		880B9423AF424F2A975DD608 /* ContainerPolicyAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C0AEA1B847C3106692AD4BB /* ContainerPolicyAuditorTests.swift */; };
 		888CF8C4F28F0AA6F1E32813 /* DifferentialScreenPerception.swift in Sources */ = {isa = PBXBuildFile; fileRef = 764931B33734D6FD77036F50 /* DifferentialScreenPerception.swift */; };
 		88A490B799A767F83191C1BC /* XCResultTrendAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 728EA0E727F11B1B0D9B4F02 /* XCResultTrendAnalyzer.swift */; };
+		88E11FA32234DD832CC77A3B /* ApexAgentIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9A131F909A44858DAE6CCE10 /* ApexAgentIntents.framework */; };
 		88E788FEC0E187CA785A5756 /* RepeatDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67DC13F56D7B73401BA68A8D /* RepeatDetector.swift */; };
 		88EC81B045C115D30EDC293D /* DispatchSwarmTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A5C6F5419AF23EFAEF97562 /* DispatchSwarmTool.swift */; };
 		89CA33D9C3C421CF1D23A6FF /* AccessibilityControlTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D571CF7D494D423A2BDC79D /* AccessibilityControlTool.swift */; };
@@ -446,6 +447,7 @@
 		A98AD0463219BD5CCC4792E3 /* ProactiveScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BA2C0DE52A04B8FBD5B0904 /* ProactiveScheduler.swift */; };
 		A9F8EDCC8B3C86899C7F7718 /* SecurityGovernanceProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D721ADBD02CBB80273EB777 /* SecurityGovernanceProfile.swift */; };
 		A9F999F499EA9DC225A150AC /* CodeReviewPersistenceToolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B7F459F6D864CD347D5903 /* CodeReviewPersistenceToolsTests.swift */; };
+		AADB2116F3E36546270E25B7 /* ApexAgentIntents.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9A131F909A44858DAE6CCE10 /* ApexAgentIntents.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		AAE2322C586056DF514D8886 /* MapSearchTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = D326AF58C2BEFC04CC7F728A /* MapSearchTool.swift */; };
 		AB7EAA722A8D32D66D83EB24 /* SpaceManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD71F633296A0B0519110983 /* SpaceManagerTests.swift */; };
 		ABA644927935CD3D07C24A09 /* MCPKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA20C2A176DB00AD435BCD7 /* MCPKit.framework */; };
@@ -780,6 +782,13 @@
 			remoteGlobalIDString = 61AFB82B28D8753880168205;
 			remoteInfo = ApexAgentCore;
 		};
+		9BFD637C518E517D71CFB071 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 39A304CAF52E92D2EBA80EA7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 87E10F15DEB270B43244F465;
+			remoteInfo = ApexAgentIntents;
+		};
 		A44E294310215EB4227190E4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 39A304CAF52E92D2EBA80EA7 /* Project object */;
@@ -839,6 +848,7 @@
 			dstSubfolderSpec = 10;
 			files = (
 				A017BECDE9535C5E98B32863 /* ApexAgentCore.framework in Embed Frameworks */,
+				AADB2116F3E36546270E25B7 /* ApexAgentIntents.framework in Embed Frameworks */,
 				4BB8A8C0B8332B055E31DFAE /* MCPKit.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
@@ -1557,6 +1567,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				969AD4C3CE7C46E33C44487A /* ApexAgentCore.framework in Frameworks */,
+				88E11FA32234DD832CC77A3B /* ApexAgentIntents.framework in Frameworks */,
 				C9603EDD6CECA4A30ADFA11A /* MCPKit.framework in Frameworks */,
 				ED302E91AFC583BD5D3BBEAB /* Logging in Frameworks */,
 			);
@@ -2552,6 +2563,7 @@
 			);
 			dependencies = (
 				862758B03E9BC5246AFA292C /* PBXTargetDependency */,
+				CDCC4689315172505E644EBD /* PBXTargetDependency */,
 				D6D2B10D83506FBFA54A2D06 /* PBXTargetDependency */,
 			);
 			name = ApexAgentTests;
@@ -3698,6 +3710,11 @@
 			isa = PBXTargetDependency;
 			target = 61AFB82B28D8753880168205 /* ApexAgentCore */;
 			targetProxy = 2D425B0473208C5466F49892 /* PBXContainerItemProxy */;
+		};
+		CDCC4689315172505E644EBD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 87E10F15DEB270B43244F465 /* ApexAgentIntents */;
+			targetProxy = 9BFD637C518E517D71CFB071 /* PBXContainerItemProxy */;
 		};
 		D6D2B10D83506FBFA54A2D06 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
