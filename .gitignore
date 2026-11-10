@@ -27,7 +27,9 @@ xcuserdata/
 .antigravity/
 .antigravity2/
 *.antigravity
-.agents/
+.agents/*
+!.agents/rules/
+!.agents/rules/**
 .idea/
 mcp-config.json
 apex-agent-config.json
