@@ -66,6 +66,37 @@ struct ShellTool: Tool {
                 } catch {
                     return "ERROR: \(error.localizedDescription)"
                 }
+            } else if case .seatbelt(let spaceID) = env {
+                let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+                let seedPath = spaceWs ?? mainWs
+                if seedPath.isEmpty {
+                    return "ERROR: No workspace path available for Seatbelt Space."
+                }
+                let wp = seedPath
+                let backend = await SeatbeltBackendRegistry.shared.backend(for: spaceID, workspacePath: wp)
+                do { try await backend.seed(workspacePath: wp) } catch {
+                    return "ERROR: \(error.localizedDescription)"
+                }
+                var cmd = arguments.command
+                if let wd = arguments.workingDirectory, !wd.isEmpty {
+                    let mapped: String
+                    do { mapped = try ExecutionEnvironmentResolver.mapPath(wd, workspacePath: wp) } catch {
+                        return "ERROR: \(error.localizedDescription)"
+                    }
+                    if mapped != "." {
+                        let escaped = "'" + mapped.replacingOccurrences(of: "'", with: "'\\''") + "'"
+                        cmd = "cd \(escaped) && \(cmd)"
+                    }
+                }
+                do {
+                    let (out, err, code) = try await backend.runShell(command: cmd, timeout: arguments.timeoutSeconds ?? 30)
+                    var result = out
+                    if !err.isEmpty { result += (result.isEmpty ? "" : "\n") + "STDERR: \(err)" }
+                    if code != 0 { result += "\nERROR: Command failed with exit code \(code)" }
+                    return result
+                } catch {
+                    return "ERROR: \(error.localizedDescription)"
+                }
             }
             
             // Security Check 1: Verify command path safety properties (bypassed in isolated container)

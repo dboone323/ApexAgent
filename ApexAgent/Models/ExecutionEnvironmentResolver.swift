@@ -6,6 +6,9 @@ public enum ExecutionEnvironmentResolver {
         if spaceTargetRaw == "tartVM", let id = spaceID {
             return .tartVM(spaceID: id.uuidString)
         }
+        if spaceTargetRaw == "seatbelt" {
+            return .seatbelt(spaceID: spaceID?.uuidString ?? "")
+        }
         if containerEnabled { return .appleContainer }
         return .host
     }
@@ -16,6 +19,9 @@ public enum ExecutionEnvironmentResolver {
         }
         if space.isSandboxVM {
             return .tartVM(spaceID: space.id.uuidString)
+        }
+        if space.isSeatbelt {
+            return .seatbelt(spaceID: space.id.uuidString)
         }
         return containerEnabled ? .appleContainer : .host
     }
@@ -31,12 +37,17 @@ public enum ExecutionEnvironmentResolver {
             return SpaceManager.shared.spaces.first(where: { $0.workspacePath == wsPath })
         }
         let env = resolve(space: space, containerEnabled: containerEnabled)
-        let workspacePath: String? = space?.workspacePath ?? (isTart(env) ? wsPath : nil)
+        let workspacePath: String? = space?.workspacePath ?? ((isTart(env) || isSeatbelt(env)) ? wsPath : nil)
         return (env, workspacePath)
     }
 
     public static func isTart(_ env: ExecutionEnvironment) -> Bool {
         if case .tartVM = env { return true }
+        return false
+    }
+
+    public static func isSeatbelt(_ env: ExecutionEnvironment) -> Bool {
+        if case .seatbelt = env { return true }
         return false
     }
 
@@ -79,6 +90,17 @@ public actor TartVMBackendRegistry {
     public func backend(for spaceID: String) -> TartVMBackend {
         if let b = backends[spaceID] { return b }
         let b = TartVMBackend(spaceID: spaceID)
+        backends[spaceID] = b
+        return b
+    }
+}
+
+public actor SeatbeltBackendRegistry {
+    public static let shared = SeatbeltBackendRegistry()
+    private var backends: [String: SeatbeltBackend] = [:]
+    public func backend(for spaceID: String, workspacePath: String = "", allowNetwork: Bool = true) -> SeatbeltBackend {
+        if let b = backends[spaceID] { return b }
+        let b = SeatbeltBackend(spaceID: spaceID, workspacePath: workspacePath, allowNetwork: allowNetwork)
         backends[spaceID] = b
         return b
     }
