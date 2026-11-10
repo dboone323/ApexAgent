@@ -84,6 +84,75 @@ struct MCPServerDashboardTests {
         #expect(stoppedHealth.isRunning == false)
     }
 
+    // MARK: - Issue #36 Production MCP Cold-Cache TLS Regression Tests
+
+    @Test func testMCPClientBuildSpawnEnvironmentGainsSystemCACertWhenAbsent() {
+        let emptyBase: [String: String] = [:]
+        let env = MCPClient.buildSpawnEnvironment(baseEnvironment: emptyBase)
+        if FileManager.default.fileExists(atPath: "/etc/ssl/cert.pem") {
+            #expect(env["NODE_EXTRA_CA_CERTS"] == "/etc/ssl/cert.pem")
+        } else {
+            #expect(env["NODE_EXTRA_CA_CERTS"] == nil)
+        }
+        #expect(env["PATH"] != nil)
+    }
+
+    @Test func testMCPClientBuildSpawnEnvironmentPreservesPreSetValue() {
+        let customCA = "/custom/ca-certificates.crt"
+        let baseWithCA = ["NODE_EXTRA_CA_CERTS": customCA]
+        let env = MCPClient.buildSpawnEnvironment(baseEnvironment: baseWithCA)
+        #expect(env["NODE_EXTRA_CA_CERTS"] == customCA)
+    }
+
+    @Test func testMCPClientColdCacheSpawnSucceedsWithoutParentNodeCA() async throws {
+        guard let live = liveServer() else {
+            Issue.record("no MCP found: @modelcontextprotocol/server-filesystem unavailable via npx")
+            return
+        }
+        defer { try? FileManager.default.removeItem(at: live.workspace) }
+
+        let originalCA = getenv("NODE_EXTRA_CA_CERTS").map { String(cString: $0) }
+        unsetenv("NODE_EXTRA_CA_CERTS")
+        defer {
+            if let originalCA {
+                setenv("NODE_EXTRA_CA_CERTS", originalCA, 1)
+            }
+        }
+
+        let orchestrator = AgentOrchestrator()
+        let config = MCPClientConfig(
+            requestTimeout: 20,
+            pingTimeout: 10,
+            maxRetries: 2,
+            circuitFailureThreshold: 3,
+            restartRateLimitWindow: 60,
+            maxRestartsInWindow: 3
+        )
+
+        let client = MCPClient(
+            serverName: "LiveColdCacheServer",
+            command: live.command,
+            arguments: live.arguments,
+            logger: orchestrator,
+            orchestrator: orchestrator,
+            config: config
+        )
+
+        try await client.start()
+        let isHealthy = await client.ping()
+        #expect(isHealthy, "Live MCP server should respond healthy to ping on cold cache without parent NODE_EXTRA_CA_CERTS")
+
+        let health = await client.health()
+        #expect(health.serverName == "LiveColdCacheServer")
+        #expect(health.isRunning == true)
+        #expect(health.circuitOpen == false)
+        #expect(health.failureCount == 0)
+
+        await client.stop()
+        let stoppedHealth = await client.health()
+        #expect(stoppedHealth.isRunning == false)
+    }
+
     @Test func testMCPClientCircuitBreakerTripAndReset() async {
         let orchestrator = AgentOrchestrator()
         let client = MCPClient(

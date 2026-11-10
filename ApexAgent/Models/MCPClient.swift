@@ -319,6 +319,59 @@ actor MCPClient {
         failureCount = maxRetries
     }
     
+    /// Builds the child process environment dictionary for MCP server launches.
+    /// Ensures `NODE_EXTRA_CA_CERTS` points to the macOS system certificate bundle
+    /// (`/etc/ssl/cert.pem`) when not already set, enabling npx/npm to validate TLS
+    /// on cold caches when running outside a shell environment.
+    static func buildSpawnEnvironment(
+        baseEnvironment: [String: String] = ProcessInfo.processInfo.environment,
+        isRestricted: Bool = false,
+        sandboxDirectory: URL? = nil,
+        serverName: String = "MCPClient"
+    ) -> [String: String] {
+        var env = baseEnvironment
+        // Build PATH from the current process environment plus standard Homebrew /
+        // local install locations. Do NOT hardcode any developer home directory.
+        // Prepend the user's ~/.local/bin (resolved at runtime) and the common
+        // brew/system locations so tools like python3 / npx resolve on any Mac.
+        let currentPath = env["PATH"] ?? ""
+        let userLocalBin = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".local/bin").path
+        let standardPaths = [userLocalBin, "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"]
+        let existing = currentPath.split(separator: ":").map(String.init)
+        // De-duplicate while preserving order: standard prefixes first, then inherited PATH.
+        var seen = Set<String>()
+        var merged: [String] = []
+        for p in standardPaths + existing where !p.isEmpty && seen.insert(p).inserted {
+            merged.append(p)
+        }
+        env["PATH"] = merged.joined(separator: ":")
+        if env["DEVELOPER_DIR"] == nil,
+           FileManager.default.fileExists(atPath: "/Applications/Xcode-beta.app/Contents/Developer") {
+            env["DEVELOPER_DIR"] = "/Applications/Xcode-beta.app/Contents/Developer"
+        }
+
+        // Production MCP cold-cache TLS fix (issue #36):
+        // If NODE_EXTRA_CA_CERTS is not already set AND /etc/ssl/cert.pem exists,
+        // set NODE_EXTRA_CA_CERTS to /etc/ssl/cert.pem for the child process.
+        if env["NODE_EXTRA_CA_CERTS"] == nil {
+            let certPath = "/etc/ssl/cert.pem"
+            if FileManager.default.fileExists(atPath: certPath) {
+                env["NODE_EXTRA_CA_CERTS"] = certPath
+            } else {
+                AppLog.notice(.mcp, "Default CA bundle not found at \(certPath); NODE_EXTRA_CA_CERTS not set for \(serverName)")
+            }
+        }
+        
+        if isRestricted, let sandboxDirectory = sandboxDirectory {
+            let fm = FileManager.default
+            try? fm.createDirectory(at: sandboxDirectory, withIntermediateDirectories: true)
+            env["HOME"] = sandboxDirectory.path
+        }
+
+        return env
+    }
+
     init(serverName: String, command: String, arguments: [String] = [], logger: ToolEventLogger, orchestrator: OrchestratorProvider? = nil, config: MCPClientConfig = .default) {
         self.serverName = serverName
         self.command = command
@@ -348,37 +401,15 @@ actor MCPClient {
         let shellArgs = ["-c", "exec \(command) \(quotedArgs)"]
         proc.arguments = shellArgs
         
-        var env = ProcessInfo.processInfo.environment
-        // Build PATH from the current process environment plus standard Homebrew /
-        // local install locations. Do NOT hardcode any developer home directory.
-        // Prepend the user's ~/.local/bin (resolved at runtime) and the common
-        // brew/system locations so tools like python3 / npx resolve on any Mac.
-        let currentPath = env["PATH"] ?? ""
-        let userLocalBin = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".local/bin").path
-        let standardPaths = [userLocalBin, "/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin"]
-        let existing = currentPath.split(separator: ":").map(String.init)
-        // De-duplicate while preserving order: standard prefixes first, then inherited PATH.
-        var seen = Set<String>()
-        var merged: [String] = []
-        for p in standardPaths + existing where !p.isEmpty && seen.insert(p).inserted {
-            merged.append(p)
-        }
-        env["PATH"] = merged.joined(separator: ":")
-        if env["DEVELOPER_DIR"] == nil,
-           FileManager.default.fileExists(atPath: "/Applications/Xcode-beta.app/Contents/Developer") {
-            env["DEVELOPER_DIR"] = "/Applications/Xcode-beta.app/Contents/Developer"
-        }
-        
-        if isRestricted {
-            let fm = FileManager.default
-            let sandboxDir = KeychainManager.isTestProcess
-                ? testSandboxDirectory
-                : ApexAgentStoragePaths.directory("sandbox")
-            try? fm.createDirectory(at: sandboxDir, withIntermediateDirectories: true)
-            env["HOME"] = sandboxDir.path
-        }
-
+        let sandboxDir = KeychainManager.isTestProcess
+            ? testSandboxDirectory
+            : ApexAgentStoragePaths.directory("sandbox")
+        let env = Self.buildSpawnEnvironment(
+            baseEnvironment: ProcessInfo.processInfo.environment,
+            isRestricted: isRestricted,
+            sandboxDirectory: isRestricted ? sandboxDir : nil,
+            serverName: serverName
+        )
         proc.environment = env
 
         let stdin = Pipe()
