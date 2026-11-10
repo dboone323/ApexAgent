@@ -2137,7 +2137,7 @@
     }
   },
   {
-    "description" : "Posts a message to a Discord channel via an incoming webhook URL.\nNo bot token required — the webhook URL carries the channel identity.\nConfigure the webhook URL in environment variable DISCORD_WEBHOOK_URL\nor UserDefaults key \"apex.discordWebhookUrl\".",
+    "description" : "Posts a message to a Discord channel via an incoming webhook URL.\nNo bot token required — the webhook URL carries the channel identity.\nConfigure the webhook URL in environment variable DISCORD_WEBHOOK_URL\nor the Keychain (set via the app's Settings / KeychainManager).",
     "name" : "discord_webhook",
     "parameters" : {
       "additionalProperties" : false,
