@@ -114,6 +114,18 @@ struct FileReadTool: Tool {
                 let content = try await backend.readFile(relativePath: guest == "." ? "" : guest)
                 return content
             } catch { return "ERROR: \(error.localizedDescription)" }
+        } else if case .seatbelt(let spaceID) = env {
+            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+            let wp = spaceWs ?? mainWs
+            guard !wp.isEmpty else { return "ERROR: No workspace path for Seatbelt Space." }
+            let backend = await SeatbeltBackendRegistry.shared.backend(for: spaceID, workspacePath: wp)
+            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            let guest: String
+            do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do {
+                let content = try await backend.readFile(relativePath: guest == "." ? "" : guest)
+                return content
+            } catch { return "ERROR: \(error.localizedDescription)" }
         }
         return try await executeWithLogging(arguments: arguments, orchestrator: self.orchestrator) {
             let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
@@ -206,6 +218,18 @@ struct FileWriteTool: Tool {
             let wp = spaceWs ?? mainWs
             guard !wp.isEmpty else { return "ERROR: No workspace path for VM seeding." }
             let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
+            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            let guest: String
+            do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do {
+                try await backend.writeFile(relativePath: guest == "." ? "" : guest, content: arguments.content)
+                return "✅ Written \(arguments.content.count) characters to \(guest)"
+            } catch { return "ERROR: \(error.localizedDescription)" }
+        } else if case .seatbelt(let spaceID) = env {
+            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+            let wp = spaceWs ?? mainWs
+            guard !wp.isEmpty else { return "ERROR: No workspace path for Seatbelt Space." }
+            let backend = await SeatbeltBackendRegistry.shared.backend(for: spaceID, workspacePath: wp)
             do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
             let guest: String
             do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
@@ -314,6 +338,16 @@ struct ListDirectoryTool: Tool {
             do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
             do { return try await backend.listDirectory(relativePath: guest == "." ? "" : guest) }
             catch { return "ERROR: \(error.localizedDescription)" }
+        } else if case .seatbelt(let spaceID) = env {
+            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+            let wp = spaceWs ?? mainWs
+            guard !wp.isEmpty else { return "ERROR: No workspace path for Seatbelt Space." }
+            let backend = await SeatbeltBackendRegistry.shared.backend(for: spaceID, workspacePath: wp)
+            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            let guest: String
+            do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do { return try await backend.listDirectory(relativePath: guest == "." ? "" : guest) }
+            catch { return "ERROR: \(error.localizedDescription)" }
         }
         return try await executeWithLogging(arguments: arguments, orchestrator: self.orchestrator) {
             let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
@@ -413,6 +447,18 @@ struct CreateDirectoryTool: Tool {
                 try await backend.createDirectory(relativePath: guest == "." ? "" : guest)
                 return "✅ Created directory: \(guest)"
             } catch { return "ERROR: \(error.localizedDescription)" }
+        } else if case .seatbelt(let spaceID) = env {
+            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+            let wp = spaceWs ?? mainWs
+            guard !wp.isEmpty else { return "ERROR: No workspace path for Seatbelt Space." }
+            let backend = await SeatbeltBackendRegistry.shared.backend(for: spaceID, workspacePath: wp)
+            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            let guest: String
+            do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do {
+                try await backend.createDirectory(relativePath: guest == "." ? "" : guest)
+                return "✅ Created directory: \(guest)"
+            } catch { return "ERROR: \(error.localizedDescription)" }
         }
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
@@ -460,6 +506,16 @@ struct DeleteFileTool: Tool {
             let wp = spaceWs ?? mainWs
             guard !wp.isEmpty else { return "ERROR: No workspace path for VM seeding." }
             let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
+            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            let guest: String
+            do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do { try await backend.deleteFile(relativePath: guest); return "✅ Deleted: \(guest)" }
+            catch { return "ERROR: \(error.localizedDescription)" }
+        } else if case .seatbelt(let spaceID) = env {
+            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+            let wp = spaceWs ?? mainWs
+            guard !wp.isEmpty else { return "ERROR: No workspace path for Seatbelt Space." }
+            let backend = await SeatbeltBackendRegistry.shared.backend(for: spaceID, workspacePath: wp)
             do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
             let guest: String
             do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
@@ -527,6 +583,17 @@ struct MoveFileTool: Tool {
             let wp = spaceWs ?? mainWs
             guard !wp.isEmpty else { return "ERROR: No workspace path for VM seeding." }
             let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
+            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            let src: String; let dst: String
+            do { src = try ExecutionEnvironmentResolver.mapPath(arguments.sourcePath, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do { dst = try ExecutionEnvironmentResolver.mapPath(arguments.destinationPath, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            do { try await backend.moveFile(from: src, to: dst); return "✅ Moved: \(src) → \(dst)" }
+            catch { return "ERROR: \(error.localizedDescription)" }
+        } else if case .seatbelt(let spaceID) = env {
+            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+            let wp = spaceWs ?? mainWs
+            guard !wp.isEmpty else { return "ERROR: No workspace path for Seatbelt Space." }
+            let backend = await SeatbeltBackendRegistry.shared.backend(for: spaceID, workspacePath: wp)
             do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
             let src: String; let dst: String
             do { src = try ExecutionEnvironmentResolver.mapPath(arguments.sourcePath, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }

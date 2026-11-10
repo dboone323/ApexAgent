@@ -150,6 +150,8 @@ public final class SpaceModel: @unchecked Sendable {
 
     public var isSandboxVM: Bool { executionTargetRaw == "tartVM" }
 
+    public var isSeatbelt: Bool { executionTargetRaw == "seatbelt" }
+
     public var sortedChannels: [SpaceChannel] {
         channels.sorted { $0.createdAt < $1.createdAt }
     }

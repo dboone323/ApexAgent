@@ -56,6 +56,31 @@ struct FileSearchTool: Tool {
                 if trimmed.isEmpty { return "No matches found for '\(arguments.query)' in directory: \(guestDir)" }
                 return trimmed
             } catch { return "ERROR: \(error.localizedDescription)" }
+        } else if case .seatbelt(let spaceID) = env {
+            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
+            let wp = spaceWs ?? mainWs
+            guard !wp.isEmpty else { return "ERROR: No workspace path for Seatbelt Space." }
+            let backend = await SeatbeltBackendRegistry.shared.backend(for: spaceID, workspacePath: wp)
+            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            let dir: String
+            if let d = arguments.directory { dir = d } else { dir = wp }
+            let guestDir: String
+            do { guestDir = try ExecutionEnvironmentResolver.mapPath(dir, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
+            var cmd = "grep -rnI --exclude-dir=.git --exclude-dir=.build --exclude-dir=.swiftpm"
+            if let pattern = arguments.filePattern {
+                let sanitized = pattern.replacingOccurrences(of: "'", with: "'\\''")
+                cmd += " --include='\(sanitized)'"
+            }
+            cmd += " -e '\(arguments.query.replacingOccurrences(of: "'", with: "'\\''"))' '\(guestDir.replacingOccurrences(of: "'", with: "'\\''"))'"
+            let maxCount = arguments.maxResults ?? 50
+            cmd += " -m \(maxCount)"
+            do {
+                let res = try await backend.runShell(command: cmd)
+                let out = res.stdout.isEmpty ? res.stderr : res.stdout
+                let trimmed = out.trimmingCharacters(in: .whitespacesAndNewlines)
+                if trimmed.isEmpty { return "No matches found for '\(arguments.query)' in directory: \(guestDir)" }
+                return trimmed
+            } catch { return "ERROR: \(error.localizedDescription)" }
         }
         return try await executeWithLogging(arguments: arguments, orchestrator: self.orchestrator) {
             let wsPath = await MainActor.run { self.orchestrator.orchestrator.currentWorkspacePath }
