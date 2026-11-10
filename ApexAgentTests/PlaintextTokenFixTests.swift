@@ -59,4 +59,111 @@ final class PlaintextTokenFixTests: XCTestCase {
         XCTAssertFalse(result.contains("ghp_"))
         XCTAssertFalse(result.lowercased().contains("gh auth token"))
     }
+
+    // MARK: - Issue #121: Keychain Credential Migration Tests
+
+    @MainActor
+    func testDiscordWebhookUrlMigratesFromUserDefaultsToKeychain() {
+        let sentinelUrl = "https://example.invalid/fake-webhook-for-tests"
+        UserDefaults.standard.set(sentinelUrl, forKey: "apex.discordWebhookUrl")
+        KeychainManager.delete(key: "discordWebhookUrl")
+        defer {
+            UserDefaults.standard.removeObject(forKey: "apex.discordWebhookUrl")
+            KeychainManager.delete(key: "discordWebhookUrl")
+        }
+
+        let orchestrator = AgentOrchestrator()
+        let tool = DiscordWebhookTool(orchestrator: orchestrator)
+
+        // Trigger migration via getter
+        let resolved = tool.getWebhookUrl()
+
+        // 1. Value is returned/available from new store (Keychain)
+        XCTAssertEqual(resolved, sentinelUrl)
+        XCTAssertEqual(KeychainManager.get(key: "discordWebhookUrl"), sentinelUrl)
+
+        // 2. Legacy UserDefaults key is deleted
+        XCTAssertNil(UserDefaults.standard.string(forKey: "apex.discordWebhookUrl"))
+
+        // 3. Pre-existing Keychain value is never overwritten by a legacy one
+        let preExistingKeychain = "https://example.invalid/pre-existing-keychain-webhook"
+        KeychainManager.save(key: "discordWebhookUrl", value: preExistingKeychain)
+        let newLegacyValue = "https://example.invalid/new-legacy-webhook"
+        UserDefaults.standard.set(newLegacyValue, forKey: "apex.discordWebhookUrl")
+
+        let secondResolved = tool.getWebhookUrl()
+        XCTAssertEqual(secondResolved, preExistingKeychain)
+        XCTAssertEqual(KeychainManager.get(key: "discordWebhookUrl"), preExistingKeychain)
+        XCTAssertNil(UserDefaults.standard.string(forKey: "apex.discordWebhookUrl"))
+    }
+
+    @MainActor
+    func testTavilyAPIKeyMigratesFromUserDefaultsToKeychain() {
+        let sentinelKey = "fake-tavily-key-for-tests"
+        UserDefaults.standard.set(sentinelKey, forKey: "apex.tavilyAPIKey")
+        KeychainManager.delete(key: "tavilyAPIKey")
+        defer {
+            UserDefaults.standard.removeObject(forKey: "apex.tavilyAPIKey")
+            KeychainManager.delete(key: "tavilyAPIKey")
+        }
+
+        let orchestrator = AgentOrchestrator()
+        let tool = WebSearchTool(orchestrator: orchestrator)
+
+        // Trigger migration via getter
+        let resolved = tool.getTavilyAPIKey()
+
+        // 1. Value is returned/available from new store (Keychain)
+        XCTAssertEqual(resolved, sentinelKey)
+        XCTAssertEqual(KeychainManager.get(key: "tavilyAPIKey"), sentinelKey)
+
+        // 2. Legacy UserDefaults key is deleted
+        XCTAssertNil(UserDefaults.standard.string(forKey: "apex.tavilyAPIKey"))
+
+        // 3. Pre-existing Keychain value is never overwritten by a legacy one
+        let preExistingKeychain = "pre-existing-tavily-keychain-val"
+        KeychainManager.save(key: "tavilyAPIKey", value: preExistingKeychain)
+        let newLegacyValue = "new-legacy-tavily-val"
+        UserDefaults.standard.set(newLegacyValue, forKey: "apex.tavilyAPIKey")
+
+        let secondResolved = tool.getTavilyAPIKey()
+        XCTAssertEqual(secondResolved, preExistingKeychain)
+        XCTAssertEqual(KeychainManager.get(key: "tavilyAPIKey"), preExistingKeychain)
+        XCTAssertNil(UserDefaults.standard.string(forKey: "apex.tavilyAPIKey"))
+    }
+
+    @MainActor
+    func testBraveAPIKeyMigratesFromUserDefaultsToKeychain() {
+        let sentinelKey = "fake-brave-key-for-tests"
+        UserDefaults.standard.set(sentinelKey, forKey: "apex.braveSearchAPIKey")
+        KeychainManager.delete(key: "braveSearchAPIKey")
+        defer {
+            UserDefaults.standard.removeObject(forKey: "apex.braveSearchAPIKey")
+            KeychainManager.delete(key: "braveSearchAPIKey")
+        }
+
+        let orchestrator = AgentOrchestrator()
+        let tool = WebSearchTool(orchestrator: orchestrator)
+
+        // Trigger migration via getter
+        let resolved = tool.getBraveAPIKey()
+
+        // 1. Value is returned/available from new store (Keychain)
+        XCTAssertEqual(resolved, sentinelKey)
+        XCTAssertEqual(KeychainManager.get(key: "braveSearchAPIKey"), sentinelKey)
+
+        // 2. Legacy UserDefaults key is deleted
+        XCTAssertNil(UserDefaults.standard.string(forKey: "apex.braveSearchAPIKey"))
+
+        // 3. Pre-existing Keychain value is never overwritten by a legacy one
+        let preExistingKeychain = "pre-existing-brave-keychain-val"
+        KeychainManager.save(key: "braveSearchAPIKey", value: preExistingKeychain)
+        let newLegacyValue = "new-legacy-brave-val"
+        UserDefaults.standard.set(newLegacyValue, forKey: "apex.braveSearchAPIKey")
+
+        let secondResolved = tool.getBraveAPIKey()
+        XCTAssertEqual(secondResolved, preExistingKeychain)
+        XCTAssertEqual(KeychainManager.get(key: "braveSearchAPIKey"), preExistingKeychain)
+        XCTAssertNil(UserDefaults.standard.string(forKey: "apex.braveSearchAPIKey"))
+    }
 }

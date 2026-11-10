@@ -5,7 +5,7 @@ import FoundationModels
 // Posts messages to a Discord channel via incoming webhook URL.
 // No bot token needed — webhook URLs are channel-specific and carry
 // the channel's identity. Configure WEBHOOK_URL in environment or
-// UserDefaults (key: "apex.discordWebhookUrl").
+// Keychain (key: "discordWebhookUrl").
 //
 // Usage from another tool or the orchestrator:
 //   let tool = DiscordWebhookTool(orchestrator: self)
@@ -24,7 +24,7 @@ struct DiscordWebhookTool: Tool {
         Posts a message to a Discord channel via an incoming webhook URL.
         No bot token required — the webhook URL carries the channel identity.
         Configure the webhook URL in environment variable DISCORD_WEBHOOK_URL
-        or UserDefaults key "apex.discordWebhookUrl".
+        or Keychain (key: "discordWebhookUrl").
         """
 
     @Generable
@@ -41,11 +41,10 @@ struct DiscordWebhookTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
-            let urlString = ProcessInfo.processInfo.environment["DISCORD_WEBHOOK_URL"]
-                ?? UserDefaults.standard.string(forKey: "apex.discordWebhookUrl")
+            let urlString = getWebhookUrl()
             guard let urlString, let url = URL(string: urlString) else {
                 throw NSError(domain: "DiscordWebhook", code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: "No webhook URL configured. Set DISCORD_WEBHOOK_URL env var or apex.discordWebhookUrl in UserDefaults."])
+                    userInfo: [NSLocalizedDescriptionKey: "No webhook URL configured. Set DISCORD_WEBHOOK_URL env var or configure in Keychain."])
             }
 
             var request = URLRequest(url: url)
@@ -75,8 +74,31 @@ struct DiscordWebhookTool: Tool {
         }
     }
 
-    private func getWebhookUrl() -> String? {
-        ProcessInfo.processInfo.environment["DISCORD_WEBHOOK_URL"]
-            ?? UserDefaults.standard.string(forKey: "apex.discordWebhookUrl")
+    private func migrateWebhookUrlIfNeeded() {
+        let defaults = UserDefaults.standard
+        let legacyKey = "apex.discordWebhookUrl"
+        guard let legacy = defaults.string(forKey: legacyKey)?.trimmingCharacters(in: .whitespacesAndNewlines), !legacy.isEmpty else {
+            return
+        }
+        if let existing = KeychainManager.get(key: "discordWebhookUrl"), !existing.isEmpty {
+            defaults.removeObject(forKey: legacyKey)
+            return
+        }
+        guard KeychainManager.save(key: "discordWebhookUrl", value: legacy) else {
+            AppLog.error(.discord, "Discord webhook URL migration from UserDefaults to Keychain failed; legacy entry was retained.")
+            return
+        }
+        defaults.removeObject(forKey: legacyKey)
+    }
+
+    func getWebhookUrl() -> String? {
+        migrateWebhookUrlIfNeeded()
+        if let envUrl = ProcessInfo.processInfo.environment["DISCORD_WEBHOOK_URL"], !envUrl.isEmpty {
+            return envUrl
+        }
+        if let keychainUrl = KeychainManager.get(key: "discordWebhookUrl"), !keychainUrl.isEmpty {
+            return keychainUrl
+        }
+        return nil
     }
 }

@@ -51,11 +51,26 @@ struct WebSearchTool: Tool {
 
     // MARK: - Tavily Search
 
-    private func getTavilyAPIKey() -> String? {
-        if let key = KeychainManager.get(key: "tavilyAPIKey"), !key.isEmpty {
-            return key
+    private func migrateTavilyAPIKeyIfNeeded() {
+        let defaults = UserDefaults.standard
+        let legacyKey = "apex.tavilyAPIKey"
+        guard let legacy = defaults.string(forKey: legacyKey)?.trimmingCharacters(in: .whitespacesAndNewlines), !legacy.isEmpty else {
+            return
         }
-        if let key = UserDefaults.standard.string(forKey: "apex.tavilyAPIKey"), !key.isEmpty {
+        if let existing = KeychainManager.get(key: "tavilyAPIKey"), !existing.isEmpty {
+            defaults.removeObject(forKey: legacyKey)
+            return
+        }
+        guard KeychainManager.save(key: "tavilyAPIKey", value: legacy) else {
+            AppLog.error(.security, "Tavily API key migration from UserDefaults to Keychain failed; legacy entry was retained.")
+            return
+        }
+        defaults.removeObject(forKey: legacyKey)
+    }
+
+    func getTavilyAPIKey() -> String? {
+        migrateTavilyAPIKeyIfNeeded()
+        if let key = KeychainManager.get(key: "tavilyAPIKey"), !key.isEmpty {
             return key
         }
         return ProcessInfo.processInfo.environment["TAVILY_API_KEY"]
@@ -107,13 +122,27 @@ struct WebSearchTool: Tool {
 
     // MARK: Brave Search
 
-    private func getBraveAPIKey() -> String? {
+    private func migrateBraveAPIKeyIfNeeded() {
+        let defaults = UserDefaults.standard
+        let legacyKey = "apex.braveSearchAPIKey"
+        guard let legacy = defaults.string(forKey: legacyKey)?.trimmingCharacters(in: .whitespacesAndNewlines), !legacy.isEmpty else {
+            return
+        }
+        if let existing = KeychainManager.get(key: "braveSearchAPIKey"), !existing.isEmpty {
+            defaults.removeObject(forKey: legacyKey)
+            return
+        }
+        guard KeychainManager.save(key: "braveSearchAPIKey", value: legacy) else {
+            AppLog.error(.security, "Brave Search API key migration from UserDefaults to Keychain failed; legacy entry was retained.")
+            return
+        }
+        defaults.removeObject(forKey: legacyKey)
+    }
+
+    func getBraveAPIKey() -> String? {
+        migrateBraveAPIKeyIfNeeded()
         // Check Keychain first (set via Settings panel → KeychainManager)
         if let key = KeychainManager.get(key: "braveSearchAPIKey"), !key.isEmpty {
-            return key
-        }
-        // Check UserDefaults (legacy path)
-        if let key = UserDefaults.standard.string(forKey: "apex.braveSearchAPIKey"), !key.isEmpty {
             return key
         }
         // Check environment variable
