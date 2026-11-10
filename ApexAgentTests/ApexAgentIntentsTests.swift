@@ -58,7 +58,7 @@ struct ApexAgentIntentsTests {
 
     @Test("SummarizeTextIntent parameter initialization and assignment")
     func testSummarizeTextIntentParameter() {
-        var intent = SummarizeTextIntent()
+        let intent = SummarizeTextIntent()
         intent.text = "Real input text for summarization."
         #expect(intent.text == "Real input text for summarization.")
     }
@@ -105,7 +105,7 @@ struct ApexAgentIntentsTests {
 
     @Test("SummarizeTextIntent perform exercises real intent logic and invokes FMIntentSupport")
     func testSummarizeTextIntentPerform() async {
-        var intent = SummarizeTextIntent()
+        let intent = SummarizeTextIntent()
         intent.text = "ApexAgent integrates on-device Foundation Models with AppIntents."
         do {
             _ = try await intent.perform()
