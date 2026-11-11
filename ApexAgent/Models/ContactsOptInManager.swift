@@ -21,6 +21,7 @@ public final class ContactsOptInManager: @unchecked Sendable {
     /// and `CNAccountCollectionUpdateWatcher` failures under test runners.
     public func configureTestIsolationIfNeeded() {
         guard isTestMode else { return }
+        setenv("CN_UNIT_TESTING", "1", 1)
         if let envClass = NSClassFromString("CNContactsEnvironment") as? NSObject.Type {
             let unitEnv = envClass.perform(NSSelectorFromString("unitTestingEnvironment")).takeUnretainedValue()
             _ = unitEnv.perform(NSSelectorFromString("useInMemoryStores"))

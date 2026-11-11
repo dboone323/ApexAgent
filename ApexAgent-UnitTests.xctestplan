@@ -12,6 +12,11 @@
           },
           {
             "enabled" : true,
+            "key" : "CN_UNIT_TESTING",
+            "value" : "1"
+          },
+          {
+            "enabled" : true,
             "key" : "NODE_EXTRA_CA_CERTS",
             "value" : "/etc/ssl/cert.pem"
           }
