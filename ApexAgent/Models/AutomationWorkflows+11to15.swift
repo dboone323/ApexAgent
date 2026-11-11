@@ -187,42 +187,56 @@ extension ApexWorkflows {
     // MARK: 14 — Deep-link routing (apexagent://) + Spotlight continuation handoff
     static func workflow14() async -> WorkflowResult {
         let name = "Deep-link routing + Spotlight handoff"
-        let navState = DeepLinkNavigationState()
+        let (routineResult, routineMatched, skillResult, skillMatched, commandResult, commandMatched, navRoutineId, navSkillName, navLastCommand) = await MainActor.run {
+            let navState = DeepLinkNavigationState()
 
-        let routineItem = SpotlightIndexer.makeRoutineItem(
-            id: "nightly-audit",
-            name: "Nightly Security Audit",
-            descriptionText: "Run hygiene audit",
-            trigger: "0 2 * * *"
-        )
-        let skillItem = SpotlightIndexer.makeSkillItem(
-            name: "code-review",
-            description: "Automated PR review",
-            triggerTerms: ["review", "diff"]
-        )
-        let commandItem = SpotlightIndexer.makeSlashCommandItem(
-            name: "/doctor",
-            summary: "Run subsystem health checks",
-            keywords: ["diagnostics"]
-        )
+            let routineItem = SpotlightIndexer.makeRoutineItem(
+                id: "nightly-audit",
+                name: "Nightly Security Audit",
+                descriptionText: "Run hygiene audit",
+                trigger: "0 2 * * *"
+            )
+            let skillItem = SpotlightIndexer.makeSkillItem(
+                name: "code-review",
+                description: "Automated PR review",
+                triggerTerms: ["review", "diff"]
+            )
+            let commandItem = SpotlightIndexer.makeSlashCommandItem(
+                name: "/doctor",
+                summary: "Run subsystem health checks",
+                keywords: ["diagnostics"]
+            )
 
-        let routineResult = SpotlightIndexer.handleSpotlightActivation(
-            uniqueIdentifier: routineItem.uniqueIdentifier,
-            navigationState: navState
-        )
-        let routineMatched = (navState.selectedRoutineId == "nightly-audit")
+            let rResult = SpotlightIndexer.handleSpotlightActivation(
+                uniqueIdentifier: routineItem.uniqueIdentifier,
+                navigationState: navState
+            )
+            let rMatched = (navState.selectedRoutineId == "nightly-audit")
 
-        let skillResult = SpotlightIndexer.handleSpotlightActivation(
-            uniqueIdentifier: skillItem.uniqueIdentifier,
-            navigationState: navState
-        )
-        let skillMatched = (navState.selectedSkillName == "code-review")
+            let sResult = SpotlightIndexer.handleSpotlightActivation(
+                uniqueIdentifier: skillItem.uniqueIdentifier,
+                navigationState: navState
+            )
+            let sMatched = (navState.selectedSkillName == "code-review")
 
-        let commandResult = SpotlightIndexer.handleSpotlightActivation(
-            uniqueIdentifier: commandItem.uniqueIdentifier,
-            navigationState: navState
-        )
-        let commandMatched = (navState.lastExecutedCommand == "doctor")
+            let cResult = SpotlightIndexer.handleSpotlightActivation(
+                uniqueIdentifier: commandItem.uniqueIdentifier,
+                navigationState: navState
+            )
+            let cMatched = (navState.lastExecutedCommand == "doctor")
+
+            return (
+                rResult != nil,
+                rMatched,
+                sResult != nil,
+                sMatched,
+                cResult != nil,
+                cMatched,
+                navState.selectedRoutineId,
+                navState.selectedSkillName,
+                navState.lastExecutedCommand
+            )
+        }
 
         let invalidURL = URL(string: "https://example.com/not-apex")!
         let invalidOutcome = DeepLinkRouter.parse(invalidURL)
@@ -233,11 +247,11 @@ extension ApexWorkflows {
             rejectedInvalid = false
         }
 
-        let passed = (routineResult != nil)
+        let passed = routineResult
             && routineMatched
-            && (skillResult != nil)
+            && skillResult
             && skillMatched
-            && (commandResult != nil)
+            && commandResult
             && commandMatched
             && rejectedInvalid
 
@@ -245,7 +259,7 @@ extension ApexWorkflows {
             id: 14,
             name: name,
             passed: passed,
-            evidence: "routine=\(navState.selectedRoutineId ?? "-") skill=\(navState.selectedSkillName ?? "-") cmd=\(navState.lastExecutedCommand ?? "-") invalidRejected=\(rejectedInvalid)"
+            evidence: "routine=\(navRoutineId ?? "-") skill=\(navSkillName ?? "-") cmd=\(navLastCommand ?? "-") invalidRejected=\(rejectedInvalid)"
         )
     }
 

@@ -211,11 +211,13 @@ extension ApexWorkflows {
         let hygiene = RepoHygieneAuditor.auditRepository(at: loop8RepoRootURL)
         let deps = DependencyLockAuditor.auditRepository(atRepoRoot: loop8RepoRootURL)
         let bundles = BundleIntegrityVerifier.verifyRepositoryBundleIntegrity(atRepoRoot: loop8RepoRootURL)
-        let smokeReport = CLISmokeTestHarness.runMatrix(cases: [
-            ("help", ["ApexAgent", "--help"]),
-            ("version", ["ApexAgent", "--version"]),
-            ("traces (json)", ["ApexAgent", "--json", "traces"])
-        ])
+        let smokeReport = await MainActor.run {
+            CLISmokeTestHarness.runMatrix(cases: [
+                ("help", ["ApexAgent", "--help"]),
+                ("version", ["ApexAgent", "--version"]),
+                ("traces (json)", ["ApexAgent", "--json", "traces"])
+            ])
+        }
         let passed = hygiene.passed && deps.passed && bundles.passed && smokeReport.passed
         return WorkflowResult(
             id: 40,

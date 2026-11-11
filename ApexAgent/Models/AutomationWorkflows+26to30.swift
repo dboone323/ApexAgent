@@ -63,7 +63,9 @@ extension ApexWorkflows {
             ("release-check (json)", ["ApexAgent", "--json", "release-check"]),
             ("provenance (json)", ["ApexAgent", "--json", "provenance"]),
         ]
-        let report = CLISmokeTestHarness.runMatrix(cases: fastCases)
+        let report = await MainActor.run {
+            CLISmokeTestHarness.runMatrix(cases: fastCases)
+        }
         return WorkflowResult(
             id: 29,
             name: name,
