@@ -72,6 +72,11 @@ final class PendingRoadmapItemsTests: XCTestCase {
         )
         // Disable tool calls for fast deterministic test execution
         botManager.session(for: responderBot).toolCallingMode = .disabled
+        // Route dispatch to deterministic test provider to eliminate live AFM inference
+        NativeAppleEngine.testResponder = { _, _ in
+            "DevOpsBot acknowledged: deploy failure detected and logged."
+        }
+        defer { NativeAppleEngine.testResponder = nil }
 
         let failRoutine = Routine(
             name: "DeployFailureReaction",
