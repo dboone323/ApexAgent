@@ -21,10 +21,80 @@ protocol AgentEngine {
 
 // MARK: - Native Apple Engine (macOS 27 native models)
 
+/// Thread-safe coordinator for prompt execution racing against cancellation and deadline timeouts.
+/// Ensures that when the caller task is cancelled or a deadline expires, the caller resumes immediately
+/// without waiting for any background inference calls (such as Apple Foundation Models daemon XPC) to finish.
+private final class PromptCancellationCoordinator: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<String, any Error>?
+    private var responseTask: Task<Void, Never>?
+    private var timeoutTask: Task<Void, Never>?
+    private var isCancelled = false
+    private var hasResumed = false
+
+    func setContinuation(_ continuation: CheckedContinuation<String, any Error>) {
+        lock.lock()
+        defer { lock.unlock() }
+        if isCancelled {
+            continuation.resume(throwing: CancellationError())
+            hasResumed = true
+        } else {
+            self.continuation = continuation
+        }
+    }
+
+    func setTasks(responseTask: Task<Void, Never>, timeoutTask: Task<Void, Never>) {
+        lock.lock()
+        defer { lock.unlock() }
+        self.responseTask = responseTask
+        self.timeoutTask = timeoutTask
+        if isCancelled {
+            responseTask.cancel()
+            timeoutTask.cancel()
+        }
+    }
+
+    func resume(returning value: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !hasResumed else { return }
+        hasResumed = true
+        continuation?.resume(returning: value)
+        continuation = nil
+        timeoutTask?.cancel()
+    }
+
+    func resume(throwing error: any Error) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !hasResumed else { return }
+        hasResumed = true
+        continuation?.resume(throwing: error)
+        continuation = nil
+        responseTask?.cancel()
+        timeoutTask?.cancel()
+    }
+
+    func cancel() {
+        lock.lock()
+        defer { lock.unlock() }
+        isCancelled = true
+        responseTask?.cancel()
+        timeoutTask?.cancel()
+        guard !hasResumed else { return }
+        hasResumed = true
+        continuation?.resume(throwing: CancellationError())
+        continuation = nil
+    }
+}
+
 @MainActor
 struct NativeAppleEngine: AgentEngine {
     let orchestrator: AgentOrchestrator
     var customSession: LanguageModelSession?
+    var timeoutOverride: TimeInterval? = nil
+    var customResponder: (@Sendable (Prompt, GenerationOptions) async throws -> String)? = nil
+    @MainActor static var testResponder: (@Sendable (Prompt, GenerationOptions) async throws -> String)? = nil
 
     func streamResponse(
         prompt: String,
@@ -41,8 +111,10 @@ struct NativeAppleEngine: AgentEngine {
         // When explicitlyNoTools or toolCallingMode == .disabled is true, always use a lightweight
         // tool-free session (even if customSession was passed) so the 3B on-device model does not
         // carry 12-14 unused tool schemas or fail when options.toolCallingMode = .disallowed is set.
-        let session: LanguageModelSession
-        if explicitlyNoTools {
+        let session: LanguageModelSession?
+        if customResponder != nil || Self.testResponder != nil {
+            session = customSession ?? orchestrator.session
+        } else if explicitlyNoTools {
             let cleanInst = "You are an expert AI assistant and Swift software engineer on macOS. Answer the user's request and write any requested code directly and concisely in your response."
             session = orchestrator.sessionCoordinator.createCompactionSession(
                 model: SystemLanguageModel.default,
@@ -100,31 +172,53 @@ struct NativeAppleEngine: AgentEngine {
                     "\n" + attachments.map { _ in "[image attachment]" }.joined(separator: "\n")
                 }
                 let multimodalPrompt = Prompt("\(promptWithContext)\(attachmentNotes)")
-                let timeoutSeconds = 90
-                let responseTask = Task { @MainActor in
-                    try await session.respond(to: multimodalPrompt, options: options)
-                }
-                defer { responseTask.cancel() }
-                let response = try await withThrowingTaskGroup(of: LanguageModelSession.Response.self) { group in
-                    group.addTask {
-                        try await responseTask.value
-                    }
-                    group.addTask {
-                        try await Task.sleep(for: .seconds(timeoutSeconds))
-                        throw NSError(
-                            domain: "NativeAppleEngine",
-                            code: timeoutSeconds,
-                            userInfo: [NSLocalizedDescriptionKey: "On-device multimodal response timed out after \(timeoutSeconds) seconds."]
-                        )
-                    }
+                let timeoutSeconds = timeoutOverride ?? 90
+                let coordinator = PromptCancellationCoordinator()
+                let responseText: String = try await withTaskCancellationHandler {
+                    try await withCheckedThrowingContinuation { continuation in
+                        coordinator.setContinuation(continuation)
 
-                    guard let response = try await group.next() else {
-                        throw CancellationError()
+                        let responseTask = Task { @MainActor in
+                            do {
+                                let result: String
+                                if let customResponder {
+                                    result = try await customResponder(multimodalPrompt, options)
+                                } else if let testResponder = Self.testResponder {
+                                    result = try await testResponder(multimodalPrompt, options)
+                                } else if let session {
+                                    result = try await session.respond(to: multimodalPrompt, options: options).content
+                                } else {
+                                    throw NSError(
+                                        domain: "NativeAppleEngine",
+                                        code: -1,
+                                        userInfo: [NSLocalizedDescriptionKey: "LanguageModelSession is not initialized."]
+                                    )
+                                }
+                                coordinator.resume(returning: result)
+                            } catch {
+                                coordinator.resume(throwing: error)
+                            }
+                        }
+
+                        let timeoutTask = Task {
+                            do {
+                                try await Task.sleep(for: .seconds(timeoutSeconds))
+                                coordinator.resume(throwing: NSError(
+                                    domain: "NativeAppleEngine",
+                                    code: Int(timeoutSeconds),
+                                    userInfo: [NSLocalizedDescriptionKey: "On-device multimodal response timed out after \(timeoutSeconds) seconds."]
+                                ))
+                            } catch {
+                                // Task.sleep cancelled
+                            }
+                        }
+
+                        coordinator.setTasks(responseTask: responseTask, timeoutTask: timeoutTask)
                     }
-                    group.cancelAll()
-                    return response
+                } onCancel: {
+                    coordinator.cancel()
                 }
-                let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                let text = responseText.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !text.isEmpty {
                     onUpdate(text)
                     if customSession == nil, let id = orchestrator.activeAssistantMessageId {
@@ -157,31 +251,53 @@ struct NativeAppleEngine: AgentEngine {
 
                 for turn in 0..<maxTurns {
                     let turnPrompt = currentPrompt
-                    let timeoutSeconds = customSession == nil ? 180 : 90
-                    let responseTask = Task { @MainActor in
-                        try await session.respond(to: turnPrompt, options: options)
-                    }
-                    defer { responseTask.cancel() }
-                    let response = try await withThrowingTaskGroup(of: LanguageModelSession.Response.self) { group in
-                        group.addTask {
-                            try await responseTask.value
-                        }
-                        group.addTask {
-                            try await Task.sleep(for: .seconds(timeoutSeconds))
-                            throw NSError(
-                                domain: "NativeAppleEngine",
-                                code: timeoutSeconds,
-                                userInfo: [NSLocalizedDescriptionKey: "On-device model response timed out after \(timeoutSeconds) seconds."]
-                            )
-                        }
+                    let timeoutSeconds = timeoutOverride ?? (customSession == nil ? 180 : 90)
+                    let coordinator = PromptCancellationCoordinator()
+                    let responseText: String = try await withTaskCancellationHandler {
+                        try await withCheckedThrowingContinuation { continuation in
+                            coordinator.setContinuation(continuation)
 
-                        guard let response = try await group.next() else {
-                            throw CancellationError()
+                            let responseTask = Task { @MainActor in
+                                do {
+                                    let result: String
+                                    if let customResponder {
+                                        result = try await customResponder(Prompt(turnPrompt), options)
+                                    } else if let testResponder = Self.testResponder {
+                                        result = try await testResponder(Prompt(turnPrompt), options)
+                                    } else if let session {
+                                        result = try await session.respond(to: turnPrompt, options: options).content
+                                    } else {
+                                        throw NSError(
+                                            domain: "NativeAppleEngine",
+                                            code: -1,
+                                            userInfo: [NSLocalizedDescriptionKey: "LanguageModelSession is not initialized."]
+                                        )
+                                    }
+                                    coordinator.resume(returning: result)
+                                } catch {
+                                    coordinator.resume(throwing: error)
+                                }
+                            }
+
+                            let timeoutTask = Task {
+                                do {
+                                    try await Task.sleep(for: .seconds(timeoutSeconds))
+                                    coordinator.resume(throwing: NSError(
+                                        domain: "NativeAppleEngine",
+                                        code: Int(timeoutSeconds),
+                                        userInfo: [NSLocalizedDescriptionKey: "On-device model response timed out after \(timeoutSeconds) seconds."]
+                                    ))
+                                } catch {
+                                    // Task.sleep cancelled
+                                }
+                            }
+
+                            coordinator.setTasks(responseTask: responseTask, timeoutTask: timeoutTask)
                         }
-                        group.cancelAll()
-                        return response
+                    } onCancel: {
+                        coordinator.cancel()
                     }
-                    let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let text = responseText.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !text.isEmpty else { break }
 
                     if fullText.isEmpty {
