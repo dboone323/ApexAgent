@@ -203,7 +203,9 @@ extension ApexWorkflows {
     // MARK: 50 — Multi-subsystem security policy audit & sandbox compliance verification
     static func workflow50() async -> WorkflowResult {
         let name = "Multi-subsystem security policy audit & sandbox compliance verification"
-        let immediateResult = ApexCLIRouter.renderImmediateSubcommand(.policy(jsonOutput: true))
+        let immediateResult = await MainActor.run {
+            ApexCLIRouter.renderImmediateSubcommand(.policy(jsonOutput: true))
+        }
         let passed = immediateResult != nil && immediateResult?.exitCode == 0 && (immediateResult?.output.contains("\"overallPassed\" : true") ?? false)
         return WorkflowResult(
             id: 50,

@@ -42,14 +42,14 @@ public struct WorkflowDescriptor: Codable, Sendable, Equatable {
     }
 }
 
-@MainActor
-public enum ApexWorkflows {
+public enum ApexWorkflows: Sendable {
 
     // MARK: Harness
 
     /// Builds an orchestrator wired to an in-memory SwiftData store with all
     /// folder permissions granted and confirmation auto-approved, so tool
     /// calls execute for real without UI prompts.
+    @MainActor
     static func makeOrchestrator(workspace: String) throws -> AgentOrchestrator {
         let orchestrator = AgentOrchestrator()
         let schema = Schema([
@@ -193,17 +193,17 @@ public enum ApexWorkflows {
     }
 
     public static func run(ids: Set<Int> = []) async -> [WorkflowResult] {
-        let all: [(Int, String, () async -> WorkflowResult)] = [
-            (1, "AI-assisted code review + persisted findings", workflow1),
-            (2, "Natural-language query over the project store", workflow2),
-            (3, "Test generation + self-healing selector repair", workflow3),
-            (4, "Documentation generation pipeline", workflow4),
-            (5, "CI/CD failure triage agent", workflow5),
-            (6, "Multi-agent task orchestration (StateGraph)", workflow6),
-            (7, "Pipeline / schema-drift monitoring", workflow7),
-            (8, "Ticket triage + routing", workflow8),
-            (9, "Legacy refactor modernization sweep", workflow9),
-            (10, "Personal productivity agent (briefing + standup)", workflow10),
+        let all: [(Int, String, @Sendable () async -> WorkflowResult)] = [
+            (1, "AI-assisted code review + persisted findings", { await workflow1() }),
+            (2, "Natural-language query over the project store", { await workflow2() }),
+            (3, "Test generation + self-healing selector repair", { await workflow3() }),
+            (4, "Documentation generation pipeline", { await workflow4() }),
+            (5, "CI/CD failure triage agent", { await workflow5() }),
+            (6, "Multi-agent task orchestration (StateGraph)", { await workflow6() }),
+            (7, "Pipeline / schema-drift monitoring", { await workflow7() }),
+            (8, "Ticket triage + routing", { await workflow8() }),
+            (9, "Legacy refactor modernization sweep", { await workflow9() }),
+            (10, "Personal productivity agent (briefing + standup)", { await workflow10() }),
             (11, "Pre-push security & hygiene self-audit", workflow11),
             (12, "Persistence corruption quarantine & recovery", workflow12),
             (13, "MCP 2026-07-28 negotiation & W3C traceparent", workflow13),
@@ -295,11 +295,20 @@ public enum ApexWorkflows {
             (99, "Dot Native Keychain Credential Vault & TouchID Security Gate", workflow99),
             (100, "Centurion Milestone: OpenSpace Thread Investigation & 100-Workflow Catalog Audit", workflow100),
         ]
-        var results: [WorkflowResult] = []
-        for (id, _, body) in all where ids.isEmpty || ids.contains(id) {
-            results.append(await body())
+        let selected = all.filter { ids.isEmpty || ids.contains($0.0) }
+        return await withTaskGroup(of: WorkflowResult.self) { group in
+            for item in selected {
+                group.addTask {
+                    await item.2()
+                }
+            }
+            var results: [WorkflowResult] = []
+            results.reserveCapacity(selected.count)
+            for await result in group {
+                results.append(result)
+            }
+            return results.sorted { $0.id < $1.id }
         }
-        return results
     }
 
     public static func runAll(ids: Set<Int> = []) async -> [WorkflowResult] {

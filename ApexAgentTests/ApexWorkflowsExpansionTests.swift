@@ -87,4 +87,13 @@ struct ApexWorkflowsExpansionTests {
         #expect(markdown.contains("Unified 12-check ApexAgent Doctor subsystem health matrix gate"))
         #expect(markdown.contains("Centurion Milestone: 100-Batch autonomous hardening loop verification & 70-workflow catalog audit"))
     }
+
+    @Test("ApexWorkflows.run executes nonisolated workflows concurrently and preserves ordered results")
+    func concurrentWorkflowExecutionPreservesOrderedResults() async {
+        let ids: Set<Int> = [11, 16, 21, 26, 31, 35, 41, 51, 61, 71, 81, 91]
+        let results = await ApexWorkflows.run(ids: ids)
+        #expect(results.count == 12)
+        #expect(results.allSatisfy { $0.passed })
+        #expect(results.map(\.id) == [11, 16, 21, 26, 31, 35, 41, 51, 61, 71, 81, 91])
+    }
 }
