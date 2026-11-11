@@ -45,13 +45,17 @@ Titles read `[Goal] ...`, `[Problem] ...`, `[Feature] ...` with matching labels 
 - The canonical gate sequence:
   1. `make lint`
   2. `make test-deep`
-- Output must ALWAYS be tee'd to a fixed repo-root log file (e.g. `test-deep.log`).
+- Output must ALWAYS be tee'd to a log file inside `runs/` (e.g. `runs/gate.log`).
 - Gates run **SOLO** — never two heavy builds or test suites at once. Before starting, check for running builds/gates and wait for them to finish.
 - Save the full gate output to the log file and read it back. Report totals from the log, never from terminal banners or memory.
 - Log counts must explicitly declare the method used: **lines vs. occurrences** (e.g. `grep -c` lines vs total match occurrences).
 - Zero failed tests is not zero errors — scan the log for runtime errors, crashes, and assertion failures separately.
 - Never skip the gate (`PUSH_CI_SKIP` and `--no-verify` are strictly forbidden), and never skip, delete, gate, or weaken a test or bump timeouts to force a green run. A failing or flaky test is reported as-is; the decision about it is Daniel's.
 - Git commands: always `git --no-pager`, bounded output, bounded-timeout pushes.
+
+## Run evidence
+
+All run evidence (dispatch reports, gate logs, sentinels) lives in `runs/` inside the project; never in the repo root, never in the home directory; `runs/` is gitignored and is never committed.
 
 ## Evidence standard
 
