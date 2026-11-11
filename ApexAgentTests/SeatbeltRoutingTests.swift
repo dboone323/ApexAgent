@@ -11,12 +11,6 @@ struct SeatbeltRoutingTests {
         #expect(env == .seatbelt(spaceID: space.id.uuidString))
     }
 
-    @Test func resolutionTartBeatsSeatbelt() {
-        let space = SpaceModel(name: "vm-space", executionTargetRaw: "tartVM")
-        let env = ExecutionEnvironmentResolver.resolve(spaceTargetRaw: space.executionTargetRaw, spaceID: space.id, containerEnabled: true)
-        #expect(env == .tartVM(spaceID: space.id.uuidString))
-    }
-
     @Test func resolutionSeatbeltPrecedenceOverHost() {
         let space = SpaceModel(name: "seatbelt-space", executionTargetRaw: "seatbelt")
         let env = ExecutionEnvironmentResolver.resolve(spaceTargetRaw: space.executionTargetRaw, spaceID: space.id, containerEnabled: false)

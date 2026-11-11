@@ -40,51 +40,7 @@ struct FilePatchTool: Tool {
     func call(arguments: Arguments) async throws -> String {
         let orchestrator = await self.orchestrator.orchestrator
         let (env, spaceWs) = await ExecutionEnvironmentResolver.resolveCurrent(orchestrator: orchestrator)
-        if case .tartVM(let spaceID) = env {
-            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
-            let wp = spaceWs ?? mainWs
-            guard !wp.isEmpty else { return "ERROR: No workspace path for VM seeding." }
-            let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
-            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
-            let guest: String
-            do { guest = try ExecutionEnvironmentResolver.mapPath(arguments.path, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
-            guard let originalContent = try? await backend.readFile(relativePath: guest) else {
-                return "ERROR: Could not read file as UTF-8 text at path: \(guest)"
-            }
-            let lines = originalContent.components(separatedBy: "\n")
-            let totalLines = lines.count
-            let startLine = max(1, arguments.startLine ?? 1)
-            let endLine = min(totalLines, arguments.endLine ?? totalLines)
-            guard startLine <= endLine else {
-                return "ERROR: Invalid line range [\(startLine), \(endLine)] for file with \(totalLines) lines."
-            }
-            let sliceLines = lines[(startLine - 1)..<endLine]
-            let sliceText = sliceLines.joined(separator: "\n")
-            guard sliceText.contains(arguments.targetContent) else {
-                return "ERROR: targetContent not found within specified lines \(startLine)-\(endLine) in \(guest)."
-            }
-            let occurrences = sliceText.components(separatedBy: arguments.targetContent).count - 1
-            if occurrences > 1 && !(arguments.allowMultiple ?? false) {
-                return "ERROR: Found \(occurrences) occurrences of targetContent in lines \(startLine)-\(endLine)."
-            }
-            let replacedSlice = (arguments.allowMultiple ?? false)
-                ? sliceText.replacingOccurrences(of: arguments.targetContent, with: arguments.replacementContent)
-                : {
-                    if let range = sliceText.range(of: arguments.targetContent) {
-                        var s = sliceText
-                        s.replaceSubrange(range, with: arguments.replacementContent)
-                        return s
-                    }
-                    return sliceText
-                }()
-            let beforeSlice = startLine > 1 ? lines[0..<(startLine - 1)].joined(separator: "\n") + "\n" : ""
-            let afterSlice = endLine < totalLines ? "\n" + lines[endLine..<totalLines].joined(separator: "\n") : ""
-            let newFullContent = beforeSlice + replacedSlice + afterSlice
-            do {
-                try await backend.writeFile(relativePath: guest, content: newFullContent)
-                return "✅ Successfully patched \(guest). Replaced \(occurrences) occurrence(s). [Verified: \(newFullContent.count) chars]"
-            } catch { return "ERROR: \(error.localizedDescription)" }
-        } else if case .seatbelt(let spaceID) = env {
+        if case .seatbelt(let spaceID) = env {
             let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
             let wp = spaceWs ?? mainWs
             guard !wp.isEmpty else { return "ERROR: No workspace path for Seatbelt Space." }

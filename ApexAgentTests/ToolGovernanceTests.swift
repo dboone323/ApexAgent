@@ -138,4 +138,24 @@ struct ToolGovernanceTests {
         let approved = await logger.requestConfirmation(toolName: "run_shell_command", arguments: "rm -rf /", riskDescription: "Dangerous", oldContent: nil, newContent: nil, filePath: nil)
         #expect(!approved)
     }
+
+    @Test func toolEventLoggerImplEmitsStructuredDiagnosticsToAppLog() async {
+        let logger = await MainActor.run { ToolEventLoggerImpl() }
+        let toolName = "test_pipe_diagnostic_tool_\(UUID().uuidString.prefix(8))"
+        let args = "{\"query\": \"safe-pipe-test\"}"
+
+        await MainActor.run {
+            logger.logToolStart(name: toolName, arguments: args)
+            logger.updateToolStatus(name: toolName, status: .running)
+            logger.logToolEnd(name: toolName, result: "pipe drain ok", status: .success)
+            logger.resolveConfirmation(approved: true)
+        }
+
+        let entries = AppLog.recentEntries(limit: 50)
+        let relevant = entries.filter { $0.category == .toolbox && $0.message.contains(toolName) }
+        #expect(!relevant.isEmpty)
+        #expect(relevant.contains { $0.message.contains("started with arguments") })
+        #expect(relevant.contains { $0.message.contains("status updated to: running") })
+        #expect(relevant.contains { $0.message.contains("ended with status: success") })
+    }
 }

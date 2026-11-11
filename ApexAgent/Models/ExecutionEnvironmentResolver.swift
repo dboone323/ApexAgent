@@ -3,9 +3,6 @@ import Foundation
 public enum ExecutionEnvironmentResolver {
 
     public static func resolve(spaceTargetRaw: String?, spaceID: UUID?, containerEnabled: Bool) -> ExecutionEnvironment {
-        if spaceTargetRaw == "tartVM", let id = spaceID {
-            return .tartVM(spaceID: id.uuidString)
-        }
         if spaceTargetRaw == "seatbelt" {
             return .seatbelt(spaceID: spaceID?.uuidString ?? "")
         }
@@ -16,9 +13,6 @@ public enum ExecutionEnvironmentResolver {
     public static func resolve(space: SpaceModel?, containerEnabled: Bool) -> ExecutionEnvironment {
         guard let space else {
             return containerEnabled ? .appleContainer : .host
-        }
-        if space.isSandboxVM {
-            return .tartVM(spaceID: space.id.uuidString)
         }
         if space.isSeatbelt {
             return .seatbelt(spaceID: space.id.uuidString)
@@ -37,13 +31,8 @@ public enum ExecutionEnvironmentResolver {
             return SpaceManager.shared.spaces.first(where: { $0.workspacePath == wsPath })
         }
         let env = resolve(space: space, containerEnabled: containerEnabled)
-        let workspacePath: String? = space?.workspacePath ?? ((isTart(env) || isSeatbelt(env)) ? wsPath : nil)
+        let workspacePath: String? = space?.workspacePath ?? (isSeatbelt(env) ? wsPath : nil)
         return (env, workspacePath)
-    }
-
-    public static func isTart(_ env: ExecutionEnvironment) -> Bool {
-        if case .tartVM = env { return true }
-        return false
     }
 
     public static func isSeatbelt(_ env: ExecutionEnvironment) -> Bool {
@@ -82,17 +71,6 @@ public func mapPathToGuest(_ rawPath: String, workspacePath: String) throws -> S
 
 public func mapToGuestPath(_ rawPath: String, workspacePath: String) throws -> String {
     try ExecutionEnvironmentResolver.mapPath(rawPath, workspacePath: workspacePath)
-}
-
-public actor TartVMBackendRegistry {
-    public static let shared = TartVMBackendRegistry()
-    private var backends: [String: TartVMBackend] = [:]
-    public func backend(for spaceID: String) -> TartVMBackend {
-        if let b = backends[spaceID] { return b }
-        let b = TartVMBackend(spaceID: spaceID)
-        backends[spaceID] = b
-        return b
-    }
 }
 
 public actor SeatbeltBackendRegistry {
