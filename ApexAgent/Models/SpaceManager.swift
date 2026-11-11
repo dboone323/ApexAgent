@@ -844,6 +844,51 @@ public final class SpaceManager {
         return msg
     }
 
+    // MARK: - Seatbelt Space Landing Reporting
+
+    @discardableResult
+    public func postLandingReport(
+        _ report: LandingReport,
+        for space: SpaceModel,
+        channel: SpaceChannel? = nil
+    ) -> SpaceMessage? {
+        let targetChannel = channel ?? space.sortedChannels.first
+        guard let targetChannel else { return nil }
+
+        let cardContent = """
+        <!-- apex-landing-report -->
+        \(report.summary)
+        """
+
+        let msg = SpaceMessage(
+            senderParticipantId: activeLocalHumanParticipantId ?? UUID(),
+            senderName: "Landing Coordinator",
+            senderHandle: "landing",
+            senderKind: .system,
+            senderAvatarSymbol: report.succeeded ? "airplane.arrival" : "exclamationmark.triangle.fill",
+            content: cardContent
+        )
+        msg.channel = targetChannel
+        targetChannel.messages.append(msg)
+        targetChannel.updatedAt = Date()
+        space.updatedAt = Date()
+        if let context = modelContext {
+            context.insert(msg)
+        }
+        saveContext()
+        return msg
+    }
+
+    public func landSpace(_ space: SpaceModel) async -> LandingReport {
+        let coordinator = SeatbeltLandingCoordinator()
+        let input = SeatbeltLandingCoordinator.Input(
+            spaceID: space.id.uuidString,
+            spaceName: space.name,
+            workspacePath: space.workspacePath
+        )
+        return await coordinator.land(input: input)
+    }
+
     /// Handles an incoming message from a remote human peer (via `CollaborativeServer` or `ApexGatewayServer`).
     @discardableResult
     public func receiveRemoteHumanMessage(_ payload: SpaceMessagePostPayload) -> SpaceMessage? {

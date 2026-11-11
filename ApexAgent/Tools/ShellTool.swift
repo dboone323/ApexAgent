@@ -33,40 +33,9 @@ struct ShellTool: Tool {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: riskDesc) {
             let orchestrator = await self.orchestrator.orchestrator
             
-            // Spaces-on-VM routing: tartVM environments execute via TartVMBackend.
+            // Seatbelt sandboxed Space routing.
             let (env, spaceWs) = await ExecutionEnvironmentResolver.resolveCurrent(orchestrator: orchestrator)
-            if case .tartVM(let spaceID) = env {
-                let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
-                let seedPath = spaceWs ?? mainWs
-                if seedPath.isEmpty {
-                    return "ERROR: No workspace path available for VM seeding."
-                }
-                let wp = seedPath
-                let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
-                do { try await backend.seed(workspacePath: wp) } catch {
-                    return "ERROR: \(error.localizedDescription)"
-                }
-                var cmd = arguments.command
-                if let wd = arguments.workingDirectory, !wd.isEmpty {
-                    let mapped: String
-                    do { mapped = try ExecutionEnvironmentResolver.mapPath(wd, workspacePath: wp) } catch {
-                        return "ERROR: \(error.localizedDescription)"
-                    }
-                    if mapped != "." {
-                        let escaped = "'" + mapped.replacingOccurrences(of: "'", with: "'\\''") + "'"
-                        cmd = "cd \(escaped) && \(cmd)"
-                    }
-                }
-                do {
-                    let (out, err, code) = try await backend.runShell(command: cmd)
-                    var result = out
-                    if !err.isEmpty { result += (result.isEmpty ? "" : "\n") + "STDERR: \(err)" }
-                    if code != 0 { result += "\nERROR: Command failed with exit code \(code)" }
-                    return result
-                } catch {
-                    return "ERROR: \(error.localizedDescription)"
-                }
-            } else if case .seatbelt(let spaceID) = env {
+            if case .seatbelt(let spaceID) = env {
                 let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
                 let seedPath = spaceWs ?? mainWs
                 if seedPath.isEmpty {

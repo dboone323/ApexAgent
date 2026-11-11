@@ -428,6 +428,22 @@ private struct SpaceChannelHeaderBar: View {
             .buttonStyle(.plain)
             .help("View Space Members (Humans & Bots)")
 
+            // Seatbelt Landing Action
+            if space.isSeatbelt {
+                Button {
+                    Task {
+                        _ = await spaceManager.landSpace(space)
+                    }
+                } label: {
+                    Label("Land Space", systemImage: "airplane.arrival")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .help("Quarantine changes, verify test integrity, and land Seatbelt Space")
+                .accessibilityIdentifier("landSeatbeltSpaceButton")
+            }
+
             // Add Human / Bot Button
             Button(action: onAddMember) {
                 Label("Add Member", systemImage: "person.badge.plus")
@@ -558,22 +574,28 @@ private struct SpaceMessageBubbleView: View {
                 }
 
                 // Body
-                Text(.init(message.content))
-                    .font(.system(size: 13.5))
-                    .foregroundStyle(.primary)
-                    .textSelection(.enabled)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 9)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color(nsColor: .windowBackgroundColor))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(badgeColor.opacity(0.22), lineWidth: 0.8)
-                    )
-                    .contextMenu {
+                Group {
+                    if message.content.contains("<!-- apex-landing-report -->") {
+                        SpaceLandingCompletionCardView(content: message.content)
+                    } else {
+                        Text(.init(message.content))
+                            .font(.system(size: 13.5))
+                            .foregroundStyle(.primary)
+                            .textSelection(.enabled)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color(nsColor: .windowBackgroundColor))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(badgeColor.opacity(0.22), lineWidth: 0.8)
+                            )
+                    }
+                }
+                .contextMenu {
                         Button {
                             NSPasteboard.general.clearContents()
                             NSPasteboard.general.setString(message.content, forType: .string)
@@ -598,6 +620,61 @@ private struct SpaceMessageBubbleView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("spaceMessage_\(message.id.uuidString)")
+    }
+}
+
+// MARK: - Seatbelt Space Landing Completion Card
+
+struct SpaceLandingCompletionCardView: View {
+    let content: String
+
+    private var isSucceeded: Bool {
+        content.contains("RESULT: LANDED")
+    }
+
+    private var cleanedSummary: String {
+        content
+            .replacingOccurrences(of: "<!-- apex-landing-report -->\n", with: "")
+            .replacingOccurrences(of: "<!-- apex-landing-report -->", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: isSucceeded ? "airplane.arrival" : "exclamationmark.triangle.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(isSucceeded ? .green : .red)
+                Text(isSucceeded ? "Seatbelt Space Landed" : "Seatbelt Landing Failed")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text(isSucceeded ? "LANDED" : "FAILED")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(isSucceeded ? .green : .red)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background((isSucceeded ? Color.green : Color.red).opacity(0.12))
+                    .clipShape(Capsule())
+            }
+
+            Text(cleanedSummary)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(8)
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .textBackgroundColor)))
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(nsColor: .windowBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke((isSucceeded ? Color.green : Color.red).opacity(0.3), lineWidth: 1)
+        )
     }
 }
 

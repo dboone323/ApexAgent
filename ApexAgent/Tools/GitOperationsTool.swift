@@ -39,37 +39,7 @@ struct GitOperationsTool: Tool {
     func call(arguments: Arguments) async throws -> String {
         let orchestrator = await self.orchestrator.orchestrator
         let (env, spaceWs) = await ExecutionEnvironmentResolver.resolveCurrent(orchestrator: orchestrator)
-        if case .tartVM(let spaceID) = env {
-            let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
-            let wp = spaceWs ?? mainWs
-            guard !wp.isEmpty else { return "ERROR: No workspace path for VM seeding." }
-            let backend = await TartVMBackendRegistry.shared.backend(for: spaceID)
-            do { try await backend.seed(workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
-            let repoRaw: String = arguments.repoPath ?? (UserDefaults.standard.string(forKey: "apex.workspacePath") ?? wp)
-            do { _ = try ExecutionEnvironmentResolver.mapPath(repoRaw, workspacePath: wp) } catch { return "ERROR: \(error.localizedDescription)" }
-            let action = arguments.action.lowercased()
-            let cmdArgs: [String]
-            switch action {
-            case "add":
-                guard let paths = arguments.paths, !paths.isEmpty else { return "ERROR: 'paths' argument is required for 'add'." }
-                cmdArgs = ["add"] + paths
-            case "commit":
-                guard let msg = arguments.message, !msg.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return "ERROR: 'message' required." }
-                cmdArgs = ["commit", "-m", msg]
-            case "checkout":
-                guard let branch = arguments.branchName, !branch.isEmpty else { return "ERROR: 'branchName' required." }
-                if arguments.createBranch ?? false { cmdArgs = ["checkout", "-b", branch] } else { cmdArgs = ["checkout", branch] }
-            case "stash":
-                cmdArgs = ["stash"]
-            default:
-                cmdArgs = [action]
-            }
-            do {
-                let res = try await backend.git(arguments: cmdArgs)
-                let out = res.stdout.isEmpty ? res.stderr : res.stdout
-                return out.isEmpty ? "✅ Done" : out
-            } catch { return "ERROR: \(error.localizedDescription)" }
-        } else if case .seatbelt(let spaceID) = env {
+        if case .seatbelt(let spaceID) = env {
             let mainWs = await MainActor.run { orchestrator.currentWorkspacePath }
             let wp = spaceWs ?? mainWs
             guard !wp.isEmpty else { return "ERROR: No workspace path for Seatbelt Space." }

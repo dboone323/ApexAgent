@@ -186,7 +186,6 @@ targets:
         - path: ApexAgent-UnitTests.xctestplan
           defaultPlan: true
         - path: ApexAgent-UITests.xctestplan
-        - path: ApexAgent-LiveVMTests.xctestplan
       environmentVariables:
         APEX_DEBUG: "1"
 
