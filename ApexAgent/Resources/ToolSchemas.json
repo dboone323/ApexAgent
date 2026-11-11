@@ -2090,7 +2090,7 @@
     }
   },
   {
-    "description" : "Two-way Discord communication via bot token.\nPosts, reads, replies, edits, deletes, and reacts to messages\nin a Discord channel. Configure the bot token in environment\nvariable DISCORD_APEX_TOKEN or UserDefaults key\n\"apex.discordBotToken\". Bot identity: @ApexAgent\n(ID: 1537957778998431775).",
+    "description" : "Two-way Discord communication via bot token.\nPosts, reads, replies, edits, deletes, and reacts to messages\nin a Discord channel. Configure the bot token in environment\nvariable DISCORD_APEX_TOKEN or the Keychain (set via the app's\nSettings / KeychainManager). Bot identity: @ApexAgent\n(ID: 1537957778998431775).",
     "name" : "discord_bot",
     "parameters" : {
       "additionalProperties" : false,
