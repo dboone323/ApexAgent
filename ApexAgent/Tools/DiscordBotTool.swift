@@ -4,8 +4,9 @@ import FoundationModels
 // MARK: - Discord Bot Tool (2-way communication via bot token)
 //
 // Posts, reads, replies, edits, deletes, and reacts to messages in a
-// Discord channel using a bot token. Uses DISCORD_APEX_TOKEN env var or
-// UserDefaults key "apex.discordBotToken".
+// Discord channel using a bot token. Configure the bot token in environment
+// variable DISCORD_APEX_TOKEN or the Keychain (set via the app's
+// Settings / KeychainManager).
 //
 // Bot identity: @ApexAgent (ID: 1537957778998431775).
 // Follows common Discord bot adapter patterns
@@ -23,8 +24,8 @@ struct DiscordBotTool: Tool {
         Two-way Discord communication via bot token.
         Posts, reads, replies, edits, deletes, and reacts to messages
         in a Discord channel. Configure the bot token in environment
-        variable DISCORD_APEX_TOKEN or UserDefaults key
-        "apex.discordBotToken". Bot identity: @ApexAgent
+        variable DISCORD_APEX_TOKEN or the Keychain (set via the app's
+        Settings / KeychainManager). Bot identity: @ApexAgent
         (ID: 1537957778998431775).
         """
 
@@ -54,7 +55,7 @@ struct DiscordBotTool: Tool {
             let token = getBotToken()
             guard let token, !token.isEmpty else {
                 throw NSError(domain: "DiscordBot", code: 1,
-                    userInfo: [NSLocalizedDescriptionKey: "No bot token configured. Set DISCORD_APEX_TOKEN env var or apex.discordBotToken in UserDefaults."])
+                    userInfo: [NSLocalizedDescriptionKey: "No bot token configured. Set DISCORD_APEX_TOKEN env var or configure in Keychain."])
             }
 
             let channelId = arguments.channelId
