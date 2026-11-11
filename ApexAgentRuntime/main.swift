@@ -29,6 +29,10 @@ case .spaceCLI(let subArgs):
     await runSpaceCLIMode(subcommandArgs: subArgs)
     exit(0)
 
+case .gateQueue(let subArgs):
+    let exitCode = await GateQueueCLI.run(arguments: subArgs)
+    exit(exitCode)
+
 case .prompt(let text, let allowTools):
     if !allowTools {
         setenv("APEX_DISABLE_DYNAMIC_TOOLS", "1", 1)

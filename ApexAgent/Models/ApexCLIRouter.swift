@@ -48,6 +48,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case policy(jsonOutput: Bool)
     case daemon
     case spaceCLI(subcommandArgs: [String])
+    case gateQueue(subcommandArgs: [String])
     case prompt(text: String, allowTools: Bool)
 }
 
@@ -193,6 +194,10 @@ public enum ApexCLIRouter {
         case "--space-cli":
             let subArgs = Array(remaining.dropFirst())
             return ParsedCLIInvocation(command: .spaceCLI(subcommandArgs: subArgs), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
+        case "gate-queue", "--gate-queue", "gate-worker":
+            let subArgs = Array(remaining.dropFirst())
+            return ParsedCLIInvocation(command: .gateQueue(subcommandArgs: subArgs), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
         case "--cli", "--prompt", "-p":
             let cliArguments = Array(remaining.dropFirst())
