@@ -11,6 +11,7 @@
 		009A8AE7D710C956F0B1EFC8 /* MCPConfigImportAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E202A95E377CB28DAD9079D3 /* MCPConfigImportAuditor.swift */; };
 		0101F5F6BEE381BEA0584A8F /* SharedLogging.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 694736B63E8080A09030C984 /* SharedLogging.framework */; };
 		01063A18A0F26FD1F9762FB5 /* EmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5B854D574C87899115615D /* EmptyState.swift */; };
+		0179BE8F4CC83C783981344C /* GateLogAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBB22BC18C6F44D02605E775 /* GateLogAnalyzer.swift */; };
 		01993B608E99894436B41CA9 /* ApexAgentCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = BF959C9824A399A7C6398153 /* ApexAgentCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		01A0D0EB23FDD403F4C06426 /* ModelTieringCascadeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F29AD37CB86376F00695233 /* ModelTieringCascadeTests.swift */; };
 		01E57A098CA9E59DCCD502AF /* RoutinesAndSkillsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD2D964A8F63E9A4D8FC1226 /* RoutinesAndSkillsUITests.swift */; };
@@ -181,6 +182,7 @@
 		3F3F6695AB48FC66D09EEFD0 /* ApexAgentCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BF959C9824A399A7C6398153 /* ApexAgentCore.framework */; };
 		3F76C8704A6CFFEA7C5D6CBE /* ApexAgentIntents.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9A131F909A44858DAE6CCE10 /* ApexAgentIntents.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		3FD557F17A99B82B3E3B3DEE /* MLXAgentEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C20FF00E342751CE33CDFBDC /* MLXAgentEngine.swift */; };
+		3FF568281C386A2B9B6A970A /* GateJobReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF63F730AB165271767CD0D9 /* GateJobReport.swift */; };
 		4015EEC2C5EF89ED90240BC6 /* DiscordWebhookSecurityAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 768AAA702A1F7D6BE24BCB56 /* DiscordWebhookSecurityAuditor.swift */; };
 		406814A2ABAD8BB5F4544BB7 /* AgentRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB8480BA47D6667188C87338 /* AgentRegistryTests.swift */; };
 		409D8956AD7617A10AD14D56 /* TeamPlaybookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7B056D8B3C53F610E89AF18 /* TeamPlaybookTests.swift */; };
@@ -201,6 +203,7 @@
 		46EAB24998DD5F982139E964 /* DiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBF6EC58E8437F751F288312 /* DiagnosticsView.swift */; };
 		4797C7D5E49CA4267D9343E4 /* FullDuplexVoiceSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12C08988ADE9622B7FB4F53A /* FullDuplexVoiceSession.swift */; };
 		479DB180739C8B327967A774 /* ConcurrentGroupChatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6458642166A6C815931D3886 /* ConcurrentGroupChatTests.swift */; };
+		47DC8278816CC5F65D9CC425 /* GateQueueWorkerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDD09CD62A1D98C42056C926 /* GateQueueWorkerTests.swift */; };
 		48F222CE822CDCB1C02A0334 /* CronParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0DCC1A2314ABCD8D4CE6D1D /* CronParserTests.swift */; };
 		498BAEDD67B16DB783A3F4E1 /* WebhookSignatureAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FDE2847AC5C337B843FFEB7 /* WebhookSignatureAuditorTests.swift */; };
 		4AEE939649EDEB1E384B5A96 /* SwiftDataStoreIntegrityGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84E9D7DF8826115342A0019C /* SwiftDataStoreIntegrityGateTests.swift */; };
@@ -311,6 +314,7 @@
 		70E72B82181AAD56535EBB64 /* CodeCoverageGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2799305BB54913713A793F0 /* CodeCoverageGateTests.swift */; };
 		718B46A8A68B655ED720B60C /* DeepLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 408787E9FA3DCFCCA4606A27 /* DeepLinkRouter.swift */; };
 		71A3AABBD7E72EF6CC3C9113 /* ProactiveSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 441051938F5BAD8749723F6B /* ProactiveSchedulerTests.swift */; };
+		72849EE0421D9AC35371902B /* GateBaseline.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1EE7F93B3F45A7656E7BE58 /* GateBaseline.swift */; };
 		73F7664128697DF737F6C642 /* VoiceSessionAudioAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB7AFC7AB5F65C32B71A79A9 /* VoiceSessionAudioAuditor.swift */; };
 		74870366706705877F9BB19F /* DotCredentialVaultTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1580AF4E9E8E3E6E913E4766 /* DotCredentialVaultTests.swift */; };
 		74CF3242C869E5FB36976EC0 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66C670673D82D5C8E6FB17EA /* main.swift */; };
@@ -339,6 +343,7 @@
 		7FC084A981E0F645B4E15810 /* SkillManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85B52F6C3959978D838C4B01 /* SkillManagerTests.swift */; };
 		7FC33531EF40E5243AF9E3B3 /* SlackIntegrationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32350C58C3FA316F5619223A /* SlackIntegrationAuditorTests.swift */; };
 		7FFBBFF921EE6F35EFC10700 /* TransactionalEmailAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B7700FB9D45524A4DE2B253 /* TransactionalEmailAuditorTests.swift */; };
+		8032BD42A43C9A91F6E59B98 /* GateSlotLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = 270D5B0346ED292B69C4B76A /* GateSlotLock.swift */; };
 		80F0DBDD796CF1F98FE6A550 /* CollaborationPlaybook.swift in Sources */ = {isa = PBXBuildFile; fileRef = B912F4246AE0A1B3A85BF2C8 /* CollaborationPlaybook.swift */; };
 		8100A821CD21EB84324AE640 /* AutomationWorkflows+61to70.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FF4E0FD9C52DA3DF313884C /* AutomationWorkflows+61to70.swift */; };
 		81D7E9546916079C65339E3C /* AppIntentsContractAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DA4D3CCCC0EB9B6B3EB7202 /* AppIntentsContractAuditor.swift */; };
@@ -373,6 +378,7 @@
 		8E26604746E3EBDCCA572305 /* MCPConfigImportAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDE9616416245E4CD1D50E46 /* MCPConfigImportAuditorTests.swift */; };
 		8F11CC90D3BF356DB5B1EB33 /* CognitiveMemoryRetrievalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78F990F3123472B6BED6AB34 /* CognitiveMemoryRetrievalTests.swift */; };
 		8F9281D351FCD927451EDFB8 /* SlackIntegrationAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = B28FD81AF2A05B8EFFC268E1 /* SlackIntegrationAuditor.swift */; };
+		900868AF38DF9F08FEB68E13 /* GateJobSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5190BBB03FBC235A46B94FB /* GateJobSpec.swift */; };
 		90B4148CEC874F5B3C06182A /* CloudStorageAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 457485AB410BEFD7F06A7FD2 /* CloudStorageAuditorTests.swift */; };
 		90DBF8F050D09CD796200901 /* SpacePageTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B9ED6E04A6C3733A1A4CD0A /* SpacePageTools.swift */; };
 		90EF5FD9A45A83509FA4D342 /* NotificationTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16608A162DA38B28DD3CF9DE /* NotificationTool.swift */; };
@@ -609,6 +615,7 @@
 		E2FEEE71E5770E14566E6EB8 /* GroupChatEngineRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A30810DC3FF5F43D5615E50 /* GroupChatEngineRoutingTests.swift */; };
 		E37AA58C8D7690441DBB824E /* CompanionSensorConsentGate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4702ECD3ACCE2FEBD6196C6 /* CompanionSensorConsentGate.swift */; };
 		E41D1B6710999CFFE0A48553 /* TartVMBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD92B4C412C139D6324E6C5 /* TartVMBackend.swift */; };
+		E44B1BCE0F29673391D5229A /* GateQueueCLI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B03A68AD3143386ED58CC31 /* GateQueueCLI.swift */; };
 		E45C5C886DBA1EB70E91E7AA /* TeamPlaybook.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40F98B9AC9559F0CA668F7F5 /* TeamPlaybook.swift */; };
 		E47995D12CAF8FD5459A5824 /* AgentSystemPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B66A755BDD664BFE2E951C37 /* AgentSystemPrompt.swift */; };
 		E4E34BAA9EBA4CDE6AA7FD15 /* ExternalToolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C3090F85717E417C67EB22E /* ExternalToolsTests.swift */; };
@@ -631,6 +638,7 @@
 		EBB9D399EDF73A273780C6A9 /* AskBotTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = B81A01680566D441F13A25D4 /* AskBotTool.swift */; };
 		EBBDF8065AC89909B2D99BAC /* BotSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = F77ED7BAD97CEC1EEF7FD3E5 /* BotSession.swift */; };
 		EC0977B6E844C9BC6643B3E8 /* DelegateTaskTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 574DC27832C1565197903328 /* DelegateTaskTool.swift */; };
+		EC44ECC9E2A54F95B8FBCA58 /* GateQueueWorker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C72E2380F140C57A3C453AC3 /* GateQueueWorker.swift */; };
 		ECB19C12379F3F6E5FF5DEE9 /* ShellTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944559FAAD58B407A4886E1A /* ShellTool.swift */; };
 		ED1BE18E30AA3B9E8C4C205E /* SecurityAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E538597D4C821CC359930D8B /* SecurityAuditor.swift */; };
 		ED302E91AFC583BD5D3BBEAB /* Logging in Frameworks */ = {isa = PBXBuildFile; productRef = AA96E90696AF78244A9AE6FF /* Logging */; };
@@ -1005,6 +1013,7 @@
 		25DB416322844D409684968E /* MailAutomationTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailAutomationTool.swift; sourceTree = "<group>"; };
 		25F6338F9532A472CABA7B65 /* AutomationWorkflows+41to50.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+41to50.swift"; sourceTree = "<group>"; };
 		25FDB6BF0804517072F707B5 /* FrontmostAppToolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrontmostAppToolTests.swift; sourceTree = "<group>"; };
+		270D5B0346ED292B69C4B76A /* GateSlotLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateSlotLock.swift; sourceTree = "<group>"; };
 		27BB48A7B1F8A25F5707958C /* AutomationWorkflows+51to60.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+51to60.swift"; sourceTree = "<group>"; };
 		27F1418D4187BE8D6678C076 /* SwiftDataStoreIntegrityGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataStoreIntegrityGate.swift; sourceTree = "<group>"; };
 		283522708C14485797415040 /* ScreenHighlightOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenHighlightOverlay.swift; sourceTree = "<group>"; };
@@ -1018,6 +1027,7 @@
 		2A24EA6259BDFCEBF67C5D67 /* WebhookIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebhookIntegrationTests.swift; sourceTree = "<group>"; };
 		2A92F5162C8780BEFB5CB9E9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		2AA845373D11701256B50D9B /* ExternalSecretVaultAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalSecretVaultAuditor.swift; sourceTree = "<group>"; };
+		2B03A68AD3143386ED58CC31 /* GateQueueCLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateQueueCLI.swift; sourceTree = "<group>"; };
 		2BA40A47DD2DFCE5FAAB4979 /* SimctlTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimctlTool.swift; sourceTree = "<group>"; };
 		2BD5ACF224DD24A4D9FA04BA /* TickerSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TickerSchedulerTests.swift; sourceTree = "<group>"; };
 		2BE4D69859E750AC4D9258DC /* DiagnosticQuerySecurityAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticQuerySecurityAuditorTests.swift; sourceTree = "<group>"; };
@@ -1341,6 +1351,7 @@
 		B077DB318B46756601CFDC2A /* SwarmConcurrencyAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwarmConcurrencyAuditor.swift; sourceTree = "<group>"; };
 		B1029F45266243C1D9237A2C /* SkillManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillManager.swift; sourceTree = "<group>"; };
 		B1E7A20DE3A6A676C0D9781D /* ReleaseChangelogEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseChangelogEngine.swift; sourceTree = "<group>"; };
+		B1EE7F93B3F45A7656E7BE58 /* GateBaseline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateBaseline.swift; sourceTree = "<group>"; };
 		B1FB30C6E4BE23626036F532 /* ModelRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRegistry.swift; sourceTree = "<group>"; };
 		B1FC4EE0959C99DE3E87CFCB /* PlanDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDashboardView.swift; sourceTree = "<group>"; };
 		B28FD81AF2A05B8EFFC268E1 /* SlackIntegrationAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SlackIntegrationAuditor.swift; sourceTree = "<group>"; };
@@ -1376,6 +1387,7 @@
 		BB08FB6B01A5EF21819F07F8 /* ContainerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerManager.swift; sourceTree = "<group>"; };
 		BB0934366B621AFB1BC59FE9 /* MCPClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPClient.swift; sourceTree = "<group>"; };
 		BB8480BA47D6667188C87338 /* AgentRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentRegistryTests.swift; sourceTree = "<group>"; };
+		BBB22BC18C6F44D02605E775 /* GateLogAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateLogAnalyzer.swift; sourceTree = "<group>"; };
 		BCFB51AE0DEA35770B157534 /* MCPManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPManager.swift; sourceTree = "<group>"; };
 		BD0394B2675C1661BE2AC59D /* AgentProfiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentProfiles.swift; sourceTree = "<group>"; };
 		BD1C04DA82D92BFFD8F70417 /* UITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITests.swift; sourceTree = "<group>"; };
@@ -1413,6 +1425,7 @@
 		C6994694E8F990C544A512C9 /* AnthropicLanguageModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicLanguageModel.swift; sourceTree = "<group>"; };
 		C69E9FC9913B81B0A0FFB076 /* GitHubCopilotLanguageModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubCopilotLanguageModel.swift; sourceTree = "<group>"; };
 		C70750D1117524740D67E4E0 /* DotResourceAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotResourceAuditorTests.swift; sourceTree = "<group>"; };
+		C72E2380F140C57A3C453AC3 /* GateQueueWorker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateQueueWorker.swift; sourceTree = "<group>"; };
 		C7F940F079E9274310BE5610 /* AutomationWorkflows+8to10.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AutomationWorkflows+8to10.swift"; sourceTree = "<group>"; };
 		C8D91B02E613F6E41B7F5651 /* GroupToolPermissionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupToolPermissionTests.swift; sourceTree = "<group>"; };
 		C8F0624D77303AF383DE8AF0 /* TracingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TracingTests.swift; sourceTree = "<group>"; };
@@ -1448,6 +1461,7 @@
 		D4293BDA76CC113828484EBD /* ContainerStatusToolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerStatusToolTests.swift; sourceTree = "<group>"; };
 		D4702ECD3ACCE2FEBD6196C6 /* CompanionSensorConsentGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanionSensorConsentGate.swift; sourceTree = "<group>"; };
 		D4E51089993249281701F701 /* ExternalSecretVaultAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalSecretVaultAuditorTests.swift; sourceTree = "<group>"; };
+		D5190BBB03FBC235A46B94FB /* GateJobSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateJobSpec.swift; sourceTree = "<group>"; };
 		D5B638C992A9831210C08E52 /* BenchmarkEvaluationPipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkEvaluationPipeline.swift; sourceTree = "<group>"; };
 		D6049722417408EC2DBEC890 /* RoutineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineTests.swift; sourceTree = "<group>"; };
 		D60A8108233F6FAB5295FD77 /* IncidentManagementAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentManagementAuditorTests.swift; sourceTree = "<group>"; };
@@ -1468,7 +1482,9 @@
 		DD2D964A8F63E9A4D8FC1226 /* RoutinesAndSkillsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutinesAndSkillsUITests.swift; sourceTree = "<group>"; };
 		DD8BCC1BF3849E22270E8B7F /* SeatbeltRoutingLiveTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeatbeltRoutingLiveTests.swift; sourceTree = "<group>"; };
 		DDAC038EC7583710C624A8C4 /* DirectionsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectionsTool.swift; sourceTree = "<group>"; };
+		DDD09CD62A1D98C42056C926 /* GateQueueWorkerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateQueueWorkerTests.swift; sourceTree = "<group>"; };
 		DDE9616416245E4CD1D50E46 /* MCPConfigImportAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPConfigImportAuditorTests.swift; sourceTree = "<group>"; };
+		DF63F730AB165271767CD0D9 /* GateJobReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateJobReport.swift; sourceTree = "<group>"; };
 		E055ED608B882477C3D5A57D /* RoutineRecorderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutineRecorderTests.swift; sourceTree = "<group>"; };
 		E07DD0FD9023AAEF95AFCBDE /* ApexGatewayClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApexGatewayClient.swift; sourceTree = "<group>"; };
 		E1682A6FFC2AC1FE97FC890C /* SimctlSecurityAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimctlSecurityAuditorTests.swift; sourceTree = "<group>"; };
@@ -1835,6 +1851,20 @@
 				AEF118ABDFECDC016B406359 /* Tools */,
 				103EB7B3CB5C42B63BD8313B /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		51193E61AF4D957C0C723E0F /* GateQueue */ = {
+			isa = PBXGroup;
+			children = (
+				B1EE7F93B3F45A7656E7BE58 /* GateBaseline.swift */,
+				DF63F730AB165271767CD0D9 /* GateJobReport.swift */,
+				D5190BBB03FBC235A46B94FB /* GateJobSpec.swift */,
+				BBB22BC18C6F44D02605E775 /* GateLogAnalyzer.swift */,
+				2B03A68AD3143386ED58CC31 /* GateQueueCLI.swift */,
+				C72E2380F140C57A3C453AC3 /* GateQueueWorker.swift */,
+				270D5B0346ED292B69C4B76A /* GateSlotLock.swift */,
+			);
+			path = GateQueue;
 			sourceTree = "<group>";
 		};
 		52C044E1B59B2FC166923D0D /* sandboxctl */ = {
@@ -2236,6 +2266,7 @@
 				D1844C7164F6C29E259C41A2 /* WritingToolsSupport.swift */,
 				C40A5E2BBF6A32F4825FAA3A /* Companion */,
 				F6E705A3372FC60A823B02A0 /* Coordinators */,
+				51193E61AF4D957C0C723E0F /* GateQueue */,
 				155061817EB5635BD7AB9641 /* Intents */,
 				8B99CE7A3398A6B2E600432F /* Models */,
 				F031E34CDD92BC6B044F8081 /* Resources */,
@@ -2389,6 +2420,7 @@
 				249E944E3BD7385E3C5E0DE9 /* FileSystemToolsTests.swift */,
 				25FDB6BF0804517072F707B5 /* FrontmostAppToolTests.swift */,
 				1DB4AE52709A0E0EE2CBBCE7 /* FullDuplexVoiceTests.swift */,
+				DDD09CD62A1D98C42056C926 /* GateQueueWorkerTests.swift */,
 				892BE4093C46CC79832CBDF0 /* GatewayModelsTests.swift */,
 				81879F8AF9B14A9243A53B8D /* GitHookGateTests.swift */,
 				44752C1860D5B93EC7CE3A49 /* GitHubIntegrationAuditorTests.swift */,
@@ -3074,6 +3106,13 @@
 				33F9C880C6EBB07BA03D5186 /* FileSearchTool.swift in Sources */,
 				070407B3360CDC04300FA589 /* FileSystemTools.swift in Sources */,
 				4797C7D5E49CA4267D9343E4 /* FullDuplexVoiceSession.swift in Sources */,
+				72849EE0421D9AC35371902B /* GateBaseline.swift in Sources */,
+				3FF568281C386A2B9B6A970A /* GateJobReport.swift in Sources */,
+				900868AF38DF9F08FEB68E13 /* GateJobSpec.swift in Sources */,
+				0179BE8F4CC83C783981344C /* GateLogAnalyzer.swift in Sources */,
+				E44B1BCE0F29673391D5229A /* GateQueueCLI.swift in Sources */,
+				EC44ECC9E2A54F95B8FBCA58 /* GateQueueWorker.swift in Sources */,
+				8032BD42A43C9A91F6E59B98 /* GateSlotLock.swift in Sources */,
 				3471B1615D157E24FDB7FDE5 /* GatewayModels.swift in Sources */,
 				7D22AB2A73F0FC1DA59EFE27 /* GeneratedContent+JSON.swift in Sources */,
 				22413990D259A7BD540F589B /* GhostCursorOverlay.swift in Sources */,
@@ -3473,6 +3512,7 @@
 				5981D3F93F563489EC0360DF /* FileSystemToolsTests.swift in Sources */,
 				3E32D8949F5105EACF7ECE29 /* FrontmostAppToolTests.swift in Sources */,
 				C9CFA611F3E517C48486B675 /* FullDuplexVoiceTests.swift in Sources */,
+				47DC8278816CC5F65D9CC425 /* GateQueueWorkerTests.swift in Sources */,
 				F326C05BBA0F63B54D395CE4 /* GatewayModelsTests.swift in Sources */,
 				06E9BE572C4558C09CE431CC /* GitHookGateTests.swift in Sources */,
 				D8DD68ED916D484C832CD003 /* GitHubIntegrationAuditorTests.swift in Sources */,
