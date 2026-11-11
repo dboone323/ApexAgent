@@ -95,3 +95,7 @@ PULL_REQUEST_*.md
 *.bundle
 *.bundle.lock
 
+# Agent run evidence — local only (Section 6 convention)
+runs/
+
+
