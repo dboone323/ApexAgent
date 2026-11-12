@@ -17,7 +17,7 @@ fi
 MAX_BYTES=$((5 * 1024 * 1024))
 NOW=$(date +%s)
 ONE_HOUR=$((60 * 60))
-THIRTY_DAYS=$((30 * 24 * 60 * 60))
+SEVEN_DAYS=$((7 * 24 * 60 * 60))
 
 acted=0
 for f in "$LOG_DIR"/*.log; do
@@ -29,7 +29,7 @@ for f in "$LOG_DIR"/*.log; do
         continue
     fi
     size=$(stat -f %z "$f" 2>/dev/null || stat -c %s "$f" 2>/dev/null)
-    if (( age > THIRTY_DAYS )); then
+    if (( age > SEVEN_DAYS )); then
         rm -f "$f"
         echo "deleted (old): $f"
         acted=$((acted + 1))

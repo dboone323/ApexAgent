@@ -74,14 +74,14 @@ test-deep:
 	@mkdir -p build
 	@rm -rf build/ApexAgent-UnitTests.xcresult
 	xcodebuild test -project ApexAgent.xcodeproj -scheme ApexAgent -testPlan ApexAgent-UnitTests -destination "platform=macOS" -resultBundlePath build/ApexAgent-UnitTests.xcresult
-	@./Tools/scripts/xcresult-report.sh build/ApexAgent-UnitTests.xcresult
+	@./Tools/scripts/xcresult-report.sh build/ApexAgent-UnitTests.xcresult --prune
 
 # Comprehensive UI test runner
 test-ui:
 	@mkdir -p build
 	@rm -rf build/ApexAgent-UITests.xcresult
 	xcodebuild test -project ApexAgent.xcodeproj -scheme ApexAgent -testPlan ApexAgent-UITests -destination "platform=macOS" -resultBundlePath build/ApexAgent-UITests.xcresult
-	@./Tools/scripts/xcresult-report.sh build/ApexAgent-UITests.xcresult
+	@./Tools/scripts/xcresult-report.sh build/ApexAgent-UITests.xcresult --prune
 
 # Inspect latest test results bundle
 xcresult-summary:

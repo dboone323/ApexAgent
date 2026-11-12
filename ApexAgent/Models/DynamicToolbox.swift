@@ -1,8 +1,74 @@
 import Foundation
+import Darwin
+
+// MARK: - §153 TestData retention: delete-on-exit + 7-day sweep backstop
+
+/// Deletes this process's `$TMPDIR/ApexAgent-TestData-<pid>/` directory on process exit.
+/// Registered via `atexit` when the storage root is first accessed in test mode.
+func deleteTestDataOnExit() {
+    guard KeychainManager.isTestProcess else { return }
+    let testDataDir = FileManager.default.temporaryDirectory
+        .appendingPathComponent("ApexAgent-TestData-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
+    try? FileManager.default.removeItem(at: testDataDir)
+}
+
+/// Sweeps stale `ApexAgent-TestData-*` folders from `$TMPDIR` as a 7-day backstop.
+/// Never deletes a folder belonging to a live PID (checked via `kill(pid, 0)`).
+/// Returns (deletedCount, skippedCount).
+func sweepStaleTestData(maxAgeDays: Int = 7) -> (deleted: Int, skipped: Int) {
+    let fm = FileManager.default
+    let tmpDir = fm.temporaryDirectory
+    guard let items = try? fm.contentsOfDirectory(
+        at: tmpDir,
+        includingPropertiesForKeys: [.contentModificationDateKey],
+        options: [.skipsHiddenFiles]
+    ) else {
+        return (0, 0)
+    }
+    let cutoff = Date().addingTimeInterval(-TimeInterval(maxAgeDays * 24 * 60 * 60))
+    var deleted = 0
+    var skipped = 0
+    let prefix = "ApexAgent-TestData-"
+    for item in items {
+        let name = item.lastPathComponent
+        guard name.hasPrefix(prefix) else { continue }
+        let pidSubstring = name.dropFirst(prefix.count)
+        guard let pidInt = Int(pidSubstring), pidInt > 0 else {
+            skipped += 1
+            continue
+        }
+        let pid = pid_t(pidInt)
+        // Never delete a folder belonging to a live PID.
+        // kill(pid, 0) == 0 means the process exists.
+        // EPERM means it exists but we can't signal it (still alive — skip).
+        if kill(pid, 0) == 0 || errno == EPERM {
+            skipped += 1
+            continue
+        }
+        // Age check: only delete folders older than maxAgeDays.
+        let attrs = try? item.resourceValues(forKeys: [.contentModificationDateKey])
+        let modDate = attrs?.contentModificationDate ?? Date.distantPast
+        if modDate < cutoff {
+            try? fm.removeItem(at: item)
+            deleted += 1
+        } else {
+            skipped += 1
+        }
+    }
+    return (deleted, skipped)
+}
 
 enum ApexAgentStoragePaths {
+    /// One-time registration of the delete-on-exit atexit handler for test-mode TestData cleanup.
+    private static let registerExitCleanup: Void = {
+        if KeychainManager.isTestProcess {
+            atexit(deleteTestDataOnExit)
+        }
+    }()
+
     private static var root: URL {
         if KeychainManager.isTestProcess {
+            _ = Self.registerExitCleanup
             return FileManager.default.temporaryDirectory
                 .appendingPathComponent("ApexAgent-TestData-\(ProcessInfo.processInfo.processIdentifier)", isDirectory: true)
                 .appendingPathComponent(".apex", isDirectory: true)
@@ -40,6 +106,13 @@ class DynamicToolbox {
     static let shared = DynamicToolbox()
 
     var orchestrator: OrchestratorProvider?
+
+    init() {
+        // §153: 7-day sweep backstop — remove stale TestData folders from previous runs.
+        // Never deletes a folder belonging to a live PID (enforced inside sweepStaleTestData).
+        let result = sweepStaleTestData(maxAgeDays: 7)
+        AppLog.info(.toolbox, "TestData retention sweep: deleted \(result.deleted), skipped \(result.skipped)")
+    }
 
     struct DynamicToolEntry {
         let name: String
