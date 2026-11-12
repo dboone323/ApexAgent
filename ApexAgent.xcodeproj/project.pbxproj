@@ -4355,7 +4355,7 @@
 			repositoryURL = "https://github.com/apple/containerization";
 			requirement = {
 				kind = exactVersion;
-				version = 0.38.0;
+				version = 0.54.0;
 			};
 		};
 		59809C23920A99AA03E92B38 /* XCRemoteSwiftPackageReference "swift-log" */ = {

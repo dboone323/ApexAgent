@@ -18,12 +18,12 @@ let package = Package(
         // The external github.com/dboone323/shared-kit dependency was removed to
         // make ApexAgent fully self-contained (no cross-repo coupling, no LFS,
         // no separate CI). shared-kit was pure-Foundation, so this is a clean lift.
-        // Container runtime — pinned to release tag 0.38.0 (= revision d9868bb,
+        // Container runtime — pinned to release tag 0.54.0 (= revision baf212e,
         // the same revision apple/container's own Package.resolved pins). The
         // host library and the guest vminit initfs image MUST be the same
         // version: vmexec's sync-pipe protocol changed between 0.37.0 and
         // 0.38.0 ("no PID data from sync pipe" on mismatch).
-        .package(url: "https://github.com/apple/containerization.git", exact: "0.38.0"),
+        .package(url: "https://github.com/apple/containerization.git", exact: "0.54.0"),
         // Explicitly declare transitive Apple infrastructure packages.
         // Pinned exact to match project.yml and Package.resolved (1.14.0).
         .package(url: "https://github.com/apple/swift-log.git", exact: "1.14.0"),

@@ -10,7 +10,7 @@ options:
 packages:
   Containerization:
     url: https://github.com/apple/containerization
-    exactVersion: 0.38.0
+    exactVersion: 0.54.0
   swift-log:
     url: https://github.com/apple/swift-log
     exactVersion: 1.14.0

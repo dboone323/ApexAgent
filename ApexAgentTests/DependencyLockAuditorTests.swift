@@ -17,7 +17,7 @@ struct DependencyLockAuditorTests {
         #expect(report.passed, "\(report.formatSummary())")
         #expect(report.violations.isEmpty)
         #expect(report.pins.count >= 20)
-        #expect(report.pins.contains { $0.identity == "containerization" && $0.version == "0.38.0" })
+        #expect(report.pins.contains { $0.identity == "containerization" && $0.version == "0.54.0" })
         #expect(report.pins.contains { $0.identity == "swift-log" && $0.version == "1.14.0" })
         #expect(report.formatSummary().hasPrefix("PASS:"))
     }
@@ -97,12 +97,12 @@ struct DependencyLockAuditorTests {
         #expect(jsonObject["specVersion"] as? String == "1.5")
         let components = try #require(jsonObject["components"] as? [[String: Any]])
         #expect(components.count == report.pins.count)
-        #expect(components.contains { ($0["purl"] as? String) == "pkg:swift/containerization@0.38.0" })
+        #expect(components.contains { ($0["purl"] as? String) == "pkg:swift/containerization@0.54.0" })
 
         let markdown = report.exportSBOMMarkdown()
         #expect(markdown.contains("### 📦 ApexAgent Software Bill of Materials"))
         #expect(markdown.contains("`containerization`"))
-        #expect(markdown.contains("`0.38.0`"))
+        #expect(markdown.contains("`0.54.0`"))
         #expect(markdown.contains("`swift-log`"))
     }
 }
