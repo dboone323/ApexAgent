@@ -2,6 +2,24 @@ import Foundation
 
 public enum ExecutionEnvironmentResolver {
 
+    public struct SpaceSnapshot: Sendable, Equatable {
+        public let id: UUID
+        public let isSeatbelt: Bool
+        public let workspacePath: String
+
+        public init(id: UUID, isSeatbelt: Bool, workspacePath: String) {
+            self.id = id
+            self.isSeatbelt = isSeatbelt
+            self.workspacePath = workspacePath
+        }
+
+        public init(space: SpaceModel) {
+            self.id = space.id
+            self.isSeatbelt = space.isSeatbelt
+            self.workspacePath = space.workspacePath
+        }
+    }
+
     public static func resolve(spaceTargetRaw: String?, spaceID: UUID?, containerEnabled: Bool) -> ExecutionEnvironment {
         if spaceTargetRaw == "seatbelt" {
             return .seatbelt(spaceID: spaceID?.uuidString ?? "")
@@ -10,7 +28,7 @@ public enum ExecutionEnvironmentResolver {
         return .host
     }
 
-    public static func resolve(space: SpaceModel?, containerEnabled: Bool) -> ExecutionEnvironment {
+    public static func resolve(space: SpaceSnapshot?, containerEnabled: Bool) -> ExecutionEnvironment {
         guard let space else {
             return containerEnabled ? .appleContainer : .host
         }
@@ -23,12 +41,15 @@ public enum ExecutionEnvironmentResolver {
     public static func resolveCurrent(orchestrator: AgentOrchestrator) async -> (ExecutionEnvironment, String?) {
         let containerEnabled = UserDefaults.standard.bool(forKey: "apex.appleContainersEnabled")
         let wsPath = await MainActor.run { orchestrator.currentWorkspacePath }
-        let space: SpaceModel? = await MainActor.run {
+        let space: SpaceSnapshot? = await MainActor.run {
             if let id = SpaceManager.shared.activeSpaceId,
                let sp = SpaceManager.shared.spaces.first(where: { $0.id == id }) {
-                return sp
+                return SpaceSnapshot(space: sp)
             }
-            return SpaceManager.shared.spaces.first(where: { $0.workspacePath == wsPath })
+            if let sp = SpaceManager.shared.spaces.first(where: { $0.workspacePath == wsPath }) {
+                return SpaceSnapshot(space: sp)
+            }
+            return nil
         }
         let env = resolve(space: space, containerEnabled: containerEnabled)
         let workspacePath: String? = space?.workspacePath ?? (isSeatbelt(env) ? wsPath : nil)

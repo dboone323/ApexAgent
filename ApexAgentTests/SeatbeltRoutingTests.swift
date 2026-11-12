@@ -21,7 +21,7 @@ struct SeatbeltRoutingTests {
         let space = SpaceModel(name: "seatbelt-space", executionTargetRaw: "seatbelt")
         #expect(space.isSeatbelt == true)
         #expect(space.isSandboxVM == false)
-        let env = ExecutionEnvironmentResolver.resolve(space: space, containerEnabled: true)
+        let env = ExecutionEnvironmentResolver.resolve(space: ExecutionEnvironmentResolver.SpaceSnapshot(space: space), containerEnabled: true)
         #expect(env == .seatbelt(spaceID: space.id.uuidString))
     }
 

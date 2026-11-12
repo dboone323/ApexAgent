@@ -108,7 +108,7 @@ final class ProposalAuditTrailTests: XCTestCase {
             state: .pending
         )
         let entry = await SpaceProposalAuditTrail.shared.record(
-            proposal: proposal,
+            proposal: SpaceProposalSnapshot(proposal: proposal),
             action: .staged,
             actorName: "Bot"
         )
@@ -131,7 +131,7 @@ final class ProposalAuditTrailTests: XCTestCase {
             state: .pending
         )
         let entry = await SpaceProposalAuditTrail.shared.record(
-            proposal: proposal,
+            proposal: SpaceProposalSnapshot(proposal: proposal),
             action: .staged,
             actorName: "Bot"
         )
@@ -158,7 +158,7 @@ final class ProposalAuditTrailTests: XCTestCase {
             state: .pending
         )
         let entry = await SpaceProposalAuditTrail.shared.record(
-            proposal: proposal,
+            proposal: SpaceProposalSnapshot(proposal: proposal),
             action: .staged,
             actorName: "Tester"
         )
@@ -177,12 +177,12 @@ final class ProposalAuditTrailTests: XCTestCase {
             state: .pending
         )
         let entry = await SpaceProposalAuditTrail.shared.record(
-            proposal: proposal,
+            proposal: SpaceProposalSnapshot(proposal: proposal),
             action: .staged,
             actorName: "Coder"
         )
 
-        let verified = await SpaceProposalAuditTrail.shared.verifyIntegrity(of: entry, proposal: proposal)
+        let verified = await SpaceProposalAuditTrail.shared.verifyIntegrity(of: entry, proposal: SpaceProposalSnapshot(proposal: proposal))
         XCTAssertTrue(verified)
     }
 
@@ -197,13 +197,13 @@ final class ProposalAuditTrailTests: XCTestCase {
             state: .pending
         )
         let entry = await SpaceProposalAuditTrail.shared.record(
-            proposal: proposal,
+            proposal: SpaceProposalSnapshot(proposal: proposal),
             action: .staged,
             actorName: "Auditor"
         )
 
         proposal.proposedContent = "Tampered malicious payload"
-        let verified = await SpaceProposalAuditTrail.shared.verifyIntegrity(of: entry, proposal: proposal)
+        let verified = await SpaceProposalAuditTrail.shared.verifyIntegrity(of: entry, proposal: SpaceProposalSnapshot(proposal: proposal))
         XCTAssertFalse(verified)
     }
 
@@ -218,12 +218,12 @@ final class ProposalAuditTrailTests: XCTestCase {
             state: .pending
         )
         _ = await SpaceProposalAuditTrail.shared.record(
-            proposal: proposal,
+            proposal: SpaceProposalSnapshot(proposal: proposal),
             action: .staged,
             actorName: "Bot"
         )
         _ = await SpaceProposalAuditTrail.shared.record(
-            proposal: proposal,
+            proposal: SpaceProposalSnapshot(proposal: proposal),
             action: .approved,
             actorName: "Reviewer",
             feedback: "LGTM"
@@ -416,7 +416,7 @@ final class ProposalAuditTrailTests: XCTestCase {
                 state: .pending
             )
             _ = await SpaceProposalAuditTrail.shared.record(
-                proposal: proposal,
+                proposal: SpaceProposalSnapshot(proposal: proposal),
                 action: .staged,
                 actorName: "Tester"
             )

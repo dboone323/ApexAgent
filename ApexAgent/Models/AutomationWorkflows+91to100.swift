@@ -177,13 +177,14 @@ extension ApexWorkflows {
             state: .pending
         )
 
+        let snapshot = SpaceProposalSnapshot(proposal: proposal)
         let entry = await SpaceProposalAuditTrail.shared.record(
-            proposal: proposal,
+            proposal: snapshot,
             action: .staged,
             actorName: "SecurityAuditDot"
         )
         let hashLengthOk = (entry.stateHash.count == 64 && entry.proposedContentHash.count == 64)
-        let integrityOk = await SpaceProposalAuditTrail.shared.verifyIntegrity(of: entry, proposal: proposal)
+        let integrityOk = await SpaceProposalAuditTrail.shared.verifyIntegrity(of: entry, proposal: snapshot)
 
         let passed = hashLengthOk && integrityOk
         return WorkflowResult(

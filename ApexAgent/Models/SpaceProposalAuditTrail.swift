@@ -139,6 +139,24 @@ public struct ProposalAuditEntry: Sendable, Codable {
 
 // MARK: - Proposal Audit Trail Actor
 
+public struct SpaceProposalSnapshot: Sendable, Equatable {
+    public let id: UUID
+    public let pageId: UUID
+    public let proposedContent: String
+
+    public init(id: UUID, pageId: UUID, proposedContent: String) {
+        self.id = id
+        self.pageId = pageId
+        self.proposedContent = proposedContent
+    }
+
+    public init(proposal: SpacePageProposal) {
+        self.id = proposal.id
+        self.pageId = proposal.pageId
+        self.proposedContent = proposal.proposedContent
+    }
+}
+
 public actor SpaceProposalAuditTrail {
     public static let shared = SpaceProposalAuditTrail()
     private var entries: [ProposalAuditEntry] = []
@@ -151,7 +169,7 @@ public actor SpaceProposalAuditTrail {
     }
 
     public func record(
-        proposal: SpacePageProposal,
+        proposal: SpaceProposalSnapshot,
         action: ProposalAuditAction,
         actorName: String,
         feedback: String? = nil
@@ -185,7 +203,7 @@ public actor SpaceProposalAuditTrail {
         entries
     }
 
-    public func verifyIntegrity(of entry: ProposalAuditEntry, proposal: SpacePageProposal) -> Bool {
+    public func verifyIntegrity(of entry: ProposalAuditEntry, proposal: SpaceProposalSnapshot) -> Bool {
         guard entry.proposalId == proposal.id else { return false }
         let recomputed = Self.sha256Hex(for: proposal.proposedContent)
         return recomputed == entry.proposedContentHash
