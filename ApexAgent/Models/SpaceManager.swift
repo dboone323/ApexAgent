@@ -207,6 +207,7 @@ public final class SpaceManager {
         name: String,
         iconName: String = "person.3.sequence.fill",
         summary: String = "",
+        workspacePath: String? = nil,
         orchestrationMode: SpaceOrchestrationMode = .mentionDriven,
         seedDefaults: Bool = true
     ) -> SpaceModel {
@@ -214,12 +215,17 @@ public final class SpaceManager {
             name: name,
             iconName: iconName,
             summary: summary,
+            workspacePath: workspacePath,
             defaultOrchestrationMode: orchestrationMode
         )
 
         // Ensure shared workspace directory exists on disk
         try? FileManager.default.createDirectory(
             atPath: space.workspacePath,
+            withIntermediateDirectories: true
+        )
+        try? FileManager.default.createDirectory(
+            atPath: space.dailyNotesDirectoryPath,
             withIntermediateDirectories: true
         )
 
@@ -844,6 +850,41 @@ public final class SpaceManager {
         return msg
     }
 
+    /// Synchronously runs a single bot turn in the Space and awaits the generated reply.
+    @discardableResult
+    public func runTurnAndWait(
+        prompt: String,
+        in space: SpaceModel,
+        channel: SpaceChannel? = nil
+    ) async -> SpaceMessage? {
+        let targetChannel = channel ?? space.sortedChannels.first ?? space.channels.first
+        guard let targetChannel else { return nil }
+
+        guard let humanMsg = postHumanMessage(prompt, in: targetChannel, triggerAgents: false) else {
+            return nil
+        }
+
+        let targetBots = resolveTargetBots(
+            for: prompt,
+            in: space,
+            channel: targetChannel,
+            senderKind: .human
+        )
+
+        guard let firstBot = targetBots.first ?? space.agentParticipants.compactMap({ p in
+            botManager?.allBots.first(where: { $0.id == p.botProfileId })
+        }).first ?? botManager?.allBots.first else {
+            return nil
+        }
+
+        return await runSingleBotTurn(
+            bot: firstBot,
+            in: space,
+            channel: targetChannel,
+            threadParentId: humanMsg.threadParentId
+        )
+    }
+
     // MARK: - Seatbelt Space Landing Reporting
 
     @discardableResult
@@ -1216,7 +1257,7 @@ public final class SpaceManager {
         let agents = space.agentParticipants.map { "\($0.displayName) (@\($0.handle) — \($0.roleTitle))" }.joined(separator: ", ")
         let pageSummary = space.sortedPages.prefix(3).map { "- \($0.title): \($0.markdownBody.prefix(240))" }.joined(separator: "\n")
 
-        return """
+        var instructions = """
         === APEX SPACE CONTEXT ===
         Space Name: \(space.name) (\(space.summary))
         Current Channel: #\(channel.name) (\(channel.topic))
@@ -1225,6 +1266,15 @@ public final class SpaceManager {
         AI Agent Teammates Present: \(agents.isEmpty ? "None" : agents)
         Shared Space Pages:
         \(pageSummary.isEmpty ? "None" : pageSummary)
+        """
+
+        let memoryTiers = SpaceMemoryTierManager.shared.buildComposedMemoryInstructions(space: space)
+        if !memoryTiers.isEmpty {
+            instructions += "\n\n" + memoryTiers
+        }
+
+        instructions += """
+
 
         Collaboration Rules for \(bot.name):
         1. You are in a shared multiplayer Space ('\(space.name)') with both humans and specialist AI agents.
@@ -1232,6 +1282,8 @@ public final class SpaceManager {
         3. Do the requested work yourself with your own tools. Do NOT reply with a plan to delegate, and do NOT hand the task back to the human. Delegation tools are withheld from you when you are directly @mentioned.
         4. Only tag another teammate with @handle when a genuinely different specialty is required — and then still deliver your own part of the answer.
         """
+
+        return instructions
     }
 
     func buildSpacePromptContext(
@@ -1243,6 +1295,11 @@ public final class SpaceManager {
         let relevantMessages = Self.relevantMessages(in: channel, threadParentId: threadParentId)
 
         var transcript = buildSpaceSystemInstructions(for: bot, in: space, channel: channel) + "\n\n"
+
+        if let todayNote = SpaceMemoryTierManager.shared.getTodayDailyNote(space: space), !todayNote.isEmpty {
+            transcript += "📅 [TODAY'S DAILY NOTE]:\n\(todayNote.prefix(800))\n\n"
+        }
+
         transcript += "Recent conversation in #\(channel.name):\n\n"
         for msg in relevantMessages where !msg.isStreaming {
             let tag = msg.senderKind == .human ? "HUMAN" : (msg.senderKind == .bot ? "AGENT" : "SYSTEM")

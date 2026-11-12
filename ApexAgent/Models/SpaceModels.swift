@@ -100,7 +100,7 @@ public final class SpaceModel {
     public var workspacePath: String
     public var memoryNamespace: String
     public var defaultOrchestrationModeRaw: String
-    public var executionTargetRaw: String
+    public var executionTargetRaw: String = "host"
     public var inviteToken: String
     public var createdAt: Date
     public var updatedAt: Date
@@ -180,6 +180,28 @@ public final class SpaceModel {
 
     public var sortedProposals: [SpacePageProposal] {
         proposals.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    // MARK: - Files-First Memory Tier Paths
+
+    public var memoryFilePath: String {
+        let ws = (workspacePath as NSString).expandingTildeInPath
+        return URL(fileURLWithPath: ws).appendingPathComponent("MEMORY.md").path
+    }
+
+    public var personaFilePath: String {
+        let ws = (workspacePath as NSString).expandingTildeInPath
+        return URL(fileURLWithPath: ws).appendingPathComponent("PERSONA.md").path
+    }
+
+    public var userFilePath: String {
+        let ws = (workspacePath as NSString).expandingTildeInPath
+        return URL(fileURLWithPath: ws).appendingPathComponent("USER.md").path
+    }
+
+    public var dailyNotesDirectoryPath: String {
+        let ws = (workspacePath as NSString).expandingTildeInPath
+        return URL(fileURLWithPath: ws).appendingPathComponent("daily").path
     }
 }
 

@@ -125,7 +125,7 @@ public actor WorkspaceProactiveAuditor {
 
     private func findTodos() async -> [(file: String, line: Int, text: String)] {
         let path = workspacePath
-        return await Task.detached(priority: .background) {
+        return await Task.detached(priority: .userInitiated) {
             let fm = FileManager.default
             var results = [(file: String, line: Int, text: String)]()
             guard let regex = try? NSRegularExpression(pattern: "\\b(todo|fixme)\\b", options: [.caseInsensitive]) else {
@@ -137,8 +137,11 @@ public actor WorkspaceProactiveAuditor {
             var scanned = 0
             let enumerator = fm.enumerator(atPath: path)
             while let file = enumerator?.nextObject() as? String {
+                if Self.shouldSkip(path: file) {
+                    enumerator?.skipDescendants()
+                    continue
+                }
                 guard file.hasSuffix(".swift") else { continue }
-                if Self.shouldSkip(path: file) { continue }
                 scanned += 1
                 if scanned > maxFiles { break }
                 let fullPath = URL(fileURLWithPath: path).appendingPathComponent(file).path
@@ -159,7 +162,7 @@ public actor WorkspaceProactiveAuditor {
 
     private func findTestGaps() async -> [String] {
         let path = workspacePath
-        return await Task.detached(priority: .background) {
+        return await Task.detached(priority: .userInitiated) {
             let fm = FileManager.default
             var sourceFiles = [String]()
             var testFiles = Set<String>()
@@ -168,8 +171,11 @@ public actor WorkspaceProactiveAuditor {
             var scanned = 0
             let enumerator = fm.enumerator(atPath: path)
             while let file = enumerator?.nextObject() as? String {
+                if Self.shouldSkip(path: file) {
+                    enumerator?.skipDescendants()
+                    continue
+                }
                 guard file.hasSuffix(".swift") else { continue }
-                if Self.shouldSkip(path: file) { continue }
                 scanned += 1
                 if scanned > maxFiles { break }
 

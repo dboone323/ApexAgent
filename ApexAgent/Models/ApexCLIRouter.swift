@@ -193,7 +193,7 @@ public enum ApexCLIRouter {
         case "--daemon":
             return ParsedCLIInvocation(command: .daemon, providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
-        case "--space-cli":
+        case "--space-cli", "space", "--space":
             let subArgs = Array(remaining.dropFirst())
             return ParsedCLIInvocation(command: .spaceCLI(subcommandArgs: subArgs), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 

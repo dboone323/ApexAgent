@@ -394,7 +394,10 @@ public struct ModelRegistry: Sendable {
 
     /// Returns the configured Ollama model name.
     public static func ollamaModel() -> String {
-        UserDefaults.standard.string(forKey: ollamaModelKey) ?? defaultFastOllamaModel
+        if let env = ProcessInfo.processInfo.environment["APEX_OLLAMA_MODEL"], !env.isEmpty {
+            return env
+        }
+        return UserDefaults.standard.string(forKey: ollamaModelKey) ?? defaultFastOllamaModel
     }
 
     /// Sets the Ollama model name.
@@ -408,6 +411,9 @@ public struct ModelRegistry: Sendable {
         role: String? = nil,
         prompt: String? = nil
     ) -> String {
+        if let env = ProcessInfo.processInfo.environment["APEX_OLLAMA_MODEL"], !env.isEmpty {
+            return env
+        }
         if let override = bot?.ollamaModelOverride, !override.isEmpty {
             return override
         }

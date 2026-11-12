@@ -233,6 +233,7 @@ let package = Package(
             name: "ApexAgentTests",
             dependencies: [
                 "ApexAgentCore",
+                "ApexAgentIntents",
                 "MCPKit",
                 // Mirrors project.yml (ApexAgentTests links Logging there).
                 .product(name: "Logging", package: "swift-log"),

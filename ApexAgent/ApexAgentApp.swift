@@ -390,6 +390,13 @@ public func runDaemonMode() async {
 
 @MainActor
 public func runSpaceCLIMode(subcommandArgs: [String]) async {
+    let printOut: (String) -> Void = { msg in
+        fputs("\(msg)\n", Darwin.stdout)
+    }
+    let printErr: (String) -> Void = { msg in
+        fputs("\(msg)\n", Darwin.stderr)
+    }
+
     AppLog.info(.app, "=== RUNNING SPACE CLI MODE ===")
     let orchestrator = AgentOrchestrator()
     do {
@@ -406,13 +413,132 @@ public func runSpaceCLIMode(subcommandArgs: [String]) async {
         SpaceManager.shared.botManager = botManager
         SpaceManager.shared.loadSpacesFromDisk()
     } catch {
-        AppLog.error(.app, "⚠️ Failed to initialize SwiftData model context: \(error)")
+        AppLog.error(.app, "⚠️ Failed to initialize SwiftData model context: \(error). Falling back to resilient container.")
+        if let fallback = try? SpaceModelMigrationGate.buildResilientModelContainer(inMemory: true) {
+            let context = ModelContext(fallback)
+            orchestrator.modelContext = context
+            let computer = Computer()
+            let botManager = BotManager(orchestrator: orchestrator, computer: computer)
+            orchestrator.botManager = botManager
+            botManager.modelContext = context
+            botManager.loadBotsFromDisk()
+            SpaceManager.shared.modelContext = context
+            SpaceManager.shared.orchestrator = orchestrator
+            SpaceManager.shared.botManager = botManager
+            SpaceManager.shared.loadSpacesFromDisk()
+        }
     }
 
     if subcommandArgs.isEmpty || subcommandArgs.contains("list") {
-        AppLog.info(.app, "Spaces (\(SpaceManager.shared.spaces.count)):")
+        printOut("Spaces (\(SpaceManager.shared.spaces.count)):")
         for space in SpaceManager.shared.spaces {
-            AppLog.info(.app, "- \(space.name) (ID: \(space.id), Channels: \(space.channels.count), Humans: \(space.humanParticipants.count), Bots: \(space.agentParticipants.count))")
+            printOut("- \(space.name) (ID: \(space.id), Workspace: \(space.workspacePath), Channels: \(space.channels.count), Humans: \(space.humanParticipants.count), Bots: \(space.agentParticipants.count))")
+        }
+    } else if let createIdx = subcommandArgs.firstIndex(of: "create"), createIdx + 1 < subcommandArgs.count {
+        let name = subcommandArgs[createIdx + 1]
+        var wsPath: String? = nil
+        if let wsIdx = subcommandArgs.firstIndex(of: "--workspace"), wsIdx + 1 < subcommandArgs.count {
+            wsPath = subcommandArgs[wsIdx + 1]
+        }
+        let space = SpaceManager.shared.createSpace(name: name, workspacePath: wsPath)
+        printOut("Created Space '\(space.name)' (ID: \(space.id), Workspace: \(space.workspacePath))")
+    } else if let memIdx = subcommandArgs.firstIndex(of: "memory"), memIdx + 1 < subcommandArgs.count {
+        let spaceName = subcommandArgs[memIdx + 1]
+        guard let space = SpaceManager.shared.spaces.first(where: {
+            $0.name.localizedCaseInsensitiveCompare(spaceName) == .orderedSame || $0.id.uuidString.hasPrefix(spaceName)
+        }) else {
+            printErr("Space '\(spaceName)' not found.")
+            return
+        }
+        if let setIdx = subcommandArgs.firstIndex(of: "--set"), setIdx + 1 < subcommandArgs.count {
+            let newContent = subcommandArgs[(setIdx + 1)...].joined(separator: " ")
+            try? SpaceMemoryTierManager.shared.saveCuratedMemory(newContent, for: space)
+            printOut("Updated MEMORY.md for '\(space.name)':\n\(newContent)")
+        } else {
+            let content = SpaceMemoryTierManager.shared.loadCuratedMemory(for: space) ?? "(empty)"
+            printOut("MEMORY.md for '\(space.name)' (\(space.memoryFilePath)):\n\(content)")
+        }
+    } else if let personaIdx = subcommandArgs.firstIndex(of: "persona"), personaIdx + 1 < subcommandArgs.count {
+        let spaceName = subcommandArgs[personaIdx + 1]
+        guard let space = SpaceManager.shared.spaces.first(where: {
+            $0.name.localizedCaseInsensitiveCompare(spaceName) == .orderedSame || $0.id.uuidString.hasPrefix(spaceName)
+        }) else {
+            printErr("Space '\(spaceName)' not found.")
+            return
+        }
+        if let setIdx = subcommandArgs.firstIndex(of: "--set"), setIdx + 1 < subcommandArgs.count {
+            let newContent = subcommandArgs[(setIdx + 1)...].joined(separator: " ")
+            try? SpaceMemoryTierManager.shared.savePersona(newContent, for: space)
+            printOut("Updated PERSONA.md for '\(space.name)':\n\(newContent)")
+        } else {
+            let content = SpaceMemoryTierManager.shared.loadPersona(for: space) ?? "(empty)"
+            printOut("PERSONA.md for '\(space.name)' (\(space.personaFilePath)):\n\(content)")
+        }
+    } else if let userIdx = subcommandArgs.firstIndex(of: "user"), userIdx + 1 < subcommandArgs.count {
+        let spaceName = subcommandArgs[userIdx + 1]
+        guard let space = SpaceManager.shared.spaces.first(where: {
+            $0.name.localizedCaseInsensitiveCompare(spaceName) == .orderedSame || $0.id.uuidString.hasPrefix(spaceName)
+        }) else {
+            printErr("Space '\(spaceName)' not found.")
+            return
+        }
+        if let setIdx = subcommandArgs.firstIndex(of: "--set"), setIdx + 1 < subcommandArgs.count {
+            let newContent = subcommandArgs[(setIdx + 1)...].joined(separator: " ")
+            try? SpaceMemoryTierManager.shared.saveUserContext(newContent, for: space)
+            printOut("Updated USER.md for '\(space.name)':\n\(newContent)")
+        } else {
+            let content = SpaceMemoryTierManager.shared.loadUserContext(for: space) ?? "(empty)"
+            printOut("USER.md for '\(space.name)' (\(space.userFilePath)):\n\(content)")
+        }
+    } else if let noteIdx = subcommandArgs.firstIndex(of: "note"), noteIdx + 2 < subcommandArgs.count {
+        let spaceName = subcommandArgs[noteIdx + 1]
+        let dateStr = subcommandArgs[noteIdx + 2]
+        guard let space = SpaceManager.shared.spaces.first(where: {
+            $0.name.localizedCaseInsensitiveCompare(spaceName) == .orderedSame || $0.id.uuidString.hasPrefix(spaceName)
+        }) else {
+            printErr("Space '\(spaceName)' not found.")
+            return
+        }
+        if let setIdx = subcommandArgs.firstIndex(of: "--set"), setIdx + 1 < subcommandArgs.count {
+            let newContent = subcommandArgs[(setIdx + 1)...].joined(separator: " ")
+            _ = try? SpaceMemoryTierManager.shared.saveDailyNote(date: dateStr, content: newContent, space: space)
+            printOut("Saved daily note \(dateStr) for '\(space.name)':\n\(newContent)")
+        } else {
+            let content = SpaceMemoryTierManager.shared.getDailyNote(date: dateStr, space: space) ?? "(not found)"
+            printOut("Daily note \(dateStr) for '\(space.name)':\n\(content)")
+        }
+    } else if let notesIdx = subcommandArgs.firstIndex(of: "notes"), notesIdx + 1 < subcommandArgs.count {
+        let spaceName = subcommandArgs[notesIdx + 1]
+        guard let space = SpaceManager.shared.spaces.first(where: {
+            $0.name.localizedCaseInsensitiveCompare(spaceName) == .orderedSame || $0.id.uuidString.hasPrefix(spaceName)
+        }) else {
+            printErr("Space '\(spaceName)' not found.")
+            return
+        }
+        let query = (notesIdx + 2 < subcommandArgs.count) ? subcommandArgs[(notesIdx + 2)...].joined(separator: " ") : ""
+        let results = SpaceMemoryTierManager.shared.searchDailyNotes(query: query, space: space)
+        printOut("Daily notes in '\(space.name)' (query: '\(query)', matches: \(results.count)):")
+        for match in results {
+            printOut("- [\(match.date)] \(match.title) (score: \(String(format: "%.1f", match.score)))\n  Snippet: \(match.snippet)")
+        }
+    } else if let runIdx = subcommandArgs.firstIndex(of: "run"), runIdx + 2 < subcommandArgs.count {
+        let spaceName = subcommandArgs[runIdx + 1]
+        let promptText = subcommandArgs[(runIdx + 2)...].joined(separator: " ")
+        guard let space = SpaceManager.shared.spaces.first(where: {
+            $0.name.localizedCaseInsensitiveCompare(spaceName) == .orderedSame || $0.id.uuidString.hasPrefix(spaceName)
+        }) else {
+            printErr("Space '\(spaceName)' not found.")
+            return
+        }
+        SpaceManager.shared.selectSpace(space)
+        printOut("Running live turn in Space '\(space.name)'...")
+        printOut("Prompt: \(promptText)")
+        if let reply = await SpaceManager.shared.runTurnAndWait(prompt: promptText, in: space) {
+            printOut("\n=== AGENT RESPONSE [\(reply.senderName)] ===")
+            printOut(reply.content)
+            printOut("===========================================")
+        } else {
+            printErr("No response generated from agent.")
         }
     } else if let postIdx = subcommandArgs.firstIndex(of: "post"), postIdx + 2 < subcommandArgs.count {
         let channelName = subcommandArgs[postIdx + 1]
@@ -420,7 +546,7 @@ public func runSpaceCLIMode(subcommandArgs: [String]) async {
         if let space = SpaceManager.shared.spaces.first,
            let channel = space.channels.first(where: { $0.name == channelName }) ?? space.channels.first {
             _ = SpaceManager.shared.postHumanMessage(messageText, in: channel)
-            AppLog.info(.app, "Posted message to #\(channel.name): \(messageText)")
+            printOut("Posted message to #\(channel.name): \(messageText)")
             try? await Task.sleep(for: .seconds(2))
         }
     }

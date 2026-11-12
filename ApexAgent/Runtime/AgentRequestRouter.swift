@@ -65,6 +65,22 @@ public final class AgentRequestRouter {
             baseInstructions += "\n\n" + skillContext
         }
 
+        let memoryTiers = await MainActor.run {
+            let activeSpace = SpaceManager.shared.activeSpace
+            return SpaceMemoryTierManager.shared.buildComposedMemoryInstructions(space: activeSpace, workspacePath: workspacePath)
+        }
+        if !memoryTiers.isEmpty {
+            let sections = memoryTiers.components(separatedBy: "\n\n===")
+            for section in sections {
+                let firstLine = section.components(separatedBy: "\n").first ?? ""
+                let header = section.hasPrefix("===") ? firstLine : "===" + firstLine
+                if !header.isEmpty && !baseInstructions.contains(header) {
+                    let block = section.hasPrefix("===") ? section : "===" + section
+                    baseInstructions += "\n\n" + block
+                }
+            }
+        }
+
         let verifiedInstructions = AgentExecutionVerification.applyingDirective(
             to: baseInstructions
         )
