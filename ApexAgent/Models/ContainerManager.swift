@@ -359,10 +359,10 @@ public final class ContainerManager: ContainerManagerProtocol {
             // Initialize the Apple ContainerManager library wrapper.
             // NOTE: Containerization is Apple-Silicon (arm64) only. This initfs is a
             // pinned Apple vminit asset; it MUST exactly match the host library
-            // version (Package.swift pins containerization 0.38.0). vmexec's
+            // version (Package.swift pins containerization 0.54.0). vmexec's
             // sync-pipe protocol is version-coupled: a mismatched vminit fails
             // exec with "no PID data from sync pipe". Keep both pins in sync.
-            let initfsRef = "ghcr.io/apple/containerization/vminit:0.38.0"
+            let initfsRef = "ghcr.io/apple/containerization/vminit:0.54.0"
             
             // Pull the initfs if not present
             state = .pullingImage(0.0)
