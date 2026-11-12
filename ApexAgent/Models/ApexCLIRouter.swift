@@ -50,6 +50,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case spaceCLI(subcommandArgs: [String])
     case gateQueue(subcommandArgs: [String])
     case scheduler(subcommandArgs: [String])
+    case longRun(subcommandArgs: [String])
     case prompt(text: String, allowTools: Bool)
 }
 
@@ -204,6 +205,10 @@ public enum ApexCLIRouter {
             let subArgs = Array(remaining.dropFirst())
             return ParsedCLIInvocation(command: .scheduler(subcommandArgs: subArgs), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
+        case "longrun", "--longrun", "long-run":
+            let subArgs = Array(remaining.dropFirst())
+            return ParsedCLIInvocation(command: .longRun(subcommandArgs: subArgs), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
         case "--cli", "--prompt", "-p":
             let cliArguments = Array(remaining.dropFirst())
             let allowTools = cliArguments.contains("--allow-tools") && !cliArguments.contains("--no-tools")
@@ -349,6 +354,7 @@ public enum ApexCLIRouter {
           --daemon                Start ApexGatewayServer on port 1337
           --space-cli [list|post] Manage collaborative Spaces from the terminal
           scheduler [action]      Scheduler trio: exact cron, heartbeat checklist passes, event triggers
+          longrun [action]        Resumable long runs: checkpointed state, pause/resume, budgets
         """
     }
 
