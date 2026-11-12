@@ -259,6 +259,25 @@ final class RoutineManager: Observable {
                 lastRunTimes[routine.name] = now
             }
         }
+
+        // Exact cron scheduling (Issue #76)
+        for routine in scheduledRoutines where routine.trigger == .cron {
+            guard let cronExpr = routine.cronExpression else { continue }
+            let routineName = routine.name
+            let routineUUID = routine.stableUUID
+            Task {
+                try? await ExactCronScheduler.shared.register(
+                    id: routineUUID,
+                    name: routineName,
+                    expression: cronExpr
+                ) {
+                    await RoutineManager.shared.executeCronRoutine(named: routineName)
+                }
+            }
+        }
+        Task {
+            await ExactCronScheduler.shared.start()
+        }
         
         TickerScheduler.shared.register(
             id: "RoutineManager.heartbeat",
@@ -276,7 +295,18 @@ final class RoutineManager: Observable {
         TickerScheduler.shared.unregister(id: "RoutineManager.heartbeat")
         cronHeartbeatTimer?.invalidate()
         cronHeartbeatTimer = nil
+        Task {
+            for routine in scheduledRoutines where routine.trigger == .cron {
+                await ExactCronScheduler.shared.unregister(id: routine.stableUUID)
+            }
+        }
         scheduledRoutines = []
+    }
+
+    func executeCronRoutine(named name: String) async {
+        guard let routine = routines.first(where: { $0.name == name && $0.enabled }) else { return }
+        lastRunTimes[routine.name] = Date()
+        _ = await execute(routine)
     }
 
     private func evaluateHeartbeat() {

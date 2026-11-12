@@ -82,6 +82,10 @@ public enum RoutineTrigger: String, Codable, CaseIterable, Sendable {
     case onSuccess           = "When build/tool succeeds"// reaction to a success signal
     case onMessage           = "On specific message"     // reaction to incoming chat message
     case webhook             = "Webhook"                 // triggered by an external POST
+    case fileChange          = "On file change"          // triggered by filesystem change
+    case mailArrival         = "On mail arrival"         // triggered by incoming mail
+    case calendarEvent       = "On calendar event"       // triggered by upcoming calendar event
+    case lanPeer             = "On LAN peer message"     // triggered by LAN peer packet
 }
 
 extension RoutineTrigger {
@@ -94,6 +98,10 @@ extension RoutineTrigger {
         case .onSuccess: return "🎉 On Success"
         case .onMessage: return "💬 On Message"
         case .webhook: return "🪝 Webhook"
+        case .fileChange: return "📁 File Change"
+        case .mailArrival: return "✉️ Mail Arrival"
+        case .calendarEvent: return "🗓️ Calendar Event"
+        case .lanPeer: return "📡 LAN Peer"
         }
     }
 
@@ -101,7 +109,7 @@ extension RoutineTrigger {
     public var requiresSchedule: Bool {
         switch self {
         case .timeInterval, .cron: return true
-        case .manual, .onError, .onSuccess, .onMessage, .webhook: return false
+        case .manual, .onError, .onSuccess, .onMessage, .webhook, .fileChange, .mailArrival, .calendarEvent, .lanPeer: return false
         }
     }
 }
@@ -126,7 +134,7 @@ extension Routine {
             if let f = messageFilter, f.count > 500 {
                 return "messageFilter exceeds 500 characters."
             }
-        case .manual, .onError, .onSuccess, .webhook:
+        case .manual, .onError, .onSuccess, .webhook, .fileChange, .mailArrival, .calendarEvent, .lanPeer:
             break
         }
         return nil

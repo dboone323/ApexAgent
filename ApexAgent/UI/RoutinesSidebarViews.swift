@@ -239,6 +239,10 @@ struct RoutineSidebarItem: View {
         case .onSuccess: return "checkmark.seal"
         case .onMessage: return "bubble.left"
         case .webhook: return "network"
+        case .fileChange: return "folder"
+        case .mailArrival: return "envelope"
+        case .calendarEvent: return "calendar"
+        case .lanPeer: return "antenna.radiowaves.left.and.right"
         }
     }
 }
