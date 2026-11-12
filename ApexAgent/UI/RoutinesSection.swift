@@ -161,6 +161,10 @@ struct RoutineRow: View {
         case .onSuccess:   return "checkmark.circle"
         case .onMessage:   return "message"
         case .webhook:     return "bolt"
+        case .fileChange:  return "folder"
+        case .mailArrival: return "envelope"
+        case .calendarEvent: return "calendar"
+        case .lanPeer:     return "antenna.radiowaves.left.and.right"
         }
     }
 
@@ -173,6 +177,10 @@ struct RoutineRow: View {
         case .onSuccess:   return "On success"
         case .onMessage:   return "On message"
         case .webhook:     return "Webhook"
+        case .fileChange:  return "On file change"
+        case .mailArrival: return "On mail arrival"
+        case .calendarEvent: return "On calendar event"
+        case .lanPeer:     return "On LAN peer message"
         }
     }
 }

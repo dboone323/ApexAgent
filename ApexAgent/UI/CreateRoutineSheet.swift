@@ -171,6 +171,10 @@ public struct CreateRoutineSheet: View {
                         Text("On Success").tag(RoutineTrigger.onSuccess)
                         Text("On Message").tag(RoutineTrigger.onMessage)
                         Text("Webhook").tag(RoutineTrigger.webhook)
+                        Text("File Change").tag(RoutineTrigger.fileChange)
+                        Text("Mail Arrival").tag(RoutineTrigger.mailArrival)
+                        Text("Calendar Event").tag(RoutineTrigger.calendarEvent)
+                        Text("LAN Peer").tag(RoutineTrigger.lanPeer)
                     }
 
                     if triggerInput == .timeInterval {
