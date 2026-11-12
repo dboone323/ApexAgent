@@ -12,6 +12,15 @@ public struct MCPWireProtocolConfig: Sendable, Codable, Equatable {
     public var enforceJSONRPCVersion: Bool
     /// Allowed MCP core methods.
     public var allowedMethods: Set<String>
+    /// Explicitly reject deprecated MCP 2026-07-28 features (roots, sampling, logging).
+    public var rejectDeprecatedMethods: Bool
+
+    /// Deprecated protocol methods per MCP 2026-07-28 specification.
+    public static let deprecatedMethods: Set<String> = [
+        "roots/list",
+        "sampling/createMessage",
+        "logging/setLevel"
+    ]
 
     public init(
         maxFrameSizeBytes: Int = 10_485_760, // 10 MB
@@ -22,13 +31,18 @@ public struct MCPWireProtocolConfig: Sendable, Codable, Equatable {
             "tools/list", "tools/call",
             "resources/list", "resources/read", "resources/subscribe", "resources/unsubscribe",
             "prompts/list", "prompts/get",
-            "logging/setLevel", "completion/complete"
-        ]
+            "completion/complete",
+            "tasks/list", "tasks/get", "tasks/call", "tasks/cancel", "tasks/result",
+            "server/card",
+            "apps/list", "apps/get"
+        ],
+        rejectDeprecatedMethods: Bool = true
     ) {
         self.maxFrameSizeBytes = maxFrameSizeBytes
         self.maxInFlightRequests = maxInFlightRequests
         self.enforceJSONRPCVersion = enforceJSONRPCVersion
         self.allowedMethods = allowedMethods
+        self.rejectDeprecatedMethods = rejectDeprecatedMethods
     }
 }
 
@@ -175,7 +189,13 @@ public enum MCPWireProtocolAuditor {
                 kind = .notification
             }
 
-            if !config.allowedMethods.contains(m) && !m.hasPrefix("custom/") {
+            if config.rejectDeprecatedMethods && MCPWireProtocolConfig.deprecatedMethods.contains(m) {
+                methodAllowed = false
+                violations.append(MCPWireViolation(
+                    code: "DEPRECATED_PROTOCOL_FEATURE",
+                    message: "MCP method '\(m)' is deprecated in MCP 2026-07-28 and prohibited."
+                ))
+            } else if !config.allowedMethods.contains(m) && !m.hasPrefix("custom/") {
                 methodAllowed = false
                 violations.append(MCPWireViolation(
                     code: "METHOD_NOT_PERMITTED",

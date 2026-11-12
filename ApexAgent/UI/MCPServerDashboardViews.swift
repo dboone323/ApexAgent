@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import WebKit
 
 // MARK: - MCPServerDashboardView: Production MCP Server Inspection & Control
 
@@ -9,6 +10,10 @@ public struct MCPServerDashboardView: View {
     @State private var serverHealth: [UUID: MCPClientHealth] = [:]
     @State private var latencies: [UUID: Double] = [:]
     @State private var serverTools: [UUID: [MCPToolDefinition]] = [:]
+    @State private var serverCards: [UUID: MCPServerCard] = [:]
+    @State private var serverTasks: [UUID: [MCPTask]] = [:]
+    @State private var serverApps: [UUID: [MCPAppDefinition]] = [:]
+    @State private var selectedApp: MCPAppDefinition?
     @State private var isProbing: Bool = false
     @State private var statusMessage: String?
 
@@ -101,6 +106,9 @@ public struct MCPServerDashboardView: View {
             }
         }
         .frame(minWidth: 640, minHeight: 480)
+        .sheet(item: $selectedApp) { app in
+            MCPAppContainerView(app: app)
+        }
         .task {
             if selectedServerId == nil {
                 selectedServerId = mcpManager.servers.first?.id
@@ -211,6 +219,17 @@ public struct MCPServerDashboardView: View {
                 .padding()
                 .background(AppTheme.Palette.controlBackground)
                 .cornerRadius(8)
+
+                // Server Card Section (MCP 2026-07-28)
+                if let card = serverCards[server.id] {
+                    serverCardSection(card)
+                }
+
+                // MCP Apps UI Section (MCP 2026-07-28)
+                appsSection(for: server)
+
+                // Tasks Extension Section (MCP 2026-07-28)
+                tasksSection(for: server)
 
                 // Tools Section
                 VStack(alignment: .leading, spacing: 8) {
@@ -364,6 +383,216 @@ public struct MCPServerDashboardView: View {
         .cornerRadius(6)
     }
 
+    @ViewBuilder
+    private func serverCardSection(_ card: MCPServerCard) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("Server Discovery Card", systemImage: "person.text.rectangle")
+                    .font(.headline)
+                Spacer()
+                Text("v\(card.version)")
+                    .font(AppTheme.Font.mono(10))
+                    .foregroundStyle(AppTheme.Palette.textSecondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(AppTheme.Palette.controlBackground)
+                    .cornerRadius(4)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                if let vendor = card.vendor {
+                    Text("Vendor: \(vendor)")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(AppTheme.Palette.textPrimary)
+                }
+
+                if let desc = card.description {
+                    Text(desc)
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                }
+
+                if let caps = card.capabilities, !caps.isEmpty {
+                    HStack(spacing: 6) {
+                        Text("Capabilities:")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.Palette.textTertiary)
+                        ForEach(caps, id: \.self) { cap in
+                            Text(cap)
+                                .font(AppTheme.Font.mono(9))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(AppTheme.Palette.accent.opacity(0.12))
+                                .foregroundStyle(AppTheme.Palette.accent)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+
+                if let tags = card.tags, !tags.isEmpty {
+                    HStack(spacing: 6) {
+                        Text("Tags:")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.Palette.textTertiary)
+                        ForEach(tags, id: \.self) { tag in
+                            Text("#\(tag)")
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.Palette.textTertiary)
+                        }
+                    }
+                }
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(AppTheme.Palette.controlBackground)
+            .cornerRadius(6)
+        }
+    }
+
+    @ViewBuilder
+    private func tasksSection(for server: MCPServerConfig) -> some View {
+        let tasks = serverTasks[server.id] ?? []
+
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("MCP Tasks (\(tasks.count))", systemImage: "clock.arrow.circlepath")
+                    .font(.headline)
+                Spacer()
+                Button("Reload Tasks") {
+                    Task { await loadTasks(for: server) }
+                }
+                .font(.caption)
+            }
+
+            if tasks.isEmpty {
+                HStack {
+                    Spacer()
+                    Text("No active long-running MCP tasks.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                        .padding()
+                    Spacer()
+                }
+                .background(AppTheme.Palette.controlBackground.opacity(0.5))
+                .cornerRadius(6)
+            } else {
+                VStack(spacing: 6) {
+                    ForEach(tasks) { task in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(task.name ?? task.taskId)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                    statusBadge(for: task.status)
+                                }
+                                if let msg = task.message {
+                                    Text(msg)
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                                }
+                            }
+                            Spacer()
+                            if !task.status.isTerminal {
+                                Button("Cancel") {
+                                    Task {
+                                        let client = mcpManager.getClient(for: server)
+                                        _ = try? await client.cancelTask(taskId: task.taskId)
+                                        await loadTasks(for: server)
+                                    }
+                                }
+                                .font(.caption2)
+                            }
+                        }
+                        .padding(8)
+                        .background(AppTheme.Palette.controlBackground)
+                        .cornerRadius(6)
+                    }
+                }
+            }
+        }
+    }
+
+    private func statusBadge(for status: MCPTaskStatus) -> some View {
+        let (text, color): (String, Color) = {
+            switch status {
+            case .pending: return ("Pending", .orange)
+            case .running: return ("Running", .blue)
+            case .completed: return ("Completed", .green)
+            case .failed: return ("Failed", .red)
+            case .cancelled: return ("Cancelled", .secondary)
+            }
+        }()
+
+        return Text(text)
+            .font(.caption2)
+            .fontWeight(.semibold)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.15))
+            .foregroundStyle(color)
+            .clipShape(Capsule())
+    }
+
+    @ViewBuilder
+    private func appsSection(for server: MCPServerConfig) -> some View {
+        let apps = serverApps[server.id] ?? []
+
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label("MCP Apps UI (\(apps.count))", systemImage: "app.window.checkmark")
+                    .font(.headline)
+                Spacer()
+                Button("Reload Apps") {
+                    Task { await loadApps(for: server) }
+                }
+                .font(.caption)
+            }
+
+            if apps.isEmpty {
+                HStack {
+                    Spacer()
+                    Text("No MCP Apps published by this server.")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                        .padding()
+                    Spacer()
+                }
+                .background(AppTheme.Palette.controlBackground.opacity(0.5))
+                .cornerRadius(6)
+            } else {
+                VStack(spacing: 6) {
+                    ForEach(apps) { app in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(app.title)
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                if let desc = app.description {
+                                    Text(desc)
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                                }
+                            }
+                            Spacer()
+                            Button {
+                                selectedApp = app
+                            } label: {
+                                Label("Open App", systemImage: "arrow.up.forward.app")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                        }
+                        .padding(8)
+                        .background(AppTheme.Palette.controlBackground)
+                        .cornerRadius(6)
+                    }
+                }
+            }
+        }
+    }
+
     private func refreshAll() async {
         isProbing = true
         defer { isProbing = false }
@@ -380,6 +609,9 @@ public struct MCPServerDashboardView: View {
 
         if health.isRunning {
             await loadTools(for: server)
+            await loadServerCard(for: server)
+            await loadTasks(for: server)
+            await loadApps(for: server)
         }
     }
 
@@ -401,6 +633,98 @@ public struct MCPServerDashboardView: View {
         let client = mcpManager.getClient(for: server)
         if let tools = try? await client.listRegisteredTools() {
             serverTools[server.id] = tools
+        }
+    }
+
+    private func loadServerCard(for server: MCPServerConfig) async {
+        let client = mcpManager.getClient(for: server)
+        if let card = try? await client.getServerCard() {
+            serverCards[server.id] = card
+        }
+    }
+
+    private func loadTasks(for server: MCPServerConfig) async {
+        let client = mcpManager.getClient(for: server)
+        if let tasks = try? await client.listTasks() {
+            serverTasks[server.id] = tasks
+        }
+    }
+
+    private func loadApps(for server: MCPServerConfig) async {
+        let client = mcpManager.getClient(for: server)
+        if let apps = try? await client.listApps() {
+            serverApps[server.id] = apps
+        }
+    }
+}
+
+// MARK: - MCP Apps UI Container & Sandboxed WebView (MCP 2026-07-28)
+
+struct MCPAppContainerView: View {
+    let app: MCPAppDefinition
+    @Environment(\.dismiss) private var dismiss
+
+    init(app: MCPAppDefinition) {
+        self.app = app
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(app.title)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    if let desc = app.description {
+                        Text(desc)
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.Palette.textSecondary)
+                    }
+                }
+                Spacer()
+                Button("Done") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+            }
+            .padding()
+            .background(AppTheme.Palette.controlBackground)
+
+            Divider()
+
+            MCPAppWebView(
+                htmlContent: app.isInlineHTML ? app.entryPoint : nil,
+                targetURL: app.isInlineHTML ? nil : URL(string: app.entryPoint)
+            )
+            .frame(minWidth: 640, minHeight: 480)
+        }
+        .frame(minWidth: 700, minHeight: 520)
+    }
+}
+
+struct MCPAppWebView: NSViewRepresentable {
+    let htmlContent: String?
+    let targetURL: URL?
+
+    init(htmlContent: String? = nil, targetURL: URL? = nil) {
+        self.htmlContent = htmlContent
+        self.targetURL = targetURL
+    }
+
+    public func makeNSView(context: Context) -> WKWebView {
+        let configuration = WKWebViewConfiguration()
+        let preferences = WKWebpagePreferences()
+        preferences.allowsContentJavaScript = true
+        configuration.defaultWebpagePreferences = preferences
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        return webView
+    }
+
+    public func updateNSView(_ nsView: WKWebView, context: Context) {
+        if let html = htmlContent {
+            nsView.loadHTMLString(html, baseURL: nil)
+        } else if let url = targetURL {
+            nsView.load(URLRequest(url: url))
         }
     }
 }
