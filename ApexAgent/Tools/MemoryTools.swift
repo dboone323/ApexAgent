@@ -184,6 +184,37 @@ struct SearchMemoryTool: Tool {
                             if !output.isEmpty { output += "\n\n" }
                             output += cognitiveContext
                         }
+
+                        // Search indexed daily notes
+                        let activeSpace = SpaceManager.shared.activeSpace
+                        let ws = orchestrator.orchestrator.currentWorkspacePath
+                        let dailyMatches = SpaceMemoryTierManager.shared.searchDailyNotes(query: query, space: activeSpace, workspacePath: ws)
+                        if !dailyMatches.isEmpty {
+                            if !output.isEmpty { output += "\n\n" }
+                            output += "📅 Found \(dailyMatches.count) indexed daily note(s):\n"
+                            for match in dailyMatches {
+                                output += "\n--- Daily Note: \(match.date) (\(match.filePath)) ---\n\(match.snippet)\n"
+                            }
+                        }
+
+                        // Search curated Space memory
+                        if let curated = SpaceMemoryTierManager.shared.loadCuratedMemory(for: activeSpace, workspacePath: ws) {
+                            if curated.localizedCaseInsensitiveContains(query) {
+                                if !output.isEmpty { output += "\n\n" }
+                                output += "📌 Curated Space Memory (MEMORY.md):\n\(curated)\n"
+                            }
+                        }
+                    } else if arguments.category?.lowercased().trimTime() == "daily" || arguments.category?.lowercased().trimTime() == "notes" {
+                        let activeSpace = SpaceManager.shared.activeSpace
+                        let ws = orchestrator.orchestrator.currentWorkspacePath
+                        let dailyMatches = SpaceMemoryTierManager.shared.searchDailyNotes(query: "", space: activeSpace, workspacePath: ws, limit: 10)
+                        if !dailyMatches.isEmpty {
+                            if !output.isEmpty { output += "\n\n" }
+                            output += "📅 Recent Daily Notes (\(dailyMatches.count)):\n"
+                            for match in dailyMatches {
+                                output += "\n--- Daily Note: \(match.date) (\(match.filePath)) ---\n\(match.snippet)\n"
+                            }
+                        }
                     }
 
                     if output.isEmpty {
