@@ -92,7 +92,7 @@ public enum SpaceProposalState: String, Codable, CaseIterable, Sendable {
 // MARK: - SwiftData Models
 
 @Model
-public final class SpaceModel: @unchecked Sendable {
+public final class SpaceModel {
     public var id: UUID
     public var name: String
     public var iconName: String
@@ -398,7 +398,7 @@ public final class SpacePage {
 // MARK: - Space Page Proposal (Human-in-the-Loop Diff Staging)
 
 @Model
-public final class SpacePageProposal: @unchecked Sendable {
+public final class SpacePageProposal {
     public var id: UUID
     public var pageId: UUID
     public var pageTitle: String
