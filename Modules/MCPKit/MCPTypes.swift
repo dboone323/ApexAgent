@@ -102,7 +102,7 @@ public struct MCPInputProperty: Sendable {
     }
 }
 
-public struct MCPToolResult: Codable, Sendable {
+public struct MCPToolResult: Codable, Sendable, Equatable {
     public let content: [MCPContent]
     public let isError: Bool
 
@@ -112,7 +112,7 @@ public struct MCPToolResult: Codable, Sendable {
     }
 }
 
-public struct MCPContent: Codable, Sendable {
+public struct MCPContent: Codable, Sendable, Equatable {
     public let type: String
     public let text: String
 
@@ -122,13 +122,147 @@ public struct MCPContent: Codable, Sendable {
     }
 }
 
-public struct MCPRequest: Codable, Sendable {
+public struct MCPRequest: Codable, Sendable, Equatable {
     public let method: String
     public let params: MCPRequestParams?
     public let id: Int?
 }
 
-public struct MCPRequestParams: Codable, Sendable {
+public struct MCPRequestParams: Codable, Sendable, Equatable {
     public let name: String?
     public let arguments: [String: MCPValue]?
+}
+
+// MARK: - MCP 2026-07-28 Modern Specifications
+
+public struct MCPExtensionCapability: Codable, Sendable, Equatable {
+    public let version: String?
+    public let options: [String: MCPValue]?
+
+    public init(version: String? = "2026-07-28", options: [String: MCPValue]? = nil) {
+        self.version = version
+        self.options = options
+    }
+}
+
+public enum MCPTaskStatus: String, Codable, Sendable, Equatable {
+    case pending = "pending"
+    case running = "running"
+    case completed = "completed"
+    case failed = "failed"
+    case cancelled = "cancelled"
+
+    public var isTerminal: Bool {
+        switch self {
+        case .completed, .failed, .cancelled: return true
+        case .pending, .running: return false
+        }
+    }
+}
+
+public struct MCPTask: Codable, Sendable, Equatable, Identifiable {
+    public var id: String { taskId }
+    public let taskId: String
+    public let name: String?
+    public let status: MCPTaskStatus
+    public let progress: Double?
+    public let message: String?
+    public let result: MCPToolResult?
+    public let error: String?
+    public let createdAt: Date?
+    public let updatedAt: Date?
+
+    public init(
+        taskId: String,
+        name: String? = nil,
+        status: MCPTaskStatus,
+        progress: Double? = nil,
+        message: String? = nil,
+        result: MCPToolResult? = nil,
+        error: String? = nil,
+        createdAt: Date? = nil,
+        updatedAt: Date? = nil
+    ) {
+        self.taskId = taskId
+        self.name = name
+        self.status = status
+        self.progress = progress
+        self.message = message
+        self.result = result
+        self.error = error
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+public struct MCPServerCard: Codable, Sendable, Equatable {
+    public let name: String
+    public let version: String
+    public let description: String?
+    public let vendor: String?
+    public let website: String?
+    public let documentation: String?
+    public let iconURL: String?
+    public let capabilities: [String]?
+    public let tags: [String]?
+    public let license: String?
+    public let privacyPolicy: String?
+
+    public init(
+        name: String,
+        version: String,
+        description: String? = nil,
+        vendor: String? = nil,
+        website: String? = nil,
+        documentation: String? = nil,
+        iconURL: String? = nil,
+        capabilities: [String]? = nil,
+        tags: [String]? = nil,
+        license: String? = nil,
+        privacyPolicy: String? = nil
+    ) {
+        self.name = name
+        self.version = version
+        self.description = description
+        self.vendor = vendor
+        self.website = website
+        self.documentation = documentation
+        self.iconURL = iconURL
+        self.capabilities = capabilities
+        self.tags = tags
+        self.license = license
+        self.privacyPolicy = privacyPolicy
+    }
+}
+
+public struct MCPAppDefinition: Codable, Sendable, Equatable, Identifiable {
+    public var id: String { appId }
+    public let appId: String
+    public let title: String
+    public let description: String?
+    public let version: String?
+    public let entryPoint: String
+    public let isInlineHTML: Bool
+    public let permissions: [String]?
+    public let supportedFormFactors: [String]?
+
+    public init(
+        appId: String,
+        title: String,
+        description: String? = nil,
+        version: String? = nil,
+        entryPoint: String,
+        isInlineHTML: Bool = true,
+        permissions: [String]? = nil,
+        supportedFormFactors: [String]? = nil
+    ) {
+        self.appId = appId
+        self.title = title
+        self.description = description
+        self.version = version
+        self.entryPoint = entryPoint
+        self.isInlineHTML = isInlineHTML
+        self.permissions = permissions
+        self.supportedFormFactors = supportedFormFactors
+    }
 }

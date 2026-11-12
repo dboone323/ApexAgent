@@ -132,7 +132,7 @@ struct MCPClientHealth: Codable, Sendable, Equatable {
     }
 }
 
-struct MCPToolDefinition: Codable, Equatable {
+struct MCPToolDefinition: Codable, Sendable, Equatable {
     let name: String
     let description: String?
     let inputSchema: MCPInputSchema
@@ -151,25 +151,169 @@ struct MCPToolDefinition: Codable, Equatable {
     }
 }
 
-struct MCPInputSchema: Codable, Equatable {
+struct MCPInputSchema: Codable, Sendable, Equatable {
     let type: String
     let properties: [String: MCPProperty]?
     let required: [String]?
 }
 
-struct MCPProperty: Codable, Equatable {
+struct MCPProperty: Codable, Sendable, Equatable {
     let type: String?
     let description: String?
 }
 
-struct MCPToolCallResult: Codable, Equatable {
+struct MCPToolCallResult: Codable, Sendable, Equatable {
     let content: [MCPContentBlock]
     let isError: Bool?
+
+    init(content: [MCPContentBlock], isError: Bool? = nil) {
+        self.content = content
+        self.isError = isError
+    }
 }
 
-struct MCPContentBlock: Codable, Equatable {
+struct MCPContentBlock: Codable, Sendable, Equatable {
     let type: String
     let text: String?
+
+    init(type: String, text: String? = nil) {
+        self.type = type
+        self.text = text
+    }
+}
+
+// MARK: - MCP 2026-07-28 Modern Specifications
+
+struct MCPExtensionCapability: Codable, Sendable, Equatable {
+    let version: String?
+    let options: [String: AnyCodable]?
+
+    init(version: String? = "2026-07-28", options: [String: AnyCodable]? = nil) {
+        self.version = version
+        self.options = options
+    }
+}
+
+enum MCPTaskStatus: String, Codable, Sendable, Equatable {
+    case pending = "pending"
+    case running = "running"
+    case completed = "completed"
+    case failed = "failed"
+    case cancelled = "cancelled"
+
+    var isTerminal: Bool {
+        switch self {
+        case .completed, .failed, .cancelled: return true
+        case .pending, .running: return false
+        }
+    }
+}
+
+struct MCPTask: Codable, Sendable, Equatable, Identifiable {
+    var id: String { taskId }
+    let taskId: String
+    let name: String?
+    let status: MCPTaskStatus
+    let progress: Double?
+    let message: String?
+    let result: MCPToolCallResult?
+    let error: String?
+    let createdAt: Date?
+    let updatedAt: Date?
+
+    init(
+        taskId: String,
+        name: String? = nil,
+        status: MCPTaskStatus,
+        progress: Double? = nil,
+        message: String? = nil,
+        result: MCPToolCallResult? = nil,
+        error: String? = nil,
+        createdAt: Date? = nil,
+        updatedAt: Date? = nil
+    ) {
+        self.taskId = taskId
+        self.name = name
+        self.status = status
+        self.progress = progress
+        self.message = message
+        self.result = result
+        self.error = error
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+struct MCPServerCard: Codable, Sendable, Equatable {
+    let name: String
+    let version: String
+    let description: String?
+    let vendor: String?
+    let website: String?
+    let documentation: String?
+    let iconURL: String?
+    let capabilities: [String]?
+    let tags: [String]?
+    let license: String?
+    let privacyPolicy: String?
+
+    init(
+        name: String,
+        version: String,
+        description: String? = nil,
+        vendor: String? = nil,
+        website: String? = nil,
+        documentation: String? = nil,
+        iconURL: String? = nil,
+        capabilities: [String]? = nil,
+        tags: [String]? = nil,
+        license: String? = nil,
+        privacyPolicy: String? = nil
+    ) {
+        self.name = name
+        self.version = version
+        self.description = description
+        self.vendor = vendor
+        self.website = website
+        self.documentation = documentation
+        self.iconURL = iconURL
+        self.capabilities = capabilities
+        self.tags = tags
+        self.license = license
+        self.privacyPolicy = privacyPolicy
+    }
+}
+
+struct MCPAppDefinition: Codable, Sendable, Equatable, Identifiable {
+    var id: String { appId }
+    let appId: String
+    let title: String
+    let description: String?
+    let version: String?
+    let entryPoint: String
+    let isInlineHTML: Bool
+    let permissions: [String]?
+    let supportedFormFactors: [String]?
+
+    init(
+        appId: String,
+        title: String,
+        description: String? = nil,
+        version: String? = nil,
+        entryPoint: String,
+        isInlineHTML: Bool = true,
+        permissions: [String]? = nil,
+        supportedFormFactors: [String]? = nil
+    ) {
+        self.appId = appId
+        self.title = title
+        self.description = description
+        self.version = version
+        self.entryPoint = entryPoint
+        self.isInlineHTML = isInlineHTML
+        self.permissions = permissions
+        self.supportedFormFactors = supportedFormFactors
+    }
 }
 
 // JSON-RPC structs
@@ -483,9 +627,19 @@ actor MCPClient {
     }
     
     private(set) var negotiatedProtocolVersion: String = MCPProtocolVersion.latestSupported
+    private(set) var negotiatedExtensions: [String: MCPExtensionCapability] = [:]
+    private(set) var lastServerInfo: [String: AnyCodable] = [:]
 
     func currentProtocolVersion() -> String {
         negotiatedProtocolVersion
+    }
+
+    func currentNegotiatedExtensions() -> [String: MCPExtensionCapability] {
+        negotiatedExtensions
+    }
+
+    func isExtensionSupported(_ name: String) -> Bool {
+        negotiatedExtensions[name] != nil
     }
 
     struct InitializeClientInfo: Codable, Equatable {
@@ -494,8 +648,15 @@ actor MCPClient {
     }
 
     struct InitializeCapabilities: Codable {
-        var sampling: [String: AnyCodable]?
-        var roots: [String: AnyCodable]?
+        var extensions: [String: MCPExtensionCapability]?
+
+        init(extensions: [String: MCPExtensionCapability]? = [
+            "tasks": MCPExtensionCapability(version: "2026-07-28"),
+            "apps": MCPExtensionCapability(version: "2026-07-28"),
+            "serverCard": MCPExtensionCapability(version: "2026-07-28")
+        ]) {
+            self.extensions = extensions
+        }
     }
 
     struct InitializeParams: Codable {
@@ -557,7 +718,7 @@ actor MCPClient {
                     let fallbackTrace = W3CTraceContext.generate()
                     let fallbackParams = InitializeParams(
                         protocolVersion: MCPProtocolVersion.legacyFallback,
-                        capabilities: InitializeCapabilities(),
+                        capabilities: InitializeCapabilities(extensions: nil),
                         clientInfo: InitializeClientInfo(name: "ApexAgent", version: "1.0.0"),
                         _meta: fallbackTrace.metaDictionary
                     )
@@ -592,12 +753,34 @@ actor MCPClient {
         }
 
         if let initResult {
+            lastServerInfo = initResult.serverInfo
             negotiatedProtocolVersion = MCPProtocolVersion.resolveNegotiatedVersion(
                 advertised: advertisedVersion,
                 serverResponseVersion: initResult.protocolVersion
             )
+
+            // Extension negotiation (MCP 2026-07-28)
+            var matched: [String: MCPExtensionCapability] = [:]
+            if let extVal = initResult.capabilities["extensions"]?.value as? [String: Any] {
+                for (k, v) in extVal {
+                    let version = (v as? [String: Any])?["version"] as? String ?? "2026-07-28"
+                    matched[k] = MCPExtensionCapability(version: version)
+                }
+            }
+            if initResult.capabilities["tasks"] != nil && matched["tasks"] == nil {
+                matched["tasks"] = MCPExtensionCapability(version: "2026-07-28")
+            }
+            if initResult.capabilities["apps"] != nil && matched["apps"] == nil {
+                matched["apps"] = MCPExtensionCapability(version: "2026-07-28")
+            }
+            if initResult.capabilities["serverCard"] != nil && matched["serverCard"] == nil {
+                matched["serverCard"] = MCPExtensionCapability(version: "2026-07-28")
+            }
+            negotiatedExtensions = matched
         } else {
             negotiatedProtocolVersion = advertisedVersion
+            negotiatedExtensions = [:]
+            lastServerInfo = [:]
         }
 
         let notification = JSONRPCNotification(method: "notifications/initialized")
@@ -850,11 +1033,21 @@ actor MCPClient {
         }
     }
 
+    public static let deprecatedMethods: Set<String> = [
+        "roots/list",
+        "sampling/createMessage",
+        "logging/setLevel"
+    ]
+
     private func sendRequestInternal<Params: Codable, Result: Codable>(
         method: String,
         params: Params,
         traceContext: W3CTraceContext? = nil
     ) async throws -> Result {
+        if Self.deprecatedMethods.contains(method) {
+            throw MCPError.protocolError("Method '\(method)' is deprecated in MCP 2026-07-28 and unsupported.")
+        }
+
         let id = nextRequestId
         nextRequestId += 1
 
@@ -997,6 +1190,138 @@ actor MCPClient {
             traceContext: activeTrace
         )
         return result
+    }
+
+    // MARK: - Tasks Extension (MCP 2026-07-28)
+
+    struct TasksListResponse: Codable {
+        let tasks: [MCPTask]
+    }
+
+    struct TaskParams: Codable {
+        let taskId: String
+    }
+
+    struct CallTaskParams: Codable {
+        let name: String
+        let arguments: [String: AnyCodable]
+        let _meta: [String: String]?
+
+        init(name: String, arguments: [String: AnyCodable], _meta: [String: String]? = nil) {
+            self.name = name
+            self.arguments = arguments
+            self._meta = _meta
+        }
+    }
+
+    func listTasks() async throws -> [MCPTask] {
+        let response: TasksListResponse = try await sendRequest(method: "tasks/list", params: EmptyParams())
+        return response.tasks
+    }
+
+    func getTask(taskId: String) async throws -> MCPTask {
+        let task: MCPTask = try await sendRequest(method: "tasks/get", params: TaskParams(taskId: taskId))
+        return task
+    }
+
+    func cancelTask(taskId: String) async throws -> MCPTask {
+        let task: MCPTask = try await sendRequest(method: "tasks/cancel", params: TaskParams(taskId: taskId))
+        return task
+    }
+
+    func callTask(
+        name: String,
+        arguments: [String: AnyCodable],
+        traceContext: W3CTraceContext? = nil
+    ) async throws -> MCPTask {
+        let activeTrace = traceContext ?? W3CTraceContext.generate()
+        let params = CallTaskParams(
+            name: name,
+            arguments: arguments,
+            _meta: activeTrace.metaDictionary
+        )
+        let task: MCPTask = try await sendRequest(
+            method: "tasks/call",
+            params: params,
+            traceContext: activeTrace
+        )
+        return task
+    }
+
+    func getTaskResult(taskId: String) async throws -> MCPToolCallResult {
+        let task = try await getTask(taskId: taskId)
+        if let res = task.result {
+            return res
+        }
+        let result: MCPToolCallResult = try await sendRequest(
+            method: "tasks/result",
+            params: TaskParams(taskId: taskId)
+        )
+        return result
+    }
+
+    func awaitTaskCompletion(
+        taskId: String,
+        timeout: TimeInterval = 60,
+        pollingInterval: TimeInterval = 0.2
+    ) async throws -> MCPTask {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            let task = try await getTask(taskId: taskId)
+            if task.status.isTerminal {
+                return task
+            }
+            try await Task.sleep(for: .milliseconds(Int(pollingInterval * 1000)))
+        }
+        throw MCPError.timeout("MCP Task '\(taskId)' did not complete within \(Int(timeout))s.")
+    }
+
+    // MARK: - Server Cards Discovery (MCP 2026-07-28)
+
+    func getServerCard() async throws -> MCPServerCard {
+        do {
+            let card: MCPServerCard = try await sendRequest(method: "server/card", params: EmptyParams())
+            return card
+        } catch {
+            let sName = (lastServerInfo["name"]?.value as? String) ?? self.serverName
+            let ver = (lastServerInfo["version"]?.value as? String) ?? negotiatedProtocolVersion
+            let desc = (lastServerInfo["description"]?.value as? String) ?? "MCP Server (\(sName))"
+            let vendor = (lastServerInfo["vendor"]?.value as? String) ?? (lastServerInfo["author"]?.value as? String)
+            let web = lastServerInfo["website"]?.value as? String
+            let doc = lastServerInfo["documentation"]?.value as? String
+            let caps = Array(negotiatedExtensions.keys.sorted())
+            return MCPServerCard(
+                name: sName,
+                version: ver,
+                description: desc,
+                vendor: vendor,
+                website: web,
+                documentation: doc,
+                iconURL: nil,
+                capabilities: caps.isEmpty ? ["tools", "stateless"] : caps + ["tools", "stateless"],
+                tags: ["mcp-2026-07-28", "stdio"]
+            )
+        }
+    }
+
+    // MARK: - MCP Apps UI (MCP 2026-07-28)
+
+    struct AppsListResponse: Codable {
+        let apps: [MCPAppDefinition]
+    }
+
+    struct AppGetParams: Codable {
+        let appId: String
+    }
+
+    func listApps() async throws -> [MCPAppDefinition] {
+        let response: AppsListResponse = try await sendRequest(method: "apps/list", params: EmptyParams())
+        return response.apps
+    }
+
+    func getApp(appId: String) async throws -> MCPAppDefinition {
+        let app: MCPAppDefinition = try await sendRequest(method: "apps/get", params: AppGetParams(appId: appId))
+        return app
     }
 
     // MARK: - Dynamic Script Execution
@@ -1205,6 +1530,29 @@ struct AnyCodable: Codable, @unchecked Sendable {
             try container.encode(dict.mapValues { AnyCodable($0) })
         default:
             try container.encode(String(describing: value))
+        }
+    }
+}
+
+extension AnyCodable: Equatable {
+    static func == (lhs: AnyCodable, rhs: AnyCodable) -> Bool {
+        switch (lhs.value, rhs.value) {
+        case (is NSNull, is NSNull):
+            return true
+        case (let l as Bool, let r as Bool):
+            return l == r
+        case (let l as Int, let r as Int):
+            return l == r
+        case (let l as Double, let r as Double):
+            return l == r
+        case (let l as String, let r as String):
+            return l == r
+        case (let l as [Any], let r as [Any]):
+            return l.map { AnyCodable($0) } == r.map { AnyCodable($0) }
+        case (let l as [String: Any], let r as [String: Any]):
+            return l.mapValues { AnyCodable($0) } == r.mapValues { AnyCodable($0) }
+        default:
+            return String(describing: lhs.value) == String(describing: rhs.value)
         }
     }
 }
