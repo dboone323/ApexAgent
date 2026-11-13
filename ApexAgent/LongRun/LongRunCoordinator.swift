@@ -41,7 +41,7 @@ final class LongRunCoordinator {
 
             // Pre-step budget check - must never fire late (fail-safe direction preserved).
             if checkpoint.elapsedWallClockSeconds >= timeBudget {
-                print("Budget exceeded! Stopping run.")
+                AppLog.info(.app, "Budget exceeded! Stopping run.")
                 break
             }
 
