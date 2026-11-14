@@ -1014,4 +1014,52 @@ import AppKit
         await MCPManager.shared.stopAll()
         MCPManager.shared.servers = []
     }
+
+    // MARK: - Sub-Agent Lifecycle Tests (Issue #165)
+
+    @MainActor
+    @Test func testSubAgentLifecycleProducesCompletionResultForKnownType() async {
+        let orchestrator = AgentOrchestrator()
+        let id = UUID()
+        let agent = SubAgent(id: id, type: .coder, modelPreference: "autoPicker", budgetLimit: 15.0)
+        orchestrator.subAgents[id] = agent
+
+        await orchestrator.runSubAgent(id: id, type: .coder, context: "refactor test suite")
+
+        let completedAgent = orchestrator.subAgents[id]
+        #expect(completedAgent != nil)
+        #expect(completedAgent?.status == .completed)
+        #expect(completedAgent?.result?.contains("Coder") == true)
+        #expect(completedAgent?.result?.contains("refactor test suite") == true)
+    }
+
+    @MainActor
+    @Test func testSubAgentLifecycleProducesCompletionResultWithEmptyContext() async {
+        let orchestrator = AgentOrchestrator()
+        let id = UUID()
+        let agent = SubAgent(id: id, type: .reviewer, modelPreference: "autoPicker", budgetLimit: 15.0)
+        orchestrator.subAgents[id] = agent
+
+        await orchestrator.runSubAgent(id: id, type: .reviewer, context: "")
+
+        let completedAgent = orchestrator.subAgents[id]
+        #expect(completedAgent != nil)
+        #expect(completedAgent?.status == .completed)
+        #expect(completedAgent?.result?.contains("Reviewer") == true)
+        #expect(completedAgent?.result?.contains("no specific task") == true)
+    }
+
+    @MainActor
+    @Test func testSubAgentHelpersPreserveToolAndModelPreferences() {
+        let orchestrator = AgentOrchestrator()
+        #expect(orchestrator.allowedTools(for: .coder).contains("read_file"))
+        #expect(orchestrator.allowedTools(for: .reviewer).contains("read_file"))
+        #expect(orchestrator.allowedTools(for: .browser).contains("web_search"))
+        #expect(orchestrator.allowedTools(for: .planner).isEmpty)
+
+        #expect(orchestrator.modelPreference(for: .coder) == "localSystem")
+        #expect(orchestrator.modelPreference(for: .reviewer) == "localSystem")
+        #expect(orchestrator.modelPreference(for: .browser) == "cloudGemini")
+        #expect(orchestrator.modelPreference(for: .planner) == "autoPicker")
+    }
 }

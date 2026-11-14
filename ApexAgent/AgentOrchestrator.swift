@@ -334,9 +334,6 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             subAgents[id] = agent
         }
 
-        let allowedTools = allowedTools(for: type)
-        let model = modelPreference(for: type)
-
         agent.result = "Sub-agent \(type.displayName) \(id.uuidString.prefix(8)) completed with \(context.isEmpty ? "no specific task" : context)"
         agent.status = .completed
         agent.lastActivity = Date()
