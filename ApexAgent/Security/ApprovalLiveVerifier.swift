@@ -18,6 +18,10 @@ public enum ApprovalLiveVerifier {
         // Clean any leftover state for deterministic test run
         allowlist.remove(command: testCmd, directory: testDir)
         allowlist.remove(command: "git status", directory: testDir)
+        defer {
+            allowlist.remove(command: testCmd, directory: testDir)
+            allowlist.remove(command: "git status", directory: testDir)
+        }
 
         // 1. Allowlist Learning & Persistence
         logs.append("\n[1] Testing Allowlist Learning & Auto-Allow:")
