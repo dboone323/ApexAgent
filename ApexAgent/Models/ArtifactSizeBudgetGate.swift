@@ -111,13 +111,26 @@ public struct ArtifactSizeBudgetReport: Sendable, Equatable, Codable {
 
 public enum ArtifactSizeBudgetGate {
     /// Audits the `ApexAgent/` source tree and `ApexAgent/Resources/` directory at `rootURL`.
+    ///
+    /// - Parameters:
+    ///   - rootURL: The repository root URL. Standardized and symlink-resolved to reliably audit
+    ///     worktrees created in symlinked paths (e.g. `/tmp` -> `/private/tmp`).
+    ///   - maxSingleSwiftFileLines: Single file line complexity budget (default 2500; largest file
+    ///     is `AgentOrchestrator.swift` at 1929 lines after PR #162 / issue #101 sub-agent additions).
+    ///   - maxSingleResourceBytes: Single resource asset budget (default 2,000,000 bytes; largest is
+    ///     `ToolSchemas.json` at ~79 KB).
+    ///   - maxTotalSourceBytes: Total Swift source byte budget (default 10,000,000 bytes; current
+    ///     verified footprint is ~3.96 MB across 365 Swift files and 97,464 lines after PRs #77, #80,
+    ///     #86, #153, #155, and #162).
     public static func auditWorkspaceFootprint(
         atRepoRoot rootURL: URL,
         maxSingleSwiftFileLines: Int = 2500,
         maxSingleResourceBytes: Int = 2_000_000,
         maxTotalSourceBytes: Int = 10_000_000
     ) -> ArtifactSizeBudgetReport {
-        let apexDir = rootURL.appendingPathComponent("ApexAgent")
+        let normalizedRootURL = rootURL.standardizedFileURL.resolvingSymlinksInPath()
+        let rootPath = normalizedRootURL.path.hasSuffix("/") ? normalizedRootURL.path : normalizedRootURL.path + "/"
+        let apexDir = normalizedRootURL.appendingPathComponent("ApexAgent")
         var fileEntries: [(relativePath: String, lineCount: Int, byteSize: Int, isResource: Bool)] = []
 
         if let enumerator = FileManager.default.enumerator(
@@ -130,10 +143,14 @@ public enum ArtifactSizeBudgetGate {
                       values.isRegularFile == true else {
                     continue
                 }
-                let relPath = fileURL.path.replacingOccurrences(of: rootURL.path + "/", with: "")
+                let normalizedFileURL = fileURL.standardizedFileURL.resolvingSymlinksInPath()
+                let filePath = normalizedFileURL.path
+                let relPath = filePath.hasPrefix(rootPath)
+                    ? String(filePath.dropFirst(rootPath.count))
+                    : filePath.replacingOccurrences(of: rootPath, with: "")
                 let byteSize = values.fileSize ?? 0
                 if fileURL.pathExtension == "swift" {
-                    let content = (try? String(contentsOf: fileURL, encoding: .utf8)) ?? ""
+                    let content = (try? String(contentsOf: normalizedFileURL, encoding: .utf8)) ?? ""
                     let lineCount = content.isEmpty ? 0 : content.components(separatedBy: .newlines).count
                     fileEntries.append((relPath, lineCount, byteSize, false))
                 } else if relPath.hasPrefix("ApexAgent/Resources/") {

@@ -9,6 +9,8 @@ struct ArtifactSizeBudgetGateTests {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
     }
 
     @Test("Live repository ApexAgent/ source tree and Resources/ pass footprint and complexity budgets")
@@ -21,6 +23,22 @@ struct ArtifactSizeBudgetGateTests {
         #expect(report.subsystems.contains { $0.subsystem == "Models" })
         #expect(report.subsystems.contains { $0.subsystem == "Security" })
         #expect(report.toMarkdown().contains("Workspace Footprint & Complexity Budget Gate (`PASS`)"))
+    }
+
+    @Test("Workspace footprint audit resolves symlinked repository root paths without dropping resources")
+    func workspaceFootprintAuditHandlesSymlinkedRoot() throws {
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("apex_audit_\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let symlinkURL = tempDir.appendingPathComponent("ApexAgentSymlink")
+        try FileManager.default.createSymbolicLink(at: symlinkURL, withDestinationURL: repoRootURL)
+
+        let report = ArtifactSizeBudgetGate.auditWorkspaceFootprint(atRepoRoot: symlinkURL)
+        #expect(report.passed, "Violations: \(report.violations)")
+        #expect(report.totalResourceBytes > 1_000)
+        #expect(report.subsystems.contains { $0.subsystem == "Models" })
+        #expect(report.subsystems.contains { $0.subsystem == "Security" })
     }
 
     @Test("Flags oversized Swift files, oversized resource assets, and total footprint overflow")
