@@ -83,9 +83,15 @@ public final class ProviderFallbackExecutor {
 
                 let trimmed = accumulatedText.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty && !trimmed.hasPrefix("⚠️ The on-device model returned no output") {
+                    let elapsedMs = self.elapsedMilliseconds(since: attemptStartedAt)
                     ModelCircuitBreaker.shared.recordSuccess(for: candidate.provider)
+                    RunTraceManager.shared.recordModelCall(
+                        model: candidate.provider.displayName,
+                        prompt: prompt,
+                        durationMs: elapsedMs
+                    )
                     Self.logger.info(
-                        "Provider attempt succeeded: \(candidate.provider.displayName, privacy: .public) in \(self.elapsedMilliseconds(since: attemptStartedAt), format: .fixed(precision: 1)) ms"
+                        "Provider attempt succeeded: \(candidate.provider.displayName, privacy: .public) in \(elapsedMs, format: .fixed(precision: 1)) ms"
                     )
                     let finalState = RuntimeTerminalState.completed(output: trimmed)
                     onEvent?(.completed(requestId: requestId, state: finalState))

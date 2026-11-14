@@ -45,6 +45,9 @@ public enum ApexCLICommand: Sendable, Equatable {
     case sarif(jsonOutput: Bool)
     case selfTest(jsonOutput: Bool)
     case traces(limit: Int, jsonOutput: Bool)
+    case traceReplay(target: String, jsonOutput: Bool)
+    case traceVerify(jsonOutput: Bool)
+    case tracesList(limit: Int, jsonOutput: Bool)
     case policy(jsonOutput: Bool)
     case approvals(subcommandArgs: [String], jsonOutput: Bool)
     case daemon
@@ -285,13 +288,30 @@ public enum ApexCLIRouter {
             return ParsedCLIInvocation(command: .selfTest(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
         case "traces", "--traces":
+            let remList = Array(remaining)
+            if remList.count > 1 {
+                let subAction = remList[1].lowercased()
+                if subAction == "replay" || subAction == "--replay" {
+                    let target = remList.count > 2 ? remList[2] : ""
+                    return ParsedCLIInvocation(command: .traceReplay(target: target, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+                }
+                if subAction == "verify" || subAction == "--verify" {
+                    return ParsedCLIInvocation(command: .traceVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+                }
+                if subAction == "list" || subAction == "--list" {
+                    var limit = 50
+                    if remList.count > 2, let parsed = Int(remList[2]) { limit = parsed }
+                    return ParsedCLIInvocation(command: .tracesList(limit: limit, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+                }
+            }
             var limit = 50
             var i = 1
-            let remList = Array(remaining)
             while i < remList.count {
                 if remList[i] == "--limit" && i + 1 < remList.count {
                     limit = Int(remList[i + 1]) ?? 50
                     i += 2
+                } else if remList[i] == "--replay" && i + 1 < remList.count {
+                    return ParsedCLIInvocation(command: .traceReplay(target: remList[i + 1], jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
                 } else {
                     i += 1
                 }
@@ -723,6 +743,37 @@ RoutineManager.shared.loadRoutines()
             let report = TraceSpanExporter.export(events: events)
             let output = jsonOutput ? report.toOTLPJSON() : report.toMarkdown()
             return (output, report.passed ? 0 : 1)
+
+        case .traceReplay(let target, let jsonOutput):
+            guard !target.isEmpty else {
+                return ("Error: Missing trace target. Usage: ApexAgent traces replay <file-or-run-id>", 1)
+            }
+            do {
+                let report = try RunTraceReplayer.replay(target: target)
+                let output = jsonOutput ? report.toJSON() : report.toFormattedString()
+                return (output, 0)
+            } catch {
+                return ("Replay failed: \(error.localizedDescription)", 1)
+            }
+
+        case .tracesList(let limit, let jsonOutput):
+            let files = RunTraceStorage.listTraces(limit: limit)
+            if jsonOutput {
+                let paths = files.map { $0.path }
+                let data = (try? JSONSerialization.data(withJSONObject: paths, options: [.prettyPrinted])) ?? Data()
+                return (String(data: data, encoding: .utf8) ?? "[]", 0)
+            } else {
+                if files.isEmpty {
+                    return ("No recorded traces found.", 0)
+                }
+                var lines = ["=== Recorded Run Traces (\(files.count)) ==="]
+                for file in files {
+                    let name = file.deletingPathExtension().lastPathComponent
+                    let size = (try? FileManager.default.attributesOfItem(atPath: file.path)[.size] as? Int) ?? 0
+                    lines.append("- \(name) (\(size) bytes) [\(file.path)]")
+                }
+                return (lines.joined(separator: "\n"), 0)
+            }
 
         case .policy(let jsonOutput):
             let repoRoot = resolveRepositoryRoot()

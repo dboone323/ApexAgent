@@ -56,7 +56,7 @@ enum ApprovalRule {
 
 /// Which rule produced the verdict — the decision log's whole value is "which
 /// rule", so the source is carried on the verdict rather than re-derived.
-enum ApprovalVerdictSource: String, Sendable {
+public enum ApprovalVerdictSource: String, Sendable {
     case alwaysAllow = "always-allow"
     case autoMode = "auto-mode"
     case containerSandbox = "container-sandbox"

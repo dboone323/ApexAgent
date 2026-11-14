@@ -312,6 +312,13 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         let id = SubAgent.ID()
         let agent = SubAgent(type: type, modelPreference: "autoPicker", budgetLimit: 15.0)
         subAgents[id] = agent
+        let parentId = RunTraceManager.shared.activeRunId ?? "orchestrator-main"
+        RunTraceManager.shared.recordSubAgentHandoff(
+            parentRunId: parentId,
+            subAgentId: id.uuidString,
+            agentType: type.displayName,
+            context: context
+        )
         // Fire and forget: run the sub-agent in the background
         Task { @MainActor in
             await self.runSubAgent(id: id, type: type, context: context)
@@ -1173,6 +1180,22 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     @MainActor
     private func runMessageGeneration(text: String, attachments: [NSImage] = []) async {
+        let isTopLevelRun = RunTraceManager.shared.activeRunId == nil
+        let runId = isTopLevelRun ? RunTrace.generateRunId() : (RunTraceManager.shared.activeRunId ?? RunTrace.generateRunId())
+        if isTopLevelRun {
+            RunTraceManager.shared.startRun(
+                runId: runId,
+                conversationId: currentConversation?.id,
+                workspacePath: currentWorkspacePath,
+                metadata: ["prompt": String(text.prefix(100))]
+            )
+        }
+        defer {
+            if isTopLevelRun {
+                RunTraceManager.shared.endRun(runId: runId, status: "completed")
+            }
+        }
+
         // Check if we need to initialize a SwiftData Conversation
         if currentConversation == nil {
             let title = text.isEmpty ? "Image Attachment" : String(text.prefix(50))
@@ -1562,14 +1585,40 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         defer { confirmationDepth = max(0, confirmationDepth - 1) }
 
         let confirmedToken = userConfirmed ? name : nil
-        return try await ToolConfirmationScope.$activeConfirmedToolName.withValue(confirmedToken) {
-            try await toolDispatchEngine.executeToolByName(
-                name: name,
-                jsonArguments: jsonArguments,
-                allTools: allTools,
-                bot: bot,
-                agentIdentity: agentIdentity
+        let startClock = ContinuousClock.now
+        do {
+            let result = try await ToolConfirmationScope.$activeConfirmedToolName.withValue(confirmedToken) {
+                try await ToolTraceScope.$isTraced.withValue(true) {
+                    try await toolDispatchEngine.executeToolByName(
+                        name: name,
+                        jsonArguments: jsonArguments,
+                        allTools: allTools,
+                        bot: bot,
+                        agentIdentity: agentIdentity
+                    )
+                }
+            }
+            let duration = ContinuousClock.now - startClock
+            let ms = Double(duration.components.attoseconds) / 1_000_000_000_000 + Double(duration.components.seconds) * 1000
+            RunTraceManager.shared.recordToolCall(
+                toolName: name,
+                arguments: jsonArguments,
+                result: result,
+                status: "success",
+                durationMs: ms
             )
+            return result
+        } catch {
+            let duration = ContinuousClock.now - startClock
+            let ms = Double(duration.components.attoseconds) / 1_000_000_000_000 + Double(duration.components.seconds) * 1000
+            RunTraceManager.shared.recordToolCall(
+                toolName: name,
+                arguments: jsonArguments,
+                result: error.localizedDescription,
+                status: "failed",
+                durationMs: ms
+            )
+            throw error
         }
     }
 
@@ -1816,6 +1865,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 source: .autoReview,
                 rule: autoReview.assessment.category.rawValue
             )
+            RunTraceManager.shared.recordApproval(
+                toolName: toolName,
+                approved: true,
+                source: .autoReview,
+                rule: autoReview.assessment.category.rawValue
+            )
             return true
         }
 
@@ -1847,6 +1902,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             await AgentAuditLog.shared.recordDecision(
                 toolName: toolName, arguments: arguments, approved: true,
                 source: verdict.source, rule: verdict.rule)
+            RunTraceManager.shared.recordApproval(
+                toolName: toolName,
+                approved: true,
+                source: verdict.source,
+                rule: verdict.rule
+            )
             return true
         }
         if verdict.source != .noGrant {
@@ -1856,6 +1917,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             await AgentAuditLog.shared.recordDecision(
                 toolName: toolName, arguments: arguments, approved: false,
                 source: verdict.source, rule: verdict.rule)
+            RunTraceManager.shared.recordApproval(
+                toolName: toolName,
+                approved: false,
+                source: verdict.source,
+                rule: verdict.rule
+            )
         }
 
         if let gateway = confirmationGateway {
@@ -1866,6 +1933,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             await AgentAuditLog.shared.recordDecision(
                 toolName: toolName, arguments: arguments, approved: approved,
                 source: .user, rule: nil)
+            RunTraceManager.shared.recordApproval(
+                toolName: toolName,
+                approved: approved,
+                source: .user,
+                rule: nil
+            )
             return approved
         }
         let expiryDate = Date().addingTimeInterval(AgentOrchestrator.confirmationTimeoutSeconds)
@@ -1908,6 +1981,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         await AgentAuditLog.shared.recordDecision(
             toolName: toolName, arguments: arguments, approved: approved,
             source: .user, rule: nil)
+        RunTraceManager.shared.recordApproval(
+            toolName: toolName,
+            approved: approved,
+            source: .user,
+            rule: nil
+        )
         return approved
     }
 

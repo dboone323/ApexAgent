@@ -57,6 +57,19 @@ case .routinesRun(let name, _):
     }
     exit(result.exitCode)
 
+case .traceVerify(let jsonOutput):
+    let result = await TraceLiveVerifier.runVerification(jsonOutput: jsonOutput)
+    print(result.output)
+    exit(result.passed ? 0 : 1)
+
+case .traceReplay, .tracesList:
+    // If not handled by renderImmediateSubcommand (e.g. empty target):
+    if let imm = ApexCLIRouter.renderImmediateSubcommand(invocation.command) {
+        print(imm.output)
+        exit(imm.exitCode)
+    }
+    exit(1)
+
 case .launchGUI, .help, .version, .doctor, .diagnostics, .skillsList, .skillsValidate, .routinesList, .completions, .man, .audit, .sbom, .changelog, .releaseCheck, .provenance, .sarif, .selfTest, .traces, .policy, .approvals:
     ApexAgentApp.main()
 }
