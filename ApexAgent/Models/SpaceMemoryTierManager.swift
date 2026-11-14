@@ -115,7 +115,9 @@ public final class SpaceMemoryTierManager {
             return nil
         }
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        guard !trimmed.isEmpty else { return nil }
+        RunTraceManager.shared.recordMemoryRead(tier: "curated", path: path, detail: "Loaded curated memory", bytesRead: trimmed.utf8.count)
+        return trimmed
     }
 
     /// Saves curated memory to disk at the Space's MEMORY.md location.
@@ -124,6 +126,7 @@ public final class SpaceMemoryTierManager {
         let fileURL = URL(fileURLWithPath: path)
         try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try content.write(to: fileURL, atomically: true, encoding: .utf8)
+        RunTraceManager.shared.recordMemoryWrite(tier: "curated", path: path, bytesWritten: content.utf8.count, detail: "Saved curated memory")
         AppLog.info(.app, "Saved curated Space MEMORY.md at: \(path)")
     }
 
@@ -159,7 +162,9 @@ public final class SpaceMemoryTierManager {
             return nil
         }
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        guard !trimmed.isEmpty else { return nil }
+        RunTraceManager.shared.recordMemoryRead(tier: "persona", path: path, detail: "Loaded persona", bytesRead: trimmed.utf8.count)
+        return trimmed
     }
 
     /// Saves persona configuration to disk.
@@ -168,6 +173,7 @@ public final class SpaceMemoryTierManager {
         let fileURL = URL(fileURLWithPath: path)
         try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try content.write(to: fileURL, atomically: true, encoding: .utf8)
+        RunTraceManager.shared.recordMemoryWrite(tier: "persona", path: path, bytesWritten: content.utf8.count, detail: "Saved persona")
         AppLog.info(.app, "Saved persona file at: \(path)")
     }
 
@@ -203,7 +209,9 @@ public final class SpaceMemoryTierManager {
             return nil
         }
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
+        guard !trimmed.isEmpty else { return nil }
+        RunTraceManager.shared.recordMemoryRead(tier: "userContext", path: path, detail: "Loaded user context", bytesRead: trimmed.utf8.count)
+        return trimmed
     }
 
     /// Saves user profile & preferences to disk.
@@ -212,6 +220,7 @@ public final class SpaceMemoryTierManager {
         let fileURL = URL(fileURLWithPath: path)
         try FileManager.default.createDirectory(at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try content.write(to: fileURL, atomically: true, encoding: .utf8)
+        RunTraceManager.shared.recordMemoryWrite(tier: "userContext", path: path, bytesWritten: content.utf8.count, detail: "Saved user context")
         AppLog.info(.app, "Saved user context file at: \(path)")
     }
 
@@ -305,6 +314,7 @@ public final class SpaceMemoryTierManager {
 
         // Refresh cache
         _ = indexDailyNotes(space: space, workspacePath: workspacePath)
+        RunTraceManager.shared.recordMemoryWrite(tier: "dailyNotes", path: targetFile.path, bytesWritten: content.utf8.count, detail: "Saved daily note for '\(safeDate)'")
         AppLog.info(.app, "Saved daily note for '\(safeDate)' at: \(targetFile.path)")
         return entry
     }
@@ -317,12 +327,18 @@ public final class SpaceMemoryTierManager {
 
         if FileManager.default.fileExists(atPath: targetFile.path),
            let content = try? String(contentsOf: targetFile, encoding: .utf8) {
-            return content.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+            RunTraceManager.shared.recordMemoryRead(tier: "dailyNotes", path: targetFile.path, detail: "Read daily note for '\(safeDate)'", bytesRead: trimmed.utf8.count)
+            return trimmed
         }
 
         // Fallback to indexed cache lookup
         let entries = indexDailyNotes(space: space, workspacePath: workspacePath)
-        return entries.first(where: { $0.date == safeDate })?.content
+        if let fallback = entries.first(where: { $0.date == safeDate })?.content {
+            RunTraceManager.shared.recordMemoryRead(tier: "dailyNotes", path: targetFile.path, detail: "Read cached daily note for '\(safeDate)'", bytesRead: fallback.utf8.count)
+            return fallback
+        }
+        return nil
     }
 
     /// Convenience to fetch today's daily note.

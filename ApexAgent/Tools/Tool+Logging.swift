@@ -85,6 +85,9 @@ extension Tool {
             if !approved {
                 await orchestrator.orchestrator.logToolEnd(name: toolName, result: "Operation denied by user.", status: .denied)
                 await AgentAuditLog.shared.record(toolName: toolName, arguments: argsString, wasConfirmed: false, status: "denied")
+                if !ToolTraceScope.isTraced {
+                    RunTraceManager.shared.recordToolCall(toolName: toolName, arguments: argsString, result: "Operation denied by user.", status: "denied")
+                }
                 return "ERROR: Operation denied by user."
             }
         }
@@ -117,19 +120,32 @@ extension Tool {
             if result.hasPrefix("ERROR:") {
                 await orchestrator.orchestrator.logToolEnd(name: toolName, result: result, status: .failed(result))
                 await AgentAuditLog.shared.record(toolName: toolName, arguments: argsString, wasConfirmed: needsConfirm, status: "failed")
+                if !ToolTraceScope.isTraced {
+                    RunTraceManager.shared.recordToolCall(toolName: toolName, arguments: argsString, result: result, status: "failed")
+                }
                 return result
             }
 
             await orchestrator.orchestrator.logToolEnd(name: toolName, result: result, status: .success)
             await AgentAuditLog.shared.record(toolName: toolName, arguments: argsString, wasConfirmed: needsConfirm, status: "success")
+            if !ToolTraceScope.isTraced {
+                RunTraceManager.shared.recordToolCall(toolName: toolName, arguments: argsString, result: result, status: "success")
+            }
             return result
         } catch {
             let errorMsg = "ERROR: \(error.localizedDescription)"
             await orchestrator.orchestrator.logToolEnd(name: toolName, result: errorMsg, status: .failed(error.localizedDescription))
             await AgentAuditLog.shared.record(toolName: toolName, arguments: argsString, wasConfirmed: needsConfirm, status: "failed")
+            if !ToolTraceScope.isTraced {
+                RunTraceManager.shared.recordToolCall(toolName: toolName, arguments: argsString, result: errorMsg, status: "failed")
+            }
             return errorMsg
         }
     }
+}
+
+public enum ToolTraceScope: Sendable {
+    @TaskLocal public static var isTraced: Bool = false
 }
 
 
