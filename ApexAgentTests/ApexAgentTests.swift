@@ -509,7 +509,7 @@ import AppKit
     
     @MainActor
     @Test func testAgentTypeInitialization() {
-        #expect(AgentType.allCases.count == 10)
+        #expect(AgentType.allCases.count == 13)
         for type in AgentType.allCases {
             #expect(!(type.systemPrompt.isEmpty))
         }

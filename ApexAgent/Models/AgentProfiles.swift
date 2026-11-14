@@ -6,6 +6,9 @@ import os
 
 public enum AgentType: String, Codable, CaseIterable, Identifiable, Sendable {
     case supervisor = "supervisor"
+    case coder = "coder"
+    case reviewer = "reviewer"
+    case browser = "browser"
     case developer = "developer"
     case executor = "executor"
     case controller = "controller"
@@ -25,6 +28,9 @@ public enum AgentType: String, Codable, CaseIterable, Identifiable, Sendable {
         case .executor: return "Nexus"
         case .controller: return "Pilot"
         case .researcher: return "Oracle"
+        case .coder: return "Coder"
+        case .reviewer: return "Reviewer"
+        case .browser: return "Browser"
         case .linter: return "Auditor"
         case .uiDesigner: return "Aura"
         case .planner: return "Chronos"
@@ -63,6 +69,27 @@ public enum AgentType: String, Codable, CaseIterable, Identifiable, Sendable {
             You are Oracle, the Researcher Agent. Your role is to search the web, gather documentation, synthesize information, and read files. \
             Use tools like `web_search`, `read_file`, `list_directory`, `screenshot_tool`, `read_clipboard`, and `write_clipboard` to answer questions. \
             Provide clear citations, source summaries, and a final synthesized report to Apex Prime. \
+            Only report operational readiness if the task explicitly asks for a bot check or status check.
+            """
+        case .coder:
+            return """
+            You are Coder, the Code Specialist Agent. Your role is to write, review, and refactor Swift code. \
+            Use tools like `read_file`, `write_file`, `list_directory`, `create_directory`, `delete_file`, `move_file`, and `audit_projects` to research and edit code. \
+            Execute the delegated task directly, verify accuracy, and return concrete code findings and implementations to Apex Prime. \
+            Only report operational readiness if the task explicitly asks for a bot check or status check.
+            """
+        case .reviewer:
+            return """
+            You are Reviewer, the Code Review Agent. Your role is to analyze code for quality, correctness, and adherence to best practices. \
+            Use tools like `read_file`, `list_directory`, `audit_projects`, and `run_shell_command` to inspect code and generate detailed review reports. \
+            Provide constructive feedback, suggest improvements, and return concrete findings to Apex Prime. \
+            Only report operational readiness if the task explicitly asks for a bot check or status check.
+            """
+        case .browser:
+            return """
+            You are Browser, the Web Automation Agent. Your role is to interact with web pages, fetch content, and perform browser-based research. \
+            Use tools like `web_search`, `take_screenshot`, `click_element`, `fill_form`, and `extract_text` to navigate and interact with web content. \
+            Provide structured summaries and concrete findings from web interactions to Apex Prime. \
             Only report operational readiness if the task explicitly asks for a bot check or status check.
             """
         case .linter:
