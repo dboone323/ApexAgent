@@ -78,6 +78,7 @@
 		1745EBA2E8514E7EDF1405AD /* BotManagerPlaybookTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9780424108D8776C2E5184C5 /* BotManagerPlaybookTests.swift */; };
 		1795691F53BD7C89AF018818 /* ApexAgentPersonalContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E9A6662B136F6C287C7DD40 /* ApexAgentPersonalContext.swift */; };
 		18AECEE896E8EB1C2AD0B6CA /* BenchmarkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8455F1C1BB32624DCA4DDA5 /* BenchmarkTests.swift */; };
+		196B1E519381DC965B0B0E95 /* SubAgentManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6908465AB7CE138D24C606F /* SubAgentManagerView.swift */; };
 		19D43DC10316B8D51BAFC898 /* AutomationWorkflows+41to50.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25F6338F9532A472CABA7B65 /* AutomationWorkflows+41to50.swift */; };
 		1A9733D8E9EAA108D70671B6 /* DiffHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0EE72FA0F75A3276A5A9511 /* DiffHelperTests.swift */; };
 		1AACCB13B7606EB68118E725 /* ApexSuiteSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3189C0C2ACF9DA76539AABBB /* ApexSuiteSchema.swift */; };
@@ -1444,6 +1445,7 @@
 		C5B559A8B132253EC2B07700 /* ComputerUseAgentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComputerUseAgentTests.swift; sourceTree = "<group>"; };
 		C615FA9D28671528EA44A5A1 /* DelegateTaskToolTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelegateTaskToolTests.swift; sourceTree = "<group>"; };
 		C62632FB07B3C8C691A44087 /* Workflows81to90Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Workflows81to90Tests.swift; sourceTree = "<group>"; };
+		C6908465AB7CE138D24C606F /* SubAgentManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubAgentManagerView.swift; sourceTree = "<group>"; };
 		C6994694E8F990C544A512C9 /* AnthropicLanguageModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicLanguageModel.swift; sourceTree = "<group>"; };
 		C69E9FC9913B81B0A0FFB076 /* GitHubCopilotLanguageModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubCopilotLanguageModel.swift; sourceTree = "<group>"; };
 		C70750D1117524740D67E4E0 /* DotResourceAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotResourceAuditorTests.swift; sourceTree = "<group>"; };
@@ -2028,6 +2030,7 @@
 				E47159FE60C60728E4EC287D /* SidebarView.swift */,
 				861FB3A27CC72FE482ADEFC1 /* SkillsSection.swift */,
 				EB444CB55101CE2B631AF69F /* SpacesViews.swift */,
+				C6908465AB7CE138D24C606F /* SubAgentManagerView.swift */,
 				C969C3513ACFED675B536F24 /* TerminalView.swift */,
 				94F7A6D8BD96CCBCA6C43C3D /* ToolActivityView.swift */,
 				E9FEC6CC55B91A30F4873DF8 /* VoiceOrbHUDView.swift */,
@@ -3312,6 +3315,7 @@
 				98D0CA9D47D32DC2AD95EEDD /* SpotlightIndexer.swift in Sources */,
 				1FB2CC43D0977E973E7CF013 /* SpotlightSearchTool.swift in Sources */,
 				F403C4FE08C9F2F4B3B6EF5E /* StateGraph.swift in Sources */,
+				196B1E519381DC965B0B0E95 /* SubAgentManagerView.swift in Sources */,
 				26D122212C2C7871F2364517 /* SwarmConcurrencyAuditor.swift in Sources */,
 				6FD431CC8DE978FAECBAAF6B /* SwiftDataStoreIntegrityGate.swift in Sources */,
 				A8D59C36AE4D44EB8E8929F6 /* SwiftSyntaxLintGate.swift in Sources */,

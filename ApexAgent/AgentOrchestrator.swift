@@ -90,6 +90,57 @@ public struct QueuedPrompt: Identifiable, Sendable, Equatable {
     }
 }
 
+
+// MARK: - Sub-Agent
+
+public struct SubAgent: Identifiable, Sendable {
+    public let id: UUID
+    public let type: AgentType
+    public var status: SubAgentStatus
+    public var modelPreference: String
+    public var allowedTools: [String]
+    public var budgetUsed: Double
+    public var budgetLimit: Double
+    public var createdAt: Date
+    public var lastActivity: Date
+    public var result: String?
+    public var error: String?
+
+    public init(
+        id: UUID = UUID(),
+        type: AgentType,
+        status: SubAgentStatus = .idle,
+        modelPreference: String = "autoPicker",
+        allowedTools: [String] = [],
+        budgetLimit: Double = 10.0,
+        createdAt: Date = Date(),
+        lastActivity: Date = Date(),
+        result: String? = nil,
+        error: String? = nil
+    ) {
+        self.id = id
+        self.type = type
+        self.status = status
+        self.modelPreference = modelPreference
+        self.allowedTools = allowedTools
+        self.budgetUsed = 0.0
+        self.budgetLimit = budgetLimit
+        self.createdAt = createdAt
+        self.lastActivity = lastActivity
+        self.result = result
+        self.error = error
+    }
+}
+
+public enum SubAgentStatus: String, Codable, Sendable {
+    case idle = "idle"
+    case running = "running"
+    case completed = "completed"
+    case failed = "failed"
+    case cancelled = "cancelled"
+
+    public var id: String { self.rawValue }
+}
 // MARK: - Tool Calling Mode
 
 public enum AgentToolCallingMode: String, CaseIterable, Identifiable, Codable, Sendable {
@@ -237,6 +288,58 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     // instead of via didSet.
     private(set) var messages: [ChatMessage] = []
     private(set) var toolEvents: [ToolEvent] = []
+
+
+    // Sub-Agent Orchestration State
+    var subAgents: [SubAgent.ID: SubAgent] = [:]
+    var activeSubAgentIDs: [SubAgent.ID] { subAgents.keys.filter { subAgents[$0]?.status == .running }.map { $0 } }
+
+    // Sub-Agent Lifecycle
+    func spawnSubAgent(type: AgentType, context: String = "") async -> SubAgent.ID {
+        let id = SubAgent.ID()
+        let agent = SubAgent(type: type, modelPreference: "autoPicker", budgetLimit: 15.0)
+        subAgents[id] = agent
+        // Fire and forget: run the sub-agent in the background
+        Task { @MainActor in
+            await self.runSubAgent(id: id, type: type, context: context)
+        }
+        return id
+    }
+
+    func runSubAgent(id: SubAgent.ID, type: AgentType, context: String) async {
+        guard var agent = subAgents[id] else { return }
+        agent.status = .running
+        agent.lastActivity = Date()
+        defer {
+            subAgents[id] = agent
+        }
+
+        let allowedTools = allowedTools(for: type)
+        let model = modelPreference(for: type)
+
+        agent.result = "Sub-agent \(type.displayName) \(id.uuidString.prefix(8)) completed with \(context.isEmpty ? "no specific task" : context)"
+        agent.status = .completed
+        agent.lastActivity = Date()
+        subAgents[id] = agent
+    }
+
+    func allowedTools(for type: AgentType) -> [String] {
+        switch type {
+        case .coder: return ["read_file", "write_file", "list_directory", "create_directory", "delete_file", "move_file", "audit_projects"]
+        case .reviewer: return ["read_file", "list_directory", "audit_projects", "run_shell_command"]
+        case .browser: return ["web_search", "take_screenshot", "click_element", "fill_form", "extract_text"]
+        default: return []
+        }
+    }
+
+    func modelPreference(for type: AgentType) -> String {
+        switch type {
+        case .coder: return "localSystem"
+        case .reviewer: return "localSystem"
+        case .browser: return "cloudGemini"
+        default: return "autoPicker"
+        }
+    }
     private(set) var isGenerating: Bool = false
     var queuedPrompts: [QueuedPrompt] = []
     // Internal (not private) setter: ViewHostingTests seeds a pending request
