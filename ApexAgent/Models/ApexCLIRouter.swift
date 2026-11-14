@@ -46,6 +46,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case selfTest(jsonOutput: Bool)
     case traces(limit: Int, jsonOutput: Bool)
     case policy(jsonOutput: Bool)
+    case approvals(subcommandArgs: [String], jsonOutput: Bool)
     case daemon
     case spaceCLI(subcommandArgs: [String])
     case gateQueue(subcommandArgs: [String])
@@ -300,6 +301,10 @@ public enum ApexCLIRouter {
         case "policy", "--policy":
             return ParsedCLIInvocation(command: .policy(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
+        case "approvals", "--approvals":
+            let rest = Array(remaining.dropFirst())
+            return ParsedCLIInvocation(command: .approvals(subcommandArgs: rest, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
         default:
             throw ApexCLIError.unknownSubcommand(first)
         }
@@ -343,6 +348,8 @@ public enum ApexCLIRouter {
           self-test               Run end-to-end CLI subcommand smoke-test contract matrix
           traces [--limit <N>]    Export recent OpenTelemetry W3C distributed trace spans
           policy                  Audit MCP, container, mesh, and tool execution security policies
+          approvals [list|remove|verify]
+                                  Manage and verify command approval allowlists, expiry, and ergonomics
           completions [shell]     Generate shell tab-completion script (zsh, bash, fish)
           man                     Generate troff man(1) manual page for ApexAgent(1)
           routines list           List registered automation routines
@@ -773,6 +780,52 @@ RoutineManager.shared.loadRoutines()
                     "Verdict:          \(overallPassed ? "HEALTHY" : "VIOLATIONS DETECTED")"
                 ]
                 return (lines.joined(separator: "\n"), overallPassed ? 0 : 1)
+            }
+
+        case .approvals(let subArgs, let jsonOutput):
+            let action = subArgs.first?.lowercased() ?? "verify"
+            switch action {
+            case "list":
+                let entries = ApprovalAllowlist.shared.listEntries()
+                if jsonOutput {
+                    let encoder = JSONEncoder()
+                    encoder.dateEncodingStrategy = .iso8601
+                    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                    let data = (try? encoder.encode(entries)) ?? Data()
+                    return (String(data: data, encoding: .utf8) ?? "[]", 0)
+                } else {
+                    if entries.isEmpty {
+                        return ("No allowlist entries found.", 0)
+                    }
+                    var lines = ["=== ApexAgent Command Allowlist Entries ==="]
+                    for entry in entries {
+                        let status = entry.isExpired() ? "EXPIRED" : "ACTIVE"
+                        lines.append("[\(status)] id=\(entry.id.uuidString.prefix(8)) cmd='\(entry.command)' dir='\(entry.directory)' expires=\(ISO8601DateFormatter().string(from: entry.expiresAt))")
+                    }
+                    return (lines.joined(separator: "\n"), 0)
+                }
+            case "remove":
+                guard subArgs.count > 1 else {
+                    return ("Error: 'approvals remove' requires an entry UUID or command.", 1)
+                }
+                let target = subArgs[1]
+                let removed: Bool
+                if let uuid = UUID(uuidString: target) {
+                    removed = ApprovalAllowlist.shared.remove(id: uuid)
+                } else {
+                    let all = ApprovalAllowlist.shared.listEntries()
+                    let matches = all.filter { $0.command == target }
+                    for m in matches {
+                        _ = ApprovalAllowlist.shared.remove(id: m.id)
+                    }
+                    removed = !matches.isEmpty
+                }
+                return (removed ? "Removed allowlist entry: \(target)" : "No matching entry found for: \(target)", removed ? 0 : 1)
+            case "verify", "--verify":
+                fallthrough
+            default:
+                let result = ApprovalLiveVerifier.runVerification()
+                return (result.output, result.passed ? 0 : 1)
             }
 
         default:

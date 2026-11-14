@@ -69,6 +69,8 @@ enum ApprovalVerdictSource: String, Sendable {
     /// The human answered a card themselves (decision-log attribution only —
     /// never produced by `ApprovalPolicy.verdict`).
     case user = "user"
+    case autoReview = "auto-review"
+    case allowlist = "allowlist"
 }
 
 /// The verdict for one permission request. `approve` is non-nil exactly when

@@ -11,6 +11,8 @@ extension Tool {
         oldContent: String? = nil,
         newContent: String? = nil,
         filePath: String? = nil,
+        command: String? = nil,
+        workingDirectory: String? = nil,
         body: () async throws -> String
     ) async throws -> String {
         let toolName = self.name
@@ -75,7 +77,9 @@ extension Tool {
                 riskDescription: riskDescription ?? "Potentially risky system operation",
                 oldContent: oldContent,
                 newContent: newContent,
-                filePath: filePath
+                filePath: filePath,
+                command: command,
+                directory: workingDirectory
             )
 
             if !approved {

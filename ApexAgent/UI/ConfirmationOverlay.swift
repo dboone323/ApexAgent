@@ -54,6 +54,21 @@ struct ConfirmationOverlay: View {
                                 .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 5))
                         }
 
+                        // Directory (if any)
+                        if let dir = request.directory {
+                            HStack(spacing: 8) {
+                                Text("Directory:")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 70, alignment: .trailing)
+                                Text(dir)
+                                    .font(.system(size: 12, design: .monospaced))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
+                        }
+
                         // File Path (if any)
                         if let filePath = request.filePath {
                             HStack(spacing: 8) {
@@ -132,13 +147,13 @@ struct ConfirmationOverlay: View {
                             .frame(width: 100)
                     }
 
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         Button {
                             stopTimer()
                             orchestrator.resolveConfirmation(approved: false)
                         } label: {
                             Text("Deny (Esc)")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
@@ -151,10 +166,25 @@ struct ConfirmationOverlay: View {
 
                         Button {
                             stopTimer()
-                            orchestrator.resolveConfirmation(approved: true)
+                            orchestrator.resolveConfirmation(approved: true, alwaysAllowInDirectory: false)
                         } label: {
-                            Text("Approve (⌘↩)")
-                                .font(.system(size: 14, weight: .semibold))
+                            Text("Allow Once")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.primary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color(nsColor: .tertiaryLabelColor).opacity(0.2), in: RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("confirmationAllowOnce")
+                        .accessibilityLabel("Allow once without remembering")
+
+                        Button {
+                            stopTimer()
+                            orchestrator.resolveConfirmation(approved: true, alwaysAllowInDirectory: true)
+                        } label: {
+                            Text("Always in Dir (⌘↩)")
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
@@ -165,7 +195,7 @@ struct ConfirmationOverlay: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("confirmationApprove")
-                        .accessibilityLabel("Approve action")
+                        .accessibilityLabel("Allow this exact command in this directory always")
                         .keyboardShortcut(.return, modifiers: .command)
                     }
                 }
