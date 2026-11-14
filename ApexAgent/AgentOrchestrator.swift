@@ -1814,7 +1814,8 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         newContent: String? = nil,
         filePath: String? = nil,
         command: String? = nil,
-        directory: String? = nil
+        directory: String? = nil,
+        allowlist: ApprovalAllowlist = .shared
     ) async -> Bool {
         // H4: the old runtime heuristics (process name contains "xctest",
         // APEX_TEST_MODE, XCTestConfigurationFilePath, argv containing
@@ -1851,21 +1852,23 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             command: extractedCmd,
             directory: extractedDir,
             workspacePath: currentWorkspacePath,
-            targetFilePath: filePath
+            targetFilePath: filePath,
+            allowlist: allowlist
         )
 
         if autoReview.shouldAutoApprove {
+            let decisionSource: ApprovalVerdictSource = (autoReview.assessment.category == .allowlisted) ? .allowlist : .autoReview
             await AgentAuditLog.shared.recordDecision(
                 toolName: toolName,
                 arguments: arguments,
                 approved: true,
-                source: .autoReview,
+                source: decisionSource,
                 rule: autoReview.assessment.category.rawValue
             )
             RunTraceManager.shared.recordApproval(
                 toolName: toolName,
                 approved: true,
-                source: .autoReview,
+                source: decisionSource,
                 rule: autoReview.assessment.category.rawValue
             )
             return true
@@ -1925,7 +1928,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         if let gateway = confirmationGateway {
             let approved = await gateway(toolName, arguments, riskDescription)
             if approved && !extractedCmd.isEmpty && !extractedDir.isEmpty {
-                ApprovalAllowlist.shared.allow(command: extractedCmd, directory: extractedDir)
+                allowlist.allow(command: extractedCmd, directory: extractedDir)
             }
             await AgentAuditLog.shared.recordDecision(
                 toolName: toolName, arguments: arguments, approved: approved,

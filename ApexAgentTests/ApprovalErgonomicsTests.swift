@@ -347,4 +347,95 @@ struct ApprovalErgonomicsTests {
         #expect(keychainVerdict.assessment.level == .high)
         #expect(keychainVerdict.assessment.category == .credentialUse)
     }
+
+    // MARK: - Issue #166 Regression Tests (UserDefaults Injection, Verifier Leftovers, Allowlist Source)
+
+    @Test func testAllowlistSuiteIsolationRoundTripDoesNotTouchStandard() {
+        let suiteName = "test.allowlist.isolation.\(UUID().uuidString)"
+        guard let testSuite = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Failed to create isolated UserDefaults suite")
+            return
+        }
+        testSuite.removePersistentDomain(forName: suiteName)
+        defer { testSuite.removePersistentDomain(forName: suiteName) }
+
+        let standardKey = "apex.commandDirectoryAllowlist"
+        let standardBefore = UserDefaults.standard.data(forKey: standardKey)
+
+        let allowlist1 = ApprovalAllowlist(userDefaults: testSuite)
+        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let cmd = "swift build"
+        let entry = allowlist1.allow(command: cmd, directory: dir)
+
+        // Read through a FRESH instance backed by the same test suite
+        let allowlist2 = ApprovalAllowlist(userDefaults: testSuite)
+        #expect(allowlist2.isAllowed(command: cmd, directory: dir))
+        let entries = allowlist2.listEntries()
+        #expect(entries.count == 1)
+        #expect(entries.first?.id == entry.id)
+        #expect(entries.first?.command == cmd)
+
+        // Ensure UserDefaults.standard was NEVER modified
+        let standardAfter = UserDefaults.standard.data(forKey: standardKey)
+        #expect(standardBefore == standardAfter)
+    }
+
+    @Test func testApprovalLiveVerifierLeavesNoGrantBehind() {
+        let testDir = "/Users/danielstevens/Developer/ApexAgent"
+        let testCmd = "swift test --filter ApprovalTests"
+
+        let (output, passed) = ApprovalLiveVerifier.runVerification()
+        #expect(passed, "Live verifier failed with output:\n\(output)")
+
+        // Assert the allowlist in UserDefaults.standard is clean of verifier-created entries
+        let freshAllowlist = ApprovalAllowlist(userDefaults: .standard)
+        #expect(!freshAllowlist.isAllowed(command: testCmd, directory: testDir))
+        #expect(!freshAllowlist.isAllowed(command: "git status", directory: testDir))
+
+        let allEntries = freshAllowlist.listEntries()
+        #expect(!allEntries.contains { $0.command == testCmd && ApprovalAllowlist.standardizeDirectory($0.directory) == ApprovalAllowlist.standardizeDirectory(testDir) })
+        #expect(!allEntries.contains { $0.command == "git status" && ApprovalAllowlist.standardizeDirectory($0.directory) == ApprovalAllowlist.standardizeDirectory(testDir) })
+    }
+
+    @Test @MainActor func testAllowlistApprovalRecordsAllowlistVerdictSource() async {
+        let orchestrator = AgentOrchestrator()
+        orchestrator.bypassConfirmationInDebug = false
+
+        let suiteName = "test.allowlist.verdict.\(UUID().uuidString)"
+        guard let testSuite = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Failed to create isolated UserDefaults suite")
+            return
+        }
+        testSuite.removePersistentDomain(forName: suiteName)
+        defer { testSuite.removePersistentDomain(forName: suiteName) }
+
+        let allowlist = ApprovalAllowlist(userDefaults: testSuite)
+        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let cmd = "swift test --filter ApprovalTests"
+
+        // Allow command in isolated allowlist
+        allowlist.allow(command: cmd, directory: dir)
+
+        let recorder = RunTraceManager.shared.startRun()
+        defer { RunTraceManager.shared.endRun(runId: recorder.runId) }
+
+        let approved = await orchestrator.requestConfirmation(
+            toolName: "run_shell_command",
+            arguments: cmd,
+            riskDescription: "Run unit tests",
+            command: cmd,
+            directory: dir,
+            allowlist: allowlist
+        )
+
+        #expect(approved)
+
+        // Verify trace event recorded source as .allowlist
+        let trace = recorder.currentTraceSnapshot()
+        let approvalEvents = trace.events.filter { $0.kind == .approval }
+        #expect(!approvalEvents.isEmpty)
+        let lastApproval = approvalEvents.last
+        #expect(lastApproval?.verdictSource == ApprovalVerdictSource.allowlist.rawValue)
+        #expect(lastApproval?.rule == ActionRiskCategory.allowlisted.rawValue)
+    }
 }

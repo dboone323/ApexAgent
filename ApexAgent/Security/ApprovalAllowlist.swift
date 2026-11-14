@@ -48,10 +48,12 @@ public final class ApprovalAllowlist: @unchecked Sendable {
 
     private static let userDefaultsKey = "apex.commandDirectoryAllowlist"
 
+    private let userDefaults: UserDefaults
     private let lock = NSLock()
     private var entries: [AllowlistEntry]
 
     public init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
         if let data = userDefaults.data(forKey: Self.userDefaultsKey),
            let decoded = try? JSONDecoder().decode([AllowlistEntry].self, from: data) {
             self.entries = decoded
@@ -192,8 +194,10 @@ public final class ApprovalAllowlist: @unchecked Sendable {
     }
 
     private func persistLocked() {
-        if let encoded = try? JSONEncoder().encode(entries) {
-            UserDefaults.standard.set(encoded, forKey: Self.userDefaultsKey)
+        if entries.isEmpty {
+            userDefaults.removeObject(forKey: Self.userDefaultsKey)
+        } else if let encoded = try? JSONEncoder().encode(entries) {
+            userDefaults.set(encoded, forKey: Self.userDefaultsKey)
         }
     }
 }
