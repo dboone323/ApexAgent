@@ -9,6 +9,7 @@ import OSLog
 
 @MainActor
 protocol AgentEngine {
+    @discardableResult
     func streamResponse(
         prompt: String,
         attachments: [NSImage],
@@ -16,7 +17,7 @@ protocol AgentEngine {
         instructions: String,
         toolCallingMode: AgentToolCallingMode,
         onUpdate: @MainActor @escaping (String) -> Void
-    ) async throws
+    ) async throws -> TokenCountInfo?
 }
 
 // MARK: - Native Apple Engine (macOS 27 native models)
@@ -96,6 +97,7 @@ struct NativeAppleEngine: AgentEngine {
     var customResponder: (@Sendable (Prompt, GenerationOptions) async throws -> String)? = nil
     @MainActor static var testResponder: (@Sendable (Prompt, GenerationOptions) async throws -> String)? = nil
 
+    @discardableResult
     func streamResponse(
         prompt: String,
         attachments: [NSImage],
@@ -103,7 +105,7 @@ struct NativeAppleEngine: AgentEngine {
         instructions: String,
         toolCallingMode: AgentToolCallingMode,
         onUpdate: @MainActor @escaping (String) -> Void
-    ) async throws {
+    ) async throws -> TokenCountInfo? {
         let lowerPrompt = prompt.lowercased()
         let explicitlyNoTools = !IntentToolSelector.shouldEnableTools(for: prompt, hasAttachments: !attachments.isEmpty)
             || toolCallingMode == .disabled
@@ -156,7 +158,7 @@ struct NativeAppleEngine: AgentEngine {
         if !attachments.isEmpty {
             guard isMultimodalAttachmentSupported() else {
                 onUpdate("Error: On-device multimodal vision is not supported on this macOS build.")
-                return
+                return nil
             }
             let genID = AgentSignpost.begin("NativeGenerate", detail: "multimodal")
             defer { AgentSignpost.end("NativeGenerate", genID) }
@@ -226,12 +228,13 @@ struct NativeAppleEngine: AgentEngine {
                         orchestrator.updateMessage(id: id, isStreaming: false)
                     }
                     AgentSignpost.event("NativeGenerate.Complete", detail: "multimodal (respond-direct)")
-                    return
+                    return nil
                 }
             } catch {
                 Logger.provider.error("Native multimodal respond(to:) failed: \(error.localizedDescription, privacy: .public)")
             }
             onUpdate("⚠️ The on-device model returned no output for this image. Switch Model Provider to “Local Ollama” or “Cloud Gemini” to continue.")
+            return nil
         } else {
             // On macOS 27 beta 4, `streamResponse` hangs forever without ever
             // yielding or returning, so use `respond(to:)` directly, which DOES
@@ -352,21 +355,22 @@ struct NativeAppleEngine: AgentEngine {
                         orchestrator.updateMessage(id: id, isStreaming: false)
                     }
                     AgentSignpost.event("NativeGenerate.Complete", detail: "chars=\(fullText.count) (respond-direct)")
-                    return
+                    return nil
                 }
             } catch is CancellationError {
                 Logger.provider.info("Native respond(to:) was cancelled.")
-                return
+                return nil
             } catch {
                 if Task.isCancelled {
                     Logger.provider.info("Native respond(to:) was cancelled during execution.")
-                    return
+                    return nil
                 }
                 Logger.provider.error("Native respond(to:) failed: \(error.localizedDescription, privacy: .public)")
             }
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled else { return nil }
             onUpdate("⚠️ The on-device model returned no output. This usually means its model asset is still downloading (enable Apple Intelligence in Settings → Siri and wait), or isn't available on this macOS build. Switch Model Provider to “Local Ollama” (if Ollama is running) or “Cloud Gemini” to continue.")
         }
+        return nil
     }
 }
 
@@ -377,6 +381,7 @@ struct FMCLIAgentEngine: AgentEngine {
     let orchestrator: AgentOrchestrator
     let backend: FMCLILanguageModel.Backend
 
+    @discardableResult
     func streamResponse(
         prompt: String,
         attachments: [NSImage],
@@ -384,7 +389,7 @@ struct FMCLIAgentEngine: AgentEngine {
         instructions: String,
         toolCallingMode: AgentToolCallingMode,
         onUpdate: @MainActor @escaping (String) -> Void
-    ) async throws {
+    ) async throws -> TokenCountInfo? {
         let fmPath = "/usr/bin/fm"
         guard FileManager.default.fileExists(atPath: fmPath) else {
             throw NSError(
@@ -478,6 +483,7 @@ struct FMCLIAgentEngine: AgentEngine {
                 process.terminate()
             }
         }
+        return nil
     }
 }
 

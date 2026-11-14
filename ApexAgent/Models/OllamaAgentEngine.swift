@@ -1,6 +1,13 @@
 import Foundation
 import AppKit
 
+// MARK: - Ollama Turn Result
+
+struct OllamaTurnResult: Sendable {
+    let text: String
+    let tokenCounts: TokenCountInfo?
+}
+
 // MARK: - Ollama Agent Engine
 //
 // Direct integration with local Ollama daemon for complete local autonomy,
@@ -63,6 +70,7 @@ final class OllamaAgentEngine: AgentEngine {
     }
 
     /// AgentEngine protocol conformance
+    @discardableResult
     func streamResponse(
         prompt: String,
         attachments: [NSImage] = [],
@@ -70,9 +78,9 @@ final class OllamaAgentEngine: AgentEngine {
         instructions: String = "",
         toolCallingMode: AgentToolCallingMode = .auto,
         onUpdate: @MainActor @escaping (String) -> Void
-    ) async throws {
-        guard let orch = orchestrator else { return }
-        _ = try await executeTurn(
+    ) async throws -> TokenCountInfo? {
+        guard let orch = orchestrator else { return nil }
+        let result = try await executeTurn(
             prompt: prompt,
             bot: nil,
             history: history,
@@ -88,6 +96,7 @@ final class OllamaAgentEngine: AgentEngine {
                 }
             }
         )
+        return result.tokenCounts
     }
 
     /// Executes an agent turn with tool calling loops against Ollama.
@@ -99,14 +108,15 @@ final class OllamaAgentEngine: AgentEngine {
         allowedTools: [String]? = nil,
         toolCallingMode: AgentToolCallingMode = .auto,
         orchestrator: AgentOrchestrator,
+        modelOverride: String? = nil,
         onUpdate: (@Sendable (String) -> Void)? = nil
-    ) async throws -> String {
+    ) async throws -> OllamaTurnResult {
         let hostStr = UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434"
         guard let host = URL(string: hostStr) else {
             throw NSError(domain: "OllamaAgentEngine", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid Ollama Host URL: \(hostStr)"])
         }
 
-        let selectedModel = ModelRegistry.ollamaModel(for: bot, role: bot?.title, prompt: prompt)
+        let selectedModel = modelOverride ?? ModelRegistry.ollamaModel(for: bot, role: bot?.title, prompt: prompt)
         let endpoint = host.appendingPathComponent("api/chat")
 
         var messages: [[String: Any]] = []
@@ -163,6 +173,9 @@ final class OllamaAgentEngine: AgentEngine {
         let maxLoops = 6
         var lastToolOutput = ""
         var disableToolsOnNextTurn = false
+        var accumulatedPromptTokens = 0
+        var accumulatedCompletionTokens = 0
+        var tokensReported = false
 
         _ = await ModelRegistry.unloadPreviousOllamaModelIfNeededAsync(newModel: selectedModel)
 
@@ -204,8 +217,18 @@ final class OllamaAgentEngine: AgentEngine {
                 let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty,
                       let data = trimmed.data(using: .utf8),
-                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                      let msg = json["message"] as? [String: Any] else { continue }
+                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
+
+                if let pTokens = json["prompt_eval_count"] as? Int {
+                    accumulatedPromptTokens += pTokens
+                    tokensReported = true
+                }
+                if let cTokens = json["eval_count"] as? Int {
+                    accumulatedCompletionTokens += cTokens
+                    tokensReported = true
+                }
+
+                guard let msg = json["message"] as? [String: Any] else { continue }
 
                 if let content = msg["content"] as? String, !content.isEmpty {
                     currentTurnText += content
@@ -282,7 +305,13 @@ final class OllamaAgentEngine: AgentEngine {
             }
         }
 
-        return fullResponse.isEmpty ? lastToolOutput : fullResponse
+        let tokenCounts: TokenCountInfo? = tokensReported ? TokenCountInfo(
+            promptTokens: accumulatedPromptTokens,
+            completionTokens: accumulatedCompletionTokens,
+            totalTokens: accumulatedPromptTokens + accumulatedCompletionTokens
+        ) : nil
+        let outputText = fullResponse.isEmpty ? lastToolOutput : fullResponse
+        return OllamaTurnResult(text: outputText, tokenCounts: tokenCounts)
     }
 }
 
@@ -293,7 +322,9 @@ struct OllamaStreamingEngine: AgentEngine {
     let orchestrator: AgentOrchestrator
     var bot: BotProfile?
     var allowedTools: [String]?
+    var modelOverride: String? = nil
 
+    @discardableResult
     func streamResponse(
         prompt: String,
         attachments: [NSImage] = [],
@@ -301,8 +332,8 @@ struct OllamaStreamingEngine: AgentEngine {
         instructions: String = "",
         toolCallingMode: AgentToolCallingMode = .auto,
         onUpdate: @MainActor @escaping (String) -> Void
-    ) async throws {
-        _ = try await OllamaAgentEngine.shared.executeTurn(
+    ) async throws -> TokenCountInfo? {
+        let result = try await OllamaAgentEngine.shared.executeTurn(
             prompt: prompt,
             bot: bot,
             history: history,
@@ -310,6 +341,7 @@ struct OllamaStreamingEngine: AgentEngine {
             allowedTools: allowedTools,
             toolCallingMode: toolCallingMode,
             orchestrator: orchestrator,
+            modelOverride: modelOverride,
             onUpdate: { str in
                 guard !Task.isCancelled else { return }
                 Task { @MainActor in
@@ -318,5 +350,6 @@ struct OllamaStreamingEngine: AgentEngine {
                 }
             }
         )
+        return result.tokenCounts
     }
 }

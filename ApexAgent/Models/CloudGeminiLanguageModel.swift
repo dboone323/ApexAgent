@@ -376,6 +376,7 @@ struct GeminiAgentEngine: AgentEngine {
     var bot: BotProfile?
     var allowedTools: [String]?
 
+    @discardableResult
     func streamResponse(
         prompt: String,
         attachments: [NSImage],
@@ -383,7 +384,7 @@ struct GeminiAgentEngine: AgentEngine {
         instructions: String,
         toolCallingMode: AgentToolCallingMode,
         onUpdate: @MainActor @escaping (String) -> Void
-    ) async throws {
+    ) async throws -> TokenCountInfo? {
         let effectiveKey = ModelRegistry.geminiAPIKey()
         guard !effectiveKey.isEmpty else {
             throw NSError(
@@ -667,7 +668,7 @@ struct GeminiAgentEngine: AgentEngine {
                     }
                     orchestrator.updateMessage(id: id, isStreaming: false)
                 }
-                return
+                return nil
             }
         }
 
@@ -681,6 +682,7 @@ struct GeminiAgentEngine: AgentEngine {
             }
             orchestrator.updateMessage(id: id, isStreaming: false)
         }
+        return nil
     }
 }
 
