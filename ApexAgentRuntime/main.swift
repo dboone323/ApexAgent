@@ -57,6 +57,6 @@ case .routinesRun(let name, _):
     }
     exit(result.exitCode)
 
-case .launchGUI, .help, .version, .doctor, .diagnostics, .skillsList, .skillsValidate, .routinesList, .completions, .man, .audit, .sbom, .changelog, .releaseCheck, .provenance, .sarif, .selfTest, .traces, .policy:
+case .launchGUI, .help, .version, .doctor, .diagnostics, .skillsList, .skillsValidate, .routinesList, .completions, .man, .audit, .sbom, .changelog, .releaseCheck, .provenance, .sarif, .selfTest, .traces, .policy, .approvals:
     ApexAgentApp.main()
 }

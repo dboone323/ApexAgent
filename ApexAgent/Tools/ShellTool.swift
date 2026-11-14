@@ -30,7 +30,13 @@ struct ShellTool: Tool {
         let isContainer = UserDefaults.standard.bool(forKey: "apex.appleContainersEnabled")
         let riskDesc: String? = isContainer ? nil : "Executing command in your terminal"
 
-        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: riskDesc) {
+        return try await executeWithLogging(
+            arguments: arguments,
+            orchestrator: orchestrator,
+            riskDescription: riskDesc,
+            command: arguments.command,
+            workingDirectory: arguments.workingDirectory
+        ) {
             let orchestrator = await self.orchestrator.orchestrator
             
             // Seatbelt sandboxed Space routing.

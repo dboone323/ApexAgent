@@ -38,6 +38,19 @@ struct ConfirmationRequest: Identifiable {
     var newContent: String?
     var filePath: String?
     var continuation: CheckedContinuation<Bool, Never>?
+    var command: String?
+    var directory: String?
+    var expiresAt: Date?
+
+    var phonePayload: PhoneApprovalPayload {
+        PhoneApprovalPayload(
+            ask: "Approve \(toolName)",
+            command: command ?? (toolName == "run_shell_command" ? arguments : toolName),
+            directory: directory ?? "/",
+            riskSummary: riskDescription,
+            expiresAt: expiresAt ?? Date().addingTimeInterval(AgentOrchestrator.confirmationTimeoutSeconds)
+        )
+    }
 }
 
 // MARK: - Chat Message
@@ -271,7 +284,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     private static let contextCompactionThreshold: Int = 12000
     private static let terminalOutputCap: Int = 50000
     private static let maxToolEventCount: Int = 200
-    private static let confirmationTimeoutSeconds: TimeInterval = 60
+    nonisolated public static let confirmationTimeoutSeconds: TimeInterval = 60
     // NOTE: no `dangerousToolNames` here — the single source of truth is
     // `ToolDispatchEngine.dangerousToolNames`, which the live confirmation
     // path reads via `toolDispatchEngine.shouldConfirmTool`.
@@ -1698,9 +1711,53 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
     /// True while the current turn was started by an external trigger
     /// (webhook/schedule) with nobody at the keyboard: grants do not inherit.
     public var isUnattendedTurn: Bool = false
+    /// In DEBUG/tests, allow bypassing confirmation dialog unless an approval test opts in.
+    public var bypassConfirmationInDebug: Bool = true
 
     public func shouldConfirmTool(name: String) -> Bool {
         toolDispatchEngine.shouldConfirmTool(name: name, requireConfirmationForAll: requireConfirmationForAll)
+    }
+
+    nonisolated public static func extractCommandAndDirectory(
+        toolName: String,
+        arguments: String,
+        explicitCommand: String? = nil,
+        explicitDirectory: String? = nil,
+        fallbackDirectory: String = "/"
+    ) -> (command: String, directory: String) {
+        let cmd: String
+        if let explicitCommand, !explicitCommand.isEmpty {
+            cmd = explicitCommand
+        } else if toolName == "run_shell_command" || toolName == "bash" || toolName == "terminal" {
+            if let cmdRange = arguments.range(of: #"command:\s*"(.*?)""#, options: .regularExpression) {
+                let match = String(arguments[cmdRange])
+                cmd = match.replacingOccurrences(of: #"^command:\s*""#, with: "", options: .regularExpression)
+                    .replacingOccurrences(of: #""$"#, with: "", options: .regularExpression)
+            } else if let json = try? JSONSerialization.jsonObject(with: Data(arguments.utf8)) as? [String: Any],
+                      let jsonCmd = json["command"] as? String {
+                cmd = jsonCmd
+            } else {
+                cmd = arguments
+            }
+        } else {
+            cmd = toolName
+        }
+
+        let dir: String
+        if let explicitDirectory, !explicitDirectory.isEmpty {
+            dir = explicitDirectory
+        } else if let wdRange = arguments.range(of: #"workingDirectory:\s*Optional\("(.*?)"\)"#, options: .regularExpression) {
+            let match = String(arguments[wdRange])
+            dir = match.replacingOccurrences(of: #"^workingDirectory:\s*Optional\(""#, with: "", options: .regularExpression)
+                .replacingOccurrences(of: #""\)$"#, with: "", options: .regularExpression)
+        } else if let json = try? JSONSerialization.jsonObject(with: Data(arguments.utf8)) as? [String: Any],
+                  let jsonWd = json["workingDirectory"] as? String ?? json["working_directory"] as? String {
+            dir = jsonWd
+        } else {
+            dir = fallbackDirectory
+        }
+
+        return (cmd, ApprovalAllowlist.standardizeDirectory(dir))
     }
 
     public func requestConfirmation(
@@ -1709,7 +1766,9 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         riskDescription: String,
         oldContent: String? = nil,
         newContent: String? = nil,
-        filePath: String? = nil
+        filePath: String? = nil,
+        command: String? = nil,
+        directory: String? = nil
     ) async -> Bool {
         // H4: the old runtime heuristics (process name contains "xctest",
         // APEX_TEST_MODE, XCTestConfigurationFilePath, argv containing
@@ -1723,13 +1782,42 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
 
         #if DEBUG
-        if NSClassFromString("XCTestCase") != nil
+        if bypassConfirmationInDebug && (
+            NSClassFromString("XCTestCase") != nil
             || getenv("APEX_TEST_MODE") != nil
             || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
-            || ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest") {
+            || ProcessInfo.processInfo.processName.localizedCaseInsensitiveContains("xctest")) {
             return true
         }
         #endif
+
+        let (extractedCmd, extractedDir) = Self.extractCommandAndDirectory(
+            toolName: toolName,
+            arguments: arguments,
+            explicitCommand: command,
+            explicitDirectory: directory,
+            fallbackDirectory: currentWorkspacePath.isEmpty ? NSHomeDirectory() : currentWorkspacePath
+        )
+
+        // Low-risk auto-review step (Issue #105)
+        let autoReview = ApprovalAutoReview.review(
+            toolName: toolName,
+            command: extractedCmd,
+            directory: extractedDir,
+            workspacePath: currentWorkspacePath,
+            targetFilePath: filePath
+        )
+
+        if autoReview.shouldAutoApprove {
+            await AgentAuditLog.shared.recordDecision(
+                toolName: toolName,
+                arguments: arguments,
+                approved: true,
+                source: .autoReview,
+                rule: autoReview.assessment.category.rawValue
+            )
+            return true
+        }
 
         // O3/O6: auto-grant fast path. The destructive/sensitive guards outrank
         // grants, so an always-allow can never widen into them — a guarded or
@@ -1772,30 +1860,38 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
         if let gateway = confirmationGateway {
             let approved = await gateway(toolName, arguments, riskDescription)
+            if approved && !extractedCmd.isEmpty && !extractedDir.isEmpty {
+                ApprovalAllowlist.shared.allow(command: extractedCmd, directory: extractedDir)
+            }
             await AgentAuditLog.shared.recordDecision(
                 toolName: toolName, arguments: arguments, approved: approved,
                 source: .user, rule: nil)
             return approved
         }
+        let expiryDate = Date().addingTimeInterval(AgentOrchestrator.confirmationTimeoutSeconds)
         let approved: Bool = await withCheckedContinuation { continuation in
             let request = ConfirmationRequest(
                 toolName: toolName,
                 arguments: arguments,
-                riskDescription: riskDescription,
+                riskDescription: autoReview.assessment.reason.isEmpty ? riskDescription : autoReview.assessment.reason,
                 oldContent: oldContent,
                 newContent: newContent,
                 filePath: filePath,
-                continuation: continuation
+                continuation: continuation,
+                command: extractedCmd,
+                directory: extractedDir,
+                expiresAt: expiryDate
             )
             pendingConfirmation = request
             
-            // Relay confirmation request to paired Remote Companion (iPhone / iPad)
+            // Relay confirmation request to paired Remote Companion (iPhone / iPad) with compact phone payload
+            let phonePayload = request.phonePayload
             let companionEvent = CompanionApprovalRelayEvent(
                 requestId: request.id.uuidString,
                 stageId: "orchestrator_tool",
                 stageName: toolName,
-                summary: riskDescription,
-                riskLevel: "high"
+                summary: phonePayload.riskSummary,
+                riskLevel: autoReview.assessment.level == .high ? "high" : "medium"
             )
             RemoteCompanionGateway.shared.postApprovalRelay(companionEvent)
 
@@ -1815,13 +1911,45 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         return approved
     }
 
-    public func resolveConfirmation(approved: Bool) {
+    public func resolveConfirmation(approved: Bool, alwaysAllowInDirectory: Bool) {
         confirmationTimeoutTask?.cancel()
         confirmationTimeoutTask = nil
         guard let pending = pendingConfirmation else { return }
+
+        // Allowlist learning: persist exact command in this directory always (Issue #105)
+        if approved && alwaysAllowInDirectory,
+           let cmd = pending.command, !cmd.isEmpty,
+           let dir = pending.directory, !dir.isEmpty {
+            ApprovalAllowlist.shared.allow(command: cmd, directory: dir)
+        }
+
         _ = RemoteCompanionGateway.shared.resolveApprovalRelay(requestId: pending.id.uuidString, allow: approved)
         pending.continuation?.resume(returning: approved)
         pendingConfirmation = nil
+    }
+
+    public func resolveConfirmation(approved: Bool) {
+        resolveConfirmation(approved: approved, alwaysAllowInDirectory: true)
+    }
+
+    public func requestConfirmation(
+        toolName: String,
+        arguments: String,
+        riskDescription: String,
+        oldContent: String?,
+        newContent: String?,
+        filePath: String?
+    ) async -> Bool {
+        await requestConfirmation(
+            toolName: toolName,
+            arguments: arguments,
+            riskDescription: riskDescription,
+            oldContent: oldContent,
+            newContent: newContent,
+            filePath: filePath,
+            command: nil,
+            directory: nil
+        )
     }
 
     // MARK: - Markdown Runtime Summary

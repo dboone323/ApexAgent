@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		14236943146542B8B2896E91 /* ApprovalAllowlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = E565F7ACF596401B869E8FBB /* ApprovalAllowlist.swift */; };
+		0C28C413D1C1499984E328B2 /* PhoneApprovalPayload.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3B48331BC01406D97AD295E /* PhoneApprovalPayload.swift */; };
+		FBDDB881DD324592ACC652B9 /* ApprovalAutoReview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 905F7D932BA94FAE8F353592 /* ApprovalAutoReview.swift */; };
+		692183261619423EBB5D8943 /* ApprovalLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB0C4EEDF3840148736619E /* ApprovalLiveVerifier.swift */; };
+		61C8E9CD705E41689DD43BA7 /* ApprovalErgonomicsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B27575CEEC040B6BA24094B /* ApprovalErgonomicsTests.swift */; };
 		002FFD5E910F431AA50C85D7 /* AutomationWorkflows+4to7.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94BE12E3CCD68A483A7AEDF /* AutomationWorkflows+4to7.swift */; };
 		009A8AE7D710C956F0B1EFC8 /* MCPConfigImportAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E202A95E377CB28DAD9079D3 /* MCPConfigImportAuditor.swift */; };
 		0101F5F6BEE381BEA0584A8F /* SharedLogging.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 694736B63E8080A09030C984 /* SharedLogging.framework */; };
@@ -917,6 +922,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		E565F7ACF596401B869E8FBB /* ApprovalAllowlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalAllowlist.swift; sourceTree = "<group>"; };
+		E3B48331BC01406D97AD295E /* PhoneApprovalPayload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneApprovalPayload.swift; sourceTree = "<group>"; };
+		905F7D932BA94FAE8F353592 /* ApprovalAutoReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalAutoReview.swift; sourceTree = "<group>"; };
+		9CB0C4EEDF3840148736619E /* ApprovalLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalLiveVerifier.swift; sourceTree = "<group>"; };
+		7B27575CEEC040B6BA24094B /* ApprovalErgonomicsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalErgonomicsTests.swift; sourceTree = "<group>"; };
 		00C1D19CCF1A38E3D1CF08C8 /* ScreenPerceptionTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenPerceptionTool.swift; sourceTree = "<group>"; };
 		0159C6A22D24E1F1A6B4D1C4 /* GhostCursorOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostCursorOverlay.swift; sourceTree = "<group>"; };
 		01677869C536A1E8041FE4D0 /* ArtifactSizeBudgetGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtifactSizeBudgetGateTests.swift; sourceTree = "<group>"; };
@@ -1949,6 +1959,11 @@
 		6A2AB8BCC1FEA8C8361CCA30 /* Security */ = {
 			isa = PBXGroup;
 			children = (
+				E565F7ACF596401B869E8FBB /* ApprovalAllowlist.swift */,
+				E3B48331BC01406D97AD295E /* PhoneApprovalPayload.swift */,
+				905F7D932BA94FAE8F353592 /* ApprovalAutoReview.swift */,
+				9CB0C4EEDF3840148736619E /* ApprovalLiveVerifier.swift */,
+
 				01D36BE270D67C0F522A0602 /* AgentAuditLog.swift */,
 				8E9AD0F69E464E99104813F9 /* AgentAuditLogger.swift */,
 				8AEF83F4C3FF3DE5CEE7D425 /* AgentSecurity.swift */,
@@ -2375,6 +2390,8 @@
 		FF1EAB66BDCDC6DFDCB0CA7A /* ApexAgentTests */ = {
 			isa = PBXGroup;
 			children = (
+				7B27575CEEC040B6BA24094B /* ApprovalErgonomicsTests.swift */,
+
 				E1AC59673F796997416BB805 /* A2AProtocolTests.swift */,
 				1AE66F50CD907013FA9CC17D /* AccessibilityPassTests.swift */,
 				23B43BB2E4549DFD6CADFD8C /* AgentAuditLoggerTests.swift */,
@@ -3001,6 +3018,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				14236943146542B8B2896E91 /* ApprovalAllowlist.swift in Sources */,
+				0C28C413D1C1499984E328B2 /* PhoneApprovalPayload.swift in Sources */,
+				FBDDB881DD324592ACC652B9 /* ApprovalAutoReview.swift in Sources */,
+				692183261619423EBB5D8943 /* ApprovalLiveVerifier.swift in Sources */,
+
 				657894613E7EC550EDCF98F9 /* A2APeerDiscovery.swift in Sources */,
 				7AA7E819D103BC3CFFD5A4FF /* A2AServer.swift in Sources */,
 				32A8413C79A55EDDBA5196F6 /* ANSIColorParser.swift in Sources */,
@@ -3480,6 +3502,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				61C8E9CD705E41689DD43BA7 /* ApprovalErgonomicsTests.swift in Sources */,
+
 				38D5400FE5D6B2E979B49B84 /* A2AProtocolTests.swift in Sources */,
 				5C6174D3AE206647683C50C0 /* AccessibilityPassTests.swift in Sources */,
 				C7AF449E49406FD406FAB73E /* AgentAuditLoggerTests.swift in Sources */,
