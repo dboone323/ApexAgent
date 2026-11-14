@@ -206,7 +206,7 @@ struct SubAgentRow: View {
                 .frame(width: 8, height: 8)
         }
         .padding()
-        .background(Color(.windowBackground).opacity(0.5))
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.5))
         .cornerRadius(12)
     }
 
@@ -267,7 +267,7 @@ struct CompletedSubAgentRow: View {
                 .foregroundStyle(.secondary)
         }
         .padding()
-        .background(Color(.windowBackground).opacity(0.3))
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.3))
         .cornerRadius(12)
     }
 
@@ -313,7 +313,7 @@ struct SpawnForm: View {
 
             Button("Spawn Sub-Agent") {
                 Task {
-                    let id = await manager.spawnSubAgent(type: type, context: context)
+                    _ = await manager.spawnSubAgent(type: type, context: context)
                     // Could add notification or feedback here
                 }
             }
