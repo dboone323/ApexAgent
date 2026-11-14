@@ -2090,7 +2090,7 @@
     }
   },
   {
-    "description" : "Two-way Discord communication via bot token.\nPosts, reads, replies, edits, deletes, and reacts to messages\nin a Discord channel. Configure the bot token in environment\nvariable DISCORD_APEX_TOKEN or the Keychain (set via the app's\nSettings / KeychainManager). Bot identity: @ApexAgent\n(ID: 1537957778998431775).",
+    "description" : "Two-way Discord communication via bot token.\nPosts, reads, replies, edits, deletes, and reacts to messages\nin a Discord channel. Configure the bot token in environment\nvariable DISCORD_APEX_TOKEN or the Keychain (set via the app's\nSettings \/ KeychainManager). Bot identity: @ApexAgent\n(ID: 1537957778998431775).",
     "name" : "discord_bot",
     "parameters" : {
       "additionalProperties" : false,
@@ -2137,7 +2137,7 @@
     }
   },
   {
-    "description" : "Posts a message to a Discord channel via an incoming webhook URL.\nNo bot token required — the webhook URL carries the channel identity.\nConfigure the webhook URL in environment variable DISCORD_WEBHOOK_URL\nor the Keychain (set via the app's Settings / KeychainManager).",
+    "description" : "Posts a message to a Discord channel via an incoming webhook URL.\nNo bot token required — the webhook URL carries the channel identity.\nConfigure the webhook URL in environment variable DISCORD_WEBHOOK_URL\nor Keychain (key: \"discordWebhookUrl\").",
     "name" : "discord_webhook",
     "parameters" : {
       "additionalProperties" : false,
