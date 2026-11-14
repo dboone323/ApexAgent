@@ -379,11 +379,66 @@ struct TraceFirstObservabilityTests {
 
     @Test("TraceLiveVerifier end-to-end contract")
     @MainActor
-    func testTraceLiveVerifierEndToEndContract() async {
+    func testTraceLiveVerifierEndToEndContract() async throws {
         let result = await TraceLiveVerifier.runVerification()
         #expect(result.passed == true)
         #expect(result.eventCount >= 6)
         #expect(result.traceSize > 0)
         #expect(FileManager.default.fileExists(atPath: result.tracePath))
+
+        let traceURL = URL(fileURLWithPath: result.tracePath)
+        let loadedTrace = try #require(try? RunTraceStorage.loadTrace(from: traceURL))
+        let modelCallEvent = try #require(loadedTrace.events.first(where: { $0.kind == .modelCall }))
+
+        // Real measured duration from provider attempt (positive, not synthetic 84.5)
+        #expect(modelCallEvent.durationMs != nil)
+        #expect((modelCallEvent.durationMs ?? 0) > 0)
+        #expect(modelCallEvent.durationMs != 84.5)
+
+        // No hardcoded fake token counts (42, 18, 60)
+        #expect(modelCallEvent.tokenCounts != TokenCountInfo(promptTokens: 42, completionTokens: 18, totalTokens: 60))
+        #expect(modelCallEvent.tokenCounts?.promptTokens != 42)
+        #expect(modelCallEvent.tokenCounts?.completionTokens != 18)
+        #expect(modelCallEvent.tokenCounts?.totalTokens != 60)
+    }
+
+    @Test("TraceLiveVerifier reports unobserved modelCall when no provider responds")
+    @MainActor
+    func testTraceLiveVerifierReportsUnobservedModelCallWhenNoProviderResponds() async throws {
+        // Point Ollama to an unreachable loopback port where no daemon listens
+        let prevHost = UserDefaults.standard.string(forKey: ModelRegistry.ollamaHostKey)
+        let prevEnv = ProcessInfo.processInfo.environment["APEX_OLLAMA_MODEL"]
+        UserDefaults.standard.set("http://127.0.0.1:59999", forKey: ModelRegistry.ollamaHostKey)
+        setenv("APEX_OLLAMA_MODEL", "nonexistent-model-fail", 1)
+        defer {
+            if let prevHost {
+                UserDefaults.standard.set(prevHost, forKey: ModelRegistry.ollamaHostKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: ModelRegistry.ollamaHostKey)
+            }
+            if let prevEnv {
+                setenv("APEX_OLLAMA_MODEL", prevEnv, 1)
+            } else {
+                unsetenv("APEX_OLLAMA_MODEL")
+            }
+        }
+
+        let failingCandidates = [
+            ProviderCandidate(provider: .localOllama, reason: "Unreachable test endpoint")
+        ]
+        let result = await TraceLiveVerifier.runVerification(
+            preferredProvider: .localOllama,
+            candidateChain: failingCandidates
+        )
+
+        #expect(result.passed == false)
+        #expect(result.output.contains("modelCall = NOT OBSERVED LIVE"))
+        #expect(result.output.contains("VERDICT: FAILED"))
+
+        let traceURL = URL(fileURLWithPath: result.tracePath)
+        if FileManager.default.fileExists(atPath: traceURL.path),
+           let loadedTrace = try? RunTraceStorage.loadTrace(from: traceURL) {
+            #expect(!loadedTrace.events.contains(where: { $0.kind == .modelCall }))
+        }
     }
 }

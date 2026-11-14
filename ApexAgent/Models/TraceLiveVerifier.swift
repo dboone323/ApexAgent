@@ -14,7 +14,12 @@ public enum TraceLiveVerifier {
         public let eventCount: Int
     }
 
-    public static func runVerification(workspacePath: String? = nil, jsonOutput: Bool = false) async -> VerificationResult {
+    public static func runVerification(
+        workspacePath: String? = nil,
+        preferredProvider: ModelProvider? = nil,
+        candidateChain: [ProviderCandidate]? = nil,
+        jsonOutput: Bool = false
+    ) async -> VerificationResult {
         var logs: [String] = []
         logs.append("================================================================================")
         logs.append("APEXAGENT ISSUE #110: LIVE TRACE-FIRST OBSERVABILITY VERIFICATION")
@@ -77,7 +82,7 @@ public enum TraceLiveVerifier {
                 jsonArguments: "{\"path\": \"\(testFilePath)\"}"
             )
             let trimmed = toolOutput.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "\n", with: " ")
-            logs.append("  -> Tool 'read_file' completed: \"\(trimmed.prefix(60))...\" (emitted toolCall event)")
+            logs.append("  -> Tool 'read_file' completed: \"\(trimmed.prefix(80))...\" (emitted toolCall event)")
         } catch {
             logs.append("  -> Tool execution failed: \(error.localizedDescription)")
         }
@@ -90,15 +95,58 @@ public enum TraceLiveVerifier {
         )
         logs.append("  -> Spawned sub-agent [id=\(subAgentId.uuidString.prefix(8)), type=reviewer] (emitted subAgentHandoff event)")
 
-        // 5. Real Model Call
-        logs.append("\n[6] Executing Model Call Recording:")
-        let modelEvent = RunTraceManager.shared.recordModelCall(
-            model: "Apple Intelligence (FoundationModels)",
-            prompt: "Verify trace-first execution telemetry",
-            tokenCounts: TokenCountInfo(promptTokens: 42, completionTokens: 18, totalTokens: 60),
-            durationMs: 84.5
+        // 5. Real Model Call via ProviderFallbackExecutor
+        logs.append("\n[6] Executing Real Model Invocation via Production Hook:")
+        let modelPrompt = "Reply with the word ok"
+        let targetProvider = preferredProvider ?? ModelRegistry.activeProvider()
+        let candidates = candidateChain ?? ModelRegistry.buildCandidateChain(
+            preferred: targetProvider,
+            prompt: modelPrompt
         )
-        logs.append("  -> Model call recorded: model=\(modelEvent?.model ?? "") (emitted modelCall event)")
+
+        let attemptTask = Task { @MainActor in
+            await ProviderFallbackExecutor.shared.execute(
+                candidates: candidates,
+                prompt: modelPrompt,
+                toolCallingMode: .disabled,
+                orchestrator: orchestrator
+            )
+        }
+
+        let terminalState: RuntimeTerminalState
+        do {
+            terminalState = try await withThrowingTaskGroup(of: RuntimeTerminalState.self) { group in
+                group.addTask {
+                    await attemptTask.value
+                }
+                group.addTask {
+                    try await Task.sleep(nanoseconds: 60_000_000_000)
+                    throw CancellationError()
+                }
+                guard let first = try await group.next() else {
+                    throw CancellationError()
+                }
+                group.cancelAll()
+                return first
+            }
+        } catch {
+            attemptTask.cancel()
+            terminalState = .failed(error: "Model call timed out after 60s", isRetryable: false)
+        }
+
+        switch terminalState {
+        case .completed(let output):
+            let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "\n", with: " ")
+            logs.append("  -> Real model turn succeeded: \"\(trimmed.prefix(80))\" (emitted modelCall event via production hook)")
+        case .fallbackExhausted(let errors):
+            logs.append("  -> Model call fallback exhausted: \(errors.joined(separator: "; "))")
+        case .failed(let error, _):
+            logs.append("  -> Model call failed: \(error)")
+        case .cancelled(let reason):
+            logs.append("  -> Model call cancelled: \(reason)")
+        default:
+            logs.append("  -> Model call finished with state: \(terminalState.terminalDescription)")
+        }
 
         // Complete the run
         RunTraceManager.shared.endRun(runId: runId, status: "completed")
@@ -144,10 +192,16 @@ public enum TraceLiveVerifier {
 
         // Assert all 6 event kinds are covered
         let recordedKinds = Set(savedTrace.events.map { $0.kind })
-        let expectedKinds: Set<RunTraceEventKind> = [
-            .modelCall, .toolCall, .memoryRead, .memoryWrite, .subAgentHandoff, .approval
+        let expectedKinds: [RunTraceEventKind] = [
+            .memoryWrite, .memoryRead, .approval, .toolCall, .subAgentHandoff, .modelCall
         ]
-        let missingKinds = expectedKinds.subtracting(recordedKinds)
+        let missingKinds = Set(expectedKinds).subtracting(recordedKinds)
+
+        logs.append("\n[11] Event Kind Observations:")
+        for kind in expectedKinds {
+            let observed = recordedKinds.contains(kind)
+            logs.append("  \(kind.rawValue) = \(observed ? "OBSERVED LIVE" : "NOT OBSERVED LIVE")")
+        }
 
         // Assert replayed sequence exactly matches recorded sequence
         var sequenceMatches = (savedTrace.events.count == replayReport.replayedEvents.count)
@@ -161,8 +215,9 @@ public enum TraceLiveVerifier {
             }
         }
 
-        logs.append("\n[11] Verification Verdicts:")
-        logs.append("  All 6 Event Kinds Covered: \(missingKinds.isEmpty ? "PASS" : "FAIL (missing: \(missingKinds))")")
+        logs.append("\n[12] Verification Verdicts:")
+        let missingDesc = missingKinds.isEmpty ? "PASS" : "FAIL (missing: \(missingKinds.map(\.rawValue).sorted()))"
+        logs.append("  All 6 Event Kinds Covered: \(missingDesc)")
         logs.append("  Sequence Exactly Matches:  \(sequenceMatches ? "PASS" : "FAIL")")
         logs.append("  Read-Only Invariant:       PASS")
 
