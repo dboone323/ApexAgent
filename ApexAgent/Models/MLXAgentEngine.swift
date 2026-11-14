@@ -16,6 +16,7 @@ struct MLXAgentEngine: AgentEngine {
     let orchestrator: AgentOrchestrator
     var bot: BotProfile?
 
+    @discardableResult
     func streamResponse(
         prompt: String,
         attachments: [NSImage],
@@ -23,7 +24,7 @@ struct MLXAgentEngine: AgentEngine {
         instructions: String,
         toolCallingMode: AgentToolCallingMode,
         onUpdate: @MainActor @escaping (String) -> Void
-    ) async throws {
+    ) async throws -> TokenCountInfo? {
         let hostString = UserDefaults.standard.string(forKey: "apex.mlxHost") ?? LocalMLXLanguageModel.defaultHostURLString
         guard let baseURL = URL(string: hostString) else {
             throw NSError(domain: "MLXAgentEngine", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid MLX server URL: \(hostString)"])
@@ -126,7 +127,7 @@ struct MLXAgentEngine: AgentEngine {
                 if loop == 0 && loopText.isEmpty {
                     onUpdate("⚠️ The MLX-LM server (\(model)) returned no text. Check that the server is running and a model is loaded.")
                 }
-                return
+                return nil
             }
 
             var toolCallsArray: [[String: Any]] = []
@@ -160,5 +161,6 @@ struct MLXAgentEngine: AgentEngine {
             }
             // Continue the loop so the model can act on tool results.
         }
+        return nil
     }
 }

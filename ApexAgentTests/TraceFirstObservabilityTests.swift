@@ -395,11 +395,63 @@ struct TraceFirstObservabilityTests {
         #expect((modelCallEvent.durationMs ?? 0) > 0)
         #expect(modelCallEvent.durationMs != 84.5)
 
+        // Real token counts reported by local Ollama engine (non-nil and positive)
+        let tokenCounts = try #require(modelCallEvent.tokenCounts)
+        #expect(tokenCounts.promptTokens > 0)
+        #expect(tokenCounts.completionTokens > 0)
+        #expect(tokenCounts.totalTokens > 0)
+        #expect(tokenCounts.totalTokens == tokenCounts.promptTokens + tokenCounts.completionTokens)
+
         // No hardcoded fake token counts (42, 18, 60)
-        #expect(modelCallEvent.tokenCounts != TokenCountInfo(promptTokens: 42, completionTokens: 18, totalTokens: 60))
-        #expect(modelCallEvent.tokenCounts?.promptTokens != 42)
-        #expect(modelCallEvent.tokenCounts?.completionTokens != 18)
-        #expect(modelCallEvent.tokenCounts?.totalTokens != 60)
+        #expect(tokenCounts != TokenCountInfo(promptTokens: 42, completionTokens: 18, totalTokens: 60))
+        #expect(tokenCounts.promptTokens != 42)
+        #expect(tokenCounts.completionTokens != 18)
+        #expect(tokenCounts.totalTokens != 60)
+    }
+
+    @Test("RunTraceReplayer renders tokens=not reported when tokenCounts is nil")
+    func testReplayerRendersNotReportedWhenTokenCountsNil() {
+        let trace = RunTrace(
+            id: "test-run",
+            startedAt: Date(),
+            finishedAt: Date(),
+            status: "completed",
+            events: [
+                RunTraceEvent.modelCall(
+                    sequence: 1,
+                    model: "Apple Intelligence",
+                    prompt: "hello",
+                    tokenCounts: nil,
+                    durationMs: 120.0
+                )
+            ]
+        )
+        let report = RunTraceReplayer.replay(trace: trace)
+        #expect(report.replayedEvents.count == 1)
+        #expect(report.replayedEvents[0].detail.contains("tokens=not reported"))
+    }
+
+    @Test("RunTraceReplayer renders real total tokens when tokenCounts is present")
+    func testReplayerRendersRealTotalTokensWhenTokenCountsPresent() {
+        let trace = RunTrace(
+            id: "test-run",
+            startedAt: Date(),
+            finishedAt: Date(),
+            status: "completed",
+            events: [
+                RunTraceEvent.modelCall(
+                    sequence: 1,
+                    model: "Local Ollama",
+                    prompt: "hello",
+                    tokenCounts: TokenCountInfo(promptTokens: 25, completionTokens: 10, totalTokens: 35),
+                    durationMs: 250.0
+                )
+            ]
+        )
+        let report = RunTraceReplayer.replay(trace: trace)
+        #expect(report.replayedEvents.count == 1)
+        #expect(report.replayedEvents[0].detail.contains("tokens=35"))
+        #expect(!report.replayedEvents[0].detail.contains("tokens=not reported"))
     }
 
     @Test("TraceLiveVerifier reports unobserved modelCall when no provider responds")

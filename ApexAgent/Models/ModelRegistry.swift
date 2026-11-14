@@ -742,6 +742,7 @@ public struct ModelRegistry: Sendable {
     @MainActor
     static func engine(
         for provider: ModelProvider,
+        modelName: String? = nil,
         bot: BotProfile? = nil,
         session: LanguageModelSession? = nil,
         allowedTools: [String]? = nil,
@@ -755,7 +756,7 @@ public struct ModelRegistry: Sendable {
         case .cloudGemini:
             return GeminiAgentEngine(orchestrator: orchestrator, bot: bot, allowedTools: allowedTools)
         case .localOllama:
-            return OllamaStreamingEngine(orchestrator: orchestrator, bot: bot, allowedTools: allowedTools)
+            return OllamaStreamingEngine(orchestrator: orchestrator, bot: bot, allowedTools: allowedTools, modelOverride: modelName)
         case .localMLX:
             return MLXAgentEngine(orchestrator: orchestrator, bot: bot)
         case .openAICompatible, .anthropic, .gitHubCopilot:

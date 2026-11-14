@@ -98,7 +98,8 @@ public enum RunTraceReplayer {
             let detail: String
             switch ev.kind {
             case .modelCall:
-                detail = "model=\(ev.model ?? "") tokens=\(ev.tokenCounts?.totalTokens ?? 0) duration=\(String(format: "%.1f", ev.durationMs ?? 0.0))ms"
+                let tokenStr = ev.tokenCounts.map { "\($0.totalTokens)" } ?? "not reported"
+                detail = "model=\(ev.model ?? "") tokens=\(tokenStr) duration=\(String(format: "%.1f", ev.durationMs ?? 0.0))ms"
             case .toolCall:
                 detail = "args=\(ev.argumentsSummary ?? "") status=\(ev.toolStatus ?? "") result=\(ev.resultSummary ?? "")"
             case .memoryRead:

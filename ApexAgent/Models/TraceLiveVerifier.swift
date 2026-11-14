@@ -98,11 +98,24 @@ public enum TraceLiveVerifier {
         // 5. Real Model Call via ProviderFallbackExecutor
         logs.append("\n[6] Executing Real Model Invocation via Production Hook:")
         let modelPrompt = "Reply with the word ok"
-        let targetProvider = preferredProvider ?? ModelRegistry.activeProvider()
-        let candidates = candidateChain ?? ModelRegistry.buildCandidateChain(
-            preferred: targetProvider,
-            prompt: modelPrompt
-        )
+        // Default to local Ollama with pre-warmed llama3.1:8b because Ollama is the provider on this Mac
+        // that reports real token counts via API (prompt_eval_count / eval_count); Apple Foundation Models (AFM)
+        // does not expose token usage.
+        let targetProvider = preferredProvider ?? .localOllama
+        let candidates: [ProviderCandidate]
+        if let candidateChain {
+            candidates = candidateChain
+        } else if targetProvider == .localOllama {
+            candidates = [
+                ProviderCandidate(provider: .localOllama, modelName: "llama3.1:8b", reason: "Local Ollama Token-Reporting Engine (llama3.1:8b)", priority: 1),
+                ProviderCandidate(provider: .appleOnDevice, reason: "On-Device AFM Fallback", priority: 2)
+            ]
+        } else {
+            candidates = ModelRegistry.buildCandidateChain(
+                preferred: targetProvider,
+                prompt: modelPrompt
+            )
+        }
 
         let attemptTask = Task { @MainActor in
             await ProviderFallbackExecutor.shared.execute(
@@ -200,7 +213,16 @@ public enum TraceLiveVerifier {
         logs.append("\n[11] Event Kind Observations:")
         for kind in expectedKinds {
             let observed = recordedKinds.contains(kind)
-            logs.append("  \(kind.rawValue) = \(observed ? "OBSERVED LIVE" : "NOT OBSERVED LIVE")")
+            if kind == .modelCall && observed {
+                let modelCallEvent = savedTrace.events.first { $0.kind == .modelCall }
+                if let tc = modelCallEvent?.tokenCounts {
+                    logs.append("  \(kind.rawValue) = OBSERVED LIVE (tokens reported: \(tc.promptTokens) prompt / \(tc.completionTokens) completion / \(tc.totalTokens) total)")
+                } else {
+                    logs.append("  \(kind.rawValue) = OBSERVED LIVE (token counts not reported by provider)")
+                }
+            } else {
+                logs.append("  \(kind.rawValue) = \(observed ? "OBSERVED LIVE" : "NOT OBSERVED LIVE")")
+            }
         }
 
         // Assert replayed sequence exactly matches recorded sequence

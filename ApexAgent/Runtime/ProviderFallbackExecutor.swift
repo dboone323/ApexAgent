@@ -59,14 +59,16 @@ public final class ProviderFallbackExecutor {
 
             let engine = ModelRegistry.engine(
                 for: candidate.provider,
+                modelName: candidate.modelName,
                 bot: bot,
                 session: session,
                 allowedTools: allowedTools ?? [],
                 orchestrator: orchestrator
             )
 
+            var capturedTokenCounts: TokenCountInfo? = nil
             do {
-                try await engine.streamResponse(
+                capturedTokenCounts = try await engine.streamResponse(
                     prompt: prompt,
                     attachments: attachments,
                     history: history,
@@ -88,6 +90,7 @@ public final class ProviderFallbackExecutor {
                     RunTraceManager.shared.recordModelCall(
                         model: candidate.provider.displayName,
                         prompt: prompt,
+                        tokenCounts: capturedTokenCounts,
                         durationMs: elapsedMs
                     )
                     Self.logger.info(
