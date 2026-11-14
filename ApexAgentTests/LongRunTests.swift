@@ -317,6 +317,49 @@ struct LongRunTests {
         #expect(!result.completedStepIds.contains("time2"))
     }
 
+    @Test("Run Budgets: elapsed equals real wall-clock and budget above runtime does not fire early")
+    func testElapsedMatchesWallClockAndHighBudgetDoesNotFireEarly() async throws {
+        let tempDir = try createTempDirectory(prefix: "apex-elapsed-budget")
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let store = LongRunCheckpointStore(baseDirectory: tempDir)
+        let coordinator = LongRunCoordinator(store: store)
+
+        let runId = UUID()
+        let steps = (1...6).map { idx in
+            LongRunStepSpec(
+                id: "elapsed-\(idx)",
+                title: "Elapsed step \(idx)",
+                kind: .sleepDelay,
+                inputPayload: ["seconds": "0.05"]
+            )
+        }
+
+        // Budget well above real runtime: must not fire early; all steps complete.
+        let spec = LongRunSpec(
+            id: runId,
+            name: "Elapsed Wall-Clock Regression Run",
+            steps: steps,
+            budgetPolicy: LongRunBudgetPolicy(maxWallClockSeconds: 60.0)
+        )
+
+        let wallStart = Date()
+        let result = try await coordinator.start(spec: spec)
+        let wallElapsed = Date().timeIntervalSince(wallStart)
+
+        // All steps must complete (budget above real runtime must not fire early).
+        #expect(result.status == .completed)
+        #expect(result.completedStepIds == steps.map { $0.id })
+
+        // Reported elapsed must match real wall-clock within tolerance and must not be
+        // inflated by the pre-step accumulation bug (which reported ~quadratic elapsed
+        // vs linear wall-clock and fired the budget early).
+        let reported = result.budgetUsage.elapsedWallClockSeconds
+        #expect(reported >= 0)
+        #expect(abs(reported - wallElapsed) < 1.0,
+                "reported \(reported)s vs wall-clock \(wallElapsed)s")
+    }
+
     @Test("Run Budgets: token budget stops run when consumed tokens exceed limit")
     func testTokenBudgetHaltsRunImmediately() async throws {
         let tempDir = try createTempDirectory(prefix: "apex-token-budget")

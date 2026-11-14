@@ -179,6 +179,14 @@ public actor LongRunCoordinator {
         }
 
         let loopStartTime = Date()
+        // Track carried-over base at loop entry so elapsed reflects total wall-clock
+        // time (including any pre-loop accumulated value) without re-adding the full
+        // interval on every pre-step check. Previously this used `+=`, which caused
+        // each of N checks to add the entire time-since-loop-start again, inflating
+        // elapsed (e.g. ~45s reported vs ~9s real for 10 one-second steps) and firing
+        // the budget early. Now each check SETS elapsed = base + timeSince(loopStart),
+        // so stored elapsed grows linearly with real wall-clock time.
+        let baseElapsed = checkpoint.budgetUsage.elapsedWallClockSeconds
 
         while checkpoint.currentStepIndex < spec.steps.count {
             // 1. Check for external interrupt request
@@ -202,7 +210,10 @@ public actor LongRunCoordinator {
             }
 
             // 3. Pre-step budget check
-            checkpoint.budgetUsage.elapsedWallClockSeconds += Date().timeIntervalSince(loopStartTime)
+            // SET elapsed = carried-over base + time since loop start (rather than
+            // accumulating += timeIntervalSince on every check, which double-counted
+            // the full interval N times and inflated elapsed / fired budget early).
+            checkpoint.budgetUsage.elapsedWallClockSeconds = baseElapsed + Date().timeIntervalSince(loopStartTime)
             if let exceeded = checkpoint.budgetUsage.evaluateExceeded(policy: budgetPolicy) {
                 checkpoint.status = .budgetExceeded(type: exceeded.type, limit: exceeded.limit, actual: exceeded.actual)
                 checkpoint.sequenceNumber += 1
@@ -238,6 +249,9 @@ public actor LongRunCoordinator {
             var stepSuccess = false
             while !stepSuccess {
                 stepRecord.attempts += 1
+                // stepsExecuted counts each attempt (not each distinct step): the step
+                // budget limits total step attempts including retries, so incrementing
+                // per attempt is intended. See LongRunBudgetUsage.stepsExecuted.
                 checkpoint.budgetUsage.stepsExecuted += 1
 
                 // Check step budget count
