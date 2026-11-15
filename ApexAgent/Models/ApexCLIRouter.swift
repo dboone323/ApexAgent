@@ -47,6 +47,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case traces(limit: Int, jsonOutput: Bool)
     case traceReplay(target: String, jsonOutput: Bool)
     case traceVerify(jsonOutput: Bool)
+    case secretsVerify(jsonOutput: Bool)
     case tracesList(limit: Int, jsonOutput: Bool)
     case policy(jsonOutput: Bool)
     case approvals(subcommandArgs: [String], jsonOutput: Bool)
@@ -287,6 +288,9 @@ public enum ApexCLIRouter {
         case "self-test", "--self-test":
             return ParsedCLIInvocation(command: .selfTest(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
+        case "secrets-verify", "--secrets-verify", "verify-secrets", "--verify-secrets":
+            return ParsedCLIInvocation(command: .secretsVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
         case "traces", "--traces":
             let remList = Array(remaining)
             if remList.count > 1 {
@@ -297,6 +301,9 @@ public enum ApexCLIRouter {
                 }
                 if subAction == "verify" || subAction == "--verify" {
                     return ParsedCLIInvocation(command: .traceVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+                }
+                if subAction == "verify-secrets" || subAction == "--verify-secrets" {
+                    return ParsedCLIInvocation(command: .secretsVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
                 }
                 if subAction == "list" || subAction == "--list" {
                     var limit = 50

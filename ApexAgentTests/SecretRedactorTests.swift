@@ -57,4 +57,26 @@ struct SecretRedactorTests {
         #expect(!out.contains("mysecretpassword123"))
         #expect(out.contains("postgresql://postgres:«redacted»@db.example.com:5432/mydb"))
     }
+
+    @Test func redactsFakeTestKeysAndDiscordWebhookUrls() {
+        let text = "Test OpenAI key: sk-test-fake-1234 and Discord webhook: https://discord.com/api/webhooks/123456789/fake-webhook-token-secret-9999"
+        let out = SecretRedactor.redact(text: text)
+        #expect(!out.contains("sk-test-fake-1234"))
+        #expect(!out.contains("fake-webhook-token-secret-9999"))
+        #expect(out.contains("https://discord.com/api/webhooks/123456789/«redacted»"))
+    }
+
+    @Test func redactsTavilyAndBraveSearchKeys() {
+        let text = "Tavily: tvly-fake-secret-tavily-key-12345 and Brave: BSA1234567890abcdefghijklmnopqrstuvwxyz"
+        let out = SecretRedactor.redact(text: text)
+        #expect(!out.contains("tvly-fake-secret-tavily-key-12345"))
+        #expect(!out.contains("BSA1234567890abcdefghijklmnopqrstuvwxyz"))
+        #expect(out.contains("«redacted»"))
+    }
+
+    @Test func containsSecretDetectsCredentialShapes() {
+        #expect(SecretRedactor.containsSecret("export KEY=sk-test-fake-1234"))
+        #expect(SecretRedactor.containsSecret("https://discord.com/api/webhooks/1234/token-secret-12345"))
+        #expect(!SecretRedactor.containsSecret("This is normal documentation text without secrets."))
+    }
 }

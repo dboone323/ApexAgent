@@ -123,10 +123,11 @@ final class OllamaAgentEngine: AgentEngine {
 
         // System instructions
         let effectiveInstructions = instructions.isEmpty ? (bot?.systemInstructions ?? "") : instructions
-        if !effectiveInstructions.isEmpty {
+        let cleanInstructions = SecretRedactor.redact(text: effectiveInstructions)
+        if !cleanInstructions.isEmpty {
             messages.append([
                 "role": "system",
-                "content": effectiveInstructions
+                "content": cleanInstructions
             ])
         }
 
@@ -141,7 +142,7 @@ final class OllamaAgentEngine: AgentEngine {
             if !msg.content.isEmpty {
                 messages.append([
                     "role": roleStr,
-                    "content": msg.content
+                    "content": SecretRedactor.redact(text: msg.content)
                 ])
             }
         }
@@ -150,7 +151,7 @@ final class OllamaAgentEngine: AgentEngine {
         if history.last?.content != prompt || history.last?.role != .user {
             messages.append([
                 "role": "user",
-                "content": prompt
+                "content": SecretRedactor.redact(text: prompt)
             ])
         }
 
@@ -280,7 +281,7 @@ final class OllamaAgentEngine: AgentEngine {
                         agentIdentity: bot.map { AgentIdentity.bot(id: $0.id, name: $0.name) }
                     )
                 } catch {
-                    toolOutput = "ERROR: Tool '\(name)' failed: \(error.localizedDescription)"
+                    toolOutput = SecretRedactor.redact(text: "ERROR: Tool '\(name)' failed: \(error.localizedDescription)")
                 }
 
                 if ProcessInfo.processInfo.arguments.contains("--cli") {
@@ -290,7 +291,7 @@ final class OllamaAgentEngine: AgentEngine {
                 lastToolOutput = toolOutput
                 messages.append([
                     "role": "tool",
-                    "content": toolOutput,
+                    "content": SecretRedactor.redact(text: toolOutput),
                     "name": name
                 ])
             }

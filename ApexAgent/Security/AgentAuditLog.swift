@@ -55,12 +55,13 @@ actor AgentAuditLog {
         wasConfirmed: Bool = false,
         status: String = "success"
     ) {
+        let redacted = SecretRedactor.redact(text: arguments)
         let entry = AuditEntry(
             id: UUID(),
             timestamp: Date(),
             toolName: toolName,
             // Cap stored arguments — they can contain large file contents.
-            arguments: String(arguments.prefix(2000)),
+            arguments: String(redacted.prefix(2000)),
             riskLevel: AgentSecurity.riskLevel(for: toolName).rawValue,
             wasConfirmed: wasConfirmed,
             status: status

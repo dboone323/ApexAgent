@@ -407,7 +407,7 @@ struct GeminiAgentEngine: AgentEngine {
         if explicitlyNoTools {
             effectiveSystemInstructions = "You are Apex Prime, a helpful AI assistant on macOS. Follow the user's instructions directly and concisely without calling tools."
         } else {
-            effectiveSystemInstructions = instructions
+            effectiveSystemInstructions = SecretRedactor.redact(text: instructions)
         }
 
         // Prepare tool declarations (filtered by allowedTools or IntentToolSelector)
@@ -445,12 +445,12 @@ struct GeminiAgentEngine: AgentEngine {
             }
             rawContents.append([
                 "role": role,
-                "parts": [["text": msg.content]]
+                "parts": [["text": SecretRedactor.redact(text: msg.content)]]
             ])
         }
 
         // Append current user prompt if not already the last user message
-        var userParts: [[String: Any]] = [["text": prompt]]
+        var userParts: [[String: Any]] = [["text": SecretRedactor.redact(text: prompt)]]
         for img in attachments {
             if let b64 = base64String(from: img) {
                 userParts.append([
@@ -634,12 +634,13 @@ struct GeminiAgentEngine: AgentEngine {
                             bot: bot
                         )
                     } catch {
-                        toolOutput = "ERROR: \(error.localizedDescription)"
+                        toolOutput = SecretRedactor.redact(text: "ERROR: \(error.localizedDescription)")
                     }
-                    lastToolOutput = toolOutput
+                    let cleanOutput = SecretRedactor.redact(text: toolOutput)
+                    lastToolOutput = cleanOutput
 
-                    var respObj: [String: Any] = ["result": toolOutput]
-                    if let data = toolOutput.data(using: .utf8),
+                    var respObj: [String: Any] = ["result": cleanOutput]
+                    if let data = cleanOutput.data(using: .utf8),
                        let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                         respObj = dict
                     }

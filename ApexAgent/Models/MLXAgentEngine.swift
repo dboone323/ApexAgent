@@ -39,9 +39,9 @@ struct MLXAgentEngine: AgentEngine {
             case .assistant: "assistant"
             case .system: "system"
             }
-            messages.append(["role": role, "content": msg.content])
+            messages.append(["role": role, "content": SecretRedactor.redact(text: msg.content)])
         }
-        messages.append(["role": "user", "content": prompt])
+        messages.append(["role": "user", "content": SecretRedactor.redact(text: prompt)])
 
         var tools: [[String: Any]] = []
         if useTools {
@@ -155,9 +155,9 @@ struct MLXAgentEngine: AgentEngine {
                         agentIdentity: bot.map { .bot(id: $0.id, name: $0.name) }
                     )
                 } catch {
-                    output = "ERROR: Tool '\(name)' failed: \(error.localizedDescription)"
+                    output = SecretRedactor.redact(text: "ERROR: Tool '\(name)' failed: \(error.localizedDescription)")
                 }
-                messages.append(["role": "tool", "content": output, "tool_call_id": callId])
+                messages.append(["role": "tool", "content": SecretRedactor.redact(text: output), "tool_call_id": callId])
             }
             // Continue the loop so the model can act on tool results.
         }

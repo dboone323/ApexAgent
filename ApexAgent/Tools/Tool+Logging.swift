@@ -112,6 +112,9 @@ extension Tool {
             // phrasing before the result re-enters the transcript so a tool
             // cannot hijack the agent loop.
             result = sanitizeForPromptInjection(result)
+            // Secrets hygiene: credentials never enter model context (issue #108).
+            // Redact any credential-shaped value before it can re-enter context.
+            result = SecretRedactor.redact(text: result)
             result = AgentExecutionVerification.applyingToolResultGuidance(
                 toolName: toolName,
                 result: result
@@ -133,7 +136,7 @@ extension Tool {
             }
             return result
         } catch {
-            let errorMsg = "ERROR: \(error.localizedDescription)"
+            let errorMsg = SecretRedactor.redact(text: "ERROR: \(error.localizedDescription)")
             await orchestrator.orchestrator.logToolEnd(name: toolName, result: errorMsg, status: .failed(error.localizedDescription))
             await AgentAuditLog.shared.record(toolName: toolName, arguments: argsString, wasConfirmed: needsConfirm, status: "failed")
             if !ToolTraceScope.isTraced {

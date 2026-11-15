@@ -37,26 +37,33 @@ enum SecretRedactor {
         #"([a-zA-Z][a-zA-Z0-9+.-]*://[^:\s@/]+:)([^@\s/]+)(@[^\s]+)"#
     )
 
+    private static let discordWebhookPattern = makeRegex(
+        #"(https?://(?:ptb\.|canary\.)?discord(?:app)?\.com/api/webhooks/\d+/)([A-Za-z0-9_-]{16,})"#,
+        options: [.caseInsensitive]
+    )
+
     private static let contentPatterns: [NSRegularExpression] = [
-        makeRegex(#"\bsk-(?:ant-|proj-|live-|test-)?[A-Za-z0-9_-]{16,}"#),  // anthropic / openai / stripe
+        makeRegex(#"\bsk-(?:ant-|proj-|live-|test-)?[A-Za-z0-9_-]{8,}"#),   // anthropic / openai / stripe / test fixtures
         makeRegex(#"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}"#),        // github classic
         makeRegex(#"\bgithub_pat_[A-Za-z0-9_]{20,}"#),                     // github fine-grained
         makeRegex(#"\bxox[abposr]-[A-Za-z0-9-]{20,}"#),                    // slack
         makeRegex(#"\bAKIA[0-9A-Z]{16}\b"#),                              // aws access key id
         makeRegex(#"\bAIza[0-9A-Za-z_-]{30,}"#),                           // google api key
         makeRegex(#"\bnpm_[A-Za-z0-9]{20,}"#),                             // npm
+        makeRegex(#"\btvly-(?:dev-)?[A-Za-z0-9_-]{16,}"#),                 // tavily
+        makeRegex(#"\bBSA[A-Za-z0-9_-]{20,}"#),                            // brave search
         makeRegex(#"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"#) // jwt
     ]
 
     private static let bearerPattern =
-        makeRegex(#"(\bBearer\s+)([A-Za-z0-9._~+/=-]{12,})"#, options: [.caseInsensitive])
+        makeRegex(#"(\bBearer\s+)([A-Za-z0-9._~+/=-]{8,})"#, options: [.caseInsensitive])
 
     private static let pemPattern = makeRegex(
         #"(-----BEGIN [A-Z ]*PRIVATE KEY-----)([\s\S]*?)(-----END [A-Z ]*PRIVATE KEY-----)"#)
 
     /// key=value / key: value / key="value" where the key is secret-shaped.
     private static let keyValuePattern = makeRegex(
-        #"\b((?:[A-Za-z0-9_-]*_)?(?:api[_-]?key|apikey|secret|token|password|passwd|authorization|auth[_-]?token|access[_-]?key|private[_-]?key)s?)(["']?\s*[=:]\s*)(["']?)([A-Za-z0-9._~+/=-]{8,})\3"#,
+        #"\b((?:[A-Za-z0-9_-]*_)?(?:api[_-]?key|apikey|secret|token|password|passwd|authorization|auth[_-]?token|access[_-]?key|private[_-]?key|webhook[_-]?url)s?)(["']?\s*[=:]\s*)(["']?)([A-Za-z0-9._~+/=:@-]{8,})\3"#,
         options: [.caseInsensitive])
 
     // MARK: Public API
@@ -112,12 +119,23 @@ enum SecretRedactor {
             "\(groups[1])\(groups[2])\(groups[3])\(mask(groups[4]))\(groups[3])"
         }
 
+        // Discord incoming webhook URL tokens: keep prefix, mask the token
+        out = replaceAll(out, pattern: discordWebhookPattern) { groups in
+            "\(groups[1])\(mask(groups[2]))"
+        }
+
         // URI credentials: scheme://user:password@host -> scheme://user:«redacted»@host
         out = replaceAll(out, pattern: uriPattern) { groups in
             "\(groups[1])\(mask(groups[2]))\(groups[3])"
         }
 
         return out
+    }
+
+    /// Checks if the text contains any secret or credential pattern.
+    static func containsSecret(_ text: String) -> Bool {
+        guard text.count >= 8 else { return false }
+        return redact(text: text) != text
     }
 
     /// Redact a dictionary of environment-style variables, masking values whose

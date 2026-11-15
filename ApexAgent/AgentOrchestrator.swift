@@ -1597,21 +1597,23 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             }
             let duration = ContinuousClock.now - startClock
             let ms = Double(duration.components.attoseconds) / 1_000_000_000_000 + Double(duration.components.seconds) * 1000
+            let cleanResult = SecretRedactor.redact(text: result)
             RunTraceManager.shared.recordToolCall(
                 toolName: name,
-                arguments: jsonArguments,
-                result: result,
+                arguments: SecretRedactor.redact(text: jsonArguments),
+                result: cleanResult,
                 status: "success",
                 durationMs: ms
             )
-            return result
+            return cleanResult
         } catch {
             let duration = ContinuousClock.now - startClock
             let ms = Double(duration.components.attoseconds) / 1_000_000_000_000 + Double(duration.components.seconds) * 1000
+            let cleanError = SecretRedactor.redact(text: error.localizedDescription)
             RunTraceManager.shared.recordToolCall(
                 toolName: name,
-                arguments: jsonArguments,
-                result: error.localizedDescription,
+                arguments: SecretRedactor.redact(text: jsonArguments),
+                result: cleanError,
                 status: "failed",
                 durationMs: ms
             )

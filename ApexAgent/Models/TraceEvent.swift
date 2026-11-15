@@ -22,9 +22,9 @@ public struct TraceEvent: Codable, Sendable, Identifiable {
         self.timestamp = timestamp
         self.source = source
         self.operation = operation
-        self.detail = detail
+        self.detail = SecretRedactor.redact(text: detail)
         self.durationMs = durationMs
-        self.metadata = metadata
+        self.metadata = metadata?.mapValues { SecretRedactor.redact(text: $0) }
     }
 
     public var category: String { source }
