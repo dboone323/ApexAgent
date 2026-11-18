@@ -20,6 +20,7 @@ public enum ActionRiskCategory: String, Codable, Sendable {
     case credentialUse = "credential-use"
     case destructive = "destructive"
     case unknownMutation = "unknown-mutation"
+    case untrustedInjectionTaint = "untrusted-injection-taint" // Issue #106
 }
 
 public struct ActionRiskAssessment: Sendable, Equatable {
@@ -116,9 +117,19 @@ public enum ApprovalAutoReview {
         directory: String,
         workspacePath: String? = nil,
         targetFilePath: String? = nil,
+        hasFlaggedInjection: Bool = false,
         now: Date = Date(),
         allowlist: ApprovalAllowlist = .shared
     ) -> ActionRiskAssessment {
+        // 0. Check prompt injection taint first (Issue #106) — fail-closed
+        if hasFlaggedInjection {
+            return ActionRiskAssessment(
+                level: .high,
+                category: .untrustedInjectionTaint,
+                reason: "Prompt injection detected in content; exec actions revoked fail-closed."
+            )
+        }
+
         let cleanDir = ApprovalAllowlist.standardizeDirectory(directory)
         let effectiveCmd = command?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
@@ -294,6 +305,7 @@ public enum ApprovalAutoReview {
         directory: String,
         workspacePath: String? = nil,
         targetFilePath: String? = nil,
+        hasFlaggedInjection: Bool = false,
         now: Date = Date(),
         allowlist: ApprovalAllowlist = .shared
     ) -> AutoReviewVerdict {
@@ -303,6 +315,7 @@ public enum ApprovalAutoReview {
             directory: directory,
             workspacePath: workspacePath,
             targetFilePath: targetFilePath,
+            hasFlaggedInjection: hasFlaggedInjection,
             now: now,
             allowlist: allowlist
         )

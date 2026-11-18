@@ -152,6 +152,10 @@ public enum AppLog {
         log(level: .notice, category: category, message: message())
     }
 
+    public static func warning(_ category: AppLogCategory, _ message: @autoclosure () -> String) {
+        log(level: .notice, category: category, message: message())
+    }
+
     public static func error(_ category: AppLogCategory, _ message: @autoclosure () -> String,
                              error: Error? = nil) {
         var text = message()
