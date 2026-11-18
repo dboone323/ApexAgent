@@ -34,6 +34,9 @@ public enum ApexCLICommand: Sendable, Equatable {
     case routinesRun(name: String, jsonOutput: Bool)
     case skillsList(jsonOutput: Bool)
     case skillsValidate(jsonOutput: Bool)
+    case skillsShow(id: String, jsonOutput: Bool)
+    case skillsRun(id: String, arguments: String, jsonOutput: Bool)
+    case skillsVerify(jsonOutput: Bool)
     case diagnostics(jsonOutput: Bool)
     case completions(shell: CLIShellDialect)
     case man
@@ -254,9 +257,27 @@ public enum ApexCLIRouter {
                 return ParsedCLIInvocation(command: .skillsList(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
             case "validate":
                 return ParsedCLIInvocation(command: .skillsValidate(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+            case "show", "info":
+                let id = remaining.dropFirst(2).first ?? ""
+                guard !id.isEmpty else {
+                    throw ApexCLIError.missingSubcommandArgument(subcommand: "skills show", expected: "<skill-id>")
+                }
+                return ParsedCLIInvocation(command: .skillsShow(id: id, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+            case "run", "invoke":
+                let id = remaining.dropFirst(2).first ?? ""
+                guard !id.isEmpty else {
+                    throw ApexCLIError.missingSubcommandArgument(subcommand: "skills run", expected: "<skill-id> [jsonArguments]")
+                }
+                let args = remaining.dropFirst(3).joined(separator: " ")
+                return ParsedCLIInvocation(command: .skillsRun(id: id, arguments: args, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+            case "verify":
+                return ParsedCLIInvocation(command: .skillsVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
             default:
                 throw ApexCLIError.unknownSubcommand("skills \(action)")
             }
+
+        case "skills-verify":
+            return ParsedCLIInvocation(command: .skillsVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
         case "completions":
             let rawShell = remaining.dropFirst().first?.lowercased() ?? "zsh"
@@ -387,6 +408,9 @@ public enum ApexCLIRouter {
           routines run <name>     Execute a named routine
           skills list             List discovered skills from the local SkillCatalog
           skills validate         Validate all skill manifests in the local SkillCatalog
+          skills show <id>        Show skill metadata and load full content on demand
+          skills run <id> [args]  Invoke a progressive skill (filesystem or MCP-served)
+          skills verify           Run live verification of issue #88 agent skills support
           --cli [--allow-tools|--no-tools] <prompt>
                                   Run a single headless agent turn and exit
           --daemon                Start ApexGatewayServer on port 1337
@@ -636,22 +660,47 @@ public enum ApexCLIRouter {
             }
             return (lines.joined(separator: "\n"), 0)
 
-        case .skillsList(let jsonOutput), .skillsValidate(let jsonOutput):
+        case .skillsList(let jsonOutput):
             let skillsDir = ApexAgentStoragePaths.directory("skills")
-            let loaded = SkillCatalog.loadSkills(root: skillsDir)
+            let loaded = SkillCatalog.loadProgressiveSkills(root: skillsDir)
             if jsonOutput {
-                let items = loaded.map { ["id": $0.manifest.id, "name": $0.manifest.name, "version": $0.manifest.version] }
+                let items = loaded.map { ["id": $0.id, "name": $0.name, "version": $0.version, "stage": $0.stage.rawValue] }
                 let data = (try? JSONSerialization.data(withJSONObject: items, options: [.prettyPrinted, .sortedKeys])) ?? Data()
                 return (String(data: data, encoding: .utf8) ?? "[]", 0)
-            }
-            if case .skillsValidate = command {
-                return ("Validated \(loaded.count) skill manifest(s) in \(skillsDir.path) — OK", 0)
             }
             if loaded.isEmpty {
                 return ("Skills (0) in \(skillsDir.path)", 0)
             }
-            let rows = loaded.map { "- \($0.manifest.id) (\($0.manifest.name) v\($0.manifest.version))" }
+            let rows = loaded.map { "- \($0.id) (\($0.name) v\($0.version)) [stage: \($0.stage.rawValue)]" }
             return ((["Skills (\(loaded.count)):"] + rows).joined(separator: "\n"), 0)
+
+        case .skillsValidate(let jsonOutput):
+            let skillsDir = ApexAgentStoragePaths.directory("skills")
+            let loaded = SkillCatalog.loadProgressiveSkills(root: skillsDir)
+            if jsonOutput {
+                let items = loaded.map { ["id": $0.id, "valid": "true", "isKilled": "\($0.isKilled)"] }
+                let data = (try? JSONSerialization.data(withJSONObject: items, options: [.prettyPrinted, .sortedKeys])) ?? Data()
+                return (String(data: data, encoding: .utf8) ?? "[]", 0)
+            }
+            return ("Validated \(loaded.count) progressive skill manifest(s) in \(skillsDir.path) — OK", 0)
+
+        case .skillsShow(let id, _):
+            let skillsDir = ApexAgentStoragePaths.directory("skills")
+            let loaded = SkillCatalog.loadProgressiveSkills(root: skillsDir)
+            guard var skill = loaded.first(where: { $0.id == id || $0.name.lowercased() == id.lowercased() }) else {
+                return ("Error: Skill '\(id)' not found in \(skillsDir.path)", 1)
+            }
+            let stage1 = "Stage 1 (Metadata Loaded):\n  ID: \(skill.id)\n  Name: \(skill.name)\n  Description: \(skill.description)\n  Version: \(skill.version)\n  When to use: \(skill.triggerTerms.joined(separator: ", "))\n  Full Content Loaded: \(skill.isFullContentLoaded)"
+            do {
+                try skill.loadFullContent()
+                let stage2 = "Stage 2 (Full Content Loaded on Invoke):\n  Full Content Loaded: \(skill.isFullContentLoaded)\n  Instructions:\n\(skill.instructions ?? "(none)")"
+                return ("\(stage1)\n\n\(stage2)", 0)
+            } catch {
+                return ("\(stage1)\n\nStage 2 Load Failed: \(error.localizedDescription)", 1)
+            }
+
+        case .skillsRun, .skillsVerify:
+            return nil
 
         case .routinesList(let jsonOutput):
 RoutineManager.shared.loadRoutines()
@@ -915,5 +964,21 @@ RoutineManager.shared.loadRoutines()
         }
         let output = await RoutineManager.shared.execute(match) ?? "Routine executed."
         return (output, 0)
+    }
+
+    /// Executes a skill by ID inside `ApexAgentCore` and returns its output and exit code.
+    @MainActor
+    public static func runNamedSkill(id: String, arguments: String) async -> (output: String, exitCode: Int32) {
+        let skillsDir = ApexAgentStoragePaths.directory("skills")
+        let loaded = SkillCatalog.loadProgressiveSkills(root: skillsDir)
+        guard var skill = loaded.first(where: { $0.id == id || $0.name.lowercased() == id.lowercased() }) else {
+            return ("Error: Skill '\(id)' not found in \(skillsDir.path)", 1)
+        }
+        do {
+            let output = try await skill.invoke(arguments: arguments.isEmpty ? "{}" : arguments)
+            return (output, 0)
+        } catch {
+            return ("Execution failed: \(error.localizedDescription)", 1)
+        }
     }
 }

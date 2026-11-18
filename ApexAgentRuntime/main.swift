@@ -72,6 +72,20 @@ case .promptInjectionVerify:
     print(result.output)
     exit(result.passed ? 0 : 1)
 
+case .skillsVerify:
+    let result = await AgentSkillsLiveVerifier.runVerification()
+    print(result.output)
+    exit(result.passed ? 0 : 1)
+
+case .skillsRun(let id, let args, _):
+    let result = await ApexCLIRouter.runNamedSkill(id: id, arguments: args)
+    if result.exitCode == 0 {
+        print(result.output)
+    } else {
+        fputs("\(result.output)\n", stderr)
+    }
+    exit(result.exitCode)
+
 case .traceReplay, .tracesList:
     // If not handled by renderImmediateSubcommand (e.g. empty target):
     if let imm = ApexCLIRouter.renderImmediateSubcommand(invocation.command) {
@@ -80,6 +94,6 @@ case .traceReplay, .tracesList:
     }
     exit(1)
 
-case .launchGUI, .help, .version, .doctor, .diagnostics, .skillsList, .skillsValidate, .routinesList, .completions, .man, .audit, .sbom, .changelog, .releaseCheck, .provenance, .sarif, .selfTest, .traces, .policy, .approvals:
+case .launchGUI, .help, .version, .doctor, .diagnostics, .skillsList, .skillsValidate, .skillsShow, .routinesList, .completions, .man, .audit, .sbom, .changelog, .releaseCheck, .provenance, .sarif, .selfTest, .traces, .policy, .approvals:
     ApexAgentApp.main()
 }

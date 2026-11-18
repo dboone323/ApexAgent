@@ -1,4 +1,200 @@
 import Foundation
+import SharedModels
+import SharedLogging
+
+// MARK: - Skill Disclosure Stages & Progressive Skills (Issue #88)
+
+public enum SkillDisclosureStage: String, Codable, Sendable, Equatable {
+    case metadataOnly = "metadata_only"
+    case fullContentLoaded = "full_content_loaded"
+    case invoked = "invoked"
+}
+
+public enum ProgressiveSkillSource: Sendable, Equatable {
+    case filesystem(directoryURL: URL)
+    case mcp(serverId: UUID, serverName: String, toolName: String)
+
+    public var isMCP: Bool {
+        if case .mcp = self { return true }
+        return false
+    }
+}
+
+public struct ProgressiveSkill: @unchecked Sendable, Equatable {
+    public let id: String
+    public let name: String
+    public let version: String
+    public let description: String
+    public let triggerTerms: [String]
+    public let requiredCapabilities: [String]
+    public let source: ProgressiveSkillSource
+    public var stage: SkillDisclosureStage
+    public var instructions: String?
+    public var parameterSchema: [String: Any]?
+    public var permissionManifest: SkillPermissionManifest?
+    public var isKilled: Bool
+    public var scriptPath: String?
+
+    public init(
+        id: String,
+        name: String,
+        version: String = "1.0.0",
+        description: String,
+        triggerTerms: [String] = [],
+        requiredCapabilities: [String] = [],
+        source: ProgressiveSkillSource,
+        stage: SkillDisclosureStage = .metadataOnly,
+        instructions: String? = nil,
+        parameterSchema: [String: Any]? = nil,
+        permissionManifest: SkillPermissionManifest? = nil,
+        isKilled: Bool = false,
+        scriptPath: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.version = version
+        self.description = description
+        self.triggerTerms = triggerTerms
+        self.requiredCapabilities = requiredCapabilities
+        self.source = source
+        self.stage = stage
+        self.instructions = instructions
+        self.parameterSchema = parameterSchema
+        self.permissionManifest = permissionManifest
+        self.isKilled = isKilled
+        self.scriptPath = scriptPath
+    }
+
+    public var isFullContentLoaded: Bool {
+        stage == .fullContentLoaded || stage == .invoked
+    }
+
+    public mutating func loadFullContent() throws {
+        guard stage == .metadataOnly else { return }
+
+        if SkillSecurityManager.shared.isKilled(name: id) {
+            let reason = SkillSecurityManager.shared.killReason(for: id) ?? "Disabled by kill-switch"
+            throw NSError(
+                domain: "SkillSecurity",
+                code: 403,
+                userInfo: [NSLocalizedDescriptionKey: "Cannot load content for skill '\(id)': disabled by kill-switch (\(reason))"]
+            )
+        }
+
+        switch source {
+        case .filesystem(let dir):
+            let skillMd = dir.appendingPathComponent("SKILL.md")
+            if FileManager.default.fileExists(atPath: skillMd.path) {
+                let content = (try? String(contentsOf: skillMd, encoding: .utf8))?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                self.instructions = content
+            } else {
+                self.instructions = "# \(name)\n\(description)"
+            }
+            self.stage = .fullContentLoaded
+
+        case .mcp(_, let serverName, let toolName):
+            var text = "# MCP Skill: \(name) (`\(id)`)\n"
+            text += "Source: MCP Server '\(serverName)'\n"
+            text += "Tool: `\(toolName)`\n\n"
+            text += "## Description\n\(description)\n\n"
+            if let schema = parameterSchema,
+               let data = try? JSONSerialization.data(withJSONObject: schema, options: .prettyPrinted),
+               let schemaStr = String(data: data, encoding: .utf8) {
+                text += "## Parameters Schema\n```json\n\(schemaStr)\n```\n"
+            }
+            self.instructions = text
+            self.stage = .fullContentLoaded
+        }
+    }
+
+    public mutating func invoke(arguments: String) async throws -> String {
+        if stage == .metadataOnly {
+            try loadFullContent()
+        }
+
+        if SkillSecurityManager.shared.isKilled(name: id) {
+            let reason = SkillSecurityManager.shared.killReason(for: id) ?? "Disabled by kill-switch"
+            throw NSError(
+                domain: "SkillSecurity",
+                code: 403,
+                userInfo: [NSLocalizedDescriptionKey: "Skill '\(id)' execution refused: disabled by kill-switch (\(reason))"]
+            )
+        }
+
+        switch source {
+        case .filesystem(let dir):
+            let effectiveScript = scriptPath ?? dir.appendingPathComponent("\(id).sh").path
+            if FileManager.default.fileExists(atPath: effectiveScript) {
+                try SkillSecurityManager.shared.validateExecution(
+                    name: id,
+                    scriptPath: effectiveScript,
+                    workspacePath: dir.path
+                )
+                let result = try await executeDynamicScript(
+                    scriptPath: effectiveScript,
+                    jsonArguments: arguments
+                )
+                self.stage = .invoked
+                if result.exitCode == 0 {
+                    return result.stdout
+                } else {
+                    return "Execution failed (code \(result.exitCode))\nstdout: \(result.stdout)\nstderr: \(result.stderr)"
+                }
+            } else {
+                self.stage = .invoked
+                return instructions ?? description
+            }
+
+        case .mcp(let serverId, _, let toolName):
+            if SkillSecurityManager.shared.isKilled(name: toolName) {
+                let reason = SkillSecurityManager.shared.killReason(for: toolName) ?? "Disabled by kill-switch"
+                throw NSError(
+                    domain: "SkillSecurity",
+                    code: 403,
+                    userInfo: [NSLocalizedDescriptionKey: "MCP Tool '\(toolName)' execution refused: disabled by kill-switch (\(reason))"]
+                )
+            }
+            let config = await MainActor.run {
+                MCPManager.shared.servers.first(where: { $0.id == serverId })
+            }
+            guard let serverConfig = config else {
+                throw NSError(
+                    domain: "MCPSkill",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "MCP Server not found for skill '\(id)'"]
+                )
+            }
+            let client = await MainActor.run {
+                MCPManager.shared.getClient(for: serverConfig)
+            }
+            try await client.start()
+            let data = arguments.data(using: .utf8) ?? Data()
+            let argsDict = (try? JSONDecoder().decode([String: AnyCodable].self, from: data)) ?? [:]
+            let callResult = try await client.callTool(name: toolName, arguments: argsDict)
+            self.stage = .invoked
+            let texts = callResult.content.compactMap { $0.text }
+            if callResult.isError == true {
+                return "ERROR: " + texts.joined(separator: "\n")
+            }
+            return texts.joined(separator: "\n")
+        }
+    }
+
+    public static func == (lhs: ProgressiveSkill, rhs: ProgressiveSkill) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.name == rhs.name &&
+        lhs.version == rhs.version &&
+        lhs.description == rhs.description &&
+        lhs.triggerTerms == rhs.triggerTerms &&
+        lhs.requiredCapabilities == rhs.requiredCapabilities &&
+        lhs.source == rhs.source &&
+        lhs.stage == rhs.stage &&
+        lhs.instructions == rhs.instructions &&
+        lhs.isKilled == rhs.isKilled &&
+        lhs.scriptPath == rhs.scriptPath
+    }
+}
 
 // MARK: - SkillCatalog: SKILL.md-style manifests + trigger-term matching
 //
@@ -318,6 +514,232 @@ enum SkillCatalog {
             md += "| `\(m.id)` | **\(m.name)** | `v\(m.version)` | `\(triggers)` | \(defaultBadge) | `\(caps)` |\n"
         }
         return md
+    }
+
+    // MARK: - Progressive Disclosure & MCP Skills (Issue #88)
+
+    /// Reads frontmatter only from a SKILL.md file without loading the entire body into memory.
+    static func readFrontmatterOnly(from fileURL: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: fileURL) else { return nil }
+        defer { try? handle.close() }
+        let data = handle.readData(ofLength: 4096)
+        guard let text = String(data: data, encoding: .utf8) else { return nil }
+        let lines = text.components(separatedBy: .newlines)
+        guard let first = lines.first?.trimmingCharacters(in: .whitespaces), first == "---" else {
+            return nil
+        }
+        var fmLines = [first]
+        for line in lines.dropFirst() {
+            fmLines.append(line)
+            if line.trimmingCharacters(in: .whitespaces) == "---" {
+                break
+            }
+        }
+        return fmLines.joined(separator: "\n")
+    }
+
+    /// Loads skills under `root` with progressive disclosure: metadata only is loaded,
+    /// full markdown instructions are NOT loaded into memory until requested or invoked.
+    public static func loadProgressiveSkills(root: URL) -> [ProgressiveSkill] {
+        let fileManager = FileManager.default
+        guard let names = try? fileManager.contentsOfDirectory(atPath: root.path) else { return [] }
+        var skills: [ProgressiveSkill] = []
+
+        for name in names.sorted() {
+            let dir = root.appendingPathComponent(name, isDirectory: true)
+            let manifestUrl = dir.appendingPathComponent("manifest.json")
+            let skillMdUrl = dir.appendingPathComponent("SKILL.md")
+
+            var manifest: SkillManifest?
+            var permManifest: SkillPermissionManifest?
+
+            if fileManager.fileExists(atPath: manifestUrl.path) {
+                guard let json = ResilientJSONStore.shared.loadJSONObject(from: manifestUrl, subsystem: "SkillCatalog") else {
+                    continue
+                }
+                do {
+                    manifest = try parseManifest(json, directoryName: name)
+                    if let dict = json as? [String: Any] {
+                        permManifest = SkillPermissionManifest.from(dictionary: dict)
+                    }
+                } catch {
+                    ResilientJSONStore.shared.quarantineCorruptFile(
+                        at: manifestUrl,
+                        subsystem: "SkillCatalog",
+                        errorDescription: String(describing: error)
+                    )
+                    continue
+                }
+            }
+
+            guard fileManager.fileExists(atPath: skillMdUrl.path) else { continue }
+
+            if manifest == nil {
+                if let fm = readFrontmatterOnly(from: skillMdUrl) {
+                    manifest = synthesizeManifestFromFrontmatter(instructions: fm, directoryName: name)
+                }
+            }
+
+            guard let finalManifest = manifest else { continue }
+            let isKilled = SkillSecurityManager.shared.isKilled(name: finalManifest.id)
+
+            let scriptPath = dir.appendingPathComponent("\(finalManifest.id).sh").path
+            let hasScript = fileManager.fileExists(atPath: scriptPath)
+
+            let skill = ProgressiveSkill(
+                id: finalManifest.id,
+                name: finalManifest.name,
+                version: finalManifest.version,
+                description: finalManifest.description,
+                triggerTerms: finalManifest.triggerTerms,
+                requiredCapabilities: finalManifest.requiredCapabilities,
+                source: .filesystem(directoryURL: dir),
+                stage: .metadataOnly,
+                instructions: nil, // Full content NOT loaded until invoked
+                parameterSchema: nil,
+                permissionManifest: permManifest,
+                isKilled: isKilled,
+                scriptPath: hasScript ? scriptPath : nil
+            )
+            skills.append(skill)
+        }
+        return skills
+    }
+
+    /// Discovers skills served over real local stdio MCP servers.
+    public static func discoverMCPSkills() async -> [ProgressiveSkill] {
+        var results: [ProgressiveSkill] = []
+        let servers = await MainActor.run { MCPManager.shared.servers }
+        for server in servers {
+            let client = await MainActor.run { MCPManager.shared.getClient(for: server) }
+            do {
+                try await client.start()
+                let tools = try await client.listTools()
+                for tool in tools {
+                    let safeServerName = server.name.lowercased().replacingOccurrences(of: " ", with: "-")
+                    let safeToolName = tool.name.lowercased().replacingOccurrences(of: " ", with: "-")
+                    let skillId = "mcp-\(safeServerName)-\(safeToolName)"
+                    let isKilled = SkillSecurityManager.shared.isKilled(name: skillId)
+                        || SkillSecurityManager.shared.isKilled(name: tool.name)
+
+                    var triggers = [tool.name.lowercased()]
+                    let toolDesc = tool.description ?? ""
+                    let words = toolDesc.components(separatedBy: CharacterSet.alphanumerics.inverted)
+                        .map { $0.lowercased() }
+                        .filter { $0.count >= 4 }
+                    for w in words.prefix(5) {
+                        if !triggers.contains(w) { triggers.append(w) }
+                    }
+
+                    let permManifest = SkillPermissionManifest(
+                        name: skillId,
+                        version: "1.0.0",
+                        description: toolDesc,
+                        permissions: SkillPermissions(tools: [tool.name], allowNetwork: false, filesystemPaths: [], allowShell: false)
+                    )
+
+                    var schemaDict: [String: Any]? = nil
+                    if let data = try? JSONEncoder().encode(tool.inputSchema),
+                       let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        schemaDict = obj
+                    }
+
+                    let skill = ProgressiveSkill(
+                        id: skillId,
+                        name: tool.annotations?.title ?? tool.name,
+                        version: "1.0.0",
+                        description: toolDesc,
+                        triggerTerms: triggers,
+                        requiredCapabilities: ["mcp"],
+                        source: .mcp(serverId: server.id, serverName: server.name, toolName: tool.name),
+                        stage: .metadataOnly,
+                        instructions: nil, // Full content NOT loaded until invoked
+                        parameterSchema: schemaDict,
+                        permissionManifest: permManifest,
+                        isKilled: isKilled
+                    )
+                    results.append(skill)
+                }
+            } catch {
+                AppLog.error(.toolbox, "Failed to discover MCP skills from \(server.name): \(error.localizedDescription)")
+            }
+        }
+        return results
+    }
+
+    /// Discovers all available skills (filesystem and MCP) with progressive disclosure.
+    public static func discoverProgressiveSkills(
+        workspacePath: String? = nil,
+        includeMCP: Bool = true
+    ) async -> [ProgressiveSkill] {
+        var results: [ProgressiveSkill] = []
+        var seenIds = Set<String>()
+
+        var roots: [URL] = [ApexAgentStoragePaths.skills]
+        if let ws = workspacePath, !ws.isEmpty {
+            let wsUrl = URL(fileURLWithPath: ws)
+            roots.append(wsUrl.appendingPathComponent(".agents/skills", isDirectory: true))
+            roots.append(wsUrl.appendingPathComponent(".apex/skills", isDirectory: true))
+        }
+
+        for root in roots {
+            guard FileManager.default.fileExists(atPath: root.path) else { continue }
+            let loaded = loadProgressiveSkills(root: root)
+            for item in loaded {
+                if !seenIds.contains(item.id) {
+                    seenIds.insert(item.id)
+                    results.append(item)
+                }
+            }
+        }
+
+        if includeMCP {
+            let mcpSkills = await discoverMCPSkills()
+            for item in mcpSkills {
+                if !seenIds.contains(item.id) {
+                    seenIds.insert(item.id)
+                    results.append(item)
+                }
+            }
+        }
+
+        return results
+    }
+
+    /// Finds a progressive skill by ID across discovered locations.
+    public static func findProgressiveSkill(
+        id: String,
+        workspacePath: String? = nil
+    ) async throws -> ProgressiveSkill {
+        let all = await discoverProgressiveSkills(workspacePath: workspacePath)
+        if let found = all.first(where: { $0.id == id || $0.name.lowercased() == id.lowercased() }) {
+            return found
+        }
+        throw NSError(
+            domain: "SkillCatalog",
+            code: 404,
+            userInfo: [NSLocalizedDescriptionKey: "Skill '\(id)' not found in discovered skills"]
+        )
+    }
+
+    /// Loads the full content of a progressive skill on demand.
+    public static func loadSkillContent(
+        id: String,
+        workspacePath: String? = nil
+    ) async throws -> ProgressiveSkill {
+        var skill = try await findProgressiveSkill(id: id, workspacePath: workspacePath)
+        try skill.loadFullContent()
+        return skill
+    }
+
+    /// Invokes a skill by ID through the progressive disclosure execution path.
+    public static func invokeSkill(
+        id: String,
+        arguments: String,
+        workspacePath: String? = nil
+    ) async throws -> String {
+        var skill = try await findProgressiveSkill(id: id, workspacePath: workspacePath)
+        return try await skill.invoke(arguments: arguments)
     }
 
 }
