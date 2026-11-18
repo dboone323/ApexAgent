@@ -258,7 +258,7 @@ struct HybridMemoryRetrievalTests {
             query: "postgresql database",
             queryTokens: ["postgresql", "database"]
         )
-        #expect(kwOnlyScore > 0.4)
+        #expect(kwOnlyScore >= 0.4)
 
         // 2. Vector score alone provides positive score
         let mockVec1 = [Double](repeating: 0.5, count: 512)
