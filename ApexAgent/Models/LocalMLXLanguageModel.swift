@@ -104,19 +104,19 @@ public struct LocalMLXLanguageModelExecutor: LanguageModelExecutor, DynamicToolR
                 for segment in inst.segments {
                     if case .text(let seg) = segment { text += seg.content }
                 }
-                messages.append(["role": "system", "content": text])
+                messages.append(["role": "system", "content": SecretRedactor.redact(text: text)])
             case .prompt(let prompt):
                 var text = ""
                 for segment in prompt.segments {
                     if case .text(let seg) = segment { text += seg.content }
                 }
-                messages.append(["role": "user", "content": text])
+                messages.append(["role": "user", "content": SecretRedactor.redact(text: text)])
             case .response(let response):
                 var text = ""
                 for segment in response.segments {
                     if case .text(let seg) = segment { text += seg.content }
                 }
-                messages.append(["role": "assistant", "content": text])
+                messages.append(["role": "assistant", "content": SecretRedactor.redact(text: text)])
             case .toolCalls(let toolCalls):
                 var callsArray: [[String: Any]] = []
                 for call in toolCalls {
@@ -136,7 +136,7 @@ public struct LocalMLXLanguageModelExecutor: LanguageModelExecutor, DynamicToolR
                 for segment in toolOutput.segments {
                     if case .text(let seg) = segment { text += seg.content }
                 }
-                messages.append(["role": "tool", "content": text, "tool_call_id": toolOutput.id])
+                messages.append(["role": "tool", "content": SecretRedactor.redact(text: text), "tool_call_id": toolOutput.id])
             case .reasoning(let reasoning):
                 var text = ""
                 for segment in reasoning.segments {

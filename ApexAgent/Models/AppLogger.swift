@@ -168,13 +168,14 @@ public enum AppLog {
 
     /// Single funnel: gate → ring buffer → unified logging.
     static func log(level: AppLogLevel, category: AppLogCategory, message: String) {
+        let cleanMessage = SecretRedactor.redact(text: message)
         storage.lock.lock()
         guard level >= storage.minimumLevel else {
             storage.lock.unlock()
             return
         }
         storage.buffer.append(AppLogEntry(timestamp: Date(), level: level,
-                                          category: category, message: message))
+                                          category: category, message: cleanMessage))
         if storage.buffer.count > bufferCapacity {
             storage.buffer.removeFirst(storage.buffer.count - bufferCapacity)
         }
@@ -183,11 +184,11 @@ public enum AppLog {
         // Dynamic content stays private in unified logging (Console redacts it).
         let logger = logger(for: category)
         switch level {
-        case .debug: logger.debug("\(message, privacy: .private)")
-        case .info: logger.info("\(message, privacy: .private)")
-        case .notice: logger.notice("\(message, privacy: .private)")
-        case .error: logger.error("\(message, privacy: .private)")
-        case .fault: logger.fault("\(message, privacy: .private)")
+        case .debug: logger.debug("\(cleanMessage, privacy: .private)")
+        case .info: logger.info("\(cleanMessage, privacy: .private)")
+        case .notice: logger.notice("\(cleanMessage, privacy: .private)")
+        case .error: logger.error("\(cleanMessage, privacy: .private)")
+        case .fault: logger.fault("\(cleanMessage, privacy: .private)")
         }
     }
 }

@@ -253,21 +253,21 @@ public struct GitHubCopilotLanguageModelExecutor: LanguageModelExecutor, Dynamic
                 for seg in inst.segments {
                     if case .text(let t) = seg { text += t.content }
                 }
-                messages.append(["role": "system", "content": text])
+                messages.append(["role": "system", "content": SecretRedactor.redact(text: text)])
 
             case .prompt(let prompt):
                 var text = ""
                 for seg in prompt.segments {
                     if case .text(let t) = seg { text += t.content }
                 }
-                messages.append(["role": "user", "content": text])
+                messages.append(["role": "user", "content": SecretRedactor.redact(text: text)])
 
             case .response(let resp):
                 var text = ""
                 for seg in resp.segments {
                     if case .text(let t) = seg { text += t.content }
                 }
-                messages.append(["role": "assistant", "content": text])
+                messages.append(["role": "assistant", "content": SecretRedactor.redact(text: text)])
 
             case .toolCalls(let toolCalls):
                 var calls: [[String: Any]] = []
@@ -298,7 +298,7 @@ public struct GitHubCopilotLanguageModelExecutor: LanguageModelExecutor, Dynamic
                 messages.append([
                     "role": "tool",
                     "tool_call_id": "call_0",
-                    "content": text
+                    "content": SecretRedactor.redact(text: text)
                 ])
 
             case .reasoning(let reasoning):

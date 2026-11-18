@@ -93,21 +93,21 @@ public struct RunTraceEvent: Codable, Sendable, Identifiable, Equatable {
         self.timestamp = timestamp
         self.kind = kind
         self.model = model
-        self.promptSummary = promptSummary
+        self.promptSummary = promptSummary.map { Self.sanitizeSummary($0) }
         self.tokenCounts = tokenCounts
         self.durationMs = durationMs
         self.toolName = toolName
-        self.argumentsSummary = argumentsSummary
-        self.resultSummary = resultSummary
+        self.argumentsSummary = argumentsSummary.map { Self.sanitizeSummary($0) }
+        self.resultSummary = resultSummary.map { Self.sanitizeSummary($0) }
         self.toolStatus = toolStatus
         self.memoryTier = memoryTier
-        self.filePath = filePath
+        self.filePath = filePath.map { SecretRedactor.redact(text: $0) }
         self.bytesTransferred = bytesTransferred
-        self.memoryDetail = memoryDetail
+        self.memoryDetail = memoryDetail.map { Self.sanitizeSummary($0) }
         self.parentRunId = parentRunId
         self.subAgentId = subAgentId
         self.agentType = agentType
-        self.contextSummary = contextSummary
+        self.contextSummary = contextSummary.map { Self.sanitizeSummary($0) }
         self.verdict = verdict
         self.verdictSource = verdictSource
         self.rule = rule
@@ -236,26 +236,28 @@ public struct RunTraceEvent: Codable, Sendable, Identifiable, Equatable {
     }
 
     public var eventDescription: String {
+        let desc: String
         switch kind {
         case .modelCall:
             let modelName = model ?? "unknown-model"
             let prompt = promptSummary ?? ""
             let ms = durationMs != nil ? String(format: " (%.1fms)", durationMs!) : ""
-            return "modelCall: \(modelName)\(ms) - \"\(prompt)\""
+            desc = "modelCall: \(modelName)\(ms) - \"\(prompt)\""
         case .toolCall:
             let name = toolName ?? "unknown-tool"
             let stat = toolStatus ?? "success"
-            return "toolCall: \(name) [\(stat)] args=\"\(argumentsSummary ?? "")\" result=\"\(resultSummary ?? "")\""
+            desc = "toolCall: \(name) [\(stat)] args=\"\(argumentsSummary ?? "")\" result=\"\(resultSummary ?? "")\""
         case .memoryRead:
-            return "memoryRead [\(memoryTier ?? "unknown")]: \(filePath ?? "") \(memoryDetail ?? "")"
+            desc = "memoryRead [\(memoryTier ?? "unknown")]: \(filePath ?? "") \(memoryDetail ?? "")"
         case .memoryWrite:
             let bytes = bytesTransferred != nil ? " (\(bytesTransferred!) bytes)" : ""
-            return "memoryWrite [\(memoryTier ?? "unknown")]: \(filePath ?? "")\(bytes) \(memoryDetail ?? "")"
+            desc = "memoryWrite [\(memoryTier ?? "unknown")]: \(filePath ?? "")\(bytes) \(memoryDetail ?? "")"
         case .subAgentHandoff:
-            return "subAgentHandoff: parent=\(parentRunId ?? "") → subAgent=\(subAgentId ?? "") (\(agentType ?? "")) context=\"\(contextSummary ?? "")\""
+            desc = "subAgentHandoff: parent=\(parentRunId ?? "") → subAgent=\(subAgentId ?? "") (\(agentType ?? "")) context=\"\(contextSummary ?? "")\""
         case .approval:
-            return "approval: \(toolName ?? "") -> \(verdict ?? "") via \(verdictSource ?? "unknown")" + (rule != nil ? " [rule: \(rule!)]" : "")
+            desc = "approval: \(toolName ?? "") -> \(verdict ?? "") via \(verdictSource ?? "unknown")" + (rule != nil ? " [rule: \(rule!)]" : "")
         }
+        return SecretRedactor.redact(text: desc)
     }
 }
 
@@ -285,7 +287,10 @@ public struct RunTrace: Codable, Sendable, Identifiable, Equatable {
         self.finishedAt = finishedAt
         self.status = status
         self.events = events
-        self.metadata = metadata
+        // Secrets hygiene: redact metadata values to prevent credentials from persisting in trace JSON
+        self.metadata = Dictionary(uniqueKeysWithValues: metadata.map { key, value in
+            (key, SecretRedactor.redact(text: value))
+        })
     }
 
     public static func generateRunId() -> String {

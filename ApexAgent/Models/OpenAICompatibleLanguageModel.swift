@@ -142,7 +142,7 @@ public struct OpenAICompatibleLanguageModelExecutor: LanguageModelExecutor, Dyna
                     }
                 }
                 if !text.isEmpty {
-                    messages.append(["role": "system", "content": text])
+                    messages.append(["role": "system", "content": SecretRedactor.redact(text: text)])
                 }
 
             case .prompt(let prompt):
@@ -152,7 +152,7 @@ public struct OpenAICompatibleLanguageModelExecutor: LanguageModelExecutor, Dyna
                         text += t.content
                     }
                 }
-                messages.append(["role": "user", "content": text])
+                messages.append(["role": "user", "content": SecretRedactor.redact(text: text)])
 
             case .response(let response):
                 var text = ""
@@ -161,7 +161,7 @@ public struct OpenAICompatibleLanguageModelExecutor: LanguageModelExecutor, Dyna
                         text += t.content
                     }
                 }
-                messages.append(["role": "assistant", "content": text])
+                messages.append(["role": "assistant", "content": SecretRedactor.redact(text: text)])
 
             case .toolCalls(let toolCalls):
                 var calls: [[String: Any]] = []
@@ -194,7 +194,7 @@ public struct OpenAICompatibleLanguageModelExecutor: LanguageModelExecutor, Dyna
                 messages.append([
                     "role": "tool",
                     "tool_call_id": "call_0",
-                    "content": text
+                    "content": SecretRedactor.redact(text: text)
                 ])
 
             case .reasoning(let reasoning):

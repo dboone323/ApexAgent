@@ -110,13 +110,27 @@ public final class AgentRequestRouter {
             isDirectMention: request.isDirectMention
         )
 
+        // Secrets hygiene: credentials never enter model context (issue #108).
+        // Ensure prompt, instructions, and conversation history are redacted before passing to models.
+        let sanitizedPrompt = SecretRedactor.redact(text: request.prompt)
+        let sanitizedInstructions = SecretRedactor.redact(text: effectiveInstructions)
+        let sanitizedHistory = history.map { msg in
+            ChatMessage(
+                id: msg.id,
+                role: msg.role,
+                content: SecretRedactor.redact(text: msg.content),
+                isStreaming: msg.isStreaming,
+                attachments: msg.attachments
+            )
+        }
+
         // 3. Build candidate chain
         let candidates = ModelRegistry.buildCandidateChain(
             preferred: effectiveProvider,
             bot: bot,
-            prompt: request.prompt,
-            history: history,
-            instructions: effectiveInstructions,
+            prompt: sanitizedPrompt,
+            history: sanitizedHistory,
+            instructions: sanitizedInstructions,
             tools: effectiveAllowedTools ?? [],
             hasAttachments: !request.attachments.isEmpty
         )
@@ -124,10 +138,10 @@ public final class AgentRequestRouter {
         // 4. Execute with bounded fallback
         let terminalState = await ProviderFallbackExecutor.shared.execute(
             candidates: candidates,
-            prompt: request.prompt,
+            prompt: sanitizedPrompt,
             attachments: request.attachments,
-            history: history,
-            instructions: effectiveInstructions,
+            history: sanitizedHistory,
+            instructions: sanitizedInstructions,
             toolCallingMode: effectiveToolCallingMode,
             bot: bot,
             session: session,

@@ -93,7 +93,7 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                         systemText += textSeg.content
                     }
                 }
-                ollamaMessages.append(["role": "system", "content": systemText])
+                ollamaMessages.append(["role": "system", "content": SecretRedactor.redact(text: systemText)])
             case .prompt(let prompt):
                 var userText = ""
                 for segment in prompt.segments {
@@ -101,7 +101,7 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                         userText += textSeg.content
                     }
                 }
-                ollamaMessages.append(["role": "user", "content": userText])
+                ollamaMessages.append(["role": "user", "content": SecretRedactor.redact(text: userText)])
             case .response(let response):
                 var assistantText = ""
                 for segment in response.segments {
@@ -109,7 +109,7 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                         assistantText += textSeg.content
                     }
                 }
-                ollamaMessages.append(["role": "assistant", "content": assistantText])
+                ollamaMessages.append(["role": "assistant", "content": SecretRedactor.redact(text: assistantText)])
             case .toolCalls(let toolCalls):
                 var callsArray: [[String: Any]] = []
                 for call in toolCalls {
@@ -137,7 +137,7 @@ public struct LocalOllamaLanguageModelExecutor: LanguageModelExecutor, DynamicTo
                 }
                 ollamaMessages.append([
                     "role": "tool",
-                    "content": contentText,
+                    "content": SecretRedactor.redact(text: contentText),
                     "name": toolOutput.toolName,
                     "tool_call_id": toolOutput.id
                 ])

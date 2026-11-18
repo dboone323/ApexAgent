@@ -145,7 +145,7 @@ struct NativeAppleEngine: AgentEngine {
         } else {
             semanticContext = ""
         }
-        let promptWithContext = prompt + semanticContext
+        let promptWithContext = SecretRedactor.redact(text: prompt + semanticContext)
         let explicitToolDirective: String
         if lowerPrompt.contains("convene_meeting") {
             explicitToolDirective = "The user explicitly requested convene_meeting. Invoke convene_meeting now, preserve the requested topic and participant list exactly, and execute the concrete discussion. Do not substitute a bot-status or readiness report.\n\n"
@@ -249,11 +249,11 @@ struct NativeAppleEngine: AgentEngine {
             // and is also a production-quality safeguard.
             do {
                 var fullText = ""
-                var currentPrompt = explicitToolDirective + promptWithContext
+                var currentPrompt = SecretRedactor.redact(text: explicitToolDirective + promptWithContext)
                 let maxTurns = 5
 
                 for turn in 0..<maxTurns {
-                    let turnPrompt = currentPrompt
+                    let turnPrompt = SecretRedactor.redact(text: currentPrompt)
                     let timeoutSeconds = timeoutOverride ?? (customSession == nil ? 180 : 90)
                     let coordinator = PromptCancellationCoordinator()
                     let responseText: String = try await withTaskCancellationHandler {
@@ -418,11 +418,11 @@ struct FMCLIAgentEngine: AgentEngine {
             : backend
 
         var args = ["respond", "--model", effectiveBackend.rawValue, "--no-stream"]
-        let cleanInstructions = instructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanInstructions = SecretRedactor.redact(text: instructions.trimmingCharacters(in: .whitespacesAndNewlines))
         if !explicitlyNoTools && !cleanInstructions.isEmpty {
             args += ["--instructions", cleanInstructions]
         }
-        args.append(prompt.trimmingCharacters(in: .whitespacesAndNewlines))
+        args.append(SecretRedactor.redact(text: prompt.trimmingCharacters(in: .whitespacesAndNewlines)))
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: fmPath)

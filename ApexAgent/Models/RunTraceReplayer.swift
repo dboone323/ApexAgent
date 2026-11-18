@@ -68,7 +68,7 @@ public struct RunTraceReplayReport: Codable, Sendable, Equatable {
             }
         }
         lines.append("\nReplay finished successfully (\(totalEvents) steps replayed in exact recorded order).")
-        return lines.joined(separator: "\n")
+        return SecretRedactor.redact(text: lines.joined(separator: "\n"))
     }
 
     public func toJSON() -> String {
@@ -94,23 +94,24 @@ public enum RunTraceReplayer {
         var replayed: [ReplayedEvent] = []
 
         for ev in sortedEvents {
-            let summary = ev.eventDescription
-            let detail: String
+            let summary = SecretRedactor.redact(text: ev.eventDescription)
+            let rawDetail: String
             switch ev.kind {
             case .modelCall:
                 let tokenStr = ev.tokenCounts.map { "\($0.totalTokens)" } ?? "not reported"
-                detail = "model=\(ev.model ?? "") tokens=\(tokenStr) duration=\(String(format: "%.1f", ev.durationMs ?? 0.0))ms"
+                rawDetail = "model=\(ev.model ?? "") tokens=\(tokenStr) duration=\(String(format: "%.1f", ev.durationMs ?? 0.0))ms"
             case .toolCall:
-                detail = "args=\(ev.argumentsSummary ?? "") status=\(ev.toolStatus ?? "") result=\(ev.resultSummary ?? "")"
+                rawDetail = "args=\(ev.argumentsSummary ?? "") status=\(ev.toolStatus ?? "") result=\(ev.resultSummary ?? "")"
             case .memoryRead:
-                detail = "tier=\(ev.memoryTier ?? "") path=\(ev.filePath ?? "")"
+                rawDetail = "tier=\(ev.memoryTier ?? "") path=\(ev.filePath ?? "")"
             case .memoryWrite:
-                detail = "tier=\(ev.memoryTier ?? "") path=\(ev.filePath ?? "") bytes=\(ev.bytesTransferred ?? 0)"
+                rawDetail = "tier=\(ev.memoryTier ?? "") path=\(ev.filePath ?? "") bytes=\(ev.bytesTransferred ?? 0)"
             case .subAgentHandoff:
-                detail = "parent=\(ev.parentRunId ?? "") subAgent=\(ev.subAgentId ?? "") type=\(ev.agentType ?? "")"
+                rawDetail = "parent=\(ev.parentRunId ?? "") subAgent=\(ev.subAgentId ?? "") type=\(ev.agentType ?? "")"
             case .approval:
-                detail = "tool=\(ev.toolName ?? "") verdict=\(ev.verdict ?? "") source=\(ev.verdictSource ?? "") rule=\(ev.rule ?? "none")"
+                rawDetail = "tool=\(ev.toolName ?? "") verdict=\(ev.verdict ?? "") source=\(ev.verdictSource ?? "") rule=\(ev.rule ?? "none")"
             }
+            let detail = SecretRedactor.redact(text: rawDetail)
 
             replayed.append(ReplayedEvent(
                 sequence: ev.sequence,
