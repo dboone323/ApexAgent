@@ -219,6 +219,9 @@ enum SkillCatalog {
     ) -> [SkillManifest] {
         let loweredPrompt = prompt.lowercased()
         return skills.compactMap { entry in
+            // Issue #107: A killed skill must never match or activate
+            guard !SkillSecurityManager.shared.isKilled(name: entry.manifest.id) else { return nil }
+
             let isEnabled = enabledIds.isEmpty
                 ? entry.manifest.defaultEnabled
                 : enabledIds.contains(entry.manifest.id)
