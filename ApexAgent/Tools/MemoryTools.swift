@@ -111,6 +111,112 @@ struct StoreMemoryTool: Tool {
     }
 }
 
+// MARK: - Hybrid Memory Search Tool
+
+struct MemorySearchTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
+    let name = "memory_search"
+    let description = "Searches memory and knowledge tiers using hybrid (vector + keyword) retrieval. Returns ranked results with exact file:line citations and relevance scores."
+
+    @Generable
+    struct Arguments: Decodable {
+        @Guide(description: "Search query or natural language question to find relevant memories.")
+        var query: String
+
+        @Guide(description: "Optional tier filter ('curated', 'daily', 'persona', 'user'). If omitted, searches all tiers.")
+        var category: String?
+
+        @Guide(description: "Maximum number of results to return (default: 5).")
+        var limit: Int?
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+            return await MainActor.run {
+                let activeSpace = SpaceManager.shared.activeSpace
+                let ws = orchestrator.orchestrator.currentWorkspacePath
+                let maxResults = arguments.limit ?? 5
+
+                let results = SpaceMemoryTierManager.shared.hybridSearch(
+                    query: arguments.query,
+                    space: activeSpace,
+                    workspacePath: ws,
+                    limit: maxResults,
+                    tierFilter: arguments.category
+                )
+
+                guard !results.isEmpty else {
+                    return "No memory records found matching query: '\(arguments.query)'."
+                }
+
+                var output = "🧠 Found \(results.count) memory match(es) for query: '\(arguments.query)':\n"
+                for (index, r) in results.enumerated() {
+                    let sPct = Int((r.score * 100).rounded())
+                    let vPct = Int((r.vectorScore * 100).rounded())
+                    let kPct = Int((r.keywordScore * 100).rounded())
+                    output += "\n[\(index + 1)] Source: \(r.citation) (Score: \(sPct)%, Vector: \(vPct)%, Keyword: \(kPct)%)\n"
+                    output += "Tier: \(r.tier) | File: \(r.filePath) (Lines \(r.startLine)-\(r.endLine))\n"
+                    output += "\(r.content)\n"
+                }
+
+                return output
+            }
+        }
+    }
+}
+
+// MARK: - Exact Range Memory Get Tool
+
+struct MemoryGetTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
+    let name = "memory_get"
+    let description = "Retrieves an exact line-bounded span from a memory or workspace file. Returns the exact lines requested with a source citation header."
+
+    @Generable
+    struct Arguments: Decodable {
+        @Guide(description: "Path to the target file (absolute or relative to workspace).")
+        var filePath: String
+
+        @Guide(description: "1-based starting line number.")
+        var startLine: Int
+
+        @Guide(description: "1-based ending line number.")
+        var endLine: Int
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
+            return await MainActor.run {
+                let activeSpace = SpaceManager.shared.activeSpace
+                let ws = orchestrator.orchestrator.currentWorkspacePath
+
+                do {
+                    let span = try SpaceMemoryTierManager.shared.getExactSpan(
+                        filePath: arguments.filePath,
+                        startLine: arguments.startLine,
+                        endLine: arguments.endLine,
+                        space: activeSpace,
+                        workspacePath: ws
+                    )
+                    return span.formattedDescription
+                } catch {
+                    return "ERROR: Failed to retrieve exact span: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+}
+
 // MARK: - Search Memory Tool
 
 struct SearchMemoryTool: Tool {
@@ -202,6 +308,16 @@ struct SearchMemoryTool: Tool {
                             if curated.localizedCaseInsensitiveContains(query) {
                                 if !output.isEmpty { output += "\n\n" }
                                 output += "📌 Curated Space Memory (MEMORY.md):\n\(curated)\n"
+                            }
+                        }
+
+                        // Search hybrid memory retriever with citations
+                        let hybridMatches = SpaceMemoryTierManager.shared.hybridSearch(query: query, space: activeSpace, workspacePath: ws, limit: 3)
+                        if !hybridMatches.isEmpty {
+                            if !output.isEmpty { output += "\n\n" }
+                            output += "🧠 Hybrid Memory Retrieval (\(hybridMatches.count) cited match(es)):\n"
+                            for match in hybridMatches {
+                                output += "\n--- Source: \(match.citation) [Score: \(Int((match.score * 100).rounded()))%] ---\n\(match.content)\n"
                             }
                         }
                     } else if arguments.category?.lowercased().trimTime() == "daily" || arguments.category?.lowercased().trimTime() == "notes" {

@@ -4,7 +4,7 @@ import Observation
 // Tools that are safe to speculate on (read-only, idempotent, no side effects)
 let speculableToolNames: Set<String> = [
     "read_file", "file_search", "list_directory",
-    "get_system_info", "search_memory", "query_logs"
+    "get_system_info", "search_memory", "memory_search", "memory_get", "query_logs"
 ]
 
 @Observable

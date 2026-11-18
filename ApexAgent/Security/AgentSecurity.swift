@@ -28,6 +28,8 @@ enum AgentSecurity {
         "search_files": .low,
         "spotlight_search": .low,
         "search_memory": .low,
+        "memory_search": .low,
+        "memory_get": .low,
         "get_system_info": .low,
         "get_running_processes": .low,
         "get_frontmost_app": .low,

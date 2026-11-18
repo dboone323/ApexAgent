@@ -81,6 +81,20 @@ public final class AgentRequestRouter {
             }
         }
 
+        let retrievedContext = await MainActor.run {
+            let activeSpace = SpaceManager.shared.activeSpace
+            let query = request.intentText.isEmpty ? request.prompt : request.intentText
+            return SpaceMemoryTierManager.shared.retrieveRelevantContext(
+                query: query,
+                space: activeSpace,
+                workspacePath: workspacePath,
+                limit: 3
+            )
+        }
+        if !retrievedContext.isEmpty && !baseInstructions.contains("=== RETRIEVED MEMORY CONTEXT") {
+            baseInstructions += "\n\n" + retrievedContext
+        }
+
         let verifiedInstructions = AgentExecutionVerification.applyingDirective(
             to: baseInstructions
         )

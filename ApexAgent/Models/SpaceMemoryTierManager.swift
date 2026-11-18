@@ -432,23 +432,89 @@ public final class SpaceMemoryTierManager {
     // MARK: - 5. Composed Memory Tier Instructions
 
     /// Builds a combined prompt block with all active files-first memory tiers:
-    /// MEMORY.md, PERSONA.md, and USER.md.
+    /// MEMORY.md, PERSONA.md, and USER.md, along with source citations and citation directives.
     public func buildComposedMemoryInstructions(space: SpaceModel? = nil, workspacePath: String? = nil) -> String {
         var blocks: [String] = []
 
         if let curatedMemory = loadCuratedMemory(for: space, workspacePath: workspacePath), !curatedMemory.isEmpty {
-            blocks.append("=== SPACE CURATED MEMORY (MEMORY.md) ===\n\(curatedMemory)")
+            let lineCount = max(1, curatedMemory.components(separatedBy: "\n").count)
+            blocks.append("=== SPACE CURATED MEMORY (MEMORY.md) ===\n[Source: MEMORY.md:1-\(lineCount)]\n\(curatedMemory)")
         }
 
         if let persona = loadPersona(for: space, workspacePath: workspacePath), !persona.isEmpty {
-            blocks.append("=== AGENT PERSONA & BEHAVIOUR (PERSONA.md) ===\n\(persona)")
+            let lineCount = max(1, persona.components(separatedBy: "\n").count)
+            blocks.append("=== AGENT PERSONA & BEHAVIOUR (PERSONA.md) ===\n[Source: PERSONA.md:1-\(lineCount)]\n\(persona)")
         }
 
         if let userContext = loadUserContext(for: space, workspacePath: workspacePath), !userContext.isEmpty {
-            blocks.append("=== USER PROFILE & PREFERENCES (USER.md) ===\n\(userContext)")
+            let lineCount = max(1, userContext.components(separatedBy: "\n").count)
+            blocks.append("=== USER PROFILE & PREFERENCES (USER.md) ===\n[Source: USER.md:1-\(lineCount)]\n\(userContext)")
+        }
+
+        if !blocks.isEmpty {
+            blocks.append("CITATION DIRECTIVE: When citing facts from memory, persona, user preferences, or daily notes, cite the exact source file and line range (e.g. [MEMORY.md:5-9] or [daily/YYYY-MM-DD.md:10-15]).")
         }
 
         return blocks.joined(separator: "\n\n")
+    }
+
+    // MARK: - 6. Hybrid Retrieval & Exact Span API
+
+    /// Retrieves relevant memory context using hybrid search and formats it for agent context assembly with citations.
+    public func retrieveRelevantContext(
+        query: String,
+        space: SpaceModel? = nil,
+        workspacePath: String? = nil,
+        limit: Int = 3
+    ) -> String {
+        let results = hybridSearch(query: query, space: space, workspacePath: workspacePath, limit: limit)
+        guard !results.isEmpty else { return "" }
+
+        var output = "=== RETRIEVED MEMORY CONTEXT (HYBRID SEARCH) ===\n"
+        output += "The following memory excerpts were retrieved as relevant to the current user query.\n"
+        output += "When answering using information from this context, you MUST cite the exact source using [file:line] format.\n\n"
+
+        for result in results {
+            let sPct = Int((result.score * 100).rounded())
+            output += "Source: \(result.citation) (Relevance: \(sPct)%)\n"
+            output += "\(result.content)\n\n"
+        }
+
+        return output.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Performs hybrid search across memory tiers using HybridMemoryRetriever.
+    public func hybridSearch(
+        query: String,
+        space: SpaceModel? = nil,
+        workspacePath: String? = nil,
+        limit: Int = 10,
+        tierFilter: String? = nil
+    ) -> [MemorySearchResult] {
+        return HybridMemoryRetriever.shared.search(
+            query: query,
+            space: space,
+            workspacePath: workspacePath,
+            limit: limit,
+            tierFilter: tierFilter
+        )
+    }
+
+    /// Exact range retrieval using HybridMemoryRetriever.
+    public func getExactSpan(
+        filePath: String,
+        startLine: Int,
+        endLine: Int,
+        space: SpaceModel? = nil,
+        workspacePath: String? = nil
+    ) throws -> MemorySpan {
+        return try HybridMemoryRetriever.shared.getExactSpan(
+            filePath: filePath,
+            startLine: startLine,
+            endLine: endLine,
+            space: space,
+            workspacePath: workspacePath
+        )
     }
 
     // MARK: - Private Helpers

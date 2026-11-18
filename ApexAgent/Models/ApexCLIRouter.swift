@@ -206,6 +206,9 @@ public enum ApexCLIRouter {
             let subArgs = Array(remaining.dropFirst())
             return ParsedCLIInvocation(command: .spaceCLI(subcommandArgs: subArgs), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
+        case "memory-search", "--memory-search", "memory-get", "--memory-get", "memory":
+            return ParsedCLIInvocation(command: .spaceCLI(subcommandArgs: remaining), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
         case "gate-queue", "--gate-queue", "gate-worker":
             let subArgs = Array(remaining.dropFirst())
             return ParsedCLIInvocation(command: .gateQueue(subcommandArgs: subArgs), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
