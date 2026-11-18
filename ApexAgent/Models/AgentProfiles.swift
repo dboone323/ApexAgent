@@ -285,6 +285,12 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
             if allowedTools.contains("search_memory") {
                 SearchMemoryTool(orchestrator: orchestrator)
             }
+            if allowedTools.contains("memory_search") {
+                MemorySearchTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("memory_get") {
+                MemoryGetTool(orchestrator: orchestrator)
+            }
             if allowedTools.contains("control_app") {
                 ApplicationControlTool(orchestrator: orchestrator)
             }

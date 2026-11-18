@@ -502,6 +502,70 @@
     }
   },
   {
+    "description" : "Searches memory and knowledge tiers using hybrid (vector + keyword) retrieval. Returns ranked results with exact file:line citations and relevance scores.",
+    "name" : "memory_search",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "category" : {
+          "description" : "Optional tier filter ('curated', 'daily', 'persona', 'user'). If omitted, searches all tiers.",
+          "type" : "string"
+        },
+        "limit" : {
+          "description" : "Maximum number of results to return (default: 5).",
+          "type" : "integer"
+        },
+        "query" : {
+          "description" : "Search query or natural language question to find relevant memories.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "query"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "query",
+        "category",
+        "limit"
+      ]
+    }
+  },
+  {
+    "description" : "Retrieves an exact line-bounded span from a memory or workspace file. Returns the exact lines requested with a source citation header.",
+    "name" : "memory_get",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "endLine" : {
+          "description" : "1-based ending line number.",
+          "type" : "integer"
+        },
+        "filePath" : {
+          "description" : "Path to the target file (absolute or relative to workspace).",
+          "type" : "string"
+        },
+        "startLine" : {
+          "description" : "1-based starting line number.",
+          "type" : "integer"
+        }
+      },
+      "required" : [
+        "filePath",
+        "startLine",
+        "endLine"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "filePath",
+        "startLine",
+        "endLine"
+      ]
+    }
+  },
+  {
     "description" : "Deletes an agent memory record by key, or clears all memory records matching a category.",
     "name" : "delete_memory",
     "parameters" : {

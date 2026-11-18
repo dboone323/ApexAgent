@@ -66,7 +66,7 @@ public enum ApprovalAutoReview {
 
     private static let readOnlyTools: Set<String> = [
         "read_file", "file_read", "list_directory", "list_dir", "directory_tree",
-        "find_by_name", "system_info", "process_list", "search_memory", "get_frontmost_app",
+        "find_by_name", "system_info", "process_list", "search_memory", "memory_search", "memory_get", "get_frontmost_app",
         "clipboard_read", "screenshot", "read_resource", "list_resources", "web_search"
     ]
 

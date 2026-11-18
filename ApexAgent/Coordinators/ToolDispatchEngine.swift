@@ -48,6 +48,8 @@ final class ToolDispatchEngine {
             AnyExecutableTool(GetFrontmostAppTool(orchestrator: orchestrator)),
             AnyExecutableTool(StoreMemoryTool(orchestrator: orchestrator)),
             AnyExecutableTool(SearchMemoryTool(orchestrator: orchestrator)),
+            AnyExecutableTool(MemorySearchTool(orchestrator: orchestrator)),
+            AnyExecutableTool(MemoryGetTool(orchestrator: orchestrator)),
             AnyExecutableTool(DeleteMemoryTool(orchestrator: orchestrator)),
             AnyExecutableTool(ApplicationControlTool(orchestrator: orchestrator)),
             AnyExecutableTool(AccessibilityControlTool(orchestrator: orchestrator)),

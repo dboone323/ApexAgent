@@ -81,7 +81,7 @@ public enum SpeculativeExecutionAuditor {
     /// Safe tools permitted to run speculatively without user confirmation.
     public static let readOnlySpeculativeTools: Set<String> = [
         "read_file", "file_search", "list_directory",
-        "get_system_info", "search_memory", "query_logs", "fetch_web_url"
+        "get_system_info", "search_memory", "memory_search", "memory_get", "query_logs", "fetch_web_url"
     ]
 
     // MARK: - Cycle Detection & Topological Sort

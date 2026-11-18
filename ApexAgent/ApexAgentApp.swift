@@ -521,6 +521,52 @@ public func runSpaceCLIMode(subcommandArgs: [String]) async {
         for match in results {
             printOut("- [\(match.date)] \(match.title) (score: \(String(format: "%.1f", match.score)))\n  Snippet: \(match.snippet)")
         }
+    } else if let searchIdx = subcommandArgs.firstIndex(where: { $0 == "memory-search" || $0 == "search" }), searchIdx + 1 < subcommandArgs.count {
+        let remainingArgs = Array(subcommandArgs[(searchIdx + 1)...])
+        let space: SpaceModel?
+        let query: String
+        if let first = remainingArgs.first,
+           let matchedSpace = SpaceManager.shared.spaces.first(where: {
+               $0.name.localizedCaseInsensitiveCompare(first) == .orderedSame || $0.id.uuidString.hasPrefix(first)
+           }) {
+            space = matchedSpace
+            query = remainingArgs.dropFirst().joined(separator: " ")
+        } else {
+            space = SpaceManager.shared.activeSpace ?? SpaceManager.shared.spaces.first
+            query = remainingArgs.joined(separator: " ")
+        }
+
+        printOut("Executing Hybrid Memory Search for: '\(query)'...")
+        let results = SpaceMemoryTierManager.shared.hybridSearch(query: query, space: space, limit: 10)
+        printOut("Found \(results.count) ranked memory match(es):")
+        for (i, r) in results.enumerated() {
+            let sPct = Int((r.score * 100).rounded())
+            let vPct = Int((r.vectorScore * 100).rounded())
+            let kPct = Int((r.keywordScore * 100).rounded())
+            printOut("\n[\(i + 1)] Source: \(r.citation) (Score: \(sPct)%, Vector: \(vPct)%, Keyword: \(kPct)%)")
+            printOut("Tier: \(r.tier) | File: \(r.filePath) (Lines \(r.startLine)-\(r.endLine))")
+            printOut("Content:\n\(r.content)")
+        }
+    } else if let getIdx = subcommandArgs.firstIndex(where: { $0 == "memory-get" || $0 == "get" }), getIdx + 3 < subcommandArgs.count {
+        let filePath = subcommandArgs[getIdx + 1]
+        let startLine = Int(subcommandArgs[getIdx + 2]) ?? 1
+        let endLine = Int(subcommandArgs[getIdx + 3]) ?? startLine
+        let space = SpaceManager.shared.activeSpace ?? SpaceManager.shared.spaces.first
+
+        do {
+            let span = try SpaceMemoryTierManager.shared.getExactSpan(
+                filePath: filePath,
+                startLine: startLine,
+                endLine: endLine,
+                space: space
+            )
+            printOut("=== EXACT RETRIEVAL: \(span.citation) ===")
+            printOut("File: \(span.filePath) (Lines \(span.startLine)-\(span.endLine) of \(span.totalLinesInFile))")
+            printOut("Content:\n\(span.content)")
+            printOut("=========================================")
+        } catch {
+            printErr("Failed to retrieve exact span: \(error.localizedDescription)")
+        }
     } else if let runIdx = subcommandArgs.firstIndex(of: "run"), runIdx + 2 < subcommandArgs.count {
         let spaceName = subcommandArgs[runIdx + 1]
         let promptText = subcommandArgs[(runIdx + 2)...].joined(separator: " ")
