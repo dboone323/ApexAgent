@@ -555,6 +555,7 @@
 		C22E2DE64C4703F6D693EFCE /* CloudGeminiLanguageModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D438ECBA5E6FA137A42141 /* CloudGeminiLanguageModel.swift */; };
 		C3857B093D4ED7281F1C8F3B /* ProcessRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 682BF6DA90FF9C428499CB92 /* ProcessRunner.swift */; };
 		C488504C0CEC4D50D683CEB8 /* DynamicToolRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF48EBF7067949B2BC247A27 /* DynamicToolRoutingTests.swift */; };
+		C4B2E086292AFEE8C993AE17 /* AgentSkillsLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C440A7D0B6E87469657664 /* AgentSkillsLiveVerifier.swift */; };
 		C4B4195D8E0D75F5FE7A1563 /* PlaybookExecutionAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7329B88CD8A4BF12A4D90F20 /* PlaybookExecutionAuditorTests.swift */; };
 		C62BA40A39EC1024FB073312 /* SharedLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6E862FC7A7EB6367D85FAAF /* SharedLogger.swift */; };
 		C65768C7BF401CE6221D5AC0 /* CryptographicAuditChain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25818F45580683370B5C057C /* CryptographicAuditChain.swift */; };
@@ -1564,6 +1565,7 @@
 		E47159FE60C60728E4EC287D /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		E538597D4C821CC359930D8B /* SecurityAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityAuditor.swift; sourceTree = "<group>"; };
 		E6BB3D379F4131D7773F53DD /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
+		E6C440A7D0B6E87469657664 /* AgentSkillsLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentSkillsLiveVerifier.swift; sourceTree = "<group>"; };
 		E6E862FC7A7EB6367D85FAAF /* SharedLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedLogger.swift; sourceTree = "<group>"; };
 		E7D2D0D85063D0D8705E2834 /* VoiceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceController.swift; sourceTree = "<group>"; };
 		E82B03F0EA3321EF8ACF973C /* PlaybookExecutionAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybookExecutionAuditor.swift; sourceTree = "<group>"; };
@@ -1992,6 +1994,7 @@
 				01D36BE270D67C0F522A0602 /* AgentAuditLog.swift */,
 				8E9AD0F69E464E99104813F9 /* AgentAuditLogger.swift */,
 				8AEF83F4C3FF3DE5CEE7D425 /* AgentSecurity.swift */,
+				E6C440A7D0B6E87469657664 /* AgentSkillsLiveVerifier.swift */,
 				1061FF08363E0805F2F29470 /* ApprovalAllowlist.swift */,
 				66E2FAD786BE52B8DA493E77 /* ApprovalAutoReview.swift */,
 				E301F98140A4A536946D9768 /* ApprovalLiveVerifier.swift */,
@@ -3082,6 +3085,7 @@
 				1173F253F7488CA72C191068 /* AgentSessionCoordinator.swift in Sources */,
 				FB9B0243104189B3936BEB1F /* AgentSessionEntity.swift in Sources */,
 				5EE819D3D20980174115F79B /* AgentSignposts.swift in Sources */,
+				C4B2E086292AFEE8C993AE17 /* AgentSkillsLiveVerifier.swift in Sources */,
 				E47995D12CAF8FD5459A5824 /* AgentSystemPrompt.swift in Sources */,
 				E7809A4C65078290C3D8CB8C /* AmbientApprovalSurfaceView.swift in Sources */,
 				0721D76EA357B86ADF1EFC5D /* AnalyzeImageTool.swift in Sources */,

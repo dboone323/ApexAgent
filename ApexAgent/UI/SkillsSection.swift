@@ -4,9 +4,9 @@ import SwiftData
 // MARK: - SkillsSection: persisted skill registry UI for Settings
 
 /// Renders the list of dynamically-created and user-defined skills, mirroring
-/// the ~/.apex/skills on-disk registry in a SwiftData-backed UI.  Each row
+/// the ~/.apex/skills on-disk registry in a SwiftData-backed UI. Each row
 /// exposes the skill name, prompt preview, tool list, and enable/disable +
-/// delete actions.
+/// delete/edit actions.
 struct SkillsSection: View {
     /// The skill manager that bridges the SwiftData store and the toolbox.
     @Environment(\.skillManager) private var managerskills
@@ -15,10 +15,11 @@ struct SkillsSection: View {
     /// manager on every run).
     @Query(sort: \Skill.name) private var skills: [Skill]
 
-    /// Tracking state for the two confirmation dialogs.
+    /// Tracking state for the two confirmation dialogs and sheets.
     @State private var isConfirmingDelete: Bool = false
     @State private var isConfirmingDisable: Bool = false
     @State private var isAddingSkill: Bool = false
+    @State private var editingSkill: Skill? = nil
 
     /// The skill currently being operated on (nil = none / cancelled).
     @State private var pendingSkill: Skill?
@@ -29,10 +30,12 @@ struct SkillsSection: View {
                 EmptyView()
             } else {
                 ForEach(skills) { skill in
-                    SkillRow(skill: skill) { skillToDelete in
+                    SkillRow(skill: skill, onEdit: { skillToEdit in
+                        editingSkill = skillToEdit
+                    }, onDelete: { skillToDelete in
                         pendingSkill = skillToDelete
                         isConfirmingDelete = true
-                    }
+                    })
                 }
             }
 
@@ -66,6 +69,9 @@ struct SkillsSection: View {
         .sheet(isPresented: $isAddingSkill) {
             CreateSkillSheet()
         }
+        .sheet(item: $editingSkill) { skill in
+            CreateSkillSheet(editing: skill)
+        }
     }
 }
 
@@ -73,6 +79,7 @@ struct SkillsSection: View {
 
 struct SkillRow: View {
     let skill: Skill
+    var onEdit: ((Skill) -> Void)? = nil
     /// H8: called when the user taps the trash button; the section owns the
     /// confirmation dialog state (pendingSkill / isConfirmingDelete).
     let onDelete: (Skill) -> Void
@@ -91,6 +98,16 @@ struct SkillRow: View {
 
             HStack {
                 Spacer()
+
+                if let onEdit = onEdit {
+                    Button {
+                        onEdit(skill)
+                    } label: {
+                        Image(systemName: "pencil")
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Edit skill")
+                }
 
                 // H8: the delete dialog state existed but no UI ever set it —
                 // the trash button arms pendingSkill / isConfirmingDelete.
