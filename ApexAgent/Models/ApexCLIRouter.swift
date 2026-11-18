@@ -50,6 +50,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case secretsVerify(jsonOutput: Bool)
     case tracesList(limit: Int, jsonOutput: Bool)
     case policy(jsonOutput: Bool)
+    case promptInjectionVerify(jsonOutput: Bool)
     case approvals(subcommandArgs: [String], jsonOutput: Bool)
     case daemon
     case spaceCLI(subcommandArgs: [String])
@@ -327,6 +328,9 @@ public enum ApexCLIRouter {
 
         case "policy", "--policy":
             return ParsedCLIInvocation(command: .policy(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
+        case "prompt-injection", "--prompt-injection", "injection":
+            return ParsedCLIInvocation(command: .promptInjectionVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
         case "approvals", "--approvals":
             let rest = Array(remaining.dropFirst())
