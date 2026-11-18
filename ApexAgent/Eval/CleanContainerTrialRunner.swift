@@ -42,11 +42,16 @@ public final class CleanContainerTrialRunner: Sendable {
         var workspaceFiles: [String: String] = [:]
 
         // 2. Snapshot baseline on container manager for rollback guarantee
-        let snapshotRecord = try? await containerManager.createSnapshot(
-            name: "pre-\(trialId)",
-            description: "Clean baseline for eval trial \(trialId)",
-            containerId: containerId
-        )
+        let snapshotRecord: ContainerSnapshotRecord?
+        if task.requiresCleanContainer && containerManager.state == .running {
+            snapshotRecord = try? await containerManager.createSnapshot(
+                name: "pre-\(trialId)",
+                description: "Clean baseline for eval trial \(trialId)",
+                containerId: containerId
+            )
+        } else {
+            snapshotRecord = nil
+        }
 
         defer {
             // Rollback and delete snapshot to ensure state cannot contaminate subsequent trials

@@ -3,6 +3,7 @@ import Foundation
 @testable import ApexAgentCore
 
 @Suite("Outcome-First Eval Harness Gate Tests")
+@MainActor
 struct OutcomeFirstEvalHarnessTests {
 
     // MARK: - Requirement 1: Suite Versioning & SemVer
@@ -187,14 +188,16 @@ struct OutcomeFirstEvalHarnessTests {
             requiredAgreementThreshold: 0.80
         )
 
-        #expect(judge.status == .uncalibrated)
+        let initialStatus = await judge.status
+        #expect(initialStatus == .uncalibrated)
 
         let report = try await judge.calibrate(dataset: .standardLabeledSet)
         #expect(report.totalSamples == 5)
         #expect(report.matchingVerdicts >= 4) // At least 80% agreement on standard dataset
         #expect(report.agreementRate >= 0.80)
         #expect(report.isQualified == true)
-        #expect(judge.status.isCalibrated == true)
+        let finalStatus = await judge.status
+        #expect(finalStatus.isCalibrated == true)
     }
 
     // MARK: - Requirement 5: Uncalibrated Judge Rejection
@@ -347,7 +350,8 @@ struct OutcomeFirstEvalHarnessTests {
                         expectedStdout: "hello_eval_world"
                     ),
                     graderType: .deterministicExact,
-                    k: 2 // exercises pass^k with k=2
+                    k: 2, // exercises pass^k with k=2
+                    requiresCleanContainer: false
                 ),
                 EvalTask(
                     id: "eval_mini_02_trace",
@@ -364,7 +368,8 @@ struct OutcomeFirstEvalHarnessTests {
                         ]
                     ),
                     graderType: .deterministicTrace,
-                    k: 1
+                    k: 1,
+                    requiresCleanContainer: false
                 )
             ]
         )
