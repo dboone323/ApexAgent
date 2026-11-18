@@ -163,6 +163,39 @@ public struct CreateSkillSheet: View {
             return
         }
 
+        // Issue #107: Verify permission manifest and run install-time security scan
+        let parsedSchema = ((try? JSONSerialization.jsonObject(with: schema.data(using: .utf8) ?? Data())) as? [String: Any]) ?? ["type": "object"]
+        let perms: SkillPermissions
+        if let permDict = parsedSchema["permissions"] as? [String: Any] {
+            perms = SkillPermissions(
+                tools: permDict["tools"] as? [String] ?? [],
+                allowNetwork: (permDict["allow_network"] as? Bool) ?? (permDict["allowNetwork"] as? Bool) ?? false,
+                filesystemPaths: (permDict["filesystem_paths"] as? [String]) ?? (permDict["filesystemPaths"] as? [String]) ?? [],
+                allowShell: (permDict["allow_shell"] as? Bool) ?? (permDict["allowShell"] as? Bool) ?? false
+            )
+        } else {
+            perms = SkillPermissions()
+        }
+
+        let permissionManifest = SkillPermissionManifest(
+            name: name,
+            version: "1.0.0",
+            description: desc,
+            scriptPath: ApexAgentStoragePaths.skillScriptReference(for: name),
+            permissions: perms
+        )
+
+        let scanCheck = SkillSecurityManager.shared.verifyInstall(
+            manifest: permissionManifest,
+            scriptContent: script
+        )
+
+        if case .failure(let err) = scanCheck {
+            let summary = err.findings.map { "[\($0.severity.rawValue)] \($0.ruleId): \($0.message)" }.joined(separator: "; ")
+            errorMessage = "Security scan rejected skill: \(summary)"
+            return
+        }
+
         let fileManager = FileManager.default
         let skillsDir = ApexAgentStoragePaths.skills
 
@@ -182,12 +215,13 @@ public struct CreateSkillSheet: View {
             chmodProcess.waitUntilExit()
 
             // Manifest JSON
-            let parsedSchema = (try? JSONSerialization.jsonObject(with: schema.data(using: .utf8) ?? Data())) ?? ["type": "object"]
             let manifest: [String: Any] = [
                 "name": name,
+                "version": "1.0.0",
                 "description": desc,
                 "script_path": ApexAgentStoragePaths.skillScriptReference(for: name),
-                "parameters": parsedSchema
+                "parameters": parsedSchema,
+                "permissions": perms.toDictionary()
             ]
             let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: .prettyPrinted)
             try manifestData.write(to: manifestPath)

@@ -275,6 +275,27 @@ class DynamicToolbox {
                 continue
             }
 
+            // Issue #107: Per-skill kill-switch check
+            if SkillSecurityManager.shared.isKilled(name: name) {
+                AppLog.notice(.toolbox, "Skipping loading of killed skill '\(name)': \(SkillSecurityManager.shared.killReason(for: name) ?? "")")
+                continue
+            }
+
+            // Parse and register permission manifest
+            let permManifest = SkillPermissionManifest.from(dictionary: parsed)
+                ?? SkillPermissionManifest(name: name, description: parsed["description"] as? String ?? "", scriptPath: scriptPath)
+            SkillSecurityManager.shared.registerManifest(permManifest)
+
+            // Resolve script content and run security scan
+            let resolvedURL = URL(fileURLWithPath: (scriptPath as NSString).expandingTildeInPath)
+            let scriptContent = (try? String(contentsOf: resolvedURL, encoding: .utf8)) ?? ""
+            let scan = SkillSecurityScanner.scan(manifest: permManifest, scriptContent: scriptContent)
+            SkillSecurityManager.shared.recordScanFindings(skillName: name, findings: scan.findings)
+            if !scan.passed {
+                AppLog.error(.toolbox, "Skill '\(name)' rejected by security scan during dynamic load: \(scan.findings)")
+                continue
+            }
+
             // Clean schema for LLM (removing script_path)
             var llmSchema = parsed
             llmSchema.removeValue(forKey: "script_path")
@@ -355,6 +376,14 @@ class DynamicToolbox {
     }
 
     func executeTool(name: String, jsonArguments: String) async throws -> String {
+        // Issue #107: Per-skill kill-switch check
+        if SkillSecurityManager.shared.isKilled(name: name) {
+            let reason = SkillSecurityManager.shared.killReason(for: name) ?? "Disabled by kill-switch"
+            throw NSError(domain: "SkillSecurity", code: 403, userInfo: [
+                NSLocalizedDescriptionKey: "Tool '\(name)' execution refused: disabled by kill-switch (\(reason))"
+            ])
+        }
+
         guard let tool = dynamicTools[name] else {
             throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Tool \(name) not found in dynamic tools"])
         }
@@ -412,6 +441,14 @@ class DynamicToolbox {
         guard let scriptPath = tool.scriptPath else {
             throw NSError(domain: "DynamicToolbox", code: -1, userInfo: [NSLocalizedDescriptionKey: "Tool \(name) missing execution path"])
         }
+
+        // Issue #107: Enforce sandboxed execution policy & permission validation
+        let ws = orchestrator?.orchestrator.currentWorkspacePath
+        try SkillSecurityManager.shared.validateExecution(
+            name: name,
+            scriptPath: scriptPath,
+            workspacePath: ws
+        )
 
         // H3: Route through the hardened executeDynamicScript executor which:
         // 1. Validates scriptPath lives under the configured dynamic tool directories
@@ -565,9 +602,13 @@ class DynamicToolbox {
     #if DEBUG
     func registerToolForTesting(name: String, entry: DynamicToolEntry) {
         dynamicTools[name] = entry
+        let manifest = SkillPermissionManifest.from(dictionary: entry.schema)
+            ?? SkillPermissionManifest(name: name, description: entry.description, scriptPath: entry.scriptPath)
+        SkillSecurityManager.shared.registerManifest(manifest)
     }
     func removeToolForTesting(name: String) {
         dynamicTools.removeValue(forKey: name)
+        SkillSecurityManager.shared.unregisterManifest(named: name)
     }
     #endif
 

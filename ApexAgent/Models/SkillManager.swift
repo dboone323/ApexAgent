@@ -59,12 +59,24 @@ final class SkillManager: Observable {
                 paramsJSON = "{}"
             }
 
+            // Issue #107: Parse permission manifest and run install/sync security scan
+            let permManifest = SkillPermissionManifest.from(dictionary: manifest)
+                ?? SkillPermissionManifest(name: rawName, description: desc, scriptPath: scriptPath)
+            SkillSecurityManager.shared.registerManifest(permManifest)
+
+            let isKilled = SkillSecurityManager.shared.isKilled(name: rawName)
+            let resolvedScriptURL = URL(fileURLWithPath: (scriptPath as NSString).expandingTildeInPath)
+            let scriptContent = (try? String(contentsOf: resolvedScriptURL, encoding: .utf8)) ?? ""
+            let scan = SkillSecurityScanner.scan(manifest: permManifest, scriptContent: scriptContent)
+            SkillSecurityManager.shared.recordScanFindings(skillName: rawName, findings: scan.findings)
+
             let skill = Skill(
                 name: rawName,
                 descriptionText: desc,
                 scriptPath: scriptPath,
                 parameterSchemaJSON: paramsJSON,
-                category: "custom"
+                category: "custom",
+                enabled: !isKilled && scan.passed
             )
             context.insert(skill)
         }
@@ -86,6 +98,10 @@ final class SkillManager: Observable {
     // MARK: - Enable / Disable / Delete
 
     func enable(_ skill: Skill) {
+        guard !SkillSecurityManager.shared.isKilled(name: skill.name) else {
+            AppLog.error(.toolbox, "Cannot enable skill '\(skill.name)': disabled by kill-switch (\(SkillSecurityManager.shared.killReason(for: skill.name) ?? ""))")
+            return
+        }
         skill.enabled = true
         skill.updatedAt = Date()
         try? modelContext?.save()
@@ -142,6 +158,25 @@ final class SkillManager: Observable {
             return .failure(.scriptFileNotFound(script))
         }
 
+        // Issue #107: Validate against per-skill kill-switch and security scan findings
+        if SkillSecurityManager.shared.isKilled(name: skillName) {
+            let reason = SkillSecurityManager.shared.killReason(for: skillName) ?? "Disabled by kill-switch"
+            return .failure(.securityScanFailed("Skill '\(skillName)' is disabled by kill-switch: \(reason)"))
+        }
+
+        let permManifest = SkillPermissionManifest.from(dictionary: json)
+            ?? SkillPermissionManifest(name: skillName, description: desc, scriptPath: script)
+        let resolvedURL = fm.fileExists(atPath: resolvedScript)
+            ? URL(fileURLWithPath: resolvedScript)
+            : fileURL.deletingLastPathComponent().appendingPathComponent(script)
+        let scriptContent = (try? String(contentsOf: resolvedURL, encoding: .utf8)) ?? ""
+        let scan = SkillSecurityScanner.scan(manifest: permManifest, scriptContent: scriptContent)
+        SkillSecurityManager.shared.recordScanFindings(skillName: skillName, findings: scan.findings)
+        if !scan.passed {
+            let reason = scan.findings.first?.message ?? "Security scan failed"
+            return .failure(.securityScanFailed(reason))
+        }
+
         let paramDict = json["parameters"] as? [String: Any] ?? [:]
         let propCount = (paramDict["properties"] as? [String: Any])?.count ?? paramDict.count
 
@@ -175,6 +210,7 @@ public enum SkillValidationError: LocalizedError, Sendable, Equatable {
     case missingDescription(String)
     case missingScriptPath(String)
     case scriptFileNotFound(String)
+    case securityScanFailed(String)
 
     public var errorDescription: String? {
         switch self {
@@ -184,6 +220,7 @@ public enum SkillValidationError: LocalizedError, Sendable, Equatable {
         case .missingDescription(let name): return "Skill '\(name)' manifest is missing 'description' field"
         case .missingScriptPath(let name): return "Skill '\(name)' manifest is missing 'script_path' field"
         case .scriptFileNotFound(let path): return "Executable script file referenced does not exist: \(path)"
+        case .securityScanFailed(let msg): return "Security scan failed: \(msg)"
         }
     }
 }
@@ -210,6 +247,7 @@ extension SkillValidationError {
         case .missingDescription: return "📝 No Description"
         case .missingScriptPath: return "🔧 No Script"
         case .scriptFileNotFound: return "❌ Script Missing"
+        case .securityScanFailed: return "🔒 Security Scan Failed"
         }
     }
 

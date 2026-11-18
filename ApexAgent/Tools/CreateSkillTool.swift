@@ -59,12 +59,45 @@ struct CreateSkillTool: Tool {
                 return "ERROR: Failed to parse parameterSchemaJSON. Ensure it is valid JSON."
             }
 
+            // Issue #107: Parse permission manifest and run install-time security scan
+            let perms: SkillPermissions
+            if let permDict = parsedSchema["permissions"] as? [String: Any] {
+                perms = SkillPermissions(
+                    tools: permDict["tools"] as? [String] ?? [],
+                    allowNetwork: (permDict["allow_network"] as? Bool) ?? (permDict["allowNetwork"] as? Bool) ?? false,
+                    filesystemPaths: (permDict["filesystem_paths"] as? [String]) ?? (permDict["filesystemPaths"] as? [String]) ?? [],
+                    allowShell: (permDict["allow_shell"] as? Bool) ?? (permDict["allowShell"] as? Bool) ?? false
+                )
+            } else {
+                perms = SkillPermissions()
+            }
+
+            let permissionManifest = SkillPermissionManifest(
+                name: sanitizedName,
+                version: "1.0.0",
+                description: arguments.skillDescription,
+                scriptPath: ApexAgentStoragePaths.skillScriptReference(for: sanitizedName),
+                permissions: perms
+            )
+
+            let scanCheck = SkillSecurityManager.shared.verifyInstall(
+                manifest: permissionManifest,
+                scriptContent: arguments.scriptContent
+            )
+
+            if case .failure(let err) = scanCheck {
+                let summary = err.findings.map { "[\($0.severity.rawValue)] \($0.ruleId): \($0.message)" }.joined(separator: "\n")
+                return "ERROR: Skill security scan failed on install for '\(sanitizedName)':\n\(summary)"
+            }
+
             // 3. Write manifest JSON
             let manifest: [String: Any] = [
                 "name": sanitizedName,
+                "version": "1.0.0",
                 "description": arguments.skillDescription,
                 "script_path": ApexAgentStoragePaths.skillScriptReference(for: sanitizedName),
-                "parameters": parsedSchema
+                "parameters": parsedSchema,
+                "permissions": perms.toDictionary()
             ]
 
             guard let manifestData = try? JSONSerialization.data(withJSONObject: manifest, options: .prettyPrinted) else {

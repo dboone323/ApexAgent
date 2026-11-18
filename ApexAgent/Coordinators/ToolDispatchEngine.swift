@@ -120,6 +120,16 @@ final class ToolDispatchEngine {
         bot: BotProfile? = nil,
         agentIdentity: AgentIdentity? = nil
     ) async throws -> String {
+        // Issue #107: Per-skill kill-switch enforcement
+        if SkillSecurityManager.shared.isKilled(name: name) {
+            let reason = SkillSecurityManager.shared.killReason(for: name) ?? "Disabled by kill-switch"
+            throw NSError(
+                domain: "AgentSecurity",
+                code: 403,
+                userInfo: [NSLocalizedDescriptionKey: "Tool '\(name)' execution refused: disabled by kill-switch (\(reason))"]
+            )
+        }
+
         // Workstream 5.6: Global Tool Governance policy enforcement
         guard ToolPolicy.shared.isGloballyAllowed(name) else {
             throw NSError(
