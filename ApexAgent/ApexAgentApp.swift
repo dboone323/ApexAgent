@@ -92,6 +92,11 @@ public struct ApexAgentApp: App {
                     ShortcutRegistry.shared.dispatch(.showDiagnostics, orchestrator: orchestrator)
                 }
                 .keyboardShortcut("d", modifiers: [.command, .shift])
+
+                Button("Run Verification…") {
+                    ShortcutRegistry.shared.dispatch(.showVerification, orchestrator: orchestrator)
+                }
+                .keyboardShortcut("v", modifiers: [.command, .shift])
             }
 
             CommandMenu("Go") {

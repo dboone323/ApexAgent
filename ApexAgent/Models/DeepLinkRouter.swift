@@ -9,6 +9,7 @@ public enum DeepLinkDestination: Sendable, Equatable {
     case routine(id: String)
     case skill(name: String)
     case diagnostics
+    case verification(runId: String? = nil)
     case settings
     case command(name: String)
 }
@@ -84,6 +85,10 @@ public enum DeepLinkRouter {
         case "diagnostics":
             return .success(.diagnostics)
 
+        case "verification", "verify":
+            let runId = remainder.first
+            return .success(.verification(runId: runId))
+
         case "settings":
             return .success(.settings)
 
@@ -114,6 +119,11 @@ public enum DeepLinkRouter {
             components.path = "/\(name)"
         case .diagnostics:
             components.host = "diagnostics"
+        case .verification(let runId):
+            components.host = "verification"
+            if let runId = runId {
+                components.path = "/\(runId)"
+            }
         case .settings:
             components.host = "settings"
         case .command(let name):
@@ -134,6 +144,7 @@ public final class DeepLinkNavigationState {
     public var selectedRoutineId: String?
     public var selectedSkillName: String?
     public var showDiagnostics = false
+    public var showVerification = false
     public var showSettings = false
     public var lastExecutedCommand: String?
     public var lastDestination: DeepLinkDestination?
@@ -173,6 +184,9 @@ public final class DeepLinkNavigationState {
         case .diagnostics:
             showDiagnostics = true
             NotificationCenter.default.post(name: .showDiagnosticsSheet, object: nil)
+        case .verification(let runId):
+            showVerification = true
+            NotificationCenter.default.post(name: .showVerificationSheet, object: runId)
         case .settings:
             showSettings = true
             NotificationCenter.default.post(name: .showSettingsSheet, object: nil)
@@ -186,6 +200,7 @@ public final class DeepLinkNavigationState {
         selectedRoutineId = nil
         selectedSkillName = nil
         showDiagnostics = false
+        showVerification = false
         showSettings = false
         lastExecutedCommand = nil
         lastDestination = nil

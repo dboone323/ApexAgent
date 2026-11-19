@@ -40,8 +40,16 @@ public enum RunTraceStorage {
 
     public static func loadTrace(for runId: String, workspacePath: String? = nil) throws -> RunTrace? {
         let fileURL = traceFileURL(for: runId, workspacePath: workspacePath)
-        guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
-        return try loadTrace(from: fileURL)
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            return try loadTrace(from: fileURL)
+        }
+        if workspacePath != nil {
+            let globalURL = traceFileURL(for: runId, workspacePath: nil)
+            if FileManager.default.fileExists(atPath: globalURL.path) {
+                return try loadTrace(from: globalURL)
+            }
+        }
+        return nil
     }
 
     public static func loadTrace(from fileURL: URL) throws -> RunTrace {
@@ -343,5 +351,62 @@ public final class RunTraceManager: @unchecked Sendable {
         defer { lock.unlock() }
         activeRecorders.removeAll()
         globalActiveRecorder = nil
+    }
+
+    // MARK: - Verification Artifacts & Comments (Issue #114)
+
+    private func activeTrace(for runId: String) -> RunTrace? {
+        lock.lock()
+        defer { lock.unlock() }
+        return activeRecorders[runId]?.trace ?? (globalActiveRecorder?.runId == runId ? globalActiveRecorder?.trace : nil)
+    }
+
+    /// Retrieves verification artifacts for a run, extracting them from the trace if not already present.
+    public func getArtifacts(for runId: String, workspacePath: String? = nil) throws -> [VerificationArtifact] {
+        guard let trace = try RunTraceStorage.loadTrace(for: runId, workspacePath: workspacePath) ?? activeTrace(for: runId) else {
+            return []
+        }
+        if !trace.artifacts.isEmpty {
+            return trace.artifacts
+        }
+        return VerificationArtifactExtractor.extractArtifacts(from: trace)
+    }
+
+    /// Attaches a comment to a verification artifact for a run and persists it immediately with the run's trace.
+    @discardableResult
+    public func attachComment(
+        to artifactId: String,
+        runId: String,
+        comment: VerificationComment,
+        workspacePath: String? = nil
+    ) throws -> VerificationArtifact {
+        guard var trace = try RunTraceStorage.loadTrace(for: runId, workspacePath: workspacePath) ?? activeTrace(for: runId) else {
+            throw NSError(domain: "RunTraceManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Trace for runId '\(runId)' not found."])
+        }
+
+        if trace.artifacts.isEmpty {
+            trace.artifacts = VerificationArtifactExtractor.extractArtifacts(from: trace)
+        }
+
+        guard let index = trace.artifacts.firstIndex(where: { $0.id == artifactId }) else {
+            throw NSError(domain: "RunTraceManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Artifact '\(artifactId)' not found in run '\(runId)'."])
+        }
+
+        trace.artifacts[index].comments.append(comment)
+        try RunTraceStorage.saveTrace(trace, workspacePath: workspacePath)
+        return trace.artifacts[index]
+    }
+
+    /// Updates or replaces the artifacts on a run trace and persists the update.
+    public func saveArtifacts(
+        _ artifacts: [VerificationArtifact],
+        for runId: String,
+        workspacePath: String? = nil
+    ) throws {
+        guard var trace = try RunTraceStorage.loadTrace(for: runId, workspacePath: workspacePath) ?? activeTrace(for: runId) else {
+            throw NSError(domain: "RunTraceManager", code: 404, userInfo: [NSLocalizedDescriptionKey: "Trace for runId '\(runId)' not found."])
+        }
+        trace.artifacts = artifacts
+        try RunTraceStorage.saveTrace(trace, workspacePath: workspacePath)
     }
 }

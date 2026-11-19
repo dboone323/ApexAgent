@@ -271,6 +271,11 @@ public struct RunTrace: Codable, Sendable, Identifiable, Equatable {
     public var status: String // "running", "completed", "failed", "cancelled"
     public var events: [RunTraceEvent]
     public var metadata: [String: String]
+    public var artifacts: [VerificationArtifact]
+
+    enum CodingKeys: String, CodingKey {
+        case id, conversationId, startedAt, finishedAt, status, events, metadata, artifacts
+    }
 
     public init(
         id: String = RunTrace.generateRunId(),
@@ -279,7 +284,8 @@ public struct RunTrace: Codable, Sendable, Identifiable, Equatable {
         finishedAt: Date? = nil,
         status: String = "running",
         events: [RunTraceEvent] = [],
-        metadata: [String: String] = [:]
+        metadata: [String: String] = [:],
+        artifacts: [VerificationArtifact] = []
     ) {
         self.id = id
         self.conversationId = conversationId
@@ -291,6 +297,33 @@ public struct RunTrace: Codable, Sendable, Identifiable, Equatable {
         self.metadata = Dictionary(uniqueKeysWithValues: metadata.map { key, value in
             (key, SecretRedactor.redact(text: value))
         })
+        self.artifacts = artifacts
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(String.self, forKey: .id)
+        self.conversationId = try container.decodeIfPresent(UUID.self, forKey: .conversationId)
+        self.startedAt = try container.decode(Date.self, forKey: .startedAt)
+        self.finishedAt = try container.decodeIfPresent(Date.self, forKey: .finishedAt)
+        self.status = try container.decode(String.self, forKey: .status)
+        self.events = try container.decodeIfPresent([RunTraceEvent].self, forKey: .events) ?? []
+        self.metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
+        self.artifacts = try container.decodeIfPresent([VerificationArtifact].self, forKey: .artifacts) ?? []
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encodeIfPresent(conversationId, forKey: .conversationId)
+        try container.encode(startedAt, forKey: .startedAt)
+        try container.encodeIfPresent(finishedAt, forKey: .finishedAt)
+        try container.encode(status, forKey: .status)
+        try container.encode(events, forKey: .events)
+        try container.encode(metadata, forKey: .metadata)
+        if !artifacts.isEmpty {
+            try container.encode(artifacts, forKey: .artifacts)
+        }
     }
 
     public static func generateRunId() -> String {

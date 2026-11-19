@@ -238,6 +238,7 @@ public enum DeepLinkRouteGate {
             case .routine: routeName = "routine"
             case .skill: routeName = "skill"
             case .diagnostics: routeName = "diagnostics"
+            case .verification: routeName = "verification"
             case .settings: routeName = "settings"
             case .command: routeName = "command"
             }
