@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var columnVisibility = NavigationSplitViewVisibility.all
     @State private var showSettings = false
     @State private var showDiagnostics = false
+    @State private var showVerification = false
     @AppStorage("apex.showActivityLog") private var showActivityLog = true
     @AppStorage("apex.showTerminal") private var showTerminal = false
     @AppStorage("apex.showPlanDashboard") private var showPlanDashboard = false
@@ -181,6 +182,16 @@ struct ContentView: View {
                 .help("System Diagnostics Self-Check")
                 .accessibilityIdentifier("diagnosticsButton")
                 .accessibilityLabel("System diagnostics")
+
+                Button {
+                    showVerification.toggle()
+                } label: {
+                    Image(systemName: "checkmark.shield")
+                }
+                .focusable()
+                .help("Run Verification Artifacts")
+                .accessibilityIdentifier("runVerificationButton")
+                .accessibilityLabel("Run verification")
                 
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -235,6 +246,9 @@ struct ContentView: View {
         .sheet(isPresented: $showDiagnostics) {
             DiagnosticsView()
         }
+        .sheet(isPresented: $showVerification) {
+            RunVerificationView(workspacePath: orchestrator.currentWorkspacePath)
+        }
         .sheet(isPresented: $showCreateBotSheet) {
             CreateBotSheet()
         }
@@ -258,6 +272,9 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .showDiagnosticsSheet)) { _ in
             showDiagnostics = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showVerificationSheet)) { _ in
+            showVerification = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .showSettingsSheet)) { _ in
             showSettings = true
@@ -343,4 +360,5 @@ struct ModelStatusBadge: View {
 
 extension Notification.Name {
     public static let showDiagnosticsSheet = Notification.Name("showDiagnosticsSheet")
+    public static let showVerificationSheet = Notification.Name("showVerificationSheet")
 }

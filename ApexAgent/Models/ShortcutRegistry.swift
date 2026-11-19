@@ -10,6 +10,7 @@ public enum AppCommandAction: String, CaseIterable, Codable, Sendable {
     case commandPalette
     case globalPaletteHotKey
     case showDiagnostics
+    case showVerification
     case goRoutines
     case goSkills
     case goSettings
@@ -20,6 +21,7 @@ public enum AppCommandAction: String, CaseIterable, Codable, Sendable {
         case .commandPalette: return "Command Palette…"
         case .globalPaletteHotKey: return "Global Command Palette"
         case .showDiagnostics: return "System Diagnostics…"
+        case .showVerification: return "Run Verification…"
         case .goRoutines: return "Routines"
         case .goSkills: return "Skills"
         case .goSettings: return "Settings…"
@@ -108,6 +110,7 @@ public final class ShortcutRegistry: @unchecked Sendable {
         .commandPalette: ShortcutBinding(key: "k", modifiers: [.command], carbonKeyCode: 40),
         .globalPaletteHotKey: ShortcutBinding(key: "space", modifiers: [.option], carbonKeyCode: 49),
         .showDiagnostics: ShortcutBinding(key: "d", modifiers: [.command, .shift], carbonKeyCode: 2),
+        .showVerification: ShortcutBinding(key: "v", modifiers: [.command, .shift], carbonKeyCode: 9),
         .goRoutines: ShortcutBinding(key: "1", modifiers: [.command], carbonKeyCode: 18),
         .goSkills: ShortcutBinding(key: "2", modifiers: [.command], carbonKeyCode: 19),
         .goSettings: ShortcutBinding(key: ",", modifiers: [.command], carbonKeyCode: 43)
@@ -201,6 +204,8 @@ public final class ShortcutRegistry: @unchecked Sendable {
             GlobalCommandPaletteController.shared.toggle()
         case .showDiagnostics:
             DeepLinkNavigationState.shared.apply(.diagnostics)
+        case .showVerification:
+            DeepLinkNavigationState.shared.apply(.verification())
         case .goRoutines:
             DeepLinkNavigationState.shared.apply(.routine(id: "all"))
         case .goSkills:
