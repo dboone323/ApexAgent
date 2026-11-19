@@ -52,6 +52,8 @@ enum AgentSecurity {
         "update_task_status": .medium,
         "create_sprint": .medium,
         "store_memory": .medium,
+        "memory_flush": .medium,
+        "memory_consolidate": .medium,
         "update_plan": .medium,
         "take_screenshot": .medium,
         "analyze_image": .medium,

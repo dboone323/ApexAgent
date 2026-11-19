@@ -291,6 +291,12 @@ struct SpecializedAgentProfile<Model: LanguageModel>: LanguageModelSession.Dynam
             if allowedTools.contains("memory_get") {
                 MemoryGetTool(orchestrator: orchestrator)
             }
+            if allowedTools.contains("memory_flush") {
+                MemoryFlushTool(orchestrator: orchestrator)
+            }
+            if allowedTools.contains("memory_consolidate") {
+                MemoryConsolidateTool(orchestrator: orchestrator)
+            }
             if allowedTools.contains("control_app") {
                 ApplicationControlTool(orchestrator: orchestrator)
             }

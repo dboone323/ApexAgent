@@ -1102,6 +1102,20 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
         AppLog.info(.orchestrator, "[DIAG] compactContextIfNeeded start; totalChars=\(totalChars) count=\(messages.count)")
 
+        // Pre-compaction flush: distil session facts into daily note and MEMORY.md before compaction
+        let activeSpace = SpaceManager.shared.activeSpace
+        let ws = currentWorkspacePath
+        do {
+            _ = try SpaceMemoryTierManager.shared.flushSession(
+                messages: self.messages,
+                space: activeSpace,
+                workspacePath: ws
+            )
+            AppLog.info(.orchestrator, "Pre-compaction memory flush successfully completed.")
+        } catch {
+            AppLog.error(.orchestrator, "Pre-compaction memory flush error: \(error.localizedDescription)")
+        }
+
         let targetBotId = currentConversation?.botProfileId ?? UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
 
         do {

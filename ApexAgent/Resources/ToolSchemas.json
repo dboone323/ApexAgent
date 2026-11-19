@@ -566,6 +566,61 @@
     }
   },
   {
+    "description" : "Distils the current session into the daily note and long-term MEMORY.md before compaction. Formats one entry per fact with exact line citations and guarantees idempotency.",
+    "name" : "memory_flush",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "date" : {
+          "description" : "Optional date override in YYYY-MM-DD format.",
+          "type" : "string"
+        },
+        "facts" : {
+          "description" : "Optional list of explicit factual statements to flush. If omitted, extracts facts from the active session.",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "sessionSummary" : {
+          "description" : "Optional session summary to distill and store.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "facts",
+        "sessionSummary",
+        "date"
+      ]
+    }
+  },
+  {
+    "description" : "Consolidates memory across daily notes and MEMORY.md. Keeps facts current, supersedes stale facts, and returns a human-readable diff of what changed.",
+    "name" : "memory_consolidate",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "dryRun" : {
+          "description" : "If true, calculates and returns the diff without writing changes to disk.",
+          "type" : "boolean"
+        }
+      },
+      "required" : [
+
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "dryRun"
+      ]
+    }
+  },
+  {
     "description" : "Deletes an agent memory record by key, or clears all memory records matching a category.",
     "name" : "delete_memory",
     "parameters" : {

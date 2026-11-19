@@ -42,7 +42,7 @@ public struct IntentToolSelector: Sendable {
     ]
 
     public static let personalAndMemoryPack: Set<String> = [
-        "store_memory", "search_memory", "memory_search", "memory_get", "calendar", "reminders", "mail_automation",
+        "store_memory", "search_memory", "memory_search", "memory_get", "memory_flush", "memory_consolidate", "calendar", "reminders", "mail_automation",
         "get_weather", "map_search", "get_directions", "web_search",
         "translate", "extract_entities", "daily_briefing",
         "discord_bot", "discord_webhook", "send_notification"
@@ -146,7 +146,7 @@ public struct IntentToolSelector: Sendable {
             "process", "running app", "frontmost", "launch", "open ", "quit ", "close ",
             "browser", "website", "url", "http", "web", "click", "type ", "scroll", "selector", "accessibility", "window",
             "clipboard", "copy", "paste", "screenshot", "screen", "image", "ocr", "vision",
-            "memory", "remember", "recall", "fact", "store_memory", "search_memory", "memory_search", "memory_get",
+            "memory", "remember", "recall", "fact", "flush", "consolidate", "store_memory", "search_memory", "memory_search", "memory_get", "memory_flush", "memory_consolidate",
             "calendar", "schedule", "calendar event", "events", "meeting", "reminder", "todo", "mail", "email", "inbox",
             "weather", "forecast", "temperature", "map", "direction", "route", "location",
             "project", "task", "sprint", "backlog", "milestone", "audit", "lint", "review",
