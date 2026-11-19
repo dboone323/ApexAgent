@@ -572,6 +572,96 @@ public func runSpaceCLIMode(subcommandArgs: [String]) async {
         } catch {
             printErr("Failed to retrieve exact span: \(error.localizedDescription)")
         }
+    } else if let flushIdx = subcommandArgs.firstIndex(where: { $0 == "memory-flush" || $0 == "flush" }) {
+        let remainingArgs = Array(subcommandArgs[(flushIdx + 1)...])
+        let space: SpaceModel?
+        let facts: [String]
+        var wsOverride: String? = nil
+        var dateOverride: String? = nil
+
+        var cleanedArgs: [String] = []
+        var i = 0
+        while i < remainingArgs.count {
+            if remainingArgs[i] == "--workspace" && i + 1 < remainingArgs.count {
+                wsOverride = remainingArgs[i + 1]
+                i += 2
+            } else if remainingArgs[i] == "--date" && i + 1 < remainingArgs.count {
+                dateOverride = remainingArgs[i + 1]
+                i += 2
+            } else {
+                cleanedArgs.append(remainingArgs[i])
+                i += 1
+            }
+        }
+
+        if let first = cleanedArgs.first,
+           let matchedSpace = SpaceManager.shared.spaces.first(where: {
+               $0.name.localizedCaseInsensitiveCompare(first) == .orderedSame || $0.id.uuidString.hasPrefix(first)
+           }) {
+            space = matchedSpace
+            facts = Array(cleanedArgs.dropFirst())
+        } else {
+            space = SpaceManager.shared.activeSpace ?? SpaceManager.shared.spaces.first
+            facts = cleanedArgs
+        }
+
+        do {
+            let result = try SpaceMemoryTierManager.shared.flushSession(
+                explicitFacts: facts.isEmpty ? nil : facts,
+                space: space,
+                workspacePath: wsOverride,
+                date: dateOverride
+            )
+            printOut("=== MEMORY FLUSH RESULT ===")
+            printOut("Facts Flushed: \(result.factsFlushedCount) (Idempotent: \(result.isIdempotent))")
+            printOut("Daily Note: \(result.dailyNotePath)")
+            for cit in result.dailyCitations {
+                printOut("  - \(cit)")
+            }
+            printOut("Curated Memory: \(result.curatedMemoryPath)")
+            for cit in result.curatedCitations {
+                printOut("  - \(cit)")
+            }
+            printOut(result.outputDescription)
+            printOut("===========================")
+        } catch {
+            printErr("Failed to flush session memory: \(error.localizedDescription)")
+        }
+    } else if let consIdx = subcommandArgs.firstIndex(where: { $0 == "memory-consolidate" || $0 == "consolidate" }) {
+        let remainingArgs = Array(subcommandArgs[(consIdx + 1)...])
+        let dryRun = remainingArgs.contains("--dry-run")
+        var wsOverride: String? = nil
+        var targetSpaceName: String? = nil
+
+        var i = 0
+        while i < remainingArgs.count {
+            if remainingArgs[i] == "--workspace" && i + 1 < remainingArgs.count {
+                wsOverride = remainingArgs[i + 1]
+                i += 2
+            } else if remainingArgs[i] != "--dry-run" && targetSpaceName == nil {
+                targetSpaceName = remainingArgs[i]
+                i += 1
+            } else {
+                i += 1
+            }
+        }
+
+        let space = targetSpaceName.flatMap { name in
+            SpaceManager.shared.spaces.first(where: {
+                $0.name.localizedCaseInsensitiveCompare(name) == .orderedSame || $0.id.uuidString.hasPrefix(name)
+            })
+        } ?? SpaceManager.shared.activeSpace ?? SpaceManager.shared.spaces.first
+
+        do {
+            let diff = try SpaceMemoryTierManager.shared.consolidateMemories(
+                space: space,
+                workspacePath: wsOverride,
+                dryRun: dryRun
+            )
+            printOut(diff.formattedDiff)
+        } catch {
+            printErr("Failed to consolidate memory tiers: \(error.localizedDescription)")
+        }
     } else if let runIdx = subcommandArgs.firstIndex(of: "run"), runIdx + 2 < subcommandArgs.count {
         let spaceName = subcommandArgs[runIdx + 1]
         let promptText = subcommandArgs[(runIdx + 2)...].joined(separator: " ")

@@ -517,6 +517,55 @@ public final class SpaceMemoryTierManager {
         )
     }
 
+    // MARK: - 7. Pre-Compaction Flush & Consolidation API
+
+    /// Distils session messages into daily notes and MEMORY.md before context compaction.
+    @discardableResult
+    func flushSession(
+        messages: [ChatMessage],
+        space: SpaceModel? = nil,
+        workspacePath: String? = nil,
+        date: String? = nil
+    ) throws -> MemoryFlushResult {
+        return try MemoryConsolidationEngine.shared.flushSession(
+            messages: messages,
+            space: space,
+            workspacePath: workspacePath,
+            date: date
+        )
+    }
+
+    /// Distils session messages into daily notes and MEMORY.md before context compaction.
+    @discardableResult
+    public func flushSession(
+        rawMessages: [(role: String, content: String)]? = nil,
+        explicitFacts: [String]? = nil,
+        space: SpaceModel? = nil,
+        workspacePath: String? = nil,
+        date: String? = nil
+    ) throws -> MemoryFlushResult {
+        return try MemoryConsolidationEngine.shared.flushSession(
+            rawMessages: rawMessages,
+            explicitFacts: explicitFacts,
+            space: space,
+            workspacePath: workspacePath,
+            date: date
+        )
+    }
+
+    /// Consolidates memory tiers, superseding stale facts and returning a human-readable diff.
+    public func consolidateMemories(
+        space: SpaceModel? = nil,
+        workspacePath: String? = nil,
+        dryRun: Bool = false
+    ) throws -> ConsolidationDiff {
+        return try MemoryConsolidationEngine.shared.consolidate(
+            space: space,
+            workspacePath: workspacePath,
+            dryRun: dryRun
+        )
+    }
+
     // MARK: - Private Helpers
 
     public static func normalizeDateString(_ raw: String) -> String {

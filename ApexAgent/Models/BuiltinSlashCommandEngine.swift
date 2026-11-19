@@ -345,6 +345,15 @@ public final class BuiltinSlashCommandEngine {
             recentTurnsToPreserve: 2
         )
 
+        // Pre-compaction flush: distil session into daily note and MEMORY.md before compaction
+        let activeSpace = SpaceManager.shared.activeSpace
+        let ws = orchestrator.currentWorkspacePath
+        _ = try? SpaceMemoryTierManager.shared.flushSession(
+            messages: messages,
+            space: activeSpace,
+            workspacePath: ws
+        )
+
         let result = await ContextCompactor.shared.compact(input)
 
         var newChatMessages: [ChatMessage] = []

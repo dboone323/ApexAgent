@@ -56,6 +56,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case promptInjectionVerify(jsonOutput: Bool)
     case evalVerify(jsonOutput: Bool)
     case verificationVerify(runId: String?, jsonOutput: Bool)
+    case memoryVerify(jsonOutput: Bool)
     case approvals(subcommandArgs: [String], jsonOutput: Bool)
     case daemon
     case spaceCLI(subcommandArgs: [String])
@@ -208,7 +209,7 @@ public enum ApexCLIRouter {
             let subArgs = Array(remaining.dropFirst())
             return ParsedCLIInvocation(command: .spaceCLI(subcommandArgs: subArgs), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
-        case "memory-search", "--memory-search", "memory-get", "--memory-get", "memory":
+        case "memory-search", "--memory-search", "memory-get", "--memory-get", "memory", "memory-flush", "--memory-flush", "memory-consolidate", "--memory-consolidate":
             return ParsedCLIInvocation(command: .spaceCLI(subcommandArgs: remaining), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
         case "gate-queue", "--gate-queue", "gate-worker":
@@ -364,6 +365,9 @@ public enum ApexCLIRouter {
         case "verification-verify", "--verification-verify", "verification", "--verification":
             let runId = remaining.dropFirst().first { !$0.hasPrefix("-") }
             return ParsedCLIInvocation(command: .verificationVerify(runId: runId, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
+        case "memory-verify", "--memory-verify":
+            return ParsedCLIInvocation(command: .memoryVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
         case "approvals", "--approvals":
             let rest = Array(remaining.dropFirst())

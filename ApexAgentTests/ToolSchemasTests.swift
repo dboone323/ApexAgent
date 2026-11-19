@@ -43,7 +43,7 @@ import Foundation
     @Test func testDumpToolSchemas() throws {
         let orchestrator = AgentOrchestrator()
         let tools = orchestrator.toolDispatchEngine.buildAllTools(orchestrator: orchestrator, botManager: nil)
-        #expect(tools.count == 80, "Must register all 80 native tools")
+        #expect(tools.count == 82, "Must register all 82 native tools")
 
         var allSchemas: [[String: Any]] = []
         for tool in tools {
@@ -53,7 +53,7 @@ import Foundation
                 allSchemas.append(dict)
             }
         }
-        #expect(allSchemas.count == 80, "Every registered tool must generate valid schema JSON")
+        #expect(allSchemas.count == 82, "Every registered tool must generate valid schema JSON")
 
         let projectDir = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

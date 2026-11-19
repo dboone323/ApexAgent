@@ -420,3 +420,122 @@ struct DeleteMemoryTool: Tool {
         }
     }
 }
+
+// MARK: - Memory Flush Tool
+
+struct MemoryFlushTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
+    let name = "memory_flush"
+    let description = "Distils the current session into the daily note and long-term MEMORY.md before compaction. Formats one entry per fact with exact line citations and guarantees idempotency."
+
+    @Generable
+    struct Arguments: Decodable {
+        @Guide(description: "Optional list of explicit factual statements to flush. If omitted, extracts facts from the active session.")
+        var facts: [String]?
+
+        @Guide(description: "Optional session summary to distill and store.")
+        var sessionSummary: String?
+
+        @Guide(description: "Optional date override in YYYY-MM-DD format.")
+        var date: String?
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Flushing session memories to disk") {
+            return await MainActor.run {
+                let activeSpace = SpaceManager.shared.activeSpace
+                let ws = orchestrator.orchestrator.currentWorkspacePath
+
+                var candidateFacts: [String] = []
+                if let explicit = arguments.facts, !explicit.isEmpty {
+                    candidateFacts.append(contentsOf: explicit)
+                }
+                if let summary = arguments.sessionSummary?.trimmingCharacters(in: .whitespacesAndNewlines), !summary.isEmpty {
+                    candidateFacts.append(summary)
+                }
+
+                do {
+                    let result: MemoryFlushResult
+                    if !candidateFacts.isEmpty {
+                        result = try SpaceMemoryTierManager.shared.flushSession(
+                            rawMessages: nil,
+                            explicitFacts: candidateFacts,
+                            space: activeSpace,
+                            workspacePath: ws,
+                            date: arguments.date
+                        )
+                    } else {
+                        result = try SpaceMemoryTierManager.shared.flushSession(
+                            messages: orchestrator.orchestrator.messages,
+                            space: activeSpace,
+                            workspacePath: ws,
+                            date: arguments.date
+                        )
+                    }
+
+                    if result.isIdempotent && result.factsFlushedCount == 0 {
+                        return "ℹ️ Memory Flush: Already flushed: 0 new entries added (idempotent)."
+                    }
+
+                    var out = "💾 Pre-Compaction Memory Flush Successful:\n"
+                    out += "- Daily note: \(result.dailyNotePath) (\(result.dailyCitations.count) entries)\n"
+                    for cit in result.dailyCitations {
+                        out += "  * \(cit)\n"
+                    }
+                    out += "- Long-term MEMORY.md: \(result.curatedMemoryPath) (\(result.curatedCitations.count) entries)\n"
+                    for cit in result.curatedCitations {
+                        out += "  * \(cit)\n"
+                    }
+                    return out
+                } catch {
+                    return "ERROR: Failed to flush session memory: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Memory Consolidate Tool
+
+struct MemoryConsolidateTool: Tool {
+    let orchestrator: OrchestratorProvider
+
+    init(orchestrator: OrchestratorProvider) {
+        self.orchestrator = orchestrator
+    }
+
+    let name = "memory_consolidate"
+    let description = "Consolidates memory across daily notes and MEMORY.md. Keeps facts current, supersedes stale facts, and returns a human-readable diff of what changed."
+
+    @Generable
+    struct Arguments: Decodable {
+        @Guide(description: "If true, calculates and returns the diff without writing changes to disk.")
+        var dryRun: Bool?
+    }
+
+    func call(arguments: Arguments) async throws -> String {
+        return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator, riskDescription: "Consolidating space memory tiers") {
+            return await MainActor.run {
+                let activeSpace = SpaceManager.shared.activeSpace
+                let ws = orchestrator.orchestrator.currentWorkspacePath
+                let isDryRun = arguments.dryRun ?? false
+
+                do {
+                    let diff = try SpaceMemoryTierManager.shared.consolidateMemories(
+                        space: activeSpace,
+                        workspacePath: ws,
+                        dryRun: isDryRun
+                    )
+                    return diff.formattedDiff
+                } catch {
+                    return "ERROR: Failed to consolidate memories: \(error.localizedDescription)"
+                }
+            }
+        }
+    }
+}

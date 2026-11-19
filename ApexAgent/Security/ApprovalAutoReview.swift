@@ -72,7 +72,7 @@ public enum ApprovalAutoReview {
 
     private static let mutatingTools: Set<String> = [
         "write_file", "file_write", "create_directory", "move_file", "rollback",
-        "clipboard_write", "applescript", "store_memory"
+        "clipboard_write", "applescript", "store_memory", "memory_flush", "memory_consolidate"
     ]
 
     private static let deletionTools: Set<String> = [
