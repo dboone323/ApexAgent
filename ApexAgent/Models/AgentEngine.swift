@@ -89,6 +89,51 @@ private final class PromptCancellationCoordinator: @unchecked Sendable {
     }
 }
 
+// MARK: - AFM Call Serializer
+
+/// Coordinates exclusive access to on-device Apple Foundation Models (AFM)
+/// across concurrent tasks, suites, and processes to prevent queue contention,
+/// daemon XPC drops, and test timeouts.
+public actor AFMCallSerializer {
+    public static let shared = AFMCallSerializer()
+
+    private let lockFilePath: String = {
+        let tempDir = NSTemporaryDirectory()
+        return (tempDir as NSString).appendingPathComponent("apexagent_afm_execution.lock")
+    }()
+
+    public init() {}
+
+    /// Executes `operation` while holding both the in-process actor lock and
+    /// an advisory POSIX file lock to ensure strictly serialized AFM execution across
+    /// suites, tasks, and test runner processes.
+    public func withExclusiveLock<T: Sendable>(_ operation: @Sendable () async throws -> T) async throws -> T {
+        try Task.checkCancellation()
+
+        let fd = open(lockFilePath, O_CREAT | O_RDWR, 0o666)
+        if fd >= 0 {
+            var acquired = false
+            while !acquired {
+                try Task.checkCancellation()
+                if flock(fd, LOCK_EX | LOCK_NB) == 0 {
+                    acquired = true
+                } else {
+                    try await Task.sleep(for: .milliseconds(25))
+                }
+            }
+        }
+
+        defer {
+            if fd >= 0 {
+                flock(fd, LOCK_UN)
+                close(fd)
+            }
+        }
+
+        return try await operation()
+    }
+}
+
 @MainActor
 struct NativeAppleEngine: AgentEngine {
     let orchestrator: AgentOrchestrator
@@ -137,6 +182,7 @@ struct NativeAppleEngine: AgentEngine {
         case .required: .required
         case .disabled: .disallowed
         }
+        let resolvedOptions = options
 
         // Extract semantic RAG context (the portion appended to orchestrator.agentInstructions)
         let semanticContext: String
@@ -184,11 +230,13 @@ struct NativeAppleEngine: AgentEngine {
                             do {
                                 let result: String
                                 if let customResponder {
-                                    result = try await customResponder(multimodalPrompt, options)
+                                    result = try await customResponder(multimodalPrompt, resolvedOptions)
                                 } else if let testResponder = Self.testResponder {
-                                    result = try await testResponder(multimodalPrompt, options)
+                                    result = try await testResponder(multimodalPrompt, resolvedOptions)
                                 } else if let session {
-                                    result = try await session.respond(to: multimodalPrompt, options: options).content
+                                    result = try await AFMCallSerializer.shared.withExclusiveLock {
+                                        try await session.respond(to: multimodalPrompt, options: resolvedOptions).content
+                                    }
                                 } else {
                                     throw NSError(
                                         domain: "NativeAppleEngine",
@@ -254,7 +302,9 @@ struct NativeAppleEngine: AgentEngine {
 
                 for turn in 0..<maxTurns {
                     let turnPrompt = SecretRedactor.redact(text: currentPrompt)
-                    let timeoutSeconds = timeoutOverride ?? (customSession == nil ? 180 : 90)
+                    let isTestMode = ProcessInfo.processInfo.environment["APEX_TEST_MODE"] == "1"
+                    let defaultTimeout: TimeInterval = isTestMode ? 40 : (customSession == nil ? 180 : 90)
+                    let timeoutSeconds = timeoutOverride ?? defaultTimeout
                     let coordinator = PromptCancellationCoordinator()
                     let responseText: String = try await withTaskCancellationHandler {
                         try await withCheckedThrowingContinuation { continuation in
@@ -264,11 +314,13 @@ struct NativeAppleEngine: AgentEngine {
                                 do {
                                     let result: String
                                     if let customResponder {
-                                        result = try await customResponder(Prompt(turnPrompt), options)
+                                        result = try await customResponder(Prompt(turnPrompt), resolvedOptions)
                                     } else if let testResponder = Self.testResponder {
-                                        result = try await testResponder(Prompt(turnPrompt), options)
+                                        result = try await testResponder(Prompt(turnPrompt), resolvedOptions)
                                     } else if let session {
-                                        result = try await session.respond(to: turnPrompt, options: options).content
+                                        result = try await AFMCallSerializer.shared.withExclusiveLock {
+                                            try await session.respond(to: turnPrompt, options: resolvedOptions).content
+                                        }
                                     } else {
                                         throw NSError(
                                             domain: "NativeAppleEngine",
@@ -427,6 +479,7 @@ struct FMCLIAgentEngine: AgentEngine {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: fmPath)
         process.arguments = args
+        process.standardInput = FileHandle.nullDevice
 
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()

@@ -1184,7 +1184,8 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             "good morning", "good afternoon", "good evening", "good night",
             "how are you", "how are you doing", "how is it going", "hows it going",
             "whats up", "what's up", "what is up",
-            "thanks", "thank you", "thanks a lot", "thank you so much", "thx", "ty"
+            "thanks", "thank you", "thanks a lot", "thank you so much", "thx", "ty",
+            "ping", "pong", "test"
         ]
         return conversationalPhrases.contains(normalized)
     }
