@@ -118,4 +118,48 @@ struct ApexAgentIntentsTests {
             Issue.record("Unexpected error: \(error)")
         }
     }
+
+    @Test("AFMCallSerializer enforces strict mutual exclusion under concurrent contention")
+    func testAFMCallSerializerMutualExclusion() async throws {
+        let serializer = AFMCallSerializer.shared
+        final class ConcurrencyTracker: @unchecked Sendable {
+            var activeCount = 0
+            var maxActiveCount = 0
+            var executedCount = 0
+            let lock = NSLock()
+
+            func enter() {
+                lock.lock()
+                defer { lock.unlock() }
+                activeCount += 1
+                if activeCount > maxActiveCount {
+                    maxActiveCount = activeCount
+                }
+            }
+
+            func exit() {
+                lock.lock()
+                defer { lock.unlock() }
+                activeCount -= 1
+                executedCount += 1
+            }
+        }
+
+        let tracker = ConcurrencyTracker()
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for _ in 0..<5 {
+                group.addTask {
+                    try await serializer.withExclusiveLock {
+                        tracker.enter()
+                        try await Task.sleep(for: .milliseconds(30))
+                        tracker.exit()
+                    }
+                }
+            }
+            try await group.waitForAll()
+        }
+
+        #expect(tracker.executedCount == 5)
+        #expect(tracker.maxActiveCount == 1, "AFMCallSerializer must never allow more than 1 concurrent execution")
+    }
 }
