@@ -637,6 +637,11 @@
 		B10300010000000000000002 /* ReviewerCriticLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10300010000000000000002 /* ReviewerCriticLiveVerifier.swift */; };
 		B10300010000000000000003 /* ReviewArtifactsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10300010000000000000003 /* ReviewArtifactsTool.swift */; };
 		B10300010000000000000004 /* ReviewerCriticTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10300010000000000000004 /* ReviewerCriticTests.swift */; };
+		B10200010000000000000001 /* TaskWorkspaceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200010000000000000001 /* TaskWorkspaceModels.swift */; };
+		B10200010000000000000002 /* TaskWorkspaceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200010000000000000002 /* TaskWorkspaceManager.swift */; };
+		B10200010000000000000003 /* TaskMergeReviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200010000000000000003 /* TaskMergeReviewService.swift */; };
+		B10200010000000000000004 /* TaskWorkspaceLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200010000000000000004 /* TaskWorkspaceLiveVerifier.swift */; };
+		B10200010000000000000005 /* TaskWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200010000000000000005 /* TaskWorkspaceTests.swift */; };
 		D8DD68ED916D484C832CD003 /* GitHubIntegrationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44752C1860D5B93EC7CE3A49 /* GitHubIntegrationAuditorTests.swift */; };
 		D92604671391FDA057EFE2CE /* SeatbeltRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA26C714C34C0964665FC86 /* SeatbeltRoutingTests.swift */; };
 		D9C41173B853FC277273505D /* DynamicToolboxManagerSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484D3337A879FB654CB4F1E4 /* DynamicToolboxManagerSection.swift */; };
@@ -1688,6 +1693,11 @@
 		A10300010000000000000002 /* ReviewerCriticLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewerCriticLiveVerifier.swift; sourceTree = "<group>"; };
 		A10300010000000000000003 /* ReviewArtifactsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewArtifactsTool.swift; sourceTree = "<group>"; };
 		A10300010000000000000004 /* ReviewerCriticTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewerCriticTests.swift; sourceTree = "<group>"; };
+		A10200010000000000000001 /* TaskWorkspaceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskWorkspaceModels.swift; sourceTree = "<group>"; };
+		A10200010000000000000002 /* TaskWorkspaceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskWorkspaceManager.swift; sourceTree = "<group>"; };
+		A10200010000000000000003 /* TaskMergeReviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskMergeReviewService.swift; sourceTree = "<group>"; };
+		A10200010000000000000004 /* TaskWorkspaceLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskWorkspaceLiveVerifier.swift; sourceTree = "<group>"; };
+		A10200010000000000000005 /* TaskWorkspaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskWorkspaceTests.swift; sourceTree = "<group>"; };
 		FAA7828EB7439A5656C74381 /* MCPPolicyAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPPolicyAuditorTests.swift; sourceTree = "<group>"; };
 		FB0F9C95A07AECB12ECA120E /* AppleShortcutsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleShortcutsTool.swift; sourceTree = "<group>"; };
 		FB99CA7CFACAB86CCC063E03 /* OSLogQueryTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSLogQueryTool.swift; sourceTree = "<group>"; };
@@ -2430,6 +2440,7 @@
 				F6E705A3372FC60A823B02A0 /* Coordinators */,
 				E64E29269091F5410A8284CE /* Eval */,
 				E64E29269091F5410A8284CF /* Review */,
+				E64E29269091F5410A8284D0 /* Workspaces */,
 				51193E61AF4D957C0C723E0F /* GateQueue */,
 				155061817EB5635BD7AB9641 /* Intents */,
 				DF05940E4CA3378D0FACA638 /* LongRun */,
@@ -2485,6 +2496,17 @@
 				A10300010000000000000002 /* ReviewerCriticLiveVerifier.swift */,
 			);
 			path = Review;
+			sourceTree = "<group>";
+		};
+		E64E29269091F5410A8284D0 /* Workspaces */ = {
+			isa = PBXGroup;
+			children = (
+				A10200010000000000000001 /* TaskWorkspaceModels.swift */,
+				A10200010000000000000002 /* TaskWorkspaceManager.swift */,
+				A10200010000000000000003 /* TaskMergeReviewService.swift */,
+				A10200010000000000000004 /* TaskWorkspaceLiveVerifier.swift */,
+			);
+			path = Workspaces;
 			sourceTree = "<group>";
 		};
 		F031E34CDD92BC6B044F8081 /* Resources */ = {
@@ -2716,6 +2738,7 @@
 				CDB982F99ED2ECD82AB8B499 /* R3R4AdversarialStressTests.swift */,
 				475AA27E9CD4482A51D18B19 /* ReflectionManagerTests.swift */,
 				A10300010000000000000004 /* ReviewerCriticTests.swift */,
+				A10200010000000000000005 /* TaskWorkspaceTests.swift */,
 				5431374CE9023D403C22BFF0 /* ReleaseChangelogEngineTests.swift */,
 				C223AB0E08F57844160384BA /* ReleaseProvenanceGeneratorTests.swift */,
 				F064D929D23188DD1C6571B5 /* RemoteCompanionTests.swift */,
@@ -3452,6 +3475,10 @@
 				B10300010000000000000001 /* ReviewerCriticAgent.swift in Sources */,
 				B10300010000000000000002 /* ReviewerCriticLiveVerifier.swift in Sources */,
 				B10300010000000000000003 /* ReviewArtifactsTool.swift in Sources */,
+				B10200010000000000000001 /* TaskWorkspaceModels.swift in Sources */,
+				B10200010000000000000002 /* TaskWorkspaceManager.swift in Sources */,
+				B10200010000000000000003 /* TaskMergeReviewService.swift in Sources */,
+				B10200010000000000000004 /* TaskWorkspaceLiveVerifier.swift in Sources */,
 				BE49594832EA0DC4A90865A7 /* RemoteCompanionGateway.swift in Sources */,
 				88E788FEC0E187CA785A5756 /* RepeatDetector.swift in Sources */,
 				66BDED758A00C481F54692AB /* RepoHygieneAuditor.swift in Sources */,
@@ -3873,6 +3900,7 @@
 				D35E46E6BA06CE5DDEE9135B /* R3R4AdversarialStressTests.swift in Sources */,
 				A95F8B3029A159BEFC419B17 /* ReflectionManagerTests.swift in Sources */,
 				B10300010000000000000004 /* ReviewerCriticTests.swift in Sources */,
+				B10200010000000000000005 /* TaskWorkspaceTests.swift in Sources */,
 				03C098F1D1822A07123E304F /* ReleaseChangelogEngineTests.swift in Sources */,
 				45538B22E3A36E61F192D220 /* ReleaseProvenanceGeneratorTests.swift in Sources */,
 				91D7398E489833978B07D683 /* RemoteCompanionTests.swift in Sources */,

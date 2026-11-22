@@ -59,6 +59,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case memoryVerify(jsonOutput: Bool)
     case reviewerVerify(jsonOutput: Bool)
     case mcpRegistryVerify(jsonOutput: Bool)
+    case workspacesVerify(jsonOutput: Bool)
     case approvals(subcommandArgs: [String], jsonOutput: Bool)
     case daemon
     case spaceCLI(subcommandArgs: [String])
@@ -376,6 +377,9 @@ public enum ApexCLIRouter {
 
         case "mcp-registry-verify", "--mcp-registry-verify", "mcp-verify", "--mcp-verify":
             return ParsedCLIInvocation(command: .mcpRegistryVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
+        case "workspaces-verify", "--workspaces-verify", "workspace-verify", "--workspace-verify", "workspaces", "--workspaces":
+            return ParsedCLIInvocation(command: .workspacesVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
         case "approvals", "--approvals":
             let rest = Array(remaining.dropFirst())
