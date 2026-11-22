@@ -80,6 +80,7 @@ enum AgentSecurity {
         "delete_memory": .medium,
         "export_review_session": .low,
         "verify_execution": .medium,
+        "review_artifacts": .low,
         "space_write_page": .medium, // stages a Space page proposal (human-gated); local state only
         "space_propose_diff": .medium, // stages a surgical page diff proposal (human-gated); local state only
 

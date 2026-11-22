@@ -57,6 +57,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case evalVerify(jsonOutput: Bool)
     case verificationVerify(runId: String?, jsonOutput: Bool)
     case memoryVerify(jsonOutput: Bool)
+    case reviewerVerify(jsonOutput: Bool)
     case approvals(subcommandArgs: [String], jsonOutput: Bool)
     case daemon
     case spaceCLI(subcommandArgs: [String])
@@ -369,6 +370,9 @@ public enum ApexCLIRouter {
         case "memory-verify", "--memory-verify":
             return ParsedCLIInvocation(command: .memoryVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
+        case "reviewer-verify", "--reviewer-verify", "reviewer", "--reviewer", "review-verify", "--review-verify":
+            return ParsedCLIInvocation(command: .reviewerVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
         case "approvals", "--approvals":
             let rest = Array(remaining.dropFirst())
             return ParsedCLIInvocation(command: .approvals(subcommandArgs: rest, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
@@ -427,6 +431,7 @@ public enum ApexCLIRouter {
           skills show <id>        Show skill metadata and load full content on demand
           skills run <id> [args]  Invoke a progressive skill (filesystem or MCP-served)
           skills verify           Run live verification of issue #88 agent skills support
+          reviewer-verify         Verify reviewer/critic agent artifact verification before done (G3)
           --cli [--allow-tools|--no-tools] <prompt>
                                   Run a single headless agent turn and exit
           --daemon                Start ApexGatewayServer on port 1337
