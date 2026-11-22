@@ -197,6 +197,7 @@ struct SpaceWorkspaceView: View {
     enum SpaceInspectorTab: String, CaseIterable, Identifiable {
         case roster = "Members"
         case pages = "Pages"
+        case memory = "Memory"
         case thread = "Thread"
 
         var id: String { rawValue }
@@ -465,6 +466,19 @@ private struct SpaceChannelHeaderBar: View {
             .buttonStyle(.bordered)
             .controlSize(.small)
             .accessibilityIdentifier("spacePagesDrawerButton")
+
+            // Inspectable Memory Shortcut
+            Button {
+                inspectorTab = .memory
+                showInspector = true
+            } label: {
+                Label("Memory", systemImage: "brain.head.profile")
+                    .font(.system(size: 11, weight: .medium))
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .help("Open Inspectable Memory UI for this Space")
+            .accessibilityIdentifier("spaceMemoryDrawerButton")
 
             // Inspector Toggle
             Button {
@@ -914,11 +928,18 @@ private struct SpaceInspectorDrawer: View {
                 rosterTabContent
             case .pages:
                 pagesTabContent
+            case .memory:
+                memoryTabContent
             case .thread:
                 threadTabContent
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
+    }
+
+    // MARK: - Memory Tab (Inspectable Memory UI)
+    private var memoryTabContent: some View {
+        SpaceMemoryInspectorView(space: space, workspacePath: space.workspacePath)
     }
 
     // MARK: 1. Roster Tab (Humans + Bots + Invite Link)

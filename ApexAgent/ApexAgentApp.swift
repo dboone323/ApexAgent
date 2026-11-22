@@ -32,6 +32,12 @@ public struct ApexAgentApp: App {
         SpaceManager.shared.botManager = bm
         ContainerBridge.shared = ContainerManager.shared
         let args = CommandLine.arguments
+        if args.contains("--memory-verify") || args.contains("memory-verify") {
+            let result = SpaceMemoryLiveVerifier.runVerification(writeLogTo: "runs/issue83/live-verify.log")
+            AppLog.info(.app, result.output)
+            fputs("\(result.output)\n", Darwin.stdout)
+            exit(result.passed ? 0 : 1)
+        }
         // Attempt to connect to background daemon gateway if explicitly requested or reachable.
         // Probing reachability avoids Network.framework ECONNREFUSED socket error noise when
         // running in standalone GUI mode without the daemon.
@@ -662,6 +668,10 @@ public func runSpaceCLIMode(subcommandArgs: [String]) async {
         } catch {
             printErr("Failed to consolidate memory tiers: \(error.localizedDescription)")
         }
+    } else if subcommandArgs.contains("memory-verify") || subcommandArgs.contains("--memory-verify") {
+        let result = SpaceMemoryLiveVerifier.runVerification(writeLogTo: "runs/issue83/live-verify.log")
+        printOut(result.output)
+        if !result.passed { exit(1) }
     } else if let runIdx = subcommandArgs.firstIndex(of: "run"), runIdx + 2 < subcommandArgs.count {
         let spaceName = subcommandArgs[runIdx + 1]
         let promptText = subcommandArgs[(runIdx + 2)...].joined(separator: " ")

@@ -63,6 +63,12 @@ struct StoreMemoryTool: Tool {
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             return await MainActor.run {
+                let activeSpace = SpaceManager.shared.activeSpace
+                let ws = orchestrator.orchestrator.currentWorkspacePath
+                if SpaceMemoryInspectorManager.shared.isNoMemoryModeEnabled(for: activeSpace, workspacePath: ws) {
+                    return "ℹ️ No-memory session active: memory record was not persisted."
+                }
+
                 guard let context = orchestrator.orchestrator.modelContext else {
                     return "Memory unavailable: model context is not initialized."
                 }
