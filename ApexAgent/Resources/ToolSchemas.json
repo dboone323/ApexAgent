@@ -1291,6 +1291,42 @@
     }
   },
   {
+    "description" : "Independent reviewer\/critic agent that verifies artifacts against request claims before work is called done. Checks that every claim is supported by an artifact, checks for contradictions, and asserts required files exist. Returns verdict (pass\/fail) with cited findings (artifact + file\/line location).",
+    "name" : "review_artifacts",
+    "parameters" : {
+      "additionalProperties" : false,
+      "properties" : {
+        "artifactPaths" : {
+          "description" : "Comma-separated list of artifact paths, if checking files on disk.",
+          "type" : "string"
+        },
+        "artifactsJSON" : {
+          "description" : "JSON array of in-memory artifacts [{\"path\":\"...\",\"content\":\"...\"}] if not on disk.",
+          "type" : "string"
+        },
+        "claimsJSON" : {
+          "description" : "JSON array of claims with optional expectedPattern, requiredArtifactPath, and contradictionPattern.",
+          "type" : "string"
+        },
+        "request" : {
+          "description" : "The original request description or task claims to verify.",
+          "type" : "string"
+        }
+      },
+      "required" : [
+        "request"
+      ],
+      "title" : "Arguments",
+      "type" : "object",
+      "x-order" : [
+        "request",
+        "artifactPaths",
+        "claimsJSON",
+        "artifactsJSON"
+      ]
+    }
+  },
+  {
     "description" : "Saves code review findings (summary, suggestions, file metrics, issues) to the database.",
     "name" : "save_review_session",
     "parameters" : {

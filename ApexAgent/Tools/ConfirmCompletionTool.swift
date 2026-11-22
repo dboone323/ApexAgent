@@ -31,19 +31,45 @@ struct ConfirmCompletionTool: Tool {
     func call(arguments: Arguments) async throws -> String {
         return try await executeWithLogging(arguments: arguments, orchestrator: orchestrator) {
             let orch = await orchestrator.orchestrator
-            
+            let wsPath = await MainActor.run { orch.currentWorkspacePath }
+
+            // Checkpoint: Reviewer/Critic Agent verifies work before 'done' (Issue #103, G3)
+            let reviewer = ReviewerAgent()
+            let report = await reviewer.reviewCompletion(
+                summary: arguments.summary,
+                filesModified: arguments.filesModified,
+                verificationResults: arguments.verificationResults,
+                workspacePath: wsPath
+            )
+
+            if !report.isPassed {
+                let findingsFormatted = report.findings.map { f in
+                    "- [\(f.kind.rawValue)] at \(f.location): \(f.reason)"
+                }.joined(separator: "\n")
+
+                return """
+                REVIEW_BLOCKED: Reviewer/critic agent rejected task completion before 'done' can be claimed.
+                Verdict: FAIL
+                Findings (\(report.findings.count)):
+                \(findingsFormatted)
+
+                You must resolve all reviewer findings and verify artifacts before calling confirm_completion again.
+                """
+            }
+
             let displayArgs = """
             Summary: \(arguments.summary)
             Files Modified: \(arguments.filesModified ?? "None")
             Verification: \(arguments.verificationResults ?? "None")
+            Reviewer Verdict: PASS (0 findings)
             """
-            
+
             let approved = await orch.requestConfirmation(
                 toolName: self.name,
                 arguments: displayArgs,
                 riskDescription: "This will complete the task and finalize execution. Do you approve of the work done?"
             )
-            
+
             if approved {
                 return "SUCCESS: The user has approved task completion. You may now stop and output the final response."
             } else {

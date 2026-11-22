@@ -110,6 +110,8 @@ public enum RunTraceReplayer {
                 rawDetail = "parent=\(ev.parentRunId ?? "") subAgent=\(ev.subAgentId ?? "") type=\(ev.agentType ?? "")"
             case .approval:
                 rawDetail = "tool=\(ev.toolName ?? "") verdict=\(ev.verdict ?? "") source=\(ev.verdictSource ?? "") rule=\(ev.rule ?? "none")"
+            case .reviewCheckpoint:
+                rawDetail = "verdict=\(ev.reviewVerdict ?? "") findings=\(ev.findingsCount ?? 0) summary=\(ev.findingsSummary ?? "")"
             }
             let detail = SecretRedactor.redact(text: rawDetail)
 

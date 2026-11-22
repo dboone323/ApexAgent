@@ -345,6 +345,23 @@ public final class RunTraceManager: @unchecked Sendable {
         }
     }
 
+    @discardableResult
+    public func recordReviewCheckpoint(
+        verdict: String,
+        findingsCount: Int,
+        findingsSummary: String
+    ) -> RunTraceEvent? {
+        guard let recorder = activeRecorder else { return nil }
+        return recorder.appendEvent { seq in
+            RunTraceEvent.reviewCheckpoint(
+                sequence: seq,
+                verdict: verdict,
+                findingsCount: findingsCount,
+                findingsSummary: findingsSummary
+            )
+        }
+    }
+
     /// Resets all active recording state (useful for tests).
     public func reset() {
         lock.lock()

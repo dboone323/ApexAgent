@@ -10,6 +10,7 @@ public enum RunTraceEventKind: String, Codable, Sendable, CaseIterable {
     case memoryWrite = "memoryWrite"
     case subAgentHandoff = "subAgentHandoff"
     case approval = "approval"
+    case reviewCheckpoint = "reviewCheckpoint"
 }
 
 // MARK: - Token Count Information
@@ -63,6 +64,11 @@ public struct RunTraceEvent: Codable, Sendable, Identifiable, Equatable {
     public let verdictSource: String? // ApprovalVerdictSource rawValue
     public let rule: String?
 
+    // Review Checkpoint details (Issue #103)
+    public let reviewVerdict: String? // "pass", "fail"
+    public let findingsCount: Int?
+    public let findingsSummary: String?
+
     public init(
         id: UUID = UUID(),
         sequence: Int,
@@ -86,7 +92,10 @@ public struct RunTraceEvent: Codable, Sendable, Identifiable, Equatable {
         contextSummary: String? = nil,
         verdict: String? = nil,
         verdictSource: String? = nil,
-        rule: String? = nil
+        rule: String? = nil,
+        reviewVerdict: String? = nil,
+        findingsCount: Int? = nil,
+        findingsSummary: String? = nil
     ) {
         self.id = id
         self.sequence = sequence
@@ -111,6 +120,9 @@ public struct RunTraceEvent: Codable, Sendable, Identifiable, Equatable {
         self.verdict = verdict
         self.verdictSource = verdictSource
         self.rule = rule
+        self.reviewVerdict = reviewVerdict
+        self.findingsCount = findingsCount
+        self.findingsSummary = findingsSummary.map { Self.sanitizeSummary($0) }
     }
 
     // MARK: - Secrets Sanitization
@@ -235,6 +247,21 @@ public struct RunTraceEvent: Codable, Sendable, Identifiable, Equatable {
         )
     }
 
+    public static func reviewCheckpoint(
+        sequence: Int,
+        verdict: String,
+        findingsCount: Int,
+        findingsSummary: String
+    ) -> RunTraceEvent {
+        RunTraceEvent(
+            sequence: sequence,
+            kind: .reviewCheckpoint,
+            reviewVerdict: verdict,
+            findingsCount: findingsCount,
+            findingsSummary: sanitizeSummary(findingsSummary)
+        )
+    }
+
     public var eventDescription: String {
         let desc: String
         switch kind {
@@ -256,6 +283,8 @@ public struct RunTraceEvent: Codable, Sendable, Identifiable, Equatable {
             desc = "subAgentHandoff: parent=\(parentRunId ?? "") → subAgent=\(subAgentId ?? "") (\(agentType ?? "")) context=\"\(contextSummary ?? "")\""
         case .approval:
             desc = "approval: \(toolName ?? "") -> \(verdict ?? "") via \(verdictSource ?? "unknown")" + (rule != nil ? " [rule: \(rule!)]" : "")
+        case .reviewCheckpoint:
+            desc = "reviewCheckpoint: \(reviewVerdict ?? "unknown") (findings: \(findingsCount ?? 0)) - \"\(findingsSummary ?? "")\""
         }
         return SecretRedactor.redact(text: desc)
     }

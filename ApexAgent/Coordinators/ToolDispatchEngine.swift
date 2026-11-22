@@ -74,6 +74,7 @@ final class ToolDispatchEngine {
             AnyExecutableTool(AskBotTool(orchestrator: orchestrator)),
             AnyExecutableTool(ConfirmCompletionTool(orchestrator: orchestrator)),
             AnyExecutableTool(VerifyExecutionTool(orchestrator: orchestrator)),
+            AnyExecutableTool(ReviewArtifactsTool(orchestrator: orchestrator)),
             AnyExecutableTool(SaveReviewSessionTool(orchestrator: orchestrator)),
             AnyExecutableTool(ListReviewSessionsTool(orchestrator: orchestrator)),
             AnyExecutableTool(ExportReviewSessionTool(orchestrator: orchestrator)),

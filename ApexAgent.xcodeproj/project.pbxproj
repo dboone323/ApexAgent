@@ -623,6 +623,10 @@
 		D7FC3506D4B023DB1283980A /* AccessibilityOmniTargeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DC6AFC4828D4E3E9A0643C7 /* AccessibilityOmniTargeter.swift */; };
 		D831C677138DEC3037E687B4 /* PrivacyManifestDriftAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 832E1C05E7B5D0DA2C0278A1 /* PrivacyManifestDriftAuditor.swift */; };
 		D856758AB2A7268C65FCB28F /* EvalGrader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA54129B321ED7F40909EB2E /* EvalGrader.swift */; };
+		B10300010000000000000001 /* ReviewerCriticAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10300010000000000000001 /* ReviewerCriticAgent.swift */; };
+		B10300010000000000000002 /* ReviewerCriticLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10300010000000000000002 /* ReviewerCriticLiveVerifier.swift */; };
+		B10300010000000000000003 /* ReviewArtifactsTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10300010000000000000003 /* ReviewArtifactsTool.swift */; };
+		B10300010000000000000004 /* ReviewerCriticTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10300010000000000000004 /* ReviewerCriticTests.swift */; };
 		D8DD68ED916D484C832CD003 /* GitHubIntegrationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44752C1860D5B93EC7CE3A49 /* GitHubIntegrationAuditorTests.swift */; };
 		D92604671391FDA057EFE2CE /* SeatbeltRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA26C714C34C0964665FC86 /* SeatbeltRoutingTests.swift */; };
 		D9C41173B853FC277273505D /* DynamicToolboxManagerSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484D3337A879FB654CB4F1E4 /* DynamicToolboxManagerSection.swift */; };
@@ -1660,6 +1664,10 @@
 		FA21ED83172022A976E4210D /* AgentRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentRegistry.swift; sourceTree = "<group>"; };
 		FA267D75AAB3636642A74AD2 /* DiscordMessageParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscordMessageParser.swift; sourceTree = "<group>"; };
 		FA54129B321ED7F40909EB2E /* EvalGrader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EvalGrader.swift; sourceTree = "<group>"; };
+		A10300010000000000000001 /* ReviewerCriticAgent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewerCriticAgent.swift; sourceTree = "<group>"; };
+		A10300010000000000000002 /* ReviewerCriticLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewerCriticLiveVerifier.swift; sourceTree = "<group>"; };
+		A10300010000000000000003 /* ReviewArtifactsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewArtifactsTool.swift; sourceTree = "<group>"; };
+		A10300010000000000000004 /* ReviewerCriticTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewerCriticTests.swift; sourceTree = "<group>"; };
 		FAA7828EB7439A5656C74381 /* MCPPolicyAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPPolicyAuditorTests.swift; sourceTree = "<group>"; };
 		FB0F9C95A07AECB12ECA120E /* AppleShortcutsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleShortcutsTool.swift; sourceTree = "<group>"; };
 		FB99CA7CFACAB86CCC063E03 /* OSLogQueryTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSLogQueryTool.swift; sourceTree = "<group>"; };
@@ -1894,6 +1902,7 @@
 				835966E6BB38D055D4FD2824 /* ProjectAuditTool.swift */,
 				D9E7CB783A177E2CCB9AB6A3 /* ProjectManagementTools.swift */,
 				997A86D1BE9862F16EB4D24F /* ReminderTool.swift */,
+				A10300010000000000000003 /* ReviewArtifactsTool.swift */,
 				F636A0FC658F1E3467177536 /* RunWorkflowTool.swift */,
 				D22EA774422B67EDF3268A5D /* ScreenPerceptionContractAuditor.swift */,
 				00C1D19CCF1A38E3D1CF08C8 /* ScreenPerceptionTool.swift */,
@@ -2392,6 +2401,7 @@
 				C40A5E2BBF6A32F4825FAA3A /* Companion */,
 				F6E705A3372FC60A823B02A0 /* Coordinators */,
 				E64E29269091F5410A8284CE /* Eval */,
+				E64E29269091F5410A8284CF /* Review */,
 				51193E61AF4D957C0C723E0F /* GateQueue */,
 				155061817EB5635BD7AB9641 /* Intents */,
 				DF05940E4CA3378D0FACA638 /* LongRun */,
@@ -2438,6 +2448,15 @@
 				D7D3F487104803F2CBEBC28B /* PassToTheKGate.swift */,
 			);
 			path = Eval;
+			sourceTree = "<group>";
+		};
+		E64E29269091F5410A8284CF /* Review */ = {
+			isa = PBXGroup;
+			children = (
+				A10300010000000000000001 /* ReviewerCriticAgent.swift */,
+				A10300010000000000000002 /* ReviewerCriticLiveVerifier.swift */,
+			);
+			path = Review;
 			sourceTree = "<group>";
 		};
 		F031E34CDD92BC6B044F8081 /* Resources */ = {
@@ -2666,6 +2685,7 @@
 				12A612AB6A3D57951F4B2C8F /* R1R2AdversarialStressTests.swift */,
 				CDB982F99ED2ECD82AB8B499 /* R3R4AdversarialStressTests.swift */,
 				475AA27E9CD4482A51D18B19 /* ReflectionManagerTests.swift */,
+				A10300010000000000000004 /* ReviewerCriticTests.swift */,
 				5431374CE9023D403C22BFF0 /* ReleaseChangelogEngineTests.swift */,
 				C223AB0E08F57844160384BA /* ReleaseProvenanceGeneratorTests.swift */,
 				F064D929D23188DD1C6571B5 /* RemoteCompanionTests.swift */,
@@ -3394,6 +3414,9 @@
 				B33DE3E6F79973472F4E74D6 /* ReleaseChangelogEngine.swift in Sources */,
 				B3153FDC99DB1167832081D9 /* ReleaseProvenanceGenerator.swift in Sources */,
 				D53FCFAD7E947C41BFF0BBA1 /* ReminderTool.swift in Sources */,
+				B10300010000000000000001 /* ReviewerCriticAgent.swift in Sources */,
+				B10300010000000000000002 /* ReviewerCriticLiveVerifier.swift in Sources */,
+				B10300010000000000000003 /* ReviewArtifactsTool.swift in Sources */,
 				BE49594832EA0DC4A90865A7 /* RemoteCompanionGateway.swift in Sources */,
 				88E788FEC0E187CA785A5756 /* RepeatDetector.swift in Sources */,
 				66BDED758A00C481F54692AB /* RepoHygieneAuditor.swift in Sources */,
@@ -3809,6 +3832,7 @@
 				0363B16D62F048AE46AF712B /* R1R2AdversarialStressTests.swift in Sources */,
 				D35E46E6BA06CE5DDEE9135B /* R3R4AdversarialStressTests.swift in Sources */,
 				A95F8B3029A159BEFC419B17 /* ReflectionManagerTests.swift in Sources */,
+				B10300010000000000000004 /* ReviewerCriticTests.swift in Sources */,
 				03C098F1D1822A07123E304F /* ReleaseChangelogEngineTests.swift in Sources */,
 				45538B22E3A36E61F192D220 /* ReleaseProvenanceGeneratorTests.swift in Sources */,
 				91D7398E489833978B07D683 /* RemoteCompanionTests.swift in Sources */,
