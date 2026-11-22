@@ -612,7 +612,7 @@ public struct SpaceMemoryInspectorView: View {
             HStack {
                 Spacer()
                 Button("Import Memory") {
-                    try? SpaceMemoryInspectorManager.shared.importMarkdown(
+                    _ = try? SpaceMemoryInspectorManager.shared.importMarkdown(
                         importMarkdownText,
                         space: space,
                         workspacePath: effectiveWorkspace
