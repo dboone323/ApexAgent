@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B08700010000000000000001 /* MCPRegistryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08700010000000000000001 /* MCPRegistryModels.swift */; };
+		B08700010000000000000002 /* MCPRegistryClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08700010000000000000002 /* MCPRegistryClient.swift */; };
+		B08700010000000000000003 /* MCPRegistryTrustScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08700010000000000000003 /* MCPRegistryTrustScanner.swift */; };
+		B08700010000000000000004 /* MCPRegistryBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08700010000000000000004 /* MCPRegistryBrowserView.swift */; };
+		B08700010000000000000005 /* MCPRegistryLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08700010000000000000005 /* MCPRegistryLiveVerifier.swift */; };
+		B08700010000000000000006 /* MCPRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08700010000000000000006 /* MCPRegistryTests.swift */; };
 		002FFD5E910F431AA50C85D7 /* AutomationWorkflows+4to7.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94BE12E3CCD68A483A7AEDF /* AutomationWorkflows+4to7.swift */; };
 		009A8AE7D710C956F0B1EFC8 /* MCPConfigImportAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E202A95E377CB28DAD9079D3 /* MCPConfigImportAuditor.swift */; };
 		0101F5F6BEE381BEA0584A8F /* SharedLogging.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 694736B63E8080A09030C984 /* SharedLogging.framework */; };
@@ -959,6 +965,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A08700010000000000000001 /* MCPRegistryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPRegistryModels.swift; sourceTree = "<group>"; };
+		A08700010000000000000002 /* MCPRegistryClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPRegistryClient.swift; sourceTree = "<group>"; };
+		A08700010000000000000003 /* MCPRegistryTrustScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPRegistryTrustScanner.swift; sourceTree = "<group>"; };
+		A08700010000000000000004 /* MCPRegistryBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPRegistryBrowserView.swift; sourceTree = "<group>"; };
+		A08700010000000000000005 /* MCPRegistryLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPRegistryLiveVerifier.swift; sourceTree = "<group>"; };
+		A08700010000000000000006 /* MCPRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPRegistryTests.swift; sourceTree = "<group>"; };
 		00C1D19CCF1A38E3D1CF08C8 /* ScreenPerceptionTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenPerceptionTool.swift; sourceTree = "<group>"; };
 		0159C6A22D24E1F1A6B4D1C4 /* GhostCursorOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostCursorOverlay.swift; sourceTree = "<group>"; };
 		01677869C536A1E8041FE4D0 /* ArtifactSizeBudgetGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArtifactSizeBudgetGateTests.swift; sourceTree = "<group>"; };
@@ -2034,6 +2046,8 @@
 		6A2AB8BCC1FEA8C8361CCA30 /* Security */ = {
 			isa = PBXGroup;
 			children = (
+				A08700010000000000000003 /* MCPRegistryTrustScanner.swift */,
+				A08700010000000000000005 /* MCPRegistryLiveVerifier.swift */,
 				01D36BE270D67C0F522A0602 /* AgentAuditLog.swift */,
 				8E9AD0F69E464E99104813F9 /* AgentAuditLogger.swift */,
 				8AEF83F4C3FF3DE5CEE7D425 /* AgentSecurity.swift */,
@@ -2099,6 +2113,7 @@
 		79411B9FF376DD38AB2AF650 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				A08700010000000000000004 /* MCPRegistryBrowserView.swift */,
 				159A57C07694CBDB641D9426 /* AmbientApprovalSurfaceView.swift */,
 				89FB6833BB17F9CF840D12D3 /* ANSIColorParser.swift */,
 				912802BE945CEE3BA6BC7BF3 /* BotChatView.swift */,
@@ -2141,6 +2156,8 @@
 		8B99CE7A3398A6B2E600432F /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				A08700010000000000000001 /* MCPRegistryModels.swift */,
+				A08700010000000000000002 /* MCPRegistryClient.swift */,
 				5B6BC0389A658C66CFE36DC7 /* A2APeerDiscovery.swift */,
 				7169AE21002560689A2AA70E /* A2AServer.swift */,
 				528F1631BDA859F3FE5E6EC3 /* AgentEngine.swift */,
@@ -2507,6 +2524,7 @@
 		FF1EAB66BDCDC6DFDCB0CA7A /* ApexAgentTests */ = {
 			isa = PBXGroup;
 			children = (
+				A08700010000000000000006 /* MCPRegistryTests.swift */,
 				E1AC59673F796997416BB805 /* A2AProtocolTests.swift */,
 				1AE66F50CD907013FA9CC17D /* AccessibilityPassTests.swift */,
 				23B43BB2E4549DFD6CADFD8C /* AgentAuditLoggerTests.swift */,
@@ -3143,6 +3161,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B08700010000000000000001 /* MCPRegistryModels.swift in Sources */,
+				B08700010000000000000002 /* MCPRegistryClient.swift in Sources */,
+				B08700010000000000000003 /* MCPRegistryTrustScanner.swift in Sources */,
+				B08700010000000000000004 /* MCPRegistryBrowserView.swift in Sources */,
+				B08700010000000000000005 /* MCPRegistryLiveVerifier.swift in Sources */,
 				657894613E7EC550EDCF98F9 /* A2APeerDiscovery.swift in Sources */,
 				7AA7E819D103BC3CFFD5A4FF /* A2AServer.swift in Sources */,
 				32A8413C79A55EDDBA5196F6 /* ANSIColorParser.swift in Sources */,
@@ -3654,6 +3677,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B08700010000000000000006 /* MCPRegistryTests.swift in Sources */,
 				38D5400FE5D6B2E979B49B84 /* A2AProtocolTests.swift in Sources */,
 				5C6174D3AE206647683C50C0 /* AccessibilityPassTests.swift in Sources */,
 				C7AF449E49406FD406FAB73E /* AgentAuditLoggerTests.swift in Sources */,

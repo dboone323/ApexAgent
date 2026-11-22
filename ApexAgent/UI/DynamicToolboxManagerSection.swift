@@ -9,6 +9,7 @@ struct DynamicToolboxManagerSection: View {
     @State private var mcpManager = MCPManager.shared
     @State private var showDashboard = false
     @State private var showScriptEditor = false
+    @State private var showRegistry = false
 
     var body: some View {
         VStack(spacing: 8) {
@@ -43,6 +44,12 @@ struct DynamicToolboxManagerSection: View {
                 }
 
                 Button {
+                    showRegistry = true
+                } label: {
+                    Label("MCP Registry", systemImage: "globe")
+                }
+
+                Button {
                     showScriptEditor = true
                 } label: {
                     Label("Script Editor", systemImage: "terminal")
@@ -59,6 +66,16 @@ struct DynamicToolboxManagerSection: View {
                         .padding()
                 }
                 MCPServerDashboardView()
+            }
+        }
+        .sheet(isPresented: $showRegistry) {
+            VStack {
+                HStack {
+                    Spacer()
+                    Button("Close") { showRegistry = false }
+                        .padding()
+                }
+                MCPRegistryBrowserView()
             }
         }
         .sheet(isPresented: $showScriptEditor) {

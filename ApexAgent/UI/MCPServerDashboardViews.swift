@@ -16,6 +16,7 @@ public struct MCPServerDashboardView: View {
     @State private var selectedApp: MCPAppDefinition?
     @State private var isProbing: Bool = false
     @State private var statusMessage: String?
+    @State private var showRegistryBrowser: Bool = false
 
     public init() {}
 
@@ -39,6 +40,12 @@ public struct MCPServerDashboardView: View {
                         .foregroundStyle(AppTheme.Palette.textSecondary)
                 }
                 Spacer()
+                Button {
+                    showRegistryBrowser = true
+                } label: {
+                    Label("Browse Registry", systemImage: "globe")
+                }
+
                 Button {
                     Task { await refreshAll() }
                 } label: {
@@ -108,6 +115,16 @@ public struct MCPServerDashboardView: View {
         .frame(minWidth: 640, minHeight: 480)
         .sheet(item: $selectedApp) { app in
             MCPAppContainerView(app: app)
+        }
+        .sheet(isPresented: $showRegistryBrowser) {
+            VStack {
+                HStack {
+                    Spacer()
+                    Button("Close") { showRegistryBrowser = false }
+                        .padding()
+                }
+                MCPRegistryBrowserView()
+            }
         }
         .task {
             if selectedServerId == nil {
