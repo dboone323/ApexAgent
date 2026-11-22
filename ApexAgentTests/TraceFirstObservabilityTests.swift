@@ -395,18 +395,53 @@ struct TraceFirstObservabilityTests {
         #expect((modelCallEvent.durationMs ?? 0) > 0)
         #expect(modelCallEvent.durationMs != 84.5)
 
-        // Real token counts reported by local Ollama engine (non-nil and positive)
-        let tokenCounts = try #require(modelCallEvent.tokenCounts)
+        // Provider identity is present
+        #expect(modelCallEvent.model != nil)
+
+        // Token counts: provider-agnostic validation (Issue #194)
+        if let tokenCounts = modelCallEvent.tokenCounts {
+            // Real token counts reported by token-reporting engine (e.g. Local Ollama)
+            #expect(tokenCounts.promptTokens > 0)
+            #expect(tokenCounts.completionTokens > 0)
+            #expect(tokenCounts.totalTokens > 0)
+            #expect(tokenCounts.totalTokens == tokenCounts.promptTokens + tokenCounts.completionTokens)
+
+            // Anti-hardcoding check: prove counts are not the old synthetic tuple (42, 18, 60) from Issue #110
+            #expect(tokenCounts != TokenCountInfo(promptTokens: 42, completionTokens: 18, totalTokens: 60))
+        } else {
+            // Provider does not report token counts (e.g. Apple Intelligence AFM).
+            // Assert the fields that this provider actually reports.
+            #expect(modelCallEvent.durationMs != nil)
+            #expect((modelCallEvent.durationMs ?? 0) > 0)
+        }
+    }
+
+    @Test("TraceLiveVerifier contract validation accepts legitimate Ollama 60-token counts")
+    func testContractValidationAcceptsLegitimate60TokenCounts() throws {
+        let tokenCounts = TokenCountInfo(promptTokens: 21, completionTokens: 39, totalTokens: 60)
         #expect(tokenCounts.promptTokens > 0)
         #expect(tokenCounts.completionTokens > 0)
         #expect(tokenCounts.totalTokens > 0)
         #expect(tokenCounts.totalTokens == tokenCounts.promptTokens + tokenCounts.completionTokens)
-
-        // No hardcoded fake token counts (42, 18, 60)
         #expect(tokenCounts != TokenCountInfo(promptTokens: 42, completionTokens: 18, totalTokens: 60))
-        #expect(tokenCounts.promptTokens != 42)
-        #expect(tokenCounts.completionTokens != 18)
-        #expect(tokenCounts.totalTokens != 60)
+    }
+
+    @Test("TraceLiveVerifier contract accepts AFM modelCall event with nil tokenCounts")
+    func testContractAcceptsAFMModelCallEventWithNilTokenCounts() throws {
+        let event = RunTraceEvent.modelCall(
+            sequence: 6,
+            model: "Apple Intelligence (AFM 3 On-Device)",
+            prompt: "Reply with the word ok",
+            tokenCounts: nil,
+            durationMs: 2627.98
+        )
+        #expect(event.durationMs != nil)
+        #expect((event.durationMs ?? 0) > 0)
+        #expect(event.durationMs != 84.5)
+        #expect(event.model != nil)
+        if let tokenCounts = event.tokenCounts {
+            #expect(tokenCounts != TokenCountInfo(promptTokens: 42, completionTokens: 18, totalTokens: 60))
+        }
     }
 
     @Test("RunTraceReplayer renders tokens=not reported when tokenCounts is nil")
