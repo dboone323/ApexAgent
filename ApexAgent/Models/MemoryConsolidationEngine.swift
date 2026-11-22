@@ -30,7 +30,11 @@ public struct MemoryFact: Identifiable, Sendable, Codable, Equatable {
         self.value = value
         self.sourceCitation = sourceCitation
         self.tier = tier
-        self.dateString = dateString.isEmpty ? Self.currentDateString() : dateString
+        if dateString.isEmpty {
+            self.dateString = tier == "curated" ? "0000-00-00" : Self.currentDateString()
+        } else {
+            self.dateString = dateString
+        }
         self.isSuperseded = isSuperseded
         self.supersededByCitation = supersededByCitation
     }
@@ -476,7 +480,7 @@ public final class MemoryConsolidationEngine {
     public static func parseFacts(from content: String, filePath: String, relativePath: String, tier: String) -> [MemoryFact] {
         var facts: [MemoryFact] = []
         let lines = content.components(separatedBy: "\n")
-        let dateFromPath = SpaceMemoryTierManager.extractDate(from: relativePath) ?? todayDateString()
+        let dateFromPath = SpaceMemoryTierManager.extractDate(from: relativePath)
         var inSupersededSection = false
 
         for (idx, line) in lines.enumerated() {
@@ -503,12 +507,15 @@ public final class MemoryConsolidationEngine {
             let isSuperseded = trimmed.lowercased().contains("[superseded]")
                 || trimmed.lowercased().contains("superseded:")
 
+            let citationDate = SpaceMemoryTierManager.extractDate(from: citation)
+            let factDate = dateFromPath ?? citationDate ?? (tier == "curated" ? "0000-00-00" : todayDateString())
+
             let fact = MemoryFact(
                 key: key,
                 value: statement,
                 sourceCitation: citation,
                 tier: tier,
-                dateString: dateFromPath,
+                dateString: factDate,
                 isSuperseded: isSuperseded
             )
             facts.append(fact)

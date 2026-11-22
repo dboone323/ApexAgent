@@ -157,7 +157,9 @@ struct MemoryConsolidationTests {
         #expect(!diff.isIdempotent)
         #expect(diff.superseded.count == 1)
 
-        let pair = diff.superseded[0]
+        guard let pair = diff.superseded.first else {
+            return
+        }
         #expect(pair.oldFact.key == "db_replica_port")
         #expect(pair.oldFact.value.contains("5432"))
         #expect(pair.oldFact.sourceCitation == "[MEMORY.md:4]")
@@ -268,12 +270,16 @@ struct MemoryConsolidationTests {
         #expect(diff.unchanged.count >= 1)
 
         // Added fact citation check
-        let addedFact = diff.added[0]
+        guard let addedFact = diff.added.first else {
+            return
+        }
         #expect(addedFact.key == "telemetry_endpoint")
         #expect(addedFact.sourceCitation == "[daily/2026-11-19.md:5]")
 
         // Superseded fact citations check
-        let supPair = diff.superseded[0]
+        guard let supPair = diff.superseded.first else {
+            return
+        }
         #expect(supPair.oldFact.sourceCitation == "[MEMORY.md:5]")
         #expect(supPair.newFact.sourceCitation == "[daily/2026-11-19.md:4]")
 
