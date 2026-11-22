@@ -527,6 +527,18 @@ public final class SpaceMemoryTierManager {
         workspacePath: String? = nil,
         date: String? = nil
     ) throws -> MemoryFlushResult {
+        if SpaceMemoryInspectorManager.shared.isNoMemoryModeEnabled(for: space, workspacePath: workspacePath) {
+            AppLog.info(.app, "No-memory session active: skipping session memory flush.")
+            return MemoryFlushResult(
+                dailyNotePath: "",
+                curatedMemoryPath: "",
+                dailyCitations: [],
+                curatedCitations: [],
+                factsFlushedCount: 0,
+                isIdempotent: true,
+                outputDescription: "No-memory session active: 0 entries written."
+            )
+        }
         return try MemoryConsolidationEngine.shared.flushSession(
             messages: messages,
             space: space,
@@ -544,6 +556,18 @@ public final class SpaceMemoryTierManager {
         workspacePath: String? = nil,
         date: String? = nil
     ) throws -> MemoryFlushResult {
+        if SpaceMemoryInspectorManager.shared.isNoMemoryModeEnabled(for: space, workspacePath: workspacePath) {
+            AppLog.info(.app, "No-memory session active: skipping session memory flush.")
+            return MemoryFlushResult(
+                dailyNotePath: "",
+                curatedMemoryPath: "",
+                dailyCitations: [],
+                curatedCitations: [],
+                factsFlushedCount: 0,
+                isIdempotent: true,
+                outputDescription: "No-memory session active: 0 entries written."
+            )
+        }
         return try MemoryConsolidationEngine.shared.flushSession(
             rawMessages: rawMessages,
             explicitFacts: explicitFacts,

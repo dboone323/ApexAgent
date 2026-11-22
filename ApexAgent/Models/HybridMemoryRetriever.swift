@@ -187,6 +187,11 @@ public final class HybridMemoryRetriever {
         var scoredResults: [MemorySearchResult] = []
 
         for chunk in filteredChunks {
+            // Exclude chunks belonging to paused topics
+            if SpaceMemoryInspectorManager.shared.isChunkPaused(chunk, space: space, workspacePath: workspacePath) {
+                continue
+            }
+
             let kwScore = Self.computeKeywordScore(
                 chunkTokens: chunk.tokens,
                 chunkContent: chunk.content,

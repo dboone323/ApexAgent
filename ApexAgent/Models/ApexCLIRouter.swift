@@ -964,6 +964,15 @@ RoutineManager.shared.loadRoutines()
                 return (result.output, result.passed ? 0 : 1)
             }
 
+        case .memoryVerify(let jsonOutput):
+            let result = SpaceMemoryLiveVerifier.runVerification(writeLogTo: "runs/issue83/live-verify.log")
+            if jsonOutput {
+                let dict: [String: Any] = ["passed": result.passed, "output": result.output]
+                let data = (try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted])) ?? Data()
+                return (String(data: data, encoding: .utf8) ?? "{}", result.passed ? 0 : 1)
+            }
+            return (result.output, result.passed ? 0 : 1)
+
         default:
             return nil
         }

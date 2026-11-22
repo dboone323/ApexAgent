@@ -269,6 +269,10 @@
 		5981D3F93F563489EC0360DF /* FileSystemToolsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 249E944E3BD7385E3C5E0DE9 /* FileSystemToolsTests.swift */; };
 		599E1581EF9E8C5307E0E3BA /* LocalMLXLanguageModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D5F6E49D6D5A006AE01BFBF /* LocalMLXLanguageModel.swift */; };
 		59AC34BE31A7A8AF77683568 /* SpaceMemoryTierManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2EB7260798188CF58EAF23 /* SpaceMemoryTierManager.swift */; };
+		83B100018300000000000001 /* SpaceMemoryInspectorManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A100018300000000000001 /* SpaceMemoryInspectorManager.swift */; };
+		83B100028300000000000002 /* SpaceMemoryLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A100028300000000000002 /* SpaceMemoryLiveVerifier.swift */; };
+		83B100038300000000000003 /* SpaceMemoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A100038300000000000003 /* SpaceMemoryViews.swift */; };
+		83B100048300000000000004 /* InspectableMemoryUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A100048300000000000004 /* InspectableMemoryUITests.swift */; };
 		59C155F62EC72467802734BF /* ProductivityAutomationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58F12C627A0753D4ECC83630 /* ProductivityAutomationAuditorTests.swift */; };
 		59D645E7842DD6E13F4AD753 /* MCPPolicyAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAA7828EB7439A5656C74381 /* MCPPolicyAuditorTests.swift */; };
 		5A377CAD211372562CFD5CBF /* OutcomeFirstEvalHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = B904A73B85669293A94A56FC /* OutcomeFirstEvalHarness.swift */; };
@@ -1110,6 +1114,10 @@
 		2C1D4A4BD44B5370EF991FEB /* ApexAgent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ApexAgent.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2C279F605CD0DFF5A66226DF /* ContainerPolicyAuditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerPolicyAuditor.swift; sourceTree = "<group>"; };
 		2C2EB7260798188CF58EAF23 /* SpaceMemoryTierManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceMemoryTierManager.swift; sourceTree = "<group>"; };
+		83A100018300000000000001 /* SpaceMemoryInspectorManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceMemoryInspectorManager.swift; sourceTree = "<group>"; };
+		83A100028300000000000002 /* SpaceMemoryLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceMemoryLiveVerifier.swift; sourceTree = "<group>"; };
+		83A100038300000000000003 /* SpaceMemoryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceMemoryViews.swift; sourceTree = "<group>"; };
+		83A100048300000000000004 /* InspectableMemoryUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectableMemoryUITests.swift; sourceTree = "<group>"; };
 		2D37200B382453196FCE2722 /* DaemonAndPeerGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaemonAndPeerGateTests.swift; sourceTree = "<group>"; };
 		2D721ADBD02CBB80273EB777 /* SecurityGovernanceProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityGovernanceProfile.swift; sourceTree = "<group>"; };
 		2DD23B48A96CB93A36C31FA6 /* RunVerificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunVerificationView.swift; sourceTree = "<group>"; };
@@ -2142,6 +2150,7 @@
 				E47159FE60C60728E4EC287D /* SidebarView.swift */,
 				861FB3A27CC72FE482ADEFC1 /* SkillsSection.swift */,
 				EB444CB55101CE2B631AF69F /* SpacesViews.swift */,
+				83A100038300000000000003 /* SpaceMemoryViews.swift */,
 				C6908465AB7CE138D24C606F /* SubAgentManagerView.swift */,
 				C969C3513ACFED675B536F24 /* TerminalView.swift */,
 				94F7A6D8BD96CCBCA6C43C3D /* ToolActivityView.swift */,
@@ -2292,6 +2301,8 @@
 				1AC777768DD70B30CE59D361 /* SpaceLandingService.swift */,
 				92AFCFEE361338674DFA1D09 /* SpaceManager.swift */,
 				2C2EB7260798188CF58EAF23 /* SpaceMemoryTierManager.swift */,
+				83A100018300000000000001 /* SpaceMemoryInspectorManager.swift */,
+				83A100028300000000000002 /* SpaceMemoryLiveVerifier.swift */,
 				1668DF819B6EAE39BAB00A5E /* SpaceModelMigrationGate.swift */,
 				D8CBDDD8539C304129ACCA2A /* SpaceModels.swift */,
 				6B8351E09D210269E8399EEB /* SpacePageLinker.swift */,
@@ -2640,6 +2651,7 @@
 				73BD983AEA3D62FB800549EB /* HardeningCycle3DenyTests.swift */,
 				3B688F904EBF8A1C8550EF94 /* HardeningCycle3F2Tests.swift */,
 				CAD2A179CF33F4CCD6E4EA8C /* HybridMemoryRetrievalTests.swift */,
+				83A100048300000000000004 /* InspectableMemoryUITests.swift */,
 				0567EE6A94EB33FA3AD1C98F /* MemoryConsolidationTests.swift */,
 				D60A8108233F6FAB5295FD77 /* IncidentManagementAuditorTests.swift */,
 				C27416A7D6D7178263246418 /* IntentToolSelectorTests.swift */,
@@ -3495,6 +3507,9 @@
 				6F39B2E735D8160D01501E74 /* SpaceLandingService.swift in Sources */,
 				A51024D94F74D6C271680186 /* SpaceManager.swift in Sources */,
 				59AC34BE31A7A8AF77683568 /* SpaceMemoryTierManager.swift in Sources */,
+				83B100018300000000000001 /* SpaceMemoryInspectorManager.swift in Sources */,
+				83B100028300000000000002 /* SpaceMemoryLiveVerifier.swift in Sources */,
+				83B100038300000000000003 /* SpaceMemoryViews.swift in Sources */,
 				2F4A18BEF0E5437105E10C70 /* SpaceModelMigrationGate.swift in Sources */,
 				410C948C8EEF39378FE972C7 /* SpaceModels.swift in Sources */,
 				98F222497A73BE75FFCE3796 /* SpacePageLinker.swift in Sources */,
@@ -3793,6 +3808,7 @@
 				D6FC45F5C74965C4F026DE23 /* HardeningCycle3DenyTests.swift in Sources */,
 				CD109D5D994A20F8EDBDD6F4 /* HardeningCycle3F2Tests.swift in Sources */,
 				9183B1A7A210385D9F915347 /* HybridMemoryRetrievalTests.swift in Sources */,
+				83B100048300000000000004 /* InspectableMemoryUITests.swift in Sources */,
 				26EE90D9DF061CE62F63DD6A /* MemoryConsolidationTests.swift in Sources */,
 				56310E12B9A89709DECB7D46 /* IncidentManagementAuditorTests.swift in Sources */,
 				2D83D18ECF411807188495D2 /* IntentToolSelectorTests.swift in Sources */,
