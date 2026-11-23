@@ -13,6 +13,11 @@
 		B08700010000000000000004 /* MCPRegistryBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08700010000000000000004 /* MCPRegistryBrowserView.swift */; };
 		B08700010000000000000005 /* MCPRegistryLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08700010000000000000005 /* MCPRegistryLiveVerifier.swift */; };
 		B08700010000000000000006 /* MCPRegistryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08700010000000000000006 /* MCPRegistryTests.swift */; };
+		BF9188F5FF9BA429EE5F99C9 /* GoalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E25E28FDA1172D8D7CF46AFE /* GoalModels.swift */; };
+		A63BC96A69B6649FAE136D90 /* GoalModeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C34240648CAA5556A1EE8A3 /* GoalModeService.swift */; };
+		14DCA82CB164DC328E6A8164 /* GoalCLI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4006EDD29A7F3A9E11CCC7AC /* GoalCLI.swift */; };
+		48A61B1CF949A6C32402FD45 /* GoalModeLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = F39AFF7C08A906FD754B9836 /* GoalModeLiveVerifier.swift */; };
+		15C61F7DFDCBD77B70BD64A7 /* GoalModeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 212CD274323C51764062AB73 /* GoalModeTests.swift */; };
 		002FFD5E910F431AA50C85D7 /* AutomationWorkflows+4to7.swift in Sources */ = {isa = PBXBuildFile; fileRef = E94BE12E3CCD68A483A7AEDF /* AutomationWorkflows+4to7.swift */; };
 		009A8AE7D710C956F0B1EFC8 /* MCPConfigImportAuditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E202A95E377CB28DAD9079D3 /* MCPConfigImportAuditor.swift */; };
 		0101F5F6BEE381BEA0584A8F /* SharedLogging.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 694736B63E8080A09030C984 /* SharedLogging.framework */; };
@@ -987,6 +992,11 @@
 		A08700010000000000000003 /* MCPRegistryTrustScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPRegistryTrustScanner.swift; sourceTree = "<group>"; };
 		A08700010000000000000004 /* MCPRegistryBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPRegistryBrowserView.swift; sourceTree = "<group>"; };
 		A08700010000000000000005 /* MCPRegistryLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPRegistryLiveVerifier.swift; sourceTree = "<group>"; };
+		E25E28FDA1172D8D7CF46AFE /* GoalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalModels.swift; sourceTree = "<group>"; };
+		5C34240648CAA5556A1EE8A3 /* GoalModeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalModeService.swift; sourceTree = "<group>"; };
+		4006EDD29A7F3A9E11CCC7AC /* GoalCLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalCLI.swift; sourceTree = "<group>"; };
+		F39AFF7C08A906FD754B9836 /* GoalModeLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalModeLiveVerifier.swift; sourceTree = "<group>"; };
+		212CD274323C51764062AB73 /* GoalModeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalModeTests.swift; sourceTree = "<group>"; };
 		A08700010000000000000006 /* MCPRegistryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPRegistryTests.swift; sourceTree = "<group>"; };
 		00C1D19CCF1A38E3D1CF08C8 /* ScreenPerceptionTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenPerceptionTool.swift; sourceTree = "<group>"; };
 		0159C6A22D24E1F1A6B4D1C4 /* GhostCursorOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GhostCursorOverlay.swift; sourceTree = "<group>"; };
@@ -2464,6 +2474,7 @@
 				51193E61AF4D957C0C723E0F /* GateQueue */,
 				155061817EB5635BD7AB9641 /* Intents */,
 				DF05940E4CA3378D0FACA638 /* LongRun */,
+				2FD372AFABF3FD00BA735548 /* GoalMode */,
 				8B99CE7A3398A6B2E600432F /* Models */,
 				F031E34CDD92BC6B044F8081 /* Resources */,
 				C67CD85EE57920E9315901A4 /* Runtime */,
@@ -2493,6 +2504,17 @@
 				8CE48CD6611ACE10E00FFCC3 /* LongRunStepExecutor.swift */,
 			);
 			path = LongRun;
+			sourceTree = "<group>";
+		};
+		2FD372AFABF3FD00BA735548 /* GoalMode */ = {
+			isa = PBXGroup;
+			children = (
+				4006EDD29A7F3A9E11CCC7AC /* GoalCLI.swift */,
+				F39AFF7C08A906FD754B9836 /* GoalModeLiveVerifier.swift */,
+				5C34240648CAA5556A1EE8A3 /* GoalModeService.swift */,
+				E25E28FDA1172D8D7CF46AFE /* GoalModels.swift */,
+			);
+			path = GoalMode;
 			sourceTree = "<group>";
 		};
 		E64E29269091F5410A8284CE /* Eval */ = {
@@ -2714,6 +2736,7 @@
 				2A1D304F3445E264A9E852D8 /* LiveBotCommunicationTests.swift */,
 				093B0E7433BF91D55EB95A4F /* LiveMCPSupport.swift */,
 				57E6A9A66CF3C285CD98595E /* LogicGapFillTests.swift */,
+				212CD274323C51764062AB73 /* GoalModeTests.swift */,
 				26168198B0D5D865F12C3F96 /* LongRunTests.swift */,
 				DDE9616416245E4CD1D50E46 /* MCPConfigImportAuditorTests.swift */,
 				EED0D7F73810AAB298E304A9 /* MCPKitClientTests.swift */,
@@ -3233,6 +3256,10 @@
 				B08700010000000000000003 /* MCPRegistryTrustScanner.swift in Sources */,
 				B08700010000000000000004 /* MCPRegistryBrowserView.swift in Sources */,
 				B08700010000000000000005 /* MCPRegistryLiveVerifier.swift in Sources */,
+				BF9188F5FF9BA429EE5F99C9 /* GoalModels.swift in Sources */,
+				A63BC96A69B6649FAE136D90 /* GoalModeService.swift in Sources */,
+				14DCA82CB164DC328E6A8164 /* GoalCLI.swift in Sources */,
+				48A61B1CF949A6C32402FD45 /* GoalModeLiveVerifier.swift in Sources */,
 				657894613E7EC550EDCF98F9 /* A2APeerDiscovery.swift in Sources */,
 				7AA7E819D103BC3CFFD5A4FF /* A2AServer.swift in Sources */,
 				32A8413C79A55EDDBA5196F6 /* ANSIColorParser.swift in Sources */,
@@ -3758,6 +3785,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B08700010000000000000006 /* MCPRegistryTests.swift in Sources */,
+				15C61F7DFDCBD77B70BD64A7 /* GoalModeTests.swift in Sources */,
 				38D5400FE5D6B2E979B49B84 /* A2AProtocolTests.swift in Sources */,
 				5C6174D3AE206647683C50C0 /* AccessibilityPassTests.swift in Sources */,
 				C7AF449E49406FD406FAB73E /* AgentAuditLoggerTests.swift in Sources */,

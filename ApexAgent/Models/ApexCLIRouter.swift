@@ -68,6 +68,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case gateQueue(subcommandArgs: [String])
     case scheduler(subcommandArgs: [String])
     case longRun(subcommandArgs: [String])
+    case goal(subcommandArgs: [String])
     case prompt(text: String, allowTools: Bool)
 }
 
@@ -228,6 +229,10 @@ public enum ApexCLIRouter {
         case "longrun", "--longrun", "long-run":
             let subArgs = Array(remaining.dropFirst())
             return ParsedCLIInvocation(command: .longRun(subcommandArgs: subArgs), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
+        case "goal", "--goal", "goal-mode":
+            let subArgs = Array(remaining.dropFirst())
+            return ParsedCLIInvocation(command: .goal(subcommandArgs: subArgs), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
         case "--cli", "--prompt", "-p":
             let cliArguments = Array(remaining.dropFirst())
@@ -454,6 +459,7 @@ public enum ApexCLIRouter {
           --space-cli [list|post] Manage collaborative Spaces from the terminal
           scheduler [action]      Scheduler trio: exact cron, heartbeat checklist passes, event triggers
           longrun [action]        Resumable long runs: checkpointed state, pause/resume, budgets
+          goal [action]           Goal mode: persistent objective with progress ledger
         """
     }
 
