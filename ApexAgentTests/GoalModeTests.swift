@@ -127,7 +127,7 @@ struct GoalModeTests {
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
         let service = GoalModeService(workspaceURL: tempDir)
-        let goal = try await service.createGoal(
+        _ = try await service.createGoal(
             title: "Automate Database Failover",
             objective: "Configure automatic failover with zero data loss.",
             criteria: [
@@ -231,7 +231,7 @@ struct GoalModeTests {
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
         let service = GoalModeService(workspaceURL: tempDir)
-        let goal = try await service.createGoal(
+        _ = try await service.createGoal(
             title: "API Rate Limiter",
             objective: "Implement token bucket rate limiter for REST API.",
             criteria: [
