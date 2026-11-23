@@ -120,6 +120,11 @@ case .onboardingVerify(let jsonOutput):
     let result = await OnboardingLiveVerifier.runVerification(jsonOutput: jsonOutput)
     print(result.output)
     exit(result.passed ? 0 : 1)
+
+case .proactiveVerify(let jsonOutput):
+    let result = await ProactiveInitiativeLiveVerifier.runVerification(jsonOutput: jsonOutput)
+    print(result.output)
+    exit(result.passed ? 0 : 1)
 case .traceReplay, .tracesList:
     // If not handled by renderImmediateSubcommand (e.g. empty target):
     if let imm = ApexCLIRouter.renderImmediateSubcommand(invocation.command) {

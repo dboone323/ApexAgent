@@ -38,6 +38,16 @@ public struct ApexAgentApp: App {
             fputs("\(result.output)\n", Darwin.stdout)
             exit(result.passed ? 0 : 1)
         }
+        if args.contains("--proactive-verify") || args.contains("proactive-verify") {
+            let sema = DispatchSemaphore(value: 0)
+            Task.detached {
+                let result = await ProactiveInitiativeLiveVerifier.runVerification(writeLogTo: "runs/issue78/live-verify.log")
+                AppLog.info(.app, result.output)
+                fputs("\(result.output)\n", Darwin.stdout)
+                exit(result.passed ? 0 : 1)
+            }
+            sema.wait()
+        }
         // Attempt to connect to background daemon gateway if explicitly requested or reachable.
         // Probing reachability avoids Network.framework ECONNREFUSED socket error noise when
         // running in standalone GUI mode without the daemon.
