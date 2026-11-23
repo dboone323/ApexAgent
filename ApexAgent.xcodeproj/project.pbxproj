@@ -646,6 +646,10 @@
 		B11800010000000000000002 /* OnboardingModelPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11800010000000000000002 /* OnboardingModelPickerView.swift */; };
 		B11800010000000000000003 /* OnboardingLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11800010000000000000003 /* OnboardingLiveVerifier.swift */; };
 		B11800010000000000000004 /* OnboardingModelPickerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11800010000000000000004 /* OnboardingModelPickerTests.swift */; };
+		B07800010000000000000001 /* ProactiveInitiativeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07800010000000000000001 /* ProactiveInitiativeModels.swift */; };
+		B07800010000000000000002 /* ProactiveInitiativeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07800010000000000000002 /* ProactiveInitiativeService.swift */; };
+		B07800010000000000000003 /* ProactiveInitiativeLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07800010000000000000003 /* ProactiveInitiativeLiveVerifier.swift */; };
+		B07800010000000000000004 /* ProactiveInitiativeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07800010000000000000004 /* ProactiveInitiativeTests.swift */; };
 		D8DD68ED916D484C832CD003 /* GitHubIntegrationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44752C1860D5B93EC7CE3A49 /* GitHubIntegrationAuditorTests.swift */; };
 		D92604671391FDA057EFE2CE /* SeatbeltRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA26C714C34C0964665FC86 /* SeatbeltRoutingTests.swift */; };
 		D9C41173B853FC277273505D /* DynamicToolboxManagerSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484D3337A879FB654CB4F1E4 /* DynamicToolboxManagerSection.swift */; };
@@ -1706,6 +1710,10 @@
 		A11800010000000000000002 /* OnboardingModelPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingModelPickerView.swift; sourceTree = "<group>"; };
 		A11800010000000000000003 /* OnboardingLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingLiveVerifier.swift; sourceTree = "<group>"; };
 		A11800010000000000000004 /* OnboardingModelPickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingModelPickerTests.swift; sourceTree = "<group>"; };
+		A07800010000000000000001 /* ProactiveInitiativeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProactiveInitiativeModels.swift; sourceTree = "<group>"; };
+		A07800010000000000000002 /* ProactiveInitiativeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProactiveInitiativeService.swift; sourceTree = "<group>"; };
+		A07800010000000000000003 /* ProactiveInitiativeLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProactiveInitiativeLiveVerifier.swift; sourceTree = "<group>"; };
+		A07800010000000000000004 /* ProactiveInitiativeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProactiveInitiativeTests.swift; sourceTree = "<group>"; };
 		FAA7828EB7439A5656C74381 /* MCPPolicyAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPPolicyAuditorTests.swift; sourceTree = "<group>"; };
 		FB0F9C95A07AECB12ECA120E /* AppleShortcutsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleShortcutsTool.swift; sourceTree = "<group>"; };
 		FB99CA7CFACAB86CCC063E03 /* OSLogQueryTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSLogQueryTool.swift; sourceTree = "<group>"; };
@@ -2452,6 +2460,7 @@
 				E64E29269091F5410A8284CE /* Eval */,
 				E64E29269091F5410A8284CF /* Review */,
 				E64E29269091F5410A8284D0 /* Workspaces */,
+				A07800000000000000000001 /* Proactive */,
 				51193E61AF4D957C0C723E0F /* GateQueue */,
 				155061817EB5635BD7AB9641 /* Intents */,
 				DF05940E4CA3378D0FACA638 /* LongRun */,
@@ -2518,6 +2527,16 @@
 				A10200010000000000000004 /* TaskWorkspaceLiveVerifier.swift */,
 			);
 			path = Workspaces;
+			sourceTree = "<group>";
+		};
+		A07800000000000000000001 /* Proactive */ = {
+			isa = PBXGroup;
+			children = (
+				A07800010000000000000001 /* ProactiveInitiativeModels.swift */,
+				A07800010000000000000002 /* ProactiveInitiativeService.swift */,
+				A07800010000000000000003 /* ProactiveInitiativeLiveVerifier.swift */,
+			);
+			path = Proactive;
 			sourceTree = "<group>";
 		};
 		F031E34CDD92BC6B044F8081 /* Resources */ = {
@@ -2841,6 +2860,7 @@
 				9474D458072CA8BE7F37D631 /* WorkspaceProactiveAuditorTests.swift */,
 				9D7D801623249430B3C9F13E /* WritingToolsSupportTests.swift */,
 				74D770EA940EED8280A05C37 /* XCResultTrendAnalyzerTests.swift */,
+				A07800010000000000000004 /* ProactiveInitiativeTests.swift */,
 			);
 			path = ApexAgentTests;
 			sourceTree = "<group>";
@@ -3494,6 +3514,9 @@
 				B11800010000000000000001 /* FreeTierModelManager.swift in Sources */,
 				B11800010000000000000002 /* OnboardingModelPickerView.swift in Sources */,
 				B11800010000000000000003 /* OnboardingLiveVerifier.swift in Sources */,
+				B07800010000000000000001 /* ProactiveInitiativeModels.swift in Sources */,
+				B07800010000000000000002 /* ProactiveInitiativeService.swift in Sources */,
+				B07800010000000000000003 /* ProactiveInitiativeLiveVerifier.swift in Sources */,
 				BE49594832EA0DC4A90865A7 /* RemoteCompanionGateway.swift in Sources */,
 				88E788FEC0E187CA785A5756 /* RepeatDetector.swift in Sources */,
 				66BDED758A00C481F54692AB /* RepoHygieneAuditor.swift in Sources */,
@@ -3917,6 +3940,7 @@
 				B10300010000000000000004 /* ReviewerCriticTests.swift in Sources */,
 				B10200010000000000000005 /* TaskWorkspaceTests.swift in Sources */,
 				B11800010000000000000004 /* OnboardingModelPickerTests.swift in Sources */,
+				B07800010000000000000004 /* ProactiveInitiativeTests.swift in Sources */,
 				03C098F1D1822A07123E304F /* ReleaseChangelogEngineTests.swift in Sources */,
 				45538B22E3A36E61F192D220 /* ReleaseProvenanceGeneratorTests.swift in Sources */,
 				91D7398E489833978B07D683 /* RemoteCompanionTests.swift in Sources */,
