@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		B08500010000000000000001 /* PersonalContextModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08500010000000000000001 /* PersonalContextModels.swift */; };
+		B08500010000000000000002 /* PersonalContextToggleStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08500010000000000000002 /* PersonalContextToggleStore.swift */; };
+		B08500010000000000000003 /* PersonalContextSourceAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08500010000000000000003 /* PersonalContextSourceAdapter.swift */; };
+		B08500010000000000000004 /* PersonalContextIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08500010000000000000004 /* PersonalContextIndex.swift */; };
+		B08500010000000000000005 /* PersonalContextIndexLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08500010000000000000005 /* PersonalContextIndexLiveVerifier.swift */; };
+		B08500010000000000000006 /* PersonalContextIndexTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08500010000000000000006 /* PersonalContextIndexTests.swift */; };
 		B08700010000000000000001 /* MCPRegistryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08700010000000000000001 /* MCPRegistryModels.swift */; };
 		B08700010000000000000002 /* MCPRegistryClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08700010000000000000002 /* MCPRegistryClient.swift */; };
 		B08700010000000000000003 /* MCPRegistryTrustScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A08700010000000000000003 /* MCPRegistryTrustScanner.swift */; };
@@ -987,6 +993,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A08500010000000000000001 /* PersonalContextModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalContextModels.swift; sourceTree = "<group>"; };
+		A08500010000000000000002 /* PersonalContextToggleStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalContextToggleStore.swift; sourceTree = "<group>"; };
+		A08500010000000000000003 /* PersonalContextSourceAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalContextSourceAdapter.swift; sourceTree = "<group>"; };
+		A08500010000000000000004 /* PersonalContextIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalContextIndex.swift; sourceTree = "<group>"; };
+		A08500010000000000000005 /* PersonalContextIndexLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalContextIndexLiveVerifier.swift; sourceTree = "<group>"; };
+		A08500010000000000000006 /* PersonalContextIndexTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalContextIndexTests.swift; sourceTree = "<group>"; };
 		A08700010000000000000001 /* MCPRegistryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPRegistryModels.swift; sourceTree = "<group>"; };
 		A08700010000000000000002 /* MCPRegistryClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPRegistryClient.swift; sourceTree = "<group>"; };
 		A08700010000000000000003 /* MCPRegistryTrustScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPRegistryTrustScanner.swift; sourceTree = "<group>"; };
@@ -2475,6 +2487,7 @@
 				155061817EB5635BD7AB9641 /* Intents */,
 				DF05940E4CA3378D0FACA638 /* LongRun */,
 				2FD372AFABF3FD00BA735548 /* GoalMode */,
+				A08500000000000000000001 /* PersonalContext */,
 				8B99CE7A3398A6B2E600432F /* Models */,
 				F031E34CDD92BC6B044F8081 /* Resources */,
 				C67CD85EE57920E9315901A4 /* Runtime */,
@@ -2515,6 +2528,18 @@
 				E25E28FDA1172D8D7CF46AFE /* GoalModels.swift */,
 			);
 			path = GoalMode;
+			sourceTree = "<group>";
+		};
+		A08500000000000000000001 /* PersonalContext */ = {
+			isa = PBXGroup;
+			children = (
+				A08500010000000000000001 /* PersonalContextModels.swift */,
+				A08500010000000000000002 /* PersonalContextToggleStore.swift */,
+				A08500010000000000000003 /* PersonalContextSourceAdapter.swift */,
+				A08500010000000000000004 /* PersonalContextIndex.swift */,
+				A08500010000000000000005 /* PersonalContextIndexLiveVerifier.swift */,
+			);
+			path = PersonalContext;
 			sourceTree = "<group>";
 		};
 		E64E29269091F5410A8284CE /* Eval */ = {
@@ -2609,6 +2634,7 @@
 		FF1EAB66BDCDC6DFDCB0CA7A /* ApexAgentTests */ = {
 			isa = PBXGroup;
 			children = (
+				A08500010000000000000006 /* PersonalContextIndexTests.swift */,
 				A08700010000000000000006 /* MCPRegistryTests.swift */,
 				E1AC59673F796997416BB805 /* A2AProtocolTests.swift */,
 				1AE66F50CD907013FA9CC17D /* AccessibilityPassTests.swift */,
@@ -3251,6 +3277,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B08500010000000000000001 /* PersonalContextModels.swift in Sources */,
+				B08500010000000000000002 /* PersonalContextToggleStore.swift in Sources */,
+				B08500010000000000000003 /* PersonalContextSourceAdapter.swift in Sources */,
+				B08500010000000000000004 /* PersonalContextIndex.swift in Sources */,
+				B08500010000000000000005 /* PersonalContextIndexLiveVerifier.swift in Sources */,
 				B08700010000000000000001 /* MCPRegistryModels.swift in Sources */,
 				B08700010000000000000002 /* MCPRegistryClient.swift in Sources */,
 				B08700010000000000000003 /* MCPRegistryTrustScanner.swift in Sources */,
@@ -3784,6 +3815,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B08500010000000000000006 /* PersonalContextIndexTests.swift in Sources */,
 				B08700010000000000000006 /* MCPRegistryTests.swift in Sources */,
 				15C61F7DFDCBD77B70BD64A7 /* GoalModeTests.swift in Sources */,
 				38D5400FE5D6B2E979B49B84 /* A2AProtocolTests.swift in Sources */,
