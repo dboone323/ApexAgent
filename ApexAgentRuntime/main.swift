@@ -142,6 +142,12 @@ case .modelRouterVerify(let jsonOutput):
     print(result.output)
     exit(result.passed ? 0 : 1)
 
+case .modelRetirementVerify(let jsonOutput):
+    let logPath = "/Users/danielstevens/.gemini/antigravity/worktrees/ApexAgent/issue180_model_retirement/runs/issue180/live-verify-round1.log"
+    let result = await ModelRetirementLiveVerifier.runVerification(logPath: logPath, jsonOutput: jsonOutput)
+    print(result.output)
+    exit(result.passed ? 0 : 1)
+
 case .proactiveVerify(let jsonOutput):
     let result = await ProactiveInitiativeLiveVerifier.runVerification(jsonOutput: jsonOutput)
     print(result.output)

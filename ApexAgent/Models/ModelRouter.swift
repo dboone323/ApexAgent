@@ -311,6 +311,43 @@ public final class ModelRouter: @unchecked Sendable {
             speedRating: "fast"
         )
 
+        // Legacy / Retirement Candidate Models
+        let copilotGpt4 = RoutableModel(
+            id: "copilot-gpt-4-0613",
+            provider: .gitHubCopilot,
+            displayName: "GitHub Copilot GPT-4 (0613)",
+            supportedTasks: [.coding, .reasoning],
+            isFree: true,
+            estimatedCostPer1kTokens: 0.0,
+            contextWindow: 8192,
+            isLocal: false,
+            speedRating: "fast"
+        )
+
+        let copilotHaiku = RoutableModel(
+            id: "copilot-claude-3-haiku",
+            provider: .gitHubCopilot,
+            displayName: "GitHub Copilot Claude 3 Haiku",
+            supportedTasks: [.classification, .verification],
+            isFree: true,
+            estimatedCostPer1kTokens: 0.0,
+            contextWindow: 32768,
+            isLocal: false,
+            speedRating: "veryFast"
+        )
+
+        let gemini10Pro = RoutableModel(
+            id: "gemini-1.0-pro",
+            provider: .cloudGemini,
+            displayName: "Google Gemini 1.0 Pro",
+            supportedTasks: [.classification, .reasoning, .coding],
+            isFree: true,
+            estimatedCostPer1kTokens: 0.0,
+            contextWindow: 32768,
+            isLocal: false,
+            speedRating: "fast"
+        )
+
         models[afmOnDevice.id] = afmOnDevice
         models[localOllama.id] = localOllama
         models[localMLX.id] = localMLX
@@ -318,6 +355,15 @@ public final class ModelRouter: @unchecked Sendable {
         models[cloudGemini.id] = cloudGemini
         models[claudeSonnet.id] = claudeSonnet
         models[gpt4o.id] = gpt4o
+        models[copilotGpt4.id] = copilotGpt4
+        models[copilotHaiku.id] = copilotHaiku
+        models[gemini10Pro.id] = gemini10Pro
+    }
+
+    public func registerModel(_ model: RoutableModel) {
+        lock.lock()
+        models[model.id] = model
+        lock.unlock()
     }
 
     public func allModels() -> [RoutableModel] {
@@ -400,19 +446,22 @@ public final class ModelRouter: @unchecked Sendable {
             if model.id == "localOllama" { return 20 }
             if model.id == "cloudGemini" { return 30 }
             if model.id == "localMLX" { return 40 }
-            return 50
+            if model.id == "copilot-claude-3-haiku" { return 50 }
+            return 60
         case .coding:
             if model.id == "localOllama" { return 10 }
             if model.id == "cloudGemini" { return 20 }
             if model.id == "localMLX" { return 30 }
             if model.id == "applePCC" { return 40 }
-            return 50
+            if model.id == "copilot-gpt-4-0613" { return 50 }
+            return 60
         case .reasoning:
             if model.id == "localOllama" { return 10 }
             if model.id == "applePCC" { return 20 }
             if model.id == "cloudGemini" { return 30 }
             if model.id == "localMLX" { return 40 }
-            return 50
+            if model.id == "copilot-gpt-4-0613" { return 50 }
+            return 60
         case .multimodal:
             if model.id == "cloudGemini" { return 10 }
             if model.id == "localOllama" { return 20 }
@@ -446,49 +495,150 @@ public final class ModelRouter: @unchecked Sendable {
         lock.unlock()
 
         // 3. If explicit model requested, evaluate it
-        if let reqId = requestedModelId, let target = catalog[reqId] {
-            if !target.isFree {
-                // Paid model requested: gated escalation check
-                let approved = approval?.isApproved ?? rule?.allowPaidEscalation ?? false
-                if !approved {
-                    let costNote = "Estimated cost $\(String(format: "%.4f", target.estimatedCostPer1kTokens))/1k tokens for '\(target.displayName)'."
-                    Self.logger.warning("Paid escalation to '\(target.displayName, privacy: .public)' refused without explicit user approval.")
-                    return .paidEscalationRefused(
-                        reason: "Paid model '\(target.displayName)' requested but user approval was not granted. Refusing paid escalation to protect zero-spend guarantee.",
-                        costNote: costNote
+        if let reqId = requestedModelId {
+            let target = catalog[reqId]
+
+            // Check if requested model has been retired (Issue #180 Model Retirement Handling)
+            if ModelRetirementManager.shared.isRetired(modelId: reqId) {
+                let rec = ModelRetirementManager.shared.retirementRecord(for: reqId)
+                let retirementReason = rec?.reason ?? "Model has been retired by provider"
+                let targetDisplayName = target?.displayName ?? rec?.displayName ?? reqId
+
+                Self.logger.warning("Requested model [\(reqId, privacy: .public)] is retired: \(retirementReason, privacy: .public). Triggering router fallback chain.")
+
+                // Advance to nearest capable FREE replacement
+                let replacementCandidates = catalog.values.filter { model in
+                    model.id != reqId &&
+                    model.supportedTasks.contains(effectiveKind) &&
+                    model.isFree &&
+                    limitHits[model.id] == nil &&
+                    !FreeTierModelManager.shared.isWithdrawn(provider: model.provider) &&
+                    !ModelRetirementManager.shared.isRetired(modelId: model.id)
+                }.sorted { (m1, m2) -> Bool in
+                    let p1 = candidatePriority(model: m1, taskKind: effectiveKind)
+                    let p2 = candidatePriority(model: m2, taskKind: effectiveKind)
+                    if p1 != p2 { return p1 < p2 }
+                    if m1.isLocal != m2.isLocal { return m1.isLocal && !m2.isLocal }
+                    if m1.estimatedCostPer1kTokens != m2.estimatedCostPer1kTokens {
+                        return m1.estimatedCostPer1kTokens < m2.estimatedCostPer1kTokens
+                    }
+                    return m1.id < m2.id
+                }
+
+                if let replacement = replacementCandidates.first {
+                    // Auto-swap and update Space rule if applicable so no Space points at a dead model
+                    if let sid = spaceId {
+                        var updatedRule = rule ?? TaskRoutingRule(spaceId: sid, taskKind: effectiveKind)
+                        updatedRule.preferredModelId = replacement.id
+                        setRule(updatedRule, for: sid)
+                        ModelRetirementManager.shared.recordSwap(
+                            spaceId: sid,
+                            oldModelId: reqId,
+                            newModelId: replacement.id,
+                            reason: "Retired (\(retirementReason))"
+                        )
+                    }
+
+                    let latencyMs = elapsedMs(since: startTime)
+                    let notice = "⚠️ Model '\(targetDisplayName)' [\(reqId)] is retired (\(retirementReason)). Automatically swapped to nearest capable free replacement '\(replacement.displayName)' [\(replacement.id)]. Remaining free-tier operation maintained."
+                    let retirementNotice = ModelRetirementNotice(
+                        spaceId: spaceId,
+                        oldModelId: reqId,
+                        newModelId: replacement.id,
+                        reason: retirementReason,
+                        message: notice,
+                        offeredPaidOption: nil,
+                        isGracefulDegradation: false
                     )
+                    ModelRetirementManager.shared.recordNotice(retirementNotice)
+
+                    let decision = RoutingDecision(
+                        spaceId: spaceId,
+                        taskKind: effectiveKind,
+                        selectedModelId: replacement.id,
+                        selectedProvider: replacement.provider,
+                        reason: "Fallback from retired \(targetDisplayName) (\(retirementReason)) to \(replacement.displayName)",
+                        isFree: true,
+                        estimatedCost: 0.0,
+                        latencyMs: latencyMs,
+                        fallbackNotice: notice
+                    )
+                    logDecision(decision)
+                    return .routed(decision: decision)
+                } else {
+                    // Graceful degradation when no capable free replacement exists
+                    let cheapestPaid = catalog.values.filter { model in
+                        !model.isFree &&
+                        model.supportedTasks.contains(effectiveKind) &&
+                        !ModelRetirementManager.shared.isRetired(modelId: model.id)
+                    }.min { $0.estimatedCostPer1kTokens < $1.estimatedCostPer1kTokens }
+
+                    let paidOffer = cheapestPaid != nil ?
+                        "Next cheapest available option is '\(cheapestPaid!.displayName)' ($\(String(format: "%.4f", cheapestPaid!.estimatedCostPer1kTokens))/1k tokens, requires explicit user approval)." :
+                        "No alternate models found."
+
+                    let plainMsg = "Model '\(targetDisplayName)' [\(reqId)] is retired (\(retirementReason)). No capable free replacement exists for task '\(effectiveKind.rawValue)'. \(paidOffer) Zero-spend guarantee: paid model was NOT automatically selected."
+
+                    let retirementNotice = ModelRetirementNotice(
+                        spaceId: spaceId,
+                        oldModelId: reqId,
+                        newModelId: nil,
+                        reason: retirementReason,
+                        message: plainMsg,
+                        offeredPaidOption: paidOffer,
+                        isGracefulDegradation: true
+                    )
+                    ModelRetirementManager.shared.recordNotice(retirementNotice)
+
+                    Self.logger.warning("No capable free replacement exists for retired model '\(targetDisplayName, privacy: .public)': \(plainMsg, privacy: .public)")
+                    return .fallbackExhausted(reason: plainMsg)
                 }
             }
 
-            // Check if requested model hit limit
-            if let reason = limitHits[target.id] {
-                // Advance to next capable free model
-                return resolveFallback(
-                    taskKind: effectiveKind,
-                    spaceId: spaceId,
-                    exhaustedModel: target,
-                    exhaustedReason: reason,
-                    startTime: startTime,
-                    catalog: catalog,
-                    limitHits: limitHits
-                )
-            }
+            if let target = target {
+                if !target.isFree {
+                    // Paid model requested: gated escalation check
+                    let approved = approval?.isApproved ?? rule?.allowPaidEscalation ?? false
+                    if !approved {
+                        let costNote = "Estimated cost $\(String(format: "%.4f", target.estimatedCostPer1kTokens))/1k tokens for '\(target.displayName)'."
+                        Self.logger.warning("Paid escalation to '\(target.displayName, privacy: .public)' refused without explicit user approval.")
+                        return .paidEscalationRefused(
+                            reason: "Paid model '\(target.displayName)' requested but user approval was not granted. Refusing paid escalation to protect zero-spend guarantee.",
+                            costNote: costNote
+                        )
+                    }
+                }
 
-            // Target is valid and operational
-            let latencyMs = elapsedMs(since: startTime)
-            let decision = RoutingDecision(
-                spaceId: spaceId,
-                taskKind: effectiveKind,
-                selectedModelId: target.id,
-                selectedProvider: target.provider,
-                reason: "Preferred model selected: \(target.displayName)",
-                isFree: target.isFree,
-                estimatedCost: target.isFree ? 0.0 : target.estimatedCostPer1kTokens,
-                latencyMs: latencyMs,
-                fallbackNotice: nil
-            )
-            logDecision(decision)
-            return .routed(decision: decision)
+                // Check if requested model hit limit
+                if let reason = limitHits[target.id] {
+                    // Advance to next capable free model
+                    return resolveFallback(
+                        taskKind: effectiveKind,
+                        spaceId: spaceId,
+                        exhaustedModel: target,
+                        exhaustedReason: reason,
+                        startTime: startTime,
+                        catalog: catalog,
+                        limitHits: limitHits
+                    )
+                }
+
+                // Target is valid and operational
+                let latencyMs = elapsedMs(since: startTime)
+                let decision = RoutingDecision(
+                    spaceId: spaceId,
+                    taskKind: effectiveKind,
+                    selectedModelId: target.id,
+                    selectedProvider: target.provider,
+                    reason: "Preferred model selected: \(target.displayName)",
+                    isFree: target.isFree,
+                    estimatedCost: target.isFree ? 0.0 : target.estimatedCostPer1kTokens,
+                    latencyMs: latencyMs,
+                    fallbackNotice: nil
+                )
+                logDecision(decision)
+                return .routed(decision: decision)
+            }
         }
 
         // 4. Default: Find cheapest capable free model for task
@@ -518,6 +668,14 @@ public final class ModelRouter: @unchecked Sendable {
         var attemptedExhausted: [(RoutableModel, String)] = []
 
         for candidate in sortedCandidates {
+            // Model retirement check (integrates with ModelRetirementManager #180)
+            if ModelRetirementManager.shared.isRetired(modelId: candidate.id) {
+                let rec = ModelRetirementManager.shared.retirementRecord(for: candidate.id)
+                let reason = "Retired: \(rec?.reason ?? "Model retired by provider")"
+                attemptedExhausted.append((candidate, reason))
+                continue
+            }
+
             // Free tier withdrawal check (integrates with FreeTierModelManager #118)
             if FreeTierModelManager.shared.isWithdrawn(provider: candidate.provider) {
                 let reason = FreeTierModelManager.shared.withdrawalReason(provider: candidate.provider) ?? "Provider free-tier withdrawn"
@@ -544,9 +702,14 @@ public final class ModelRouter: @unchecked Sendable {
             var fallbackNotice: String? = nil
             var reasonMsg = "Cheapest capable model selected for \(effectiveKind.rawValue): \(candidate.displayName)"
 
-            if let (exhaustedModel, limitReason) = attemptedExhausted.first {
-                fallbackNotice = "⚠️ Model '\(exhaustedModel.displayName)' [\(exhaustedModel.id)] hit daily limit (\(limitReason)). Automatically falling back to '\(candidate.displayName)'. Remaining free-tier operation maintained."
-                reasonMsg = "Fallback from \(exhaustedModel.displayName) (\(limitReason)) to \(candidate.displayName)"
+            if let (exhaustedModel, exhaustReason) = attemptedExhausted.first {
+                if exhaustReason.hasPrefix("Retired:") {
+                    fallbackNotice = "⚠️ Model '\(exhaustedModel.displayName)' [\(exhaustedModel.id)] is retired (\(exhaustReason)). Automatically swapped to '\(candidate.displayName)' [\(candidate.id)]. Remaining free-tier operation maintained."
+                    reasonMsg = "Fallback from retired \(exhaustedModel.displayName) (\(exhaustReason)) to \(candidate.displayName)"
+                } else {
+                    fallbackNotice = "⚠️ Model '\(exhaustedModel.displayName)' [\(exhaustedModel.id)] hit daily limit (\(exhaustReason)). Automatically falling back to '\(candidate.displayName)'. Remaining free-tier operation maintained."
+                    reasonMsg = "Fallback from \(exhaustedModel.displayName) (\(exhaustReason)) to \(candidate.displayName)"
+                }
             }
 
             let decision = RoutingDecision(
@@ -565,8 +728,34 @@ public final class ModelRouter: @unchecked Sendable {
         }
 
         // All free models exhausted without fallback
-        if let (exhaustedModel, limitReason) = attemptedExhausted.first {
-            return .fallbackExhausted(reason: "All capable free-tier models for '\(effectiveKind.rawValue)' exhausted (initial: \(exhaustedModel.displayName), reason: \(limitReason)). Paid escalation is disallowed.")
+        if let (exhaustedModel, exhaustReason) = attemptedExhausted.first {
+            if exhaustReason.hasPrefix("Retired:") {
+                let cheapestPaid = catalog.values.filter { model in
+                    !model.isFree &&
+                    model.supportedTasks.contains(effectiveKind) &&
+                    !ModelRetirementManager.shared.isRetired(modelId: model.id)
+                }.min { $0.estimatedCostPer1kTokens < $1.estimatedCostPer1kTokens }
+
+                let paidOffer = cheapestPaid != nil ?
+                    "Next cheapest available option is '\(cheapestPaid!.displayName)' ($\(String(format: "%.4f", cheapestPaid!.estimatedCostPer1kTokens))/1k tokens, requires explicit user approval)." :
+                    "No alternate models found."
+
+                let plainMsg = "Model '\(exhaustedModel.displayName)' [\(exhaustedModel.id)] is retired (\(exhaustReason)). No capable free replacement exists for task '\(effectiveKind.rawValue)'. \(paidOffer) Zero-spend guarantee: paid model was NOT automatically selected."
+
+                let retirementNotice = ModelRetirementNotice(
+                    spaceId: spaceId,
+                    oldModelId: exhaustedModel.id,
+                    newModelId: nil,
+                    reason: exhaustReason,
+                    message: plainMsg,
+                    offeredPaidOption: paidOffer,
+                    isGracefulDegradation: true
+                )
+                ModelRetirementManager.shared.recordNotice(retirementNotice)
+
+                return .fallbackExhausted(reason: plainMsg)
+            }
+            return .fallbackExhausted(reason: "All capable free-tier models for '\(effectiveKind.rawValue)' exhausted (initial: \(exhaustedModel.displayName), reason: \(exhaustReason)). Paid escalation is disallowed.")
         }
 
         return .fallbackExhausted(reason: "No capable model found for task kind '\(effectiveKind.rawValue)'")
@@ -581,13 +770,14 @@ public final class ModelRouter: @unchecked Sendable {
         catalog: [String: RoutableModel],
         limitHits: [String: String]
     ) -> RoutingResolutionResult {
-        // Bounded fallback: strictly select next capable free model, excluding exhaustedModel and limitHits
+        // Bounded fallback: strictly select next capable free model, excluding exhaustedModel, limitHits, and retired models
         let candidates = catalog.values.filter { model in
             model.id != exhaustedModel.id &&
             model.supportedTasks.contains(taskKind) &&
             model.isFree &&
             limitHits[model.id] == nil &&
-            !FreeTierModelManager.shared.isWithdrawn(provider: model.provider)
+            !FreeTierModelManager.shared.isWithdrawn(provider: model.provider) &&
+            !ModelRetirementManager.shared.isRetired(modelId: model.id)
         }.sorted { (m1, m2) -> Bool in
             let p1 = candidatePriority(model: m1, taskKind: taskKind)
             let p2 = candidatePriority(model: m2, taskKind: taskKind)
@@ -685,6 +875,15 @@ public final class ModelRouter: @unchecked Sendable {
             lines.append("\(ts) | \(d.taskKind.rawValue) | \(d.selectedModelId) | $\(String(format: "%.4f", d.estimatedCost)) | \(String(format: "%.1f", d.latencyMs))ms | \(notice)")
         }
         return lines.joined(separator: "\n")
+    }
+
+    // MARK: - Model Retirement Integration
+
+    /// Inspects the specified Space IDs (or rules) for models that have been retired,
+    /// auto-swaps them to the nearest capable free replacement, records history, and emits notices.
+    @discardableResult
+    public func detectAndSwapRetiredModels(spaceIds: [UUID], atStartup: Bool = false) -> [ModelRetirementNotice] {
+        ModelRetirementManager.shared.detectAndSwap(spaceIds: spaceIds, router: self, atStartup: atStartup)
     }
 
     private func elapsedMs(since start: ContinuousClock.Instant) -> Double {
