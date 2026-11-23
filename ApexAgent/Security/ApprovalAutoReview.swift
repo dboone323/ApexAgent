@@ -75,6 +75,10 @@ public enum ApprovalAutoReview {
         "clipboard_write", "applescript", "store_memory", "memory_flush", "memory_consolidate"
     ]
 
+    public static func isMutatingTool(_ name: String) -> Bool {
+        mutatingTools.contains(name.lowercased())
+    }
+
     private static let deletionTools: Set<String> = [
         "delete_file", "file_delete", "remove_file"
     ]

@@ -9,7 +9,7 @@ import Testing
 import Foundation
 @testable import ApexAgentCore
 
-@Suite("Issue #181 — Agent Governance Tests")
+@Suite("Issue #181 — Agent Governance Tests", .serialized)
 @MainActor
 struct AgentGovernanceTests {
 
@@ -519,5 +519,133 @@ struct AgentGovernanceTests {
         #expect((coder?["tasksDone"] as? Int) == 4)
         #expect((coder?["prsMerged"] as? Int) == 2)
         #expect((coder?["verifiedRuns"] as? Int) == 3)
+    }
+
+    // MARK: - Round 5 Tests (Codex Re-Review Findings)
+
+    @Test("R5-1 / P1: Workspace mutations by class require writeWorkspace permission even if agent holds shellExecution")
+    func testWorkspaceMutationByClassRequiresWritePermissionEvenWithShellPermission() {
+        let suiteName = "test.governance.mutation.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Failed to create isolated defaults")
+            return
+        }
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let governance = AgentGovernanceManager(userDefaults: defaults)
+        governance.registerAgent(
+            id: "readonly-shell-agent",
+            displayName: "Shell Only Agent",
+            status: .approved,
+            permissions: [.readWorkspace, .shellExecution] // Has shell, LACKS writeWorkspace
+        )
+        governance.registerAgent(
+            id: "readwrite-shell-agent",
+            displayName: "Read Write Agent",
+            status: .approved,
+            permissions: [.readWorkspace, .writeWorkspace, .shellExecution] // Has both
+        )
+
+        // 1. Mutating shell commands for agent WITHOUT writeWorkspace must be gated (requires human approval)
+        let mkdirVerdict = governance.checkActionRisk(
+            agentId: "readonly-shell-agent",
+            toolName: "run_shell_command",
+            command: "mkdir -p new_directory",
+            directory: "/tmp"
+        )
+        #expect(!mkdirVerdict.allowed)
+        #expect(mkdirVerdict.requiresHumanApproval)
+        #expect(mkdirVerdict.riskCategory == "missing-permission-write")
+
+        let mvVerdict = governance.checkActionRisk(
+            agentId: "readonly-shell-agent",
+            toolName: "bash",
+            command: "mv file.txt other.txt",
+            directory: "/tmp"
+        )
+        #expect(!mvVerdict.allowed)
+        #expect(mvVerdict.requiresHumanApproval)
+        #expect(mvVerdict.riskCategory == "missing-permission-write")
+
+        let redirectVerdict = governance.checkActionRisk(
+            agentId: "readonly-shell-agent",
+            toolName: "run_shell_command",
+            command: "echo 'injected' > output.txt",
+            directory: "/tmp"
+        )
+        #expect(!redirectVerdict.allowed)
+        #expect(redirectVerdict.requiresHumanApproval)
+        #expect(redirectVerdict.riskCategory == "missing-permission-write")
+
+        // 2. Non-mutating inspection commands for agent WITHOUT writeWorkspace proceed normally
+        let lsVerdict = governance.checkActionRisk(
+            agentId: "readonly-shell-agent",
+            toolName: "run_shell_command",
+            command: "ls -la",
+            directory: "/tmp"
+        )
+        #expect(lsVerdict.allowed)
+
+        // 3. Mutating shell commands for agent WITH writeWorkspace are allowed through
+        let rwMkdirVerdict = governance.checkActionRisk(
+            agentId: "readwrite-shell-agent",
+            toolName: "run_shell_command",
+            command: "mkdir -p new_directory",
+            directory: "/tmp"
+        )
+        #expect(rwMkdirVerdict.allowed)
+    }
+
+    @Test("R5-2 / P1: AgentGovernanceLiveVerifier uses isolated storage and never erases shared governance settings")
+    func testVerifierDoesNotEraseSharedGovernanceSettings() async {
+        let sharedGovernance = AgentGovernanceManager.shared
+        sharedGovernance.resetToDefaults()
+        defer { sharedGovernance.resetToDefaults() }
+
+        // Configure custom state on the SHARED manager
+        sharedGovernance.blockAgent(id: "coder", reason: "Custom security hold", actor: "admin")
+        sharedGovernance.setSpendLimit(
+            scopeKey: "agent:coder",
+            scopeKind: .agent,
+            limit: 77.50,
+            alertThresholdPercent: 0.85,
+            reason: "Custom test cap",
+            actor: "admin"
+        )
+        sharedGovernance.recordSpend(agentId: "coder", amount: 15.25, tokens: 3500)
+
+        // Run live verification
+        let result = await AgentGovernanceLiveVerifier.runVerification()
+        #expect(result.passed)
+
+        // Assert shared manager state is 100% preserved
+        let coder = sharedGovernance.agent(for: "coder")
+        #expect(coder?.status == .blocked)
+
+        let limit = sharedGovernance.spendLimit(for: "agent:coder")
+        #expect(limit?.spendLimit == 77.50)
+        #expect(limit?.currentSpend == 15.25)
+    }
+
+    @Test("R5-3 / P2: AgentGovernanceLiveVerifier emits valid JSON when jsonOutput is true")
+    func testGovernanceVerifyCLIHonorsJsonFlag() async {
+        let result = await AgentGovernanceLiveVerifier.runVerification(jsonOutput: true)
+        #expect(result.passed)
+        #expect(result.totalChecks == 7)
+        #expect(result.passedChecks == 7)
+
+        guard let data = result.output.data(using: .utf8) else {
+            Issue.record("Failed to convert verifier output to UTF8 data")
+            return
+        }
+
+        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        #expect(json != nil)
+        #expect(json?["passed"] as? Bool == true)
+        #expect(json?["totalChecks"] as? Int == 7)
+        #expect(json?["passedChecks"] as? Int == 7)
+        let checks = json?["checks"] as? [[String: Any]]
+        #expect(checks != nil)
+        #expect(checks?.count == 7)
     }
 }

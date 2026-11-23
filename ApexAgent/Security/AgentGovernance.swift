@@ -749,6 +749,67 @@ public final class AgentGovernanceManager: @unchecked Sendable {
 
     // MARK: - Risky Action Governance
 
+    /// Evaluates whether an action (tool invocation or shell command content) mutates workspace state by class.
+    public static func isWorkspaceMutatingAction(toolName: String, command: String = "") -> Bool {
+        let lowerTool = toolName.lowercased()
+
+        // Tool-level mutation check
+        if lowerTool == "write_file" || lowerTool == "file_write" || lowerTool.hasPrefix("write_") || lowerTool.hasSuffix("_write") {
+            return true
+        }
+        if ApprovalAutoReview.isMutatingTool(lowerTool) {
+            return true
+        }
+
+        // Shell-level mutation check
+        let isShellTool = lowerTool == "run_shell_command" || lowerTool == "bash" || lowerTool == "sh" || lowerTool == "zsh"
+        if isShellTool && !command.isEmpty {
+            return isWorkspaceMutatingShellCommand(command)
+        }
+
+        return false
+    }
+
+    /// Evaluates whether a shell command content performs workspace mutations (directory creation/removal, file move/copy/touch, redirection, in-place edits).
+    public static func isWorkspaceMutatingShellCommand(_ command: String) -> Bool {
+        let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty { return false }
+
+        // Output redirection (excluding standard redirection to /dev/null or descriptors like 2>&1)
+        if trimmed.contains(">") {
+            let redirectPattern = #"(?:^|[^&21])(?:>>?)\s*(?!\/dev\/null\b|&[12]\b)\S+"#
+            if trimmed.range(of: redirectPattern, options: .regularExpression) != nil {
+                return true
+            }
+        }
+
+        // Mutating command verbs (mkdir, mv, cp, touch, rm, rmdir, unlink, truncate, patch, install)
+        let mutatingVerbsPattern = #"(?:^|[|;&\s])(mkdir|mv|cp|touch|rm|rmdir|unlink|truncate|patch|install)\b"#
+        if trimmed.range(of: mutatingVerbsPattern, options: .regularExpression) != nil {
+            return true
+        }
+
+        // Piping to file write utilities (e.g. tee [file])
+        let teePattern = #"(?:^|[|;&\s])tee\s+(?!-a\s+\/dev\/null\b|\/dev\/null\b)\S+"#
+        if trimmed.range(of: teePattern, options: .regularExpression) != nil {
+            return true
+        }
+
+        // In-place stream editing (sed -i, perl -i)
+        let inPlacePattern = #"(?:^|[|;&\s])(sed|perl)\s+-[a-zA-Z]*i"#
+        if trimmed.range(of: inPlacePattern, options: .regularExpression) != nil {
+            return true
+        }
+
+        // Git workspace mutation commands
+        let gitMutationPattern = #"\bgit\s+(commit|merge|rebase|reset|checkout|restore|apply|cherry-pick|pull)\b"#
+        if trimmed.range(of: gitMutationPattern, options: .regularExpression) != nil {
+            return true
+        }
+
+        return false
+    }
+
     /// Evaluates whether an action requires human approval through the existing approval system.
     public func checkActionRisk(
         agentId: String,
@@ -784,8 +845,22 @@ public final class AgentGovernanceManager: @unchecked Sendable {
         }
 
         // 1. Check explicit agent permission flag
+        let effectiveCmd = command.isEmpty ? arguments : command
         if let permissions = agentRecord?.permissions {
-            if (toolName == "run_shell_command" || toolName == "bash") && !permissions.contains(.shellExecution) {
+            if (toolName == "run_shell_command" || toolName == "bash" || toolName == "sh" || toolName == "zsh") && !permissions.contains(.shellExecution) {
+                lock.lock()
+                appendDecisionLocked(
+                    actor: "governance",
+                    targetType: "agent",
+                    targetId: agentId,
+                    action: "risky_action_gated",
+                    previousValue: nil,
+                    newValue: "missing-permission-shell",
+                    reason: "Agent '\(displayName)' lacks shell execution permission; human approval required."
+                )
+                persistLocked()
+                lock.unlock()
+
                 return GovernanceActionVerdict(
                     allowed: false,
                     requiresHumanApproval: true,
@@ -793,7 +868,20 @@ public final class AgentGovernanceManager: @unchecked Sendable {
                     reason: "Agent '\(displayName)' lacks shell execution permission; human approval required."
                 )
             }
-            if (toolName == "write_file" || toolName == "file_write") && !permissions.contains(.writeWorkspace) {
+            if !permissions.contains(.writeWorkspace) && Self.isWorkspaceMutatingAction(toolName: toolName, command: effectiveCmd) {
+                lock.lock()
+                appendDecisionLocked(
+                    actor: "governance",
+                    targetType: "agent",
+                    targetId: agentId,
+                    action: "risky_action_gated",
+                    previousValue: nil,
+                    newValue: "missing-permission-write",
+                    reason: "Agent '\(displayName)' lacks workspace write permission; human approval required."
+                )
+                persistLocked()
+                lock.unlock()
+
                 return GovernanceActionVerdict(
                     allowed: false,
                     requiresHumanApproval: true,
@@ -802,6 +890,19 @@ public final class AgentGovernanceManager: @unchecked Sendable {
                 )
             }
             if (toolName == "delete_file" || toolName == "file_delete") && !permissions.contains(.fileDeletion) {
+                lock.lock()
+                appendDecisionLocked(
+                    actor: "governance",
+                    targetType: "agent",
+                    targetId: agentId,
+                    action: "risky_action_gated",
+                    previousValue: nil,
+                    newValue: "missing-permission-deletion",
+                    reason: "Agent '\(displayName)' lacks file deletion permission; human approval required."
+                )
+                persistLocked()
+                lock.unlock()
+
                 return GovernanceActionVerdict(
                     allowed: false,
                     requiresHumanApproval: true,

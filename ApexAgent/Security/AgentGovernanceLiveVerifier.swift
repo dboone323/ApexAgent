@@ -20,7 +20,8 @@ public enum AgentGovernanceLiveVerifier {
 
     public static func runVerification(
         logPath: String? = nil,
-        jsonOutput: Bool = false
+        jsonOutput: Bool = false,
+        userDefaults: UserDefaults? = nil
     ) async -> VerificationResult {
         var logs: [String] = []
         let isoFormatter = ISO8601DateFormatter()
@@ -36,8 +37,25 @@ public enum AgentGovernanceLiveVerifier {
         var passedChecks = 0
         let totalChecks = 7
 
-        let governance = AgentGovernanceManager.shared
+        // Use isolated storage so verification never touches or erases real persisted user settings
+        let isolatedSuiteName = "com.apexagent.governance.verifier.\(UUID().uuidString)"
+        let isolatedDefaults = userDefaults ?? UserDefaults(suiteName: isolatedSuiteName) ?? .standard
+        defer {
+            if userDefaults == nil {
+                UserDefaults.standard.removePersistentDomain(forName: isolatedSuiteName)
+            }
+        }
+
+        let governance = AgentGovernanceManager(userDefaults: isolatedDefaults)
         governance.resetToDefaults()
+
+        struct CheckSummary {
+            let check: Int
+            let name: String
+            let passed: Bool
+            let verdict: String
+        }
+        var checkSummaries: [CheckSummary] = []
 
         // -------------------------------------------------------------------------
         // CHECK 1: A spend cap set for an agent is enforced: a run that would exceed
@@ -74,12 +92,21 @@ public enum AgentGovernanceLiveVerifier {
         logs.append("  -> Spend before: $0.85, spend after stopped run: $\(String(format: "%.2f", initialSpend)) ($0 over-spend)")
 
         let check1Passed = check1RefusalValid && noticeContainsDetails && zeroOverspend
+        let check1Verdict = check1Passed
+            ? "PASS (spend cap set for agent stopped run with visible notice naming agent, cap, and spend so far with $0 over-spend)"
+            : "FAIL (spend cap check failed: allowed=\(evalResult.allowed), details=\(noticeContainsDetails), zeroOverspend=\(zeroOverspend))"
+        checkSummaries.append(CheckSummary(
+            check: 1,
+            name: "Spend Cap Enforcement & $0 Over-Spend Guarantee",
+            passed: check1Passed,
+            verdict: check1Verdict
+        ))
         if check1Passed {
             passedChecks += 1
-            logs.append("VERDICT 1: PASS (spend cap set for agent stopped run with visible notice naming agent, cap, and spend so far with $0 over-spend)")
+            logs.append("VERDICT 1: \(check1Verdict)")
         } else {
             allPassed = false
-            logs.append("VERDICT 1: FAIL (spend cap check failed: allowed=\(evalResult.allowed), details=\(noticeContainsDetails), zeroOverspend=\(zeroOverspend))")
+            logs.append("VERDICT 1: \(check1Verdict)")
         }
 
         // -------------------------------------------------------------------------
@@ -108,12 +135,21 @@ public enum AgentGovernanceLiveVerifier {
         logs.append("  -> Approved evaluation allowed: \(approvedEval.allowed)")
 
         let check2Passed = isBlocked && blockedReasonValid && isApproved && approvedEval.allowed
+        let check2Verdict = check2Passed
+            ? "PASS (agent can be blocked and approved; blocked run refused with clear reason naming agent and block; approved run succeeds)"
+            : "FAIL (block/approve cycle failed: isBlocked=\(isBlocked), reasonValid=\(blockedReasonValid), isApproved=\(isApproved), approvedEval=\(approvedEval.allowed))"
+        checkSummaries.append(CheckSummary(
+            check: 2,
+            name: "Block and Approve Lifecycle",
+            passed: check2Passed,
+            verdict: check2Verdict
+        ))
         if check2Passed {
             passedChecks += 1
-            logs.append("VERDICT 2: PASS (agent can be blocked and approved; blocked run refused with clear reason naming agent and block; approved run succeeds)")
+            logs.append("VERDICT 2: \(check2Verdict)")
         } else {
             allPassed = false
-            logs.append("VERDICT 2: FAIL (block/approve cycle failed: isBlocked=\(isBlocked), reasonValid=\(blockedReasonValid), isApproved=\(isApproved), approvedEval=\(approvedEval.allowed))")
+            logs.append("VERDICT 2: \(check2Verdict)")
         }
 
         // -------------------------------------------------------------------------
@@ -151,12 +187,21 @@ public enum AgentGovernanceLiveVerifier {
         let check3Passed = verdictNoShell.requiresHumanApproval
             && verdictDestructive.requiresHumanApproval
             && !verdictSafe.requiresHumanApproval
+        let check3Verdict = check3Passed
+            ? "PASS (risky actions require human approval through approval system while safe inspection operations proceed)"
+            : "FAIL (risky action check failed: noShell=\(verdictNoShell.requiresHumanApproval), destructive=\(verdictDestructive.requiresHumanApproval), safe=\(!verdictSafe.requiresHumanApproval))"
+        checkSummaries.append(CheckSummary(
+            check: 3,
+            name: "Risky Action Routing Through Existing Approval System",
+            passed: check3Passed,
+            verdict: check3Verdict
+        ))
         if check3Passed {
             passedChecks += 1
-            logs.append("VERDICT 3: PASS (risky actions require human approval through approval system while safe inspection operations proceed)")
+            logs.append("VERDICT 3: \(check3Verdict)")
         } else {
             allPassed = false
-            logs.append("VERDICT 3: FAIL (risky action check failed: noShell=\(verdictNoShell.requiresHumanApproval), destructive=\(verdictDestructive.requiresHumanApproval), safe=\(!verdictSafe.requiresHumanApproval))")
+            logs.append("VERDICT 3: \(check3Verdict)")
         }
 
         // -------------------------------------------------------------------------
@@ -198,12 +243,21 @@ public enum AgentGovernanceLiveVerifier {
             && (coderValue.totalTokens == 18450)
             && (coderValue.totalCost == 0.0)
 
+        let check4Verdict = check4Passed
+            ? "PASS (value analytics shows work completed: tasks done, PRs merged, verified runs per agent/model/Space with tokens and cost alongside)"
+            : "FAIL (value analytics data mismatch: tasks=\(coderValue.tasksCompleted), prs=\(coderValue.prsMerged), verified=\(coderValue.verifiedRuns))"
+        checkSummaries.append(CheckSummary(
+            check: 4,
+            name: "Value Analytics (Work Completed Beyond Just Tokens)",
+            passed: check4Passed,
+            verdict: check4Verdict
+        ))
         if check4Passed {
             passedChecks += 1
-            logs.append("VERDICT 4: PASS (value analytics shows work completed: tasks done, PRs merged, verified runs per agent/model/Space with tokens and cost alongside)")
+            logs.append("VERDICT 4: \(check4Verdict)")
         } else {
             allPassed = false
-            logs.append("VERDICT 4: FAIL (value analytics data mismatch: tasks=\(coderValue.tasksCompleted), prs=\(coderValue.prsMerged), verified=\(coderValue.verifiedRuns))")
+            logs.append("VERDICT 4: \(check4Verdict)")
         }
 
         // -------------------------------------------------------------------------
@@ -223,12 +277,21 @@ public enum AgentGovernanceLiveVerifier {
         let containsEfficiency = viewSummary.contains("Efficiency:") && viewSummary.contains("Tokens:") && viewSummary.contains("Cost:")
 
         let check5Passed = containsIdentity && containsPermissions && containsSpendVsCap && containsWorkValue && containsEfficiency
+        let check5Verdict = check5Passed
+            ? "PASS (governance view shows agent identity, permissions, spend vs cap, and work value together in one place)"
+            : "FAIL (governance view missing sections: id=\(containsIdentity), perms=\(containsPermissions), spend=\(containsSpendVsCap), work=\(containsWorkValue), eff=\(containsEfficiency))"
+        checkSummaries.append(CheckSummary(
+            check: 5,
+            name: "Unified Governance View",
+            passed: check5Passed,
+            verdict: check5Verdict
+        ))
         if check5Passed {
             passedChecks += 1
-            logs.append("VERDICT 5: PASS (governance view shows agent identity, permissions, spend vs cap, and work value together in one place)")
+            logs.append("VERDICT 5: \(check5Verdict)")
         } else {
             allPassed = false
-            logs.append("VERDICT 5: FAIL (governance view missing sections: id=\(containsIdentity), perms=\(containsPermissions), spend=\(containsSpendVsCap), work=\(containsWorkValue), eff=\(containsEfficiency))")
+            logs.append("VERDICT 5: \(check5Verdict)")
         }
 
         // -------------------------------------------------------------------------
@@ -267,12 +330,21 @@ public enum AgentGovernanceLiveVerifier {
         logs.append("  -> Audit contains approve: \(hasApproveAction), block: \(hasBlockAction), hard_cap_stop: \(hasCapStopAction)")
 
         let check6Passed = isDefaultFreeTier && paidBlockedOnZeroSpend && localAllowed && hasApproveAction && hasBlockAction && hasCapStopAction
+        let check6Verdict = check6Passed
+            ? "PASS (free-tier governance enforces $0 spend cap stopping paid runs while allowing local models, with all decisions recorded in audit log)"
+            : "FAIL (free-tier audit check failed: freeTier=\(isDefaultFreeTier), paidBlocked=\(paidBlockedOnZeroSpend), localAllowed=\(localAllowed), auditApprove=\(hasApproveAction), auditBlock=\(hasBlockAction), auditCap=\(hasCapStopAction))"
+        checkSummaries.append(CheckSummary(
+            check: 6,
+            name: "Free-Tier Zero-Spend Guardrails & Audit Trail",
+            passed: check6Passed,
+            verdict: check6Verdict
+        ))
         if check6Passed {
             passedChecks += 1
-            logs.append("VERDICT 6: PASS (free-tier governance enforces $0 spend cap stopping paid runs while allowing local models, with all decisions recorded in audit log)")
+            logs.append("VERDICT 6: \(check6Verdict)")
         } else {
             allPassed = false
-            logs.append("VERDICT 6: FAIL (free-tier audit check failed: freeTier=\(isDefaultFreeTier), paidBlocked=\(paidBlockedOnZeroSpend), localAllowed=\(localAllowed), auditApprove=\(hasApproveAction), auditBlock=\(hasBlockAction), auditCap=\(hasCapStopAction))")
+            logs.append("VERDICT 6: \(check6Verdict)")
         }
 
         // -------------------------------------------------------------------------
@@ -291,8 +363,8 @@ public enum AgentGovernanceLiveVerifier {
         )
         governance.recordSpend(agentId: "reviewer", amount: 10.50, tokens: 3000)
 
-        // Recreate manager to simulate app restart
-        let relaunchedGovernance = AgentGovernanceManager(userDefaults: .standard)
+        // Recreate manager using the same isolated store to verify persistence
+        let relaunchedGovernance = AgentGovernanceManager(userDefaults: isolatedDefaults)
         let reviewerRecord = relaunchedGovernance.agent(for: "reviewer")
         let isReviewerBlocked = reviewerRecord?.status == .blocked
         let capRecord = relaunchedGovernance.spendLimit(for: "agent:reviewer")
@@ -305,12 +377,21 @@ public enum AgentGovernanceLiveVerifier {
         logs.append("  -> Reviewer block decision in audit log persists: \(auditSurvives)")
 
         let check7Passed = isReviewerBlocked && capSurvives && auditSurvives
+        let check7Verdict = check7Passed
+            ? "PASS (governance state persists across launches: blocks, spend limits, spend totals, and decision log survive restart)"
+            : "FAIL (persistence check failed: blocked=\(isReviewerBlocked), capSurvives=\(capSurvives), auditSurvives=\(auditSurvives))"
+        checkSummaries.append(CheckSummary(
+            check: 7,
+            name: "Governance State Persistence Across Launches",
+            passed: check7Passed,
+            verdict: check7Verdict
+        ))
         if check7Passed {
             passedChecks += 1
-            logs.append("VERDICT 7: PASS (governance state persists across launches: blocks, spend limits, spend totals, and decision log survive restart)")
+            logs.append("VERDICT 7: \(check7Verdict)")
         } else {
             allPassed = false
-            logs.append("VERDICT 7: FAIL (persistence check failed: blocked=\(isReviewerBlocked), capSurvives=\(capSurvives), auditSurvives=\(auditSurvives))")
+            logs.append("VERDICT 7: \(check7Verdict)")
         }
 
         // Summary
@@ -318,27 +399,50 @@ public enum AgentGovernanceLiveVerifier {
         logs.append("SUMMARY: \(passedChecks)/\(totalChecks) CHECKS PASSED. ALL PASS: \(allPassed)")
         logs.append("================================================================================")
 
-        var outputText = logs.joined(separator: "\n")
-
-        // Write output to log file if path provided (with loud failure on error)
+        // Write plain-text output to log file if path provided (with loud failure on error)
         if let path = logPath {
             let url = URL(fileURLWithPath: path)
             do {
                 try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-                try outputText.write(to: url, atomically: true, encoding: .utf8)
+                try logs.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
             } catch {
                 let fatalMsg = "FATAL ERROR: Failed to write verification log to '\(path)': \(error.localizedDescription)"
                 logs.append(fatalMsg)
                 allPassed = false
-                outputText = logs.joined(separator: "\n")
             }
         }
 
-        // Clean up verifier state so subsequent tests start clean
+        let plainTextOutput = logs.joined(separator: "\n")
+
+        // Clean up verifier state in isolated defaults
         governance.resetToDefaults()
 
+        let finalOutput: String
+        if jsonOutput {
+            let jsonPayload: [String: Any] = [
+                "timestamp": timestamp,
+                "passed": allPassed,
+                "totalChecks": totalChecks,
+                "passedChecks": passedChecks,
+                "checks": checkSummaries.map { [
+                    "check": $0.check,
+                    "name": $0.name,
+                    "passed": $0.passed,
+                    "verdict": $0.verdict
+                ] }
+            ]
+            if let data = try? JSONSerialization.data(withJSONObject: jsonPayload, options: [.prettyPrinted, .sortedKeys]),
+               let jsonString = String(data: data, encoding: .utf8) {
+                finalOutput = jsonString
+            } else {
+                finalOutput = "{\"passed\": \(allPassed), \"totalChecks\": \(totalChecks), \"passedChecks\": \(passedChecks)}"
+            }
+        } else {
+            finalOutput = plainTextOutput
+        }
+
         return VerificationResult(
-            output: outputText,
+            output: finalOutput,
             passed: allPassed,
             totalChecks: totalChecks,
             passedChecks: passedChecks
