@@ -2,10 +2,19 @@ import SwiftUI
 import AuthenticationServices
 
 public struct WelcomeView: View {
+    public enum OnboardingStep: String, CaseIterable, Identifiable, Sendable {
+        case modelSelection
+        case workspaceAndAccount
+
+        public var id: String { rawValue }
+    }
+
     @ObservedObject var accountManager: UserAccountManager
     @ObservedObject var workspaceManager = WorkspaceSecurityManager.shared
     var onComplete: () -> Void
 
+    @State private var currentStep: OnboardingStep = .modelSelection
+    @State private var selectedProvider: ModelProvider = ModelRegistry.activeProvider()
     @State private var localNameInput: String = ""
     @State private var showWorkspaceSuccess = false
 
@@ -17,7 +26,7 @@ public struct WelcomeView: View {
     public var body: some View {
         VStack(spacing: 0) {
             // MARK: - Header
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 ZStack {
                     Circle()
                         .fill(
@@ -27,31 +36,123 @@ public struct WelcomeView: View {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 64, height: 64)
-                        .shadow(color: Color.accentColor.opacity(0.3), radius: 10, x: 0, y: 4)
+                        .frame(width: 52, height: 52)
+                        .shadow(color: Color.accentColor.opacity(0.3), radius: 8, x: 0, y: 3)
 
                     Image(systemName: "brain.head.profile")
-                        .font(.system(size: 30, weight: .semibold))
+                        .font(.system(size: 26, weight: .semibold))
                         .foregroundStyle(.white)
                 }
-                .padding(.top, 24)
+                .padding(.top, 16)
 
                 Text("Welcome to ApexAgent")
-                    .font(.system(size: 24, weight: .bold))
+                    .font(.system(size: 22, weight: .bold))
 
-                Text("Autonomous multi-agent orchestration, native on-device intelligence, and persistent sandboxed execution.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 480)
+                HStack(spacing: 12) {
+                    stepIndicator(
+                        step: .modelSelection,
+                        title: "1. Intelligence Engine",
+                        isActive: currentStep == .modelSelection
+                    )
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.secondary)
+                    stepIndicator(
+                        step: .workspaceAndAccount,
+                        title: "2. Workspace & Profile",
+                        isActive: currentStep == .workspaceAndAccount
+                    )
+                }
+                .padding(.top, 2)
             }
             .padding(.horizontal, 32)
 
             Divider()
-                .padding(.vertical, 20)
+                .padding(.vertical, 14)
 
-            // MARK: - Feature Pillars
-            HStack(alignment: .top, spacing: 20) {
+            // MARK: - Step Content
+            Group {
+                switch currentStep {
+                case .modelSelection:
+                    modelSelectionStepView
+                case .workspaceAndAccount:
+                    workspaceAndAccountStepView
+                }
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
+
+            Divider()
+                .padding(.vertical, 12)
+
+            // MARK: - Footer
+            HStack {
+                if currentStep == .workspaceAndAccount {
+                    Button("Back") {
+                        currentStep = .modelSelection
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.regular)
+                    .accessibilityIdentifier("onboardingBackButton")
+                }
+
+                Text(currentStep == .modelSelection
+                     ? "Free-tier reality: zero required paid subscriptions or usage-based billing."
+                     : "You can change accounts and folder permissions anytime in Settings.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                if currentStep == .modelSelection {
+                    Button("Continue to Workspace") {
+                        currentStep = .workspaceAndAccount
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
+                    .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier("onboardingContinueButton")
+                } else {
+                    Button("Get Started") {
+                        FreeTierModelManager.shared.applyProviderSelection(selectedProvider)
+                        if !accountManager.isAuthenticated {
+                            accountManager.continueAsLocalProfile()
+                        }
+                        onComplete()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
+                    .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier("onboardingGetStartedButton")
+                }
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 20)
+        }
+        .frame(width: 660, height: 570)
+        .background(Color(NSColor.underPageBackgroundColor))
+        .accessibilityIdentifier("onboardingWelcomeView")
+    }
+
+    // MARK: - Step 1: Model Selection
+    private var modelSelectionStepView: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            OnboardingModelPickerView(
+                selectedProvider: $selectedProvider,
+                onSelectionConfirmed: { provider in
+                    selectedProvider = provider
+                    currentStep = .workspaceAndAccount
+                }
+            )
+        }
+    }
+
+    // MARK: - Step 2: Workspace & Account
+    private var workspaceAndAccountStepView: some View {
+        VStack(spacing: 14) {
+            // Feature Pillars
+            HStack(alignment: .top, spacing: 16) {
                 featureCard(
                     icon: "person.3.sequence.fill",
                     color: .blue,
@@ -73,12 +174,27 @@ public struct WelcomeView: View {
                     description: "Persistent security bookmarks remember your project directories without repeat prompts."
                 )
             }
-            .padding(.horizontal, 32)
 
-            Spacer()
+            // Summary of Chosen Engine
+            HStack(spacing: 8) {
+                Image(systemName: "cpu")
+                    .foregroundStyle(Color.accentColor)
+                Text("Selected Engine: **\(selectedProvider.displayName)** (100% Free)")
+                    .font(.system(size: 11))
+                Spacer()
+                Button("Change") {
+                    currentStep = .modelSelection
+                }
+                .buttonStyle(.borderless)
+                .font(.system(size: 11))
+                .foregroundStyle(Color.accentColor)
+            }
+            .padding(8)
+            .background(Color(NSColor.controlBackgroundColor).opacity(0.4))
+            .cornerRadius(6)
 
-            // MARK: - Onboarding Action Card
-            VStack(spacing: 16) {
+            // Onboarding Action Card
+            VStack(spacing: 12) {
                 // Workspace Folder Selection
                 HStack {
                     Image(systemName: "folder")
@@ -158,63 +274,53 @@ public struct WelcomeView: View {
                     }
                 }
                 .toggleStyle(.checkbox)
-                .padding(.top, 4)
+                .padding(.top, 2)
             }
-            .padding(16)
+            .padding(14)
             .background(Color(NSColor.windowBackgroundColor))
-            .cornerRadius(12)
+            .cornerRadius(10)
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 10)
                     .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
             )
-            .padding(.horizontal, 32)
-
-            Spacer()
-
-            // MARK: - Footer / Get Started
-            HStack {
-                Text("You can change accounts and folder permissions anytime in Settings.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                Button("Get Started") {
-                    if !accountManager.isAuthenticated {
-                        accountManager.continueAsLocalProfile()
-                    }
-                    onComplete()
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
-                .keyboardShortcut(.defaultAction)
-            }
-            .padding(.horizontal, 32)
-            .padding(.bottom, 24)
         }
-        .frame(width: 640, height: 530)
-        .background(Color(NSColor.underPageBackgroundColor))
+    }
+
+    @ViewBuilder
+    private func stepIndicator(step: OnboardingStep, title: String, isActive: Bool) -> some View {
+        Button {
+            currentStep = step
+        } label: {
+            Text(title)
+                .font(.system(size: 11, weight: isActive ? .bold : .medium))
+                .foregroundStyle(isActive ? Color.accentColor : Color.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(isActive ? Color.accentColor.opacity(0.12) : Color.clear)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
     private func featureCard(icon: String, color: Color, title: String, description: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 20))
+                .font(.system(size: 18))
                 .foregroundStyle(color)
-                .frame(width: 28, height: 28)
+                .frame(width: 24, height: 24)
 
             Text(title)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 12, weight: .semibold))
 
             Text(description)
-                .font(.system(size: 11))
+                .font(.system(size: 10))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
+        .padding(10)
         .background(Color(NSColor.controlBackgroundColor).opacity(0.4))
-        .cornerRadius(10)
+        .cornerRadius(8)
     }
 }

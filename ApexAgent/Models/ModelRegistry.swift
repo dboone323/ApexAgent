@@ -552,6 +552,10 @@ public struct ModelRegistry: Sendable {
         let estimatedTokens = estimateTokenCount(prompt: prompt, history: history, instructions: instructions, tools: tools)
 
         if preferred != .autoPicker && preferred != .appleOnDevice {
+            if FreeTierModelManager.shared.isWithdrawn(provider: preferred) {
+                let degraded = FreeTierModelManager.shared.resolveGracefulDegradation(for: preferred)
+                return (degraded.provider, degraded.explanation)
+            }
             return (preferred, nil)
         }
 
@@ -567,11 +571,11 @@ public struct ModelRegistry: Sendable {
             return (.applePCC, "Context tokens (\(estimatedTokens)) exceed 3.2k on-device ceiling; tiering to Apple Private Cloud Compute.")
         }
 
-        if hasAttachments && !geminiAPIKey().isEmpty {
+        if hasAttachments && !geminiAPIKey().isEmpty && !FreeTierModelManager.shared.isWithdrawn(provider: .cloudGemini) {
             return (.cloudGemini, "Attachments require multimodal vision processing; tiering to Cloud Gemini.")
         }
 
-        if estimatedTokens > 8000 && !geminiAPIKey().isEmpty {
+        if estimatedTokens > 8000 && !geminiAPIKey().isEmpty && !FreeTierModelManager.shared.isWithdrawn(provider: .cloudGemini) {
             return (.cloudGemini, "Context tokens (\(estimatedTokens)) exceed local 8k ceiling; tiering to Cloud Gemini long-context engine.")
         }
 
@@ -635,16 +639,28 @@ public struct ModelRegistry: Sendable {
         let target = preferred ?? .autoPicker
 
         if target != .autoPicker {
-            candidates.append(ProviderCandidate(provider: target, modelName: target == .localOllama ? ollamaModel(for: bot, prompt: prompt) : nil, reason: "User or Bot Preferred: \(target.displayName)", priority: 1))
-            if target != .localOllama {
+            let effectiveTarget: ModelProvider
+            let targetReason: String
+            if FreeTierModelManager.shared.isWithdrawn(provider: target) {
+                let degraded = FreeTierModelManager.shared.resolveGracefulDegradation(for: target)
+                effectiveTarget = degraded.provider
+                targetReason = "Degraded from Withdrawn \(target.displayName): \(degraded.provider.displayName)"
+            } else {
+                effectiveTarget = target
+                targetReason = "User or Bot Preferred: \(target.displayName)"
+            }
+
+            candidates.append(ProviderCandidate(provider: effectiveTarget, modelName: effectiveTarget == .localOllama ? ollamaModel(for: bot, prompt: prompt) : nil, reason: targetReason, priority: 1))
+            if effectiveTarget != .localOllama && !FreeTierModelManager.shared.isWithdrawn(provider: .localOllama) {
                 candidates.append(ProviderCandidate(provider: .localOllama, modelName: ollamaModel(for: bot, prompt: prompt), reason: "Local Ollama Fallback", priority: 2))
             }
-            if target != .cloudGemini && !geminiAPIKey().isEmpty {
+            if effectiveTarget != .cloudGemini && !geminiAPIKey().isEmpty && !FreeTierModelManager.shared.isWithdrawn(provider: .cloudGemini) {
                 candidates.append(ProviderCandidate(provider: .cloudGemini, modelName: geminiModel(), reason: "Cloud Gemini Fallback", priority: 3))
             }
-            if target != .appleOnDevice {
+            if effectiveTarget != .appleOnDevice && !FreeTierModelManager.shared.isWithdrawn(provider: .appleOnDevice) {
                 candidates.append(ProviderCandidate(provider: .appleOnDevice, reason: "On-Device AFM Fallback", priority: 4))
             }
+            candidates.removeAll { FreeTierModelManager.shared.isWithdrawn(provider: $0.provider) }
             return candidates
         }
 
@@ -655,6 +671,7 @@ public struct ModelRegistry: Sendable {
             }
             candidates.append(ProviderCandidate(provider: .localOllama, modelName: ollamaModel(for: bot, prompt: prompt), reason: "Local Ollama Fallback", priority: 2))
             candidates.append(ProviderCandidate(provider: .appleOnDevice, reason: "On-Device Fallback", priority: 3))
+            candidates.removeAll { FreeTierModelManager.shared.isWithdrawn(provider: $0.provider) }
             return candidates
         }
 
@@ -693,6 +710,7 @@ public struct ModelRegistry: Sendable {
             candidates.append(ProviderCandidate(provider: .localOllama, modelName: ollamaModel(for: bot, prompt: prompt), reason: "Local Ollama Specialist", priority: 2))
         }
 
+        candidates.removeAll { FreeTierModelManager.shared.isWithdrawn(provider: $0.provider) }
         return candidates
     }
 
