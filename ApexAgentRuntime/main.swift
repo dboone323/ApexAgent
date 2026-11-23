@@ -149,7 +149,8 @@ case .modelRetirementVerify(let jsonOutput):
     exit(result.passed ? 0 : 1)
 
 case .agentGovernanceVerify(let jsonOutput):
-    let logPath = "/Users/danielstevens/.gemini/antigravity/worktrees/ApexAgent/issue181_agent_governance/runs/issue181/live-verify-round1.log"
+    let repoRoot = ApexCLIRouter.resolveRepositoryRoot()
+    let logPath = repoRoot.appendingPathComponent("runs/issue181/live-verify-round2.log").path
     let result = await AgentGovernanceLiveVerifier.runVerification(logPath: logPath, jsonOutput: jsonOutput)
     print(result.output)
     exit(result.passed ? 0 : 1)

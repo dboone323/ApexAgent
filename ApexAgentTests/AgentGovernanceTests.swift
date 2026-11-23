@@ -217,10 +217,307 @@ struct AgentGovernanceTests {
         #expect(viewOutput.contains("Verified Runs: 2"))
         #expect(viewOutput.contains("Tokens: 5000"))
 
-        // Also run live verifier end-to-end to ensure all 6 checks succeed
+        // Also run live verifier end-to-end to ensure all 7 checks succeed
         let liveResult = await AgentGovernanceLiveVerifier.runVerification()
         #expect(liveResult.passed)
-        #expect(liveResult.passedChecks == 6)
-        #expect(liveResult.totalChecks == 6)
+        #expect(liveResult.passedChecks == 7)
+        #expect(liveResult.totalChecks == 7)
+    }
+
+    // MARK: - Round 4: Tests for 10 Codex PR #207 Findings (5 P1, 5 P2)
+
+    @Test("P1-1: Paid model turn is refused under $0.00 cap, and spend accumulates after cap is raised")
+    func testPaidTurnRefusedUnderZeroCapAndSpendAccrues() async {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        let router = ModelRouter.shared
+        router.clearDecisions()
+
+        let paidApprovalZeroCap = PaidEscalationApproval(
+            isApproved: true,
+            authorizedSpendCap: 0.0
+        )
+        // With default $0.00 cap, router must refuse paid escalation
+        let result = router.route(
+            taskKind: .coding,
+            preferredModelId: "anthropic-claude-3-5-sonnet",
+            approval: paidApprovalZeroCap
+        )
+        switch result {
+        case .paidEscalationRefused(let reason, _):
+            #expect(reason.contains("cap") || reason.contains("Spend cap reached") || reason.contains("zero-spend") || reason.contains("governance"))
+        default:
+            Issue.record("Expected paid escalation refused under $0 cap, got \(result)")
+        }
+
+        // Now increase global cap to $10.00 and supervisor agent cap to $10.00
+        governance.setSpendLimit(scopeKey: "global", scopeKind: .global, limit: 10.00, reason: "Allowed spend", actor: "test")
+        governance.setSpendLimit(scopeKey: "agent:supervisor", scopeKind: .agent, limit: 10.00, reason: "Allowed spend", actor: "test")
+
+        let paidApprovalWithCap = PaidEscalationApproval(
+            isApproved: true,
+            authorizedSpendCap: 10.0
+        )
+        let allowedResult = router.route(
+            taskKind: .coding,
+            preferredModelId: "anthropic-claude-3-5-sonnet",
+            approval: paidApprovalWithCap
+        )
+        switch allowedResult {
+        case .routed(let decision):
+            #expect(decision.selectedModelId == "anthropic-claude-3-5-sonnet")
+            #expect(decision.estimatedCost > 0.0)
+            // Verify spend was actually recorded
+            let currentSpend = governance.spendLimit(for: "agent:supervisor")?.currentSpend ?? 0.0
+            #expect(currentSpend > 0.0)
+        default:
+            Issue.record("Expected paid model to be routed when cap raised, got \(allowedResult)")
+        }
+    }
+
+    @Test("P1-2: Blocked supervisor gets no tool approvals, even for safe allowlisted tools")
+    func testBlockedSupervisorCannotAutoApproveTools() async {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        // Block supervisor
+        governance.blockAgent(id: "supervisor", reason: "Compromised credential suspected", actor: "security_admin")
+        #expect(governance.isAgentBlocked(id: "supervisor"))
+
+        // checkActionRisk must refuse blocked supervisor
+        let riskVerdict = governance.checkActionRisk(
+            agentId: "supervisor",
+            toolName: "read_file",
+            command: "",
+            arguments: "{\"filePath\":\"Package.swift\"}"
+        )
+        #expect(!riskVerdict.allowed)
+        #expect(riskVerdict.riskCategory == "agent-blocked")
+
+        // Orchestrator requestConfirmation must fail (return false)
+        let orchestrator = AgentOrchestrator()
+        let confirmed = await orchestrator.requestConfirmation(
+            toolName: "read_file",
+            arguments: "{\"filePath\":\"Package.swift\"}",
+            riskDescription: "Read workspace file"
+        )
+        #expect(!confirmed)
+    }
+
+    @Test("P1-3: Governance state persists across manager recreation via storage")
+    func testGovernanceStatePersistsAcrossManagerRecreation() {
+        let testSuiteName = "apexagent.governance.test.\(UUID().uuidString)"
+        guard let testDefaults = UserDefaults(suiteName: testSuiteName) else {
+            Issue.record("Failed to create isolated UserDefaults suite")
+            return
+        }
+        defer { testDefaults.removePersistentDomain(forName: testSuiteName) }
+
+        let manager1 = AgentGovernanceManager(userDefaults: testDefaults)
+        manager1.blockAgent(id: "coder", reason: "Maintenance freeze", actor: "admin")
+        manager1.setSpendLimit(
+            scopeKey: "agent:coder",
+            scopeKind: .agent,
+            limit: 15.50,
+            alertThresholdPercent: 0.75,
+            reason: "Quarterly budget",
+            actor: "admin"
+        )
+        manager1.recordSpend(agentId: "coder", amount: 4.25, tokens: 12000)
+
+        // Recreate manager with same storage to simulate app restart
+        let manager2 = AgentGovernanceManager(userDefaults: testDefaults)
+        let coderRecord = manager2.agent(for: "coder")
+        #expect(coderRecord?.status == .blocked)
+
+        let limitRecord = manager2.spendLimit(for: "agent:coder")
+        #expect(limitRecord?.spendLimit == 15.50)
+        #expect(limitRecord?.currentSpend == 4.25)
+        #expect(limitRecord?.alertThresholdPercent == 0.75)
+
+        let decisions = manager2.decisionAuditLog()
+        #expect(decisions.contains { $0.action == "block" && $0.targetId == "coder" })
+    }
+
+    @Test("P1-4: Verifier fails loudly when log path is unwritable")
+    func testVerifierFailsLoudlyWhenLogPathUnwritable() async {
+        let unwritablePath = "/dev/null/impossible_dir/live-verify.log"
+        let result = await AgentGovernanceLiveVerifier.runVerification(logPath: unwritablePath)
+        #expect(!result.passed)
+        #expect(result.output.contains("FATAL ERROR") || result.output.contains("Failed to write"))
+    }
+
+    @Test("P1-5: Approaching cap alert does not bypass subsequent hard cap exceedance in another scope")
+    func testApproachingCapAlertDoesNotBypassGlobalExceededCap() {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        // Agent cap: $10.00, spend: $7.50
+        governance.setSpendLimit(
+            scopeKey: "agent:coder",
+            scopeKind: .agent,
+            limit: 10.00,
+            alertThresholdPercent: 0.80,
+            reason: "Agent limit",
+            actor: "test"
+        )
+        governance.recordSpend(agentId: "coder", amount: 7.50, tokens: 1000)
+
+        // Global cap: $5.00, spend: $4.50
+        governance.setSpendLimit(
+            scopeKey: "global",
+            scopeKind: .global,
+            limit: 5.00,
+            alertThresholdPercent: 0.80,
+            reason: "Global limit",
+            actor: "test"
+        )
+        governance.recordSpend(agentId: "developer", amount: 4.50, tokens: 500)
+
+        // Execution costing $1.00:
+        // agent:coder -> 7.50 + 1.00 = 8.50 <= 10.00 (approaching limit alert)
+        // global -> 4.50 + 7.50 + 1.00 or global spend > 5.00 -> EXCEEDED hard cap!
+        let eval = governance.evaluateExecution(agentId: "coder", estimatedCost: 1.00)
+        #expect(!eval.allowed)
+        #expect(eval.refusalReason != nil)
+        #expect(eval.refusalReason?.contains("global") == true)
+    }
+
+    @Test("P2-6: Agent with pendingApproval status is refused execution")
+    func testPendingApprovalAgentExecutionRefused() {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        governance.registerAgent(
+            id: "intern_bot",
+            displayName: "Intern Bot",
+            status: .pendingApproval,
+            permissions: [.readWorkspace]
+        )
+
+        let eval = governance.evaluateExecution(agentId: "intern_bot")
+        #expect(!eval.allowed)
+        let reason = eval.refusalReason ?? ""
+        #expect(reason.contains("pending approval") || reason.contains("pendingApproval") || reason.contains("Pending"))
+    }
+
+    @Test("P2-7: User-scoped spend limits are enforced and accrued")
+    func testUserScopedSpendLimitEnforcedAndAccrued() {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        governance.setSpendLimit(
+            scopeKey: "user:developer_dan",
+            scopeKind: .user,
+            limit: 3.00,
+            alertThresholdPercent: 0.80,
+            reason: "User tier limit",
+            actor: "admin"
+        )
+        governance.setSpendLimit(scopeKey: "global", scopeKind: .global, limit: 100.00)
+        governance.setSpendLimit(scopeKey: "agent:coder", scopeKind: .agent, limit: 100.00)
+
+        // Cost exceeding user cap should be refused
+        let evalExceeded = governance.evaluateExecution(
+            agentId: "coder",
+            userId: "developer_dan",
+            estimatedCost: 3.50
+        )
+        #expect(!evalExceeded.allowed)
+        #expect(evalExceeded.refusalReason?.contains("user:developer_dan") == true)
+
+        // Cost within user cap should be allowed
+        let evalAllowed = governance.evaluateExecution(
+            agentId: "coder",
+            userId: "developer_dan",
+            estimatedCost: 1.50
+        )
+        #expect(evalAllowed.allowed)
+
+        // Record spend for user
+        governance.recordSpend(
+            agentId: "coder",
+            userId: "developer_dan",
+            amount: 1.50,
+            tokens: 3000
+        )
+        let userLimit = governance.spendLimit(for: "user:developer_dan")
+        #expect(userLimit?.currentSpend == 1.50)
+    }
+
+    @Test("P2-8: Stubbed sub-agent run does not record phantom tasks in value analytics")
+    func testStubbedRunSubAgentDoesNotRecordPhantomTasks() async {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        let orchestrator = AgentOrchestrator()
+        let subAgentId = SubAgent.ID()
+        let subAgent = SubAgent(id: subAgentId, type: .coder, budgetLimit: 10.0)
+        orchestrator.subAgents[subAgentId] = subAgent
+
+        await orchestrator.runSubAgent(id: subAgentId, type: .coder, context: "testing no phantom tasks")
+
+        let analytics = governance.valueAnalytics(for: "coder")
+        let tasksDone = analytics.reduce(0) { $0 + $1.tasksCompleted }
+        #expect(tasksDone == 0)
+    }
+
+    @Test("P2-9: Agent governance dashboard is accessible via Settings navigation")
+    func testGovernanceDashboardWiredIntoSettingsView() {
+        let view = SettingsView()
+        let mirror = Mirror(reflecting: view)
+        let hasGovernanceProperty = mirror.children.contains { child in
+            child.label?.contains("Governance") == true || child.label?.contains("governance") == true
+        }
+        #expect(hasGovernanceProperty)
+    }
+
+    @Test("P2-10: ApexCLIRouter returns valid structured JSON for governance command with --json flag")
+    func testGovernanceCLIHonorsJsonFlag() {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        governance.setSpendLimit(
+            scopeKey: "agent:coder",
+            scopeKind: .agent,
+            limit: 25.00,
+            alertThresholdPercent: 0.80,
+            reason: "JSON test limit",
+            actor: "admin"
+        )
+        governance.recordSpend(agentId: "coder", amount: 5.00, tokens: 10000)
+        governance.recordWorkCompleted(agentId: "coder", tasksDone: 4, prsMerged: 2, verifiedRuns: 3)
+
+        guard let output = ApexCLIRouter.renderImmediateSubcommand(.governance(agentId: "coder", jsonOutput: true)) else {
+            Issue.record("Expected governance subcommand to render output")
+            return
+        }
+        #expect(output.exitCode == 0)
+        guard let data = output.output.data(using: .utf8) else {
+            Issue.record("Failed to convert output to data")
+            return
+        }
+
+        let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        #expect(json != nil)
+        let agents = json?["agents"] as? [[String: Any]]
+        #expect(agents != nil)
+        let coder = agents?.first { ($0["id"] as? String) == "coder" }
+        #expect(coder != nil)
+        #expect((coder?["displayName"] as? String) == "Codex")
+        #expect((coder?["status"] as? String) == "approved")
+        #expect((coder?["spendLimit"] as? Double) == 25.00)
+        #expect((coder?["currentSpend"] as? Double) == 5.00)
+        #expect((coder?["tasksDone"] as? Int) == 4)
+        #expect((coder?["prsMerged"] as? Int) == 2)
+        #expect((coder?["verifiedRuns"] as? Int) == 3)
     }
 }

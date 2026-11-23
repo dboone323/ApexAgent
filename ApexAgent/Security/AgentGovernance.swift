@@ -261,19 +261,81 @@ public struct GovernanceActionVerdict: Sendable, Equatable {
 public final class AgentGovernanceManager: @unchecked Sendable {
     public static let shared = AgentGovernanceManager()
 
+    public static let agentsDefaultsKey = "apex.agentGovernance.agents"
+    public static let spendLimitsDefaultsKey = "apex.agentGovernance.spendLimits"
+    public static let valueRecordsDefaultsKey = "apex.agentGovernance.valueRecords"
+    public static let decisionLogDefaultsKey = "apex.agentGovernance.decisionLog"
+
     private static let logger = Logger(subsystem: "com.apexagent.ApexAgent", category: "AgentGovernance")
     private let lock = NSLock()
+    private let userDefaults: UserDefaults
 
     private var agents: [String: AgentIdentityRecord] = [:]
     private var spendLimits: [String: SpendLimitRecord] = [:]
     private var valueRecords: [String: AgentValueRecord] = [:]
     private var decisionLog: [GovernanceDecisionRecord] = []
 
-    public init() {
-        resetToDefaults()
+    public init(userDefaults: UserDefaults = .standard) {
+        self.userDefaults = userDefaults
+        loadFromStorageOrDefaults()
     }
 
     // MARK: - State Management & Defaults
+
+    private func loadFromStorageOrDefaults() {
+        lock.lock()
+        defer { lock.unlock() }
+
+        var loadedAgents: [String: AgentIdentityRecord]?
+        if let data = userDefaults.data(forKey: Self.agentsDefaultsKey),
+           let decoded = try? JSONDecoder().decode([String: AgentIdentityRecord].self, from: data) {
+            loadedAgents = decoded
+        }
+
+        var loadedSpendLimits: [String: SpendLimitRecord]?
+        if let data = userDefaults.data(forKey: Self.spendLimitsDefaultsKey),
+           let decoded = try? JSONDecoder().decode([String: SpendLimitRecord].self, from: data) {
+            loadedSpendLimits = decoded
+        }
+
+        var loadedValueRecords: [String: AgentValueRecord]?
+        if let data = userDefaults.data(forKey: Self.valueRecordsDefaultsKey),
+           let decoded = try? JSONDecoder().decode([String: AgentValueRecord].self, from: data) {
+            loadedValueRecords = decoded
+        }
+
+        var loadedDecisionLog: [GovernanceDecisionRecord]?
+        if let data = userDefaults.data(forKey: Self.decisionLogDefaultsKey),
+           let decoded = try? JSONDecoder().decode([GovernanceDecisionRecord].self, from: data) {
+            loadedDecisionLog = decoded
+        }
+
+        if let agents = loadedAgents, !agents.isEmpty {
+            self.agents = agents
+            self.spendLimits = loadedSpendLimits ?? [:]
+            self.valueRecords = loadedValueRecords ?? [:]
+            self.decisionLog = loadedDecisionLog ?? []
+        } else {
+            populateDefaultsLocked()
+            persistLocked()
+        }
+    }
+
+    private func persistLocked() {
+        let encoder = JSONEncoder()
+        if let data = try? encoder.encode(agents) {
+            userDefaults.set(data, forKey: Self.agentsDefaultsKey)
+        }
+        if let data = try? encoder.encode(spendLimits) {
+            userDefaults.set(data, forKey: Self.spendLimitsDefaultsKey)
+        }
+        if let data = try? encoder.encode(valueRecords) {
+            userDefaults.set(data, forKey: Self.valueRecordsDefaultsKey)
+        }
+        if let data = try? encoder.encode(decisionLog) {
+            userDefaults.set(data, forKey: Self.decisionLogDefaultsKey)
+        }
+    }
 
     public func resetToDefaults() {
         lock.lock()
@@ -284,6 +346,16 @@ public final class AgentGovernanceManager: @unchecked Sendable {
         valueRecords.removeAll()
         decisionLog.removeAll()
 
+        userDefaults.removeObject(forKey: Self.agentsDefaultsKey)
+        userDefaults.removeObject(forKey: Self.spendLimitsDefaultsKey)
+        userDefaults.removeObject(forKey: Self.valueRecordsDefaultsKey)
+        userDefaults.removeObject(forKey: Self.decisionLogDefaultsKey)
+
+        populateDefaultsLocked()
+        persistLocked()
+    }
+
+    private func populateDefaultsLocked() {
         // Register default known agents with default permissions
         registerDefaultAgentLocked(
             id: "coder",
@@ -365,6 +437,7 @@ public final class AgentGovernanceManager: @unchecked Sendable {
             updatedAt: Date()
         )
         agents[id] = record
+        persistLocked()
     }
 
     public func agent(for id: String) -> AgentIdentityRecord? {
@@ -411,6 +484,7 @@ public final class AgentGovernanceManager: @unchecked Sendable {
             newValue: AgentGovernanceStatus.approved.rawValue,
             reason: reason
         )
+        persistLocked()
     }
 
     public func blockAgent(
@@ -443,6 +517,7 @@ public final class AgentGovernanceManager: @unchecked Sendable {
             newValue: AgentGovernanceStatus.blocked.rawValue,
             reason: reason
         )
+        persistLocked()
     }
 
     public func isAgentBlocked(id: String) -> Bool {
@@ -484,6 +559,7 @@ public final class AgentGovernanceManager: @unchecked Sendable {
             newValue: String(format: "$%.2f", limit),
             reason: reason
         )
+        persistLocked()
     }
 
     public func spendLimit(for scopeKey: String) -> SpendLimitRecord? {
@@ -504,6 +580,7 @@ public final class AgentGovernanceManager: @unchecked Sendable {
         agentId: String,
         spaceId: UUID? = nil,
         modelId: String? = nil,
+        userId: String? = "default",
         estimatedCost: Double = 0.0
     ) -> GovernanceCheckResult {
         lock.lock()
@@ -512,33 +589,59 @@ public final class AgentGovernanceManager: @unchecked Sendable {
         let agentRecord = agents[agentId]
         let displayName = agentRecord?.displayName ?? agentId
 
-        // 1. Check if agent is blocked
-        if agentRecord?.status == .blocked {
-            let reason = "Agent '\(displayName)' is blocked by governance policy. Unblock or approve the agent to proceed."
-            appendDecisionLocked(
-                actor: "policy",
-                targetType: "agent",
-                targetId: agentId,
-                action: "refused_blocked",
-                previousValue: nil,
-                newValue: nil,
-                reason: reason
-            )
-            return GovernanceCheckResult(
-                allowed: false,
-                refusalReason: reason,
-                applicableCap: 0.0,
-                currentSpend: 0.0
-            )
+        // 1. Check if agent is blocked or pending approval
+        if let record = agentRecord {
+            if record.status == .blocked {
+                let reason = "Agent '\(displayName)' is blocked by governance policy. Unblock or approve the agent to proceed."
+                appendDecisionLocked(
+                    actor: "policy",
+                    targetType: "agent",
+                    targetId: agentId,
+                    action: "refused_blocked",
+                    previousValue: nil,
+                    newValue: nil,
+                    reason: reason
+                )
+                return GovernanceCheckResult(
+                    allowed: false,
+                    refusalReason: reason,
+                    applicableCap: 0.0,
+                    currentSpend: 0.0
+                )
+            } else if record.status == .pendingApproval {
+                let reason = "Agent '\(displayName)' is pending approval. A user must approve the agent before execution is allowed."
+                appendDecisionLocked(
+                    actor: "policy",
+                    targetType: "agent",
+                    targetId: agentId,
+                    action: "refused_pending_approval",
+                    previousValue: nil,
+                    newValue: nil,
+                    reason: reason
+                )
+                return GovernanceCheckResult(
+                    allowed: false,
+                    refusalReason: reason,
+                    applicableCap: 0.0,
+                    currentSpend: 0.0
+                )
+            }
         }
 
-        // 2. Check spend limits in hierarchical order: agent -> space -> model -> global
+        // 2. Check spend limits in hierarchical order: agent -> space -> model -> user -> global
+        let userKey = "user:\(userId ?? "default")"
         let candidateKeys = [
             "agent:\(agentId)",
             spaceId != nil ? "space:\(spaceId!.uuidString)" : nil,
             modelId != nil ? "model:\(modelId!)" : nil,
+            userKey,
             "global"
         ].compactMap { $0 }
+
+        var isApproaching = false
+        var alertMsg: String?
+        var applicableCap: Double = 0.0
+        var currentSpendForAlert: Double = 0.0
 
         for key in candidateKeys {
             if let limitRecord = spendLimits[key] {
@@ -569,16 +672,23 @@ public final class AgentGovernanceManager: @unchecked Sendable {
                 // Check approaching alert threshold (e.g. 80%)
                 if cap > 0.0 && (projected / cap) >= limitRecord.alertThresholdPercent {
                     let pct = Int((projected / cap) * 100)
-                    let alertMsg = "Notice: Agent '\(displayName)' spend is approaching cap for '\(key)': $\(String(format: "%.2f", projected))/$\(String(format: "%.2f", cap)) (\(pct)%)."
-                    return GovernanceCheckResult(
-                        allowed: true,
-                        isApproachingLimit: true,
-                        alertMessage: alertMsg,
-                        applicableCap: cap,
-                        currentSpend: current
-                    )
+                    isApproaching = true
+                    alertMsg = alertMsg ?? "Notice: Agent '\(displayName)' spend is approaching cap for '\(key)': $\(String(format: "%.2f", projected))/$\(String(format: "%.2f", cap)) (\(pct)%)."
+                    applicableCap = cap
+                    currentSpendForAlert = max(currentSpendForAlert, current)
+                    // Continue evaluating other scopes to ensure hard caps take precedence!
                 }
             }
+        }
+
+        if isApproaching {
+            return GovernanceCheckResult(
+                allowed: true,
+                isApproachingLimit: true,
+                alertMessage: alertMsg,
+                applicableCap: applicableCap,
+                currentSpend: currentSpendForAlert
+            )
         }
 
         return GovernanceCheckResult.allowed
@@ -591,16 +701,19 @@ public final class AgentGovernanceManager: @unchecked Sendable {
         agentId: String,
         spaceId: UUID? = nil,
         modelId: String? = nil,
+        userId: String? = "default",
         amount: Double,
         tokens: Int = 0
     ) -> (isAlert: Bool, alertMessage: String?) {
         lock.lock()
         defer { lock.unlock() }
 
+        let userKey = "user:\(userId ?? "default")"
         let candidateKeys = [
             "agent:\(agentId)",
             spaceId != nil ? "space:\(spaceId!.uuidString)" : nil,
             modelId != nil ? "model:\(modelId!)" : nil,
+            userKey,
             "global"
         ].compactMap { $0 }
 
@@ -629,6 +742,8 @@ public final class AgentGovernanceManager: @unchecked Sendable {
             cost: amount
         )
 
+        persistLocked()
+
         return (isAlert: triggeredAlert != nil, alertMessage: triggeredAlert)
     }
 
@@ -649,6 +764,24 @@ public final class AgentGovernanceManager: @unchecked Sendable {
         lock.unlock()
 
         let displayName = agentRecord?.displayName ?? agentId
+
+        // 0. Check agent blocked / pending approval status
+        if agentRecord?.status == .blocked {
+            return GovernanceActionVerdict(
+                allowed: false,
+                requiresHumanApproval: false,
+                riskCategory: "agent-blocked",
+                reason: "Agent '\(displayName)' is blocked by governance policy. No tool executions or approvals allowed."
+            )
+        }
+        if agentRecord?.status == .pendingApproval {
+            return GovernanceActionVerdict(
+                allowed: false,
+                requiresHumanApproval: false,
+                riskCategory: "agent-pending-approval",
+                reason: "Agent '\(displayName)' is pending approval. No tool executions or approvals allowed until approved."
+            )
+        }
 
         // 1. Check explicit agent permission flag
         if let permissions = agentRecord?.permissions {
@@ -698,6 +831,7 @@ public final class AgentGovernanceManager: @unchecked Sendable {
                 newValue: autoReview.assessment.category.rawValue,
                 reason: "Action gated for human approval: \(autoReview.assessment.reason)"
             )
+            persistLocked()
             lock.unlock()
 
             return GovernanceActionVerdict(
@@ -741,6 +875,7 @@ public final class AgentGovernanceManager: @unchecked Sendable {
             tokens: tokens,
             cost: cost
         )
+        persistLocked()
     }
 
     private func recordValueAccumulationLocked(
@@ -810,6 +945,7 @@ public final class AgentGovernanceManager: @unchecked Sendable {
         if decisionLog.count > 500 {
             decisionLog.removeFirst(decisionLog.count - 500)
         }
+        persistLocked()
 
         Self.logger.info("Governance decision: [\(action, privacy: .public)] on [\(targetId, privacy: .public)] by [\(actor, privacy: .public)] — \(reason, privacy: .public)")
     }
@@ -824,6 +960,99 @@ public final class AgentGovernanceManager: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         decisionLog.removeAll()
+        persistLocked()
+    }
+
+    // MARK: - Governance JSON Payload (for --json CLI flag)
+
+    public struct GovernanceSummaryPayload: Codable, Sendable {
+        public struct AgentItem: Codable, Sendable {
+            public let id: String
+            public let displayName: String
+            public let status: String
+            public let permissions: [String]
+            public let spendLimit: Double
+            public let currentSpend: Double
+            public let spendStatus: String
+            public let tasksDone: Int
+            public let prsMerged: Int
+            public let verifiedRuns: Int
+            public let tokens: Int
+            public let cost: Double
+        }
+        public let agents: [AgentItem]
+        public let recentDecisions: [GovernanceDecisionRecord]
+    }
+
+    public func governanceSummaryJSON(for targetAgentId: String? = nil) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+
+        let targetAgents = targetAgentId != nil
+            ? agents.values.filter { $0.id == targetAgentId }
+            : Array(agents.values)
+
+        let sortedAgents = targetAgents.sorted(by: { $0.displayName < $1.displayName })
+
+        var agentItems: [GovernanceSummaryPayload.AgentItem] = []
+        for agent in sortedAgents {
+            let perms = agent.permissions.map { $0.rawValue }.sorted()
+            let agentCapKey = "agent:\(agent.id)"
+            let capRecord = spendLimits[agentCapKey] ?? spendLimits["global"]
+            let capVal = capRecord?.spendLimit ?? 0.0
+            let spendVal = capRecord?.currentSpend ?? 0.0
+
+            let capStatus: String
+            if capVal > 0.0 {
+                let util = (spendVal / capVal) * 100.0
+                if spendVal >= capVal {
+                    capStatus = "EXCEEDED HARD CAP ($\(String(format: "%.2f", spendVal))/$\(String(format: "%.2f", capVal)))"
+                } else if util >= (capRecord?.alertThresholdPercent ?? 0.8) * 100.0 {
+                    capStatus = "APPROACHING CAP (\(Int(util))% used: $\(String(format: "%.2f", spendVal))/$\(String(format: "%.2f", capVal)))"
+                } else {
+                    capStatus = "OK ($\(String(format: "%.2f", spendVal))/$\(String(format: "%.2f", capVal)))"
+                }
+            } else {
+                capStatus = spendVal > 0.0
+                    ? "UNAUTHORIZED SPEND ($\(String(format: "%.2f", spendVal))/Free-Tier $0.00 Cap)"
+                    : "FREE-TIER SAFE ($0.00 spent / $0.00 cap)"
+            }
+
+            let matchingValues = valueRecords.values.filter { $0.agentId == agent.id }
+            let totalTasks = matchingValues.reduce(0) { $0 + $1.tasksCompleted }
+            let totalPRs = matchingValues.reduce(0) { $0 + $1.prsMerged }
+            let totalVerified = matchingValues.reduce(0) { $0 + $1.verifiedRuns }
+            let totalTokens = matchingValues.reduce(0) { $0 + $1.totalTokens }
+            let totalCost = matchingValues.reduce(0.0) { $0 + $1.totalCost }
+
+            agentItems.append(GovernanceSummaryPayload.AgentItem(
+                id: agent.id,
+                displayName: agent.displayName,
+                status: agent.status.rawValue,
+                permissions: perms,
+                spendLimit: capVal,
+                currentSpend: spendVal,
+                spendStatus: capStatus,
+                tasksDone: totalTasks,
+                prsMerged: totalPRs,
+                verifiedRuns: totalVerified,
+                tokens: totalTokens,
+                cost: totalCost
+            ))
+        }
+
+        let payload = GovernanceSummaryPayload(
+            agents: agentItems,
+            recentDecisions: Array(decisionLog.suffix(50).reversed())
+        )
+
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.dateEncodingStrategy = .iso8601
+        if let data = try? encoder.encode(payload), let string = String(data: data, encoding: .utf8) {
+            return string
+        }
+        return "{}"
     }
 
     // MARK: - Governance View (Unified Text/Markdown Presentation)

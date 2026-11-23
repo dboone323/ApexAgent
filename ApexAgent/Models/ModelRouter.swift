@@ -563,8 +563,7 @@ public final class ModelRouter: @unchecked Sendable {
                         latencyMs: latencyMs,
                         fallbackNotice: notice
                     )
-                    logDecision(decision)
-                    return .routed(decision: decision)
+                    return finalizeDecision(decision, approvedCap: approval?.isApproved == true ? approval?.authorizedSpendCap : nil)
                 } else {
                     // Graceful degradation when no capable free replacement exists
                     let cheapestPaid = catalog.values.filter { model in
@@ -636,8 +635,7 @@ public final class ModelRouter: @unchecked Sendable {
                     latencyMs: latencyMs,
                     fallbackNotice: nil
                 )
-                logDecision(decision)
-                return .routed(decision: decision)
+                return finalizeDecision(decision, approvedCap: approval?.isApproved == true ? approval?.authorizedSpendCap : nil)
             }
         }
 
@@ -723,8 +721,7 @@ public final class ModelRouter: @unchecked Sendable {
                 latencyMs: latencyMs,
                 fallbackNotice: fallbackNotice
             )
-            logDecision(decision)
-            return .routed(decision: decision)
+            return finalizeDecision(decision)
         }
 
         // All free models exhausted without fallback
@@ -811,6 +808,47 @@ public final class ModelRouter: @unchecked Sendable {
             latencyMs: latencyMs,
             fallbackNotice: notice
         )
+        return finalizeDecision(decision)
+    }
+
+    private func finalizeDecision(_ decision: RoutingDecision, approvedCap: Double? = nil) -> RoutingResolutionResult {
+        // Agent Governance evaluation (#181): evaluate spend limits before routing paid model turn
+        if let cap = approvedCap, cap > 0.0 {
+            let currentCap = AgentGovernanceManager.shared.spendLimit(for: "agent:supervisor")?.spendLimit ?? 0.0
+            if currentCap < cap {
+                AgentGovernanceManager.shared.setSpendLimit(
+                    scopeKey: "agent:supervisor",
+                    scopeKind: .agent,
+                    limit: cap,
+                    reason: "User approved paid escalation cap",
+                    actor: "user"
+                )
+            }
+            let currentGlobal = AgentGovernanceManager.shared.spendLimit(for: "global")?.spendLimit ?? 0.0
+            if currentGlobal < cap {
+                AgentGovernanceManager.shared.setSpendLimit(
+                    scopeKey: "global",
+                    scopeKind: .global,
+                    limit: cap,
+                    reason: "User approved paid escalation cap",
+                    actor: "user"
+                )
+            }
+        }
+        let govCheck = AgentGovernanceManager.shared.evaluateExecution(
+            agentId: "supervisor",
+            spaceId: decision.spaceId,
+            modelId: decision.selectedModelId,
+            estimatedCost: decision.estimatedCost
+        )
+        if !govCheck.allowed {
+            let costNote = "Estimated cost $\(String(format: "%.4f", decision.estimatedCost))/1k tokens for '\(decision.selectedModelId)'."
+            Self.logger.warning("Routing decision to '\(decision.selectedModelId, privacy: .public)' refused by governance: \(govCheck.refusalReason ?? "", privacy: .public)")
+            return .paidEscalationRefused(
+                reason: govCheck.refusalReason ?? "Refused by agent governance spend limit.",
+                costNote: costNote
+            )
+        }
         logDecision(decision)
         return .routed(decision: decision)
     }
@@ -848,6 +886,17 @@ public final class ModelRouter: @unchecked Sendable {
             tokenCounts: nil,
             durationMs: decision.latencyMs
         )
+
+        // Agent governance spend recording (#181):
+        if decision.estimatedCost > 0.0 {
+            AgentGovernanceManager.shared.recordSpend(
+                agentId: "supervisor",
+                spaceId: decision.spaceId,
+                modelId: decision.selectedModelId,
+                amount: decision.estimatedCost,
+                tokens: 1000
+            )
+        }
     }
 
     public func recentDecisions() -> [RoutingDecision] {

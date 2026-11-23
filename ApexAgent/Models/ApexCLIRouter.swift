@@ -1026,16 +1026,21 @@ RoutineManager.shared.loadRoutines()
             }
             return (result.output, result.passed ? 0 : 1)
 
-        case .governance(let agentId, _):
-            let summary = AgentGovernanceManager.shared.governanceSummaryView(for: agentId)
-            return (summary, 0)
+        case .governance(let agentId, let jsonOutput):
+            if jsonOutput {
+                let json = AgentGovernanceManager.shared.governanceSummaryJSON(for: agentId)
+                return (json, 0)
+            } else {
+                let summary = AgentGovernanceManager.shared.governanceSummaryView(for: agentId)
+                return (summary, 0)
+            }
 
         default:
             return nil
         }
     }
 
-    private static func resolveRepositoryRoot() -> URL {
+    public static func resolveRepositoryRoot() -> URL {
         let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
         if FileManager.default.fileExists(atPath: cwd.appendingPathComponent("Package.resolved").path) {
             return cwd

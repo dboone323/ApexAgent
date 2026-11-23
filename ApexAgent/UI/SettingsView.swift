@@ -133,6 +133,7 @@ struct SettingsView: View {
     @State private var proactiveScheduler = ProactiveScheduler.shared
     @State private var alwaysAllowKeys: [String] = []
     @State private var isLoaded: Bool = false
+    @State private var showingAgentGovernanceDashboard: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -911,6 +912,27 @@ struct SettingsView: View {
                     }
                 }
                 .padding(.vertical, AppTheme.Spacing.xs)
+            }
+
+            Divider()
+
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Agent Governance Dashboard")
+                        .font(AppTheme.Font.headline(12, weight: .semibold))
+                    Text("Spend limits, work completion value, and agent block/approve controls.")
+                        .font(AppTheme.Font.caption(10))
+                        .foregroundStyle(AppTheme.Palette.textSecondary)
+                }
+                Spacer()
+                Button("Open Dashboard") {
+                    showingAgentGovernanceDashboard = true
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(.vertical, AppTheme.Spacing.xs)
+            .sheet(isPresented: $showingAgentGovernanceDashboard) {
+                AgentGovernanceView()
             }
         }
     }

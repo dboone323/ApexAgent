@@ -353,12 +353,6 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         agent.status = .completed
         agent.lastActivity = Date()
         subAgents[id] = agent
-
-        // Value Analytics (#181): Record work completed
-        AgentGovernanceManager.shared.recordWorkCompleted(
-            agentId: type.rawValue,
-            tasksDone: 1
-        )
     }
 
     func allowedTools(for type: AgentType) -> [String] {
@@ -1855,6 +1849,43 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         directory: String? = nil,
         allowlist: ApprovalAllowlist = .shared
     ) async -> Bool {
+        let (extractedCmd, extractedDir) = Self.extractCommandAndDirectory(
+            toolName: toolName,
+            arguments: arguments,
+            explicitCommand: command,
+            explicitDirectory: directory,
+            fallbackDirectory: currentWorkspacePath.isEmpty ? NSHomeDirectory() : currentWorkspacePath
+        )
+
+        // Agent Governance risk check (#181): A blocked agent gets NO tool approvals before any approval path
+        let govVerdict = AgentGovernanceManager.shared.checkActionRisk(
+            agentId: "supervisor",
+            toolName: toolName,
+            command: extractedCmd,
+            arguments: arguments,
+            directory: extractedDir,
+            workspacePath: currentWorkspacePath,
+            allowlist: allowlist
+        )
+
+        // If governance policy disallows action (e.g. agent blocked or pending approval), refuse immediately
+        if !govVerdict.allowed {
+            await AgentAuditLog.shared.recordDecision(
+                toolName: toolName,
+                arguments: arguments,
+                approved: false,
+                source: .governanceBlock,
+                rule: govVerdict.riskCategory ?? "agent-blocked"
+            )
+            RunTraceManager.shared.recordApproval(
+                toolName: toolName,
+                approved: false,
+                source: .governanceBlock,
+                rule: govVerdict.riskCategory ?? "agent-blocked"
+            )
+            return false
+        }
+
         // H4: the old runtime heuristics (process name contains "xctest",
         // APEX_TEST_MODE, XCTestConfigurationFilePath, argv containing
         // "test") let launch-environment influence disable ALL human
@@ -1876,14 +1907,6 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
         #endif
 
-        let (extractedCmd, extractedDir) = Self.extractCommandAndDirectory(
-            toolName: toolName,
-            arguments: arguments,
-            explicitCommand: command,
-            explicitDirectory: directory,
-            fallbackDirectory: currentWorkspacePath.isEmpty ? NSHomeDirectory() : currentWorkspacePath
-        )
-
         // Low-risk auto-review step (Issue #105)
         let autoReview = ApprovalAutoReview.review(
             toolName: toolName,
@@ -1891,17 +1914,6 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             directory: extractedDir,
             workspacePath: currentWorkspacePath,
             targetFilePath: filePath,
-            allowlist: allowlist
-        )
-
-        // Agent Governance risk check (#181)
-        let govVerdict = AgentGovernanceManager.shared.checkActionRisk(
-            agentId: "supervisor",
-            toolName: toolName,
-            command: extractedCmd,
-            arguments: arguments,
-            directory: extractedDir,
-            workspacePath: currentWorkspacePath,
             allowlist: allowlist
         )
 

@@ -34,7 +34,7 @@ public enum AgentGovernanceLiveVerifier {
 
         var allPassed = true
         var passedChecks = 0
-        let totalChecks = 6
+        let totalChecks = 7
 
         let governance = AgentGovernanceManager.shared
         governance.resetToDefaults()
@@ -275,18 +275,63 @@ public enum AgentGovernanceLiveVerifier {
             logs.append("VERDICT 6: FAIL (free-tier audit check failed: freeTier=\(isDefaultFreeTier), paidBlocked=\(paidBlockedOnZeroSpend), localAllowed=\(localAllowed), auditApprove=\(hasApproveAction), auditBlock=\(hasBlockAction), auditCap=\(hasCapStopAction))")
         }
 
+        // -------------------------------------------------------------------------
+        // CHECK 7: Persistence — set a block + a cap, recreate the manager from
+        //          stored state, and verify the block and cap are still in force.
+        // -------------------------------------------------------------------------
+        logs.append("\n[Check 7] Governance State Persistence Across Launches:")
+        governance.blockAgent(id: "reviewer", reason: "Verifier persistence test", actor: "verifier")
+        governance.setSpendLimit(
+            scopeKey: "agent:reviewer",
+            scopeKind: .agent,
+            limit: 42.00,
+            alertThresholdPercent: 0.80,
+            reason: "Verifier persistence cap",
+            actor: "verifier"
+        )
+        governance.recordSpend(agentId: "reviewer", amount: 10.50, tokens: 3000)
+
+        // Recreate manager to simulate app restart
+        let relaunchedGovernance = AgentGovernanceManager(userDefaults: .standard)
+        let reviewerRecord = relaunchedGovernance.agent(for: "reviewer")
+        let isReviewerBlocked = reviewerRecord?.status == .blocked
+        let capRecord = relaunchedGovernance.spendLimit(for: "agent:reviewer")
+        let capSurvives = capRecord?.spendLimit == 42.00 && capRecord?.currentSpend == 10.50
+        let recentDecisions = relaunchedGovernance.decisionAuditLog()
+        let auditSurvives = recentDecisions.contains { $0.action == "block" && $0.targetId == "reviewer" }
+
+        logs.append("  -> Reviewer blocked persists: \(isReviewerBlocked)")
+        logs.append("  -> Reviewer spend limit $42.00 and spend $10.50 persists: \(capSurvives)")
+        logs.append("  -> Reviewer block decision in audit log persists: \(auditSurvives)")
+
+        let check7Passed = isReviewerBlocked && capSurvives && auditSurvives
+        if check7Passed {
+            passedChecks += 1
+            logs.append("VERDICT 7: PASS (governance state persists across launches: blocks, spend limits, spend totals, and decision log survive restart)")
+        } else {
+            allPassed = false
+            logs.append("VERDICT 7: FAIL (persistence check failed: blocked=\(isReviewerBlocked), capSurvives=\(capSurvives), auditSurvives=\(auditSurvives))")
+        }
+
         // Summary
         logs.append("\n================================================================================")
         logs.append("SUMMARY: \(passedChecks)/\(totalChecks) CHECKS PASSED. ALL PASS: \(allPassed)")
         logs.append("================================================================================")
 
-        let outputText = logs.joined(separator: "\n")
+        var outputText = logs.joined(separator: "\n")
 
-        // Write output to log file if path provided
+        // Write output to log file if path provided (with loud failure on error)
         if let path = logPath {
             let url = URL(fileURLWithPath: path)
-            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? outputText.write(to: url, atomically: true, encoding: .utf8)
+            do {
+                try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try outputText.write(to: url, atomically: true, encoding: .utf8)
+            } catch {
+                let fatalMsg = "FATAL ERROR: Failed to write verification log to '\(path)': \(error.localizedDescription)"
+                logs.append(fatalMsg)
+                allPassed = false
+                outputText = logs.joined(separator: "\n")
+            }
         }
 
         // Clean up verifier state so subsequent tests start clean
