@@ -41,6 +41,10 @@ case .longRun(let subArgs):
     let exitCode = await LongRunCLI.run(arguments: subArgs)
     exit(exitCode)
 
+case .goal(let subArgs):
+    let exitCode = await GoalCLI.run(arguments: subArgs)
+    exit(exitCode)
+
 case .prompt(let text, let allowTools):
     if !allowTools {
         setenv("APEX_DISABLE_DYNAMIC_TOOLS", "1", 1)
