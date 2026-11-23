@@ -108,7 +108,9 @@ public enum SharedMemoryBlocksLiveVerifier {
         )
 
         var v2Pass = false
+        var capturedConflict: SharedMemoryConflict?
         if case .conflict(let conflict, let current) = writeResultB {
+            capturedConflict = conflict
             logs.append("Conflict successfully caught! Winning writer: '\(conflict.winningWriterId)', Conflicting writer: '\(conflict.conflictingWriterId)'.")
             logs.append("Reason: \(conflict.reason)")
             v2Pass = (conflict.winningWriterId == "agent_architect_A") &&
@@ -131,7 +133,9 @@ public enum SharedMemoryBlocksLiveVerifier {
         let allConflicts = service.getConflicts(spaceId: spaceAlpha, blockId: blockId, workspacePath: tempWorkspace.path)
         let matchingConflict = allConflicts.first(where: { $0.conflictingWriterId == "agent_developer_B" })
 
-        let v3Pass = (matchingConflict != nil) &&
+        let v3Pass = (capturedConflict != nil) &&
+                     (matchingConflict != nil) &&
+                     (capturedConflict?.id == matchingConflict?.id) &&
                      (matchingConflict?.conflictingContent == stalePayloadB) &&
                      (matchingConflict?.winningContent == v2Payload)
 
