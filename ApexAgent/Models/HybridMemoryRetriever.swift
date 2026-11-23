@@ -313,6 +313,27 @@ public final class HybridMemoryRetriever {
             }
         }
 
+        // Tier 5: Shared Memory Blocks
+        let spaceId = space?.id.uuidString ?? "default"
+        let sharedBlocks = SharedMemoryBlockService.shared.listBlocks(spaceId: spaceId, workspacePath: workspacePath)
+        for block in sharedBlocks {
+            let blockPath = SharedMemoryBlockService.shared.blockFilePath(spaceId: spaceId, blockId: block.id, workspacePath: workspacePath)
+            let relPath = ".apex/shared_memory/\(spaceId)/blocks/\(block.id).json"
+            let tokens = Self.tokenize(block.content)
+            let emb = EmbeddingHelper.getVector(for: block.content)
+            let chunk = MemoryChunk(
+                filePath: blockPath,
+                relativePath: relPath,
+                startLine: 1,
+                endLine: 1,
+                content: block.content,
+                tier: "shared_block",
+                tokens: tokens,
+                embedding: emb
+            )
+            allChunks.append(chunk)
+        }
+
         return allChunks
     }
 

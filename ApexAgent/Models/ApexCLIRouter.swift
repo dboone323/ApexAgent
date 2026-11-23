@@ -57,6 +57,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case evalVerify(jsonOutput: Bool)
     case verificationVerify(runId: String?, jsonOutput: Bool)
     case memoryVerify(jsonOutput: Bool)
+    case sharedMemoryVerify(jsonOutput: Bool)
     case reviewerVerify(jsonOutput: Bool)
     case mcpRegistryVerify(jsonOutput: Bool)
     case workspacesVerify(jsonOutput: Bool)
@@ -379,6 +380,9 @@ public enum ApexCLIRouter {
 
         case "memory-verify", "--memory-verify":
             return ParsedCLIInvocation(command: .memoryVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
+        case "shared-memory-verify", "--shared-memory-verify", "shared-memory", "--shared-memory":
+            return ParsedCLIInvocation(command: .sharedMemoryVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
         case "reviewer-verify", "--reviewer-verify", "reviewer", "--reviewer", "review-verify", "--review-verify":
             return ParsedCLIInvocation(command: .reviewerVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
@@ -988,6 +992,15 @@ RoutineManager.shared.loadRoutines()
 
         case .memoryVerify(let jsonOutput):
             let result = SpaceMemoryLiveVerifier.runVerification(writeLogTo: "runs/issue83/live-verify.log")
+            if jsonOutput {
+                let dict: [String: Any] = ["passed": result.passed, "output": result.output]
+                let data = (try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted])) ?? Data()
+                return (String(data: data, encoding: .utf8) ?? "{}", result.passed ? 0 : 1)
+            }
+            return (result.output, result.passed ? 0 : 1)
+
+        case .sharedMemoryVerify(let jsonOutput):
+            let result = SharedMemoryBlocksLiveVerifier.runVerification(writeLogTo: "runs/issue84/live-verify.log")
             if jsonOutput {
                 let dict: [String: Any] = ["passed": result.passed, "output": result.output]
                 let data = (try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted])) ?? Data()

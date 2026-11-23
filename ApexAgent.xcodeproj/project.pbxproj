@@ -284,6 +284,9 @@
 		83B100028300000000000002 /* SpaceMemoryLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A100028300000000000002 /* SpaceMemoryLiveVerifier.swift */; };
 		83B100038300000000000003 /* SpaceMemoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A100038300000000000003 /* SpaceMemoryViews.swift */; };
 		83B100048300000000000004 /* InspectableMemoryUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83A100048300000000000004 /* InspectableMemoryUITests.swift */; };
+		84B100018400000000000001 /* SharedMemoryBlockService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A100018400000000000001 /* SharedMemoryBlockService.swift */; };
+		84B100028400000000000002 /* SharedMemoryBlocksLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A100028400000000000002 /* SharedMemoryBlocksLiveVerifier.swift */; };
+		84B100038400000000000003 /* SharedMemoryBlocksTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A100038400000000000003 /* SharedMemoryBlocksTests.swift */; };
 		59C155F62EC72467802734BF /* ProductivityAutomationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58F12C627A0753D4ECC83630 /* ProductivityAutomationAuditorTests.swift */; };
 		59D645E7842DD6E13F4AD753 /* MCPPolicyAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAA7828EB7439A5656C74381 /* MCPPolicyAuditorTests.swift */; };
 		5A377CAD211372562CFD5CBF /* OutcomeFirstEvalHarness.swift in Sources */ = {isa = PBXBuildFile; fileRef = B904A73B85669293A94A56FC /* OutcomeFirstEvalHarness.swift */; };
@@ -1153,6 +1156,9 @@
 		83A100028300000000000002 /* SpaceMemoryLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceMemoryLiveVerifier.swift; sourceTree = "<group>"; };
 		83A100038300000000000003 /* SpaceMemoryViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpaceMemoryViews.swift; sourceTree = "<group>"; };
 		83A100048300000000000004 /* InspectableMemoryUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectableMemoryUITests.swift; sourceTree = "<group>"; };
+		84A100018400000000000001 /* SharedMemoryBlockService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMemoryBlockService.swift; sourceTree = "<group>"; };
+		84A100028400000000000002 /* SharedMemoryBlocksLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMemoryBlocksLiveVerifier.swift; sourceTree = "<group>"; };
+		84A100038400000000000003 /* SharedMemoryBlocksTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedMemoryBlocksTests.swift; sourceTree = "<group>"; };
 		2D37200B382453196FCE2722 /* DaemonAndPeerGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaemonAndPeerGateTests.swift; sourceTree = "<group>"; };
 		2D721ADBD02CBB80273EB777 /* SecurityGovernanceProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecurityGovernanceProfile.swift; sourceTree = "<group>"; };
 		2DD23B48A96CB93A36C31FA6 /* RunVerificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunVerificationView.swift; sourceTree = "<group>"; };
@@ -2354,6 +2360,8 @@
 				2C2EB7260798188CF58EAF23 /* SpaceMemoryTierManager.swift */,
 				83A100018300000000000001 /* SpaceMemoryInspectorManager.swift */,
 				83A100028300000000000002 /* SpaceMemoryLiveVerifier.swift */,
+				84A100018400000000000001 /* SharedMemoryBlockService.swift */,
+				84A100028400000000000002 /* SharedMemoryBlocksLiveVerifier.swift */,
 				1668DF819B6EAE39BAB00A5E /* SpaceModelMigrationGate.swift */,
 				D8CBDDD8539C304129ACCA2A /* SpaceModels.swift */,
 				6B8351E09D210269E8399EEB /* SpacePageLinker.swift */,
@@ -2752,6 +2760,7 @@
 				3B688F904EBF8A1C8550EF94 /* HardeningCycle3F2Tests.swift */,
 				CAD2A179CF33F4CCD6E4EA8C /* HybridMemoryRetrievalTests.swift */,
 				83A100048300000000000004 /* InspectableMemoryUITests.swift */,
+				84A100038400000000000003 /* SharedMemoryBlocksTests.swift */,
 				0567EE6A94EB33FA3AD1C98F /* MemoryConsolidationTests.swift */,
 				D60A8108233F6FAB5295FD77 /* IncidentManagementAuditorTests.swift */,
 				C27416A7D6D7178263246418 /* IntentToolSelectorTests.swift */,
@@ -3632,6 +3641,8 @@
 				59AC34BE31A7A8AF77683568 /* SpaceMemoryTierManager.swift in Sources */,
 				83B100018300000000000001 /* SpaceMemoryInspectorManager.swift in Sources */,
 				83B100028300000000000002 /* SpaceMemoryLiveVerifier.swift in Sources */,
+				84B100018400000000000001 /* SharedMemoryBlockService.swift in Sources */,
+				84B100028400000000000002 /* SharedMemoryBlocksLiveVerifier.swift in Sources */,
 				83B100038300000000000003 /* SpaceMemoryViews.swift in Sources */,
 				2F4A18BEF0E5437105E10C70 /* SpaceModelMigrationGate.swift in Sources */,
 				410C948C8EEF39378FE972C7 /* SpaceModels.swift in Sources */,
@@ -3934,6 +3945,7 @@
 				CD109D5D994A20F8EDBDD6F4 /* HardeningCycle3F2Tests.swift in Sources */,
 				9183B1A7A210385D9F915347 /* HybridMemoryRetrievalTests.swift in Sources */,
 				83B100048300000000000004 /* InspectableMemoryUITests.swift in Sources */,
+				84B100038400000000000003 /* SharedMemoryBlocksTests.swift in Sources */,
 				26EE90D9DF061CE62F63DD6A /* MemoryConsolidationTests.swift in Sources */,
 				56310E12B9A89709DECB7D46 /* IncidentManagementAuditorTests.swift in Sources */,
 				2D83D18ECF411807188495D2 /* IntentToolSelectorTests.swift in Sources */,
