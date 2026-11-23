@@ -105,6 +105,17 @@ case .memoryVerify:
     print(result.output)
     exit(result.passed ? 0 : 1)
 
+case .sharedMemoryVerify(let jsonOutput):
+    let result = SharedMemoryBlocksLiveVerifier.runVerification(writeLogTo: "runs/issue84/live-verify.log")
+    if jsonOutput {
+        let dict: [String: Any] = ["passed": result.passed, "output": result.output]
+        let data = (try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted])) ?? Data()
+        print(String(data: data, encoding: .utf8) ?? "{}")
+        exit(result.passed ? 0 : 1)
+    }
+    print(result.output)
+    exit(result.passed ? 0 : 1)
+
 case .reviewerVerify(let jsonOutput):
     let result = await ReviewerCriticLiveVerifier.runVerification(jsonOutput: jsonOutput)
     print(result.output)

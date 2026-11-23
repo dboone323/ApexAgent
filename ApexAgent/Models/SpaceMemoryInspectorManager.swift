@@ -202,6 +202,31 @@ public final class SpaceMemoryInspectorManager {
             allItems.append(contentsOf: userItems)
         }
 
+        // Tier 5: Shared Memory Blocks
+        let spaceId = space?.id.uuidString ?? "default"
+        let sharedBlocks = SharedMemoryBlockService.shared.listBlocks(spaceId: spaceId, workspacePath: wsRoot)
+        for block in sharedBlocks {
+            let blockPath = SharedMemoryBlockService.shared.blockFilePath(spaceId: spaceId, blockId: block.id, workspacePath: wsRoot)
+            let rel = ".apex/shared_memory/\(spaceId)/blocks/\(block.id).json"
+            let pausedSet = pausedTopicsByWorkspace[wsRoot] ?? []
+            let isPaused = pausedSet.contains(block.id.lowercased())
+            let item = MemoryTopicItem(
+                key: block.id,
+                statement: block.content,
+                sourceCitation: "[shared:\(block.id):v\(block.version)]",
+                filePath: blockPath,
+                relativePath: rel,
+                startLine: 1,
+                endLine: 1,
+                tier: "shared_block",
+                dateString: todayDateString(),
+                isPaused: isPaused,
+                rawSourceSnippet: block.content,
+                provenanceRationale: "Shared memory block '\(block.id)' v\(block.version) written by '\(block.writerId)' in Space '\(spaceId)'."
+            )
+            allItems.append(item)
+        }
+
         // Group items by normalized topic
         let pausedSet = pausedTopicsByWorkspace[wsRoot] ?? []
         var grouped: [String: [MemoryTopicItem]] = [:]
