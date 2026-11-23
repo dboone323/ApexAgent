@@ -55,7 +55,9 @@ actor AgentAuditLog {
         wasConfirmed: Bool = false,
         status: String = "success"
     ) {
-        let redacted = SecretRedactor.redact(text: arguments)
+        // Cap input arguments before regex redaction to avoid catastrophic backtracking on huge payloads
+        let boundedArgs = String(arguments.prefix(4000))
+        let redacted = SecretRedactor.redact(text: boundedArgs)
         let entry = AuditEntry(
             id: UUID(),
             timestamp: Date(),
@@ -84,7 +86,8 @@ actor AgentAuditLog {
         source: ApprovalVerdictSource?,
         rule: String?
     ) {
-        let redacted = SecretRedactor.redact(text: arguments)
+        let boundedArgs = String(arguments.prefix(4000))
+        let redacted = SecretRedactor.redact(text: boundedArgs)
         let entry = AuditEntry(
             id: UUID(),
             timestamp: Date(),

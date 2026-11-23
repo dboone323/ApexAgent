@@ -663,6 +663,9 @@
 		B17900010000000000000001 /* ModelRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17900010000000000000001 /* ModelRouter.swift */; };
 		B17900010000000000000002 /* ModelRouterLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17900010000000000000002 /* ModelRouterLiveVerifier.swift */; };
 		B17900010000000000000003 /* ModelRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17900010000000000000003 /* ModelRouterTests.swift */; };
+		B18000010000000000000001 /* ModelRetirement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18000010000000000000001 /* ModelRetirement.swift */; };
+		B18000010000000000000002 /* ModelRetirementLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18000010000000000000002 /* ModelRetirementLiveVerifier.swift */; };
+		B18000010000000000000003 /* ModelRetirementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18000010000000000000003 /* ModelRetirementTests.swift */; };
 		B07800010000000000000001 /* ProactiveInitiativeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07800010000000000000001 /* ProactiveInitiativeModels.swift */; };
 		B07800010000000000000002 /* ProactiveInitiativeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07800010000000000000002 /* ProactiveInitiativeService.swift */; };
 		B07800010000000000000003 /* ProactiveInitiativeLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07800010000000000000003 /* ProactiveInitiativeLiveVerifier.swift */; };
@@ -1744,6 +1747,9 @@
 		A17900010000000000000001 /* ModelRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRouter.swift; sourceTree = "<group>"; };
 		A17900010000000000000002 /* ModelRouterLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRouterLiveVerifier.swift; sourceTree = "<group>"; };
 		A17900010000000000000003 /* ModelRouterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRouterTests.swift; sourceTree = "<group>"; };
+		A18000010000000000000001 /* ModelRetirement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRetirement.swift; sourceTree = "<group>"; };
+		A18000010000000000000002 /* ModelRetirementLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRetirementLiveVerifier.swift; sourceTree = "<group>"; };
+		A18000010000000000000003 /* ModelRetirementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRetirementTests.swift; sourceTree = "<group>"; };
 		A07800010000000000000001 /* ProactiveInitiativeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProactiveInitiativeModels.swift; sourceTree = "<group>"; };
 		A07800010000000000000002 /* ProactiveInitiativeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProactiveInitiativeService.swift; sourceTree = "<group>"; };
 		A07800010000000000000003 /* ProactiveInitiativeLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProactiveInitiativeLiveVerifier.swift; sourceTree = "<group>"; };
@@ -2232,6 +2238,8 @@
 				A11800010000000000000003 /* OnboardingLiveVerifier.swift */,
 				A17900010000000000000001 /* ModelRouter.swift */,
 				A17900010000000000000002 /* ModelRouterLiveVerifier.swift */,
+				A18000010000000000000001 /* ModelRetirement.swift */,
+				A18000010000000000000002 /* ModelRetirementLiveVerifier.swift */,
 				5B6BC0389A658C66CFE36DC7 /* A2APeerDiscovery.swift */,
 				7169AE21002560689A2AA70E /* A2AServer.swift */,
 				528F1631BDA859F3FE5E6EC3 /* AgentEngine.swift */,
@@ -2837,6 +2845,7 @@
 				A10200010000000000000005 /* TaskWorkspaceTests.swift */,
 				A11800010000000000000004 /* OnboardingModelPickerTests.swift */,
 				A17900010000000000000003 /* ModelRouterTests.swift */,
+				A18000010000000000000003 /* ModelRetirementTests.swift */,
 				5431374CE9023D403C22BFF0 /* ReleaseChangelogEngineTests.swift */,
 				C223AB0E08F57844160384BA /* ReleaseProvenanceGeneratorTests.swift */,
 				F064D929D23188DD1C6571B5 /* RemoteCompanionTests.swift */,
@@ -3592,6 +3601,8 @@
 				B11800010000000000000003 /* OnboardingLiveVerifier.swift in Sources */,
 				B17900010000000000000001 /* ModelRouter.swift in Sources */,
 				B17900010000000000000002 /* ModelRouterLiveVerifier.swift in Sources */,
+				B18000010000000000000001 /* ModelRetirement.swift in Sources */,
+				B18000010000000000000002 /* ModelRetirementLiveVerifier.swift in Sources */,
 				B07800010000000000000001 /* ProactiveInitiativeModels.swift in Sources */,
 				B07800010000000000000002 /* ProactiveInitiativeService.swift in Sources */,
 				B07800010000000000000003 /* ProactiveInitiativeLiveVerifier.swift in Sources */,
@@ -4024,6 +4035,7 @@
 				B10200010000000000000005 /* TaskWorkspaceTests.swift in Sources */,
 				B11800010000000000000004 /* OnboardingModelPickerTests.swift in Sources */,
 				B17900010000000000000003 /* ModelRouterTests.swift in Sources */,
+				B18000010000000000000003 /* ModelRetirementTests.swift in Sources */,
 				B07800010000000000000004 /* ProactiveInitiativeTests.swift in Sources */,
 				03C098F1D1822A07123E304F /* ReleaseChangelogEngineTests.swift in Sources */,
 				45538B22E3A36E61F192D220 /* ReleaseProvenanceGeneratorTests.swift in Sources */,
