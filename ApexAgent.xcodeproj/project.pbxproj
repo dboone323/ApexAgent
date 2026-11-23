@@ -642,6 +642,10 @@
 		B10200010000000000000003 /* TaskMergeReviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200010000000000000003 /* TaskMergeReviewService.swift */; };
 		B10200010000000000000004 /* TaskWorkspaceLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200010000000000000004 /* TaskWorkspaceLiveVerifier.swift */; };
 		B10200010000000000000005 /* TaskWorkspaceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200010000000000000005 /* TaskWorkspaceTests.swift */; };
+		B11800010000000000000001 /* FreeTierModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11800010000000000000001 /* FreeTierModelManager.swift */; };
+		B11800010000000000000002 /* OnboardingModelPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11800010000000000000002 /* OnboardingModelPickerView.swift */; };
+		B11800010000000000000003 /* OnboardingLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11800010000000000000003 /* OnboardingLiveVerifier.swift */; };
+		B11800010000000000000004 /* OnboardingModelPickerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11800010000000000000004 /* OnboardingModelPickerTests.swift */; };
 		D8DD68ED916D484C832CD003 /* GitHubIntegrationAuditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44752C1860D5B93EC7CE3A49 /* GitHubIntegrationAuditorTests.swift */; };
 		D92604671391FDA057EFE2CE /* SeatbeltRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAA26C714C34C0964665FC86 /* SeatbeltRoutingTests.swift */; };
 		D9C41173B853FC277273505D /* DynamicToolboxManagerSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484D3337A879FB654CB4F1E4 /* DynamicToolboxManagerSection.swift */; };
@@ -1698,6 +1702,10 @@
 		A10200010000000000000003 /* TaskMergeReviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskMergeReviewService.swift; sourceTree = "<group>"; };
 		A10200010000000000000004 /* TaskWorkspaceLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskWorkspaceLiveVerifier.swift; sourceTree = "<group>"; };
 		A10200010000000000000005 /* TaskWorkspaceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskWorkspaceTests.swift; sourceTree = "<group>"; };
+		A11800010000000000000001 /* FreeTierModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeTierModelManager.swift; sourceTree = "<group>"; };
+		A11800010000000000000002 /* OnboardingModelPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingModelPickerView.swift; sourceTree = "<group>"; };
+		A11800010000000000000003 /* OnboardingLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingLiveVerifier.swift; sourceTree = "<group>"; };
+		A11800010000000000000004 /* OnboardingModelPickerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingModelPickerTests.swift; sourceTree = "<group>"; };
 		FAA7828EB7439A5656C74381 /* MCPPolicyAuditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPPolicyAuditorTests.swift; sourceTree = "<group>"; };
 		FB0F9C95A07AECB12ECA120E /* AppleShortcutsTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleShortcutsTool.swift; sourceTree = "<group>"; };
 		FB99CA7CFACAB86CCC063E03 /* OSLogQueryTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSLogQueryTool.swift; sourceTree = "<group>"; };
@@ -2165,6 +2173,7 @@
 				C969C3513ACFED675B536F24 /* TerminalView.swift */,
 				94F7A6D8BD96CCBCA6C43C3D /* ToolActivityView.swift */,
 				E9FEC6CC55B91A30F4873DF8 /* VoiceOrbHUDView.swift */,
+				A11800010000000000000002 /* OnboardingModelPickerView.swift */,
 				E6BB3D379F4131D7773F53DD /* WelcomeView.swift */,
 				C6BFC553F72EA059FA15375A /* Components */,
 				2A0C0221A81143B4D69663A6 /* Styles */,
@@ -2177,6 +2186,8 @@
 			children = (
 				A08700010000000000000001 /* MCPRegistryModels.swift */,
 				A08700010000000000000002 /* MCPRegistryClient.swift */,
+				A11800010000000000000001 /* FreeTierModelManager.swift */,
+				A11800010000000000000003 /* OnboardingLiveVerifier.swift */,
 				5B6BC0389A658C66CFE36DC7 /* A2APeerDiscovery.swift */,
 				7169AE21002560689A2AA70E /* A2AServer.swift */,
 				528F1631BDA859F3FE5E6EC3 /* AgentEngine.swift */,
@@ -2739,6 +2750,7 @@
 				475AA27E9CD4482A51D18B19 /* ReflectionManagerTests.swift */,
 				A10300010000000000000004 /* ReviewerCriticTests.swift */,
 				A10200010000000000000005 /* TaskWorkspaceTests.swift */,
+				A11800010000000000000004 /* OnboardingModelPickerTests.swift */,
 				5431374CE9023D403C22BFF0 /* ReleaseChangelogEngineTests.swift */,
 				C223AB0E08F57844160384BA /* ReleaseProvenanceGeneratorTests.swift */,
 				F064D929D23188DD1C6571B5 /* RemoteCompanionTests.swift */,
@@ -3479,6 +3491,9 @@
 				B10200010000000000000002 /* TaskWorkspaceManager.swift in Sources */,
 				B10200010000000000000003 /* TaskMergeReviewService.swift in Sources */,
 				B10200010000000000000004 /* TaskWorkspaceLiveVerifier.swift in Sources */,
+				B11800010000000000000001 /* FreeTierModelManager.swift in Sources */,
+				B11800010000000000000002 /* OnboardingModelPickerView.swift in Sources */,
+				B11800010000000000000003 /* OnboardingLiveVerifier.swift in Sources */,
 				BE49594832EA0DC4A90865A7 /* RemoteCompanionGateway.swift in Sources */,
 				88E788FEC0E187CA785A5756 /* RepeatDetector.swift in Sources */,
 				66BDED758A00C481F54692AB /* RepoHygieneAuditor.swift in Sources */,
@@ -3901,6 +3916,7 @@
 				A95F8B3029A159BEFC419B17 /* ReflectionManagerTests.swift in Sources */,
 				B10300010000000000000004 /* ReviewerCriticTests.swift in Sources */,
 				B10200010000000000000005 /* TaskWorkspaceTests.swift in Sources */,
+				B11800010000000000000004 /* OnboardingModelPickerTests.swift in Sources */,
 				03C098F1D1822A07123E304F /* ReleaseChangelogEngineTests.swift in Sources */,
 				45538B22E3A36E61F192D220 /* ReleaseProvenanceGeneratorTests.swift in Sources */,
 				91D7398E489833978B07D683 /* RemoteCompanionTests.swift in Sources */,
