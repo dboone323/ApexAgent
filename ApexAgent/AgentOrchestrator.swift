@@ -328,6 +328,21 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     func runSubAgent(id: SubAgent.ID, type: AgentType, context: String) async {
         guard var agent = subAgents[id] else { return }
+
+        // Agent Governance Check (#181): spend limits, blocked status
+        let govCheck = AgentGovernanceManager.shared.evaluateExecution(
+            agentId: type.rawValue,
+            estimatedCost: 0.0
+        )
+        if !govCheck.allowed {
+            agent.status = .failed
+            agent.error = govCheck.refusalReason
+            agent.result = govCheck.refusalReason
+            agent.lastActivity = Date()
+            subAgents[id] = agent
+            return
+        }
+
         agent.status = .running
         agent.lastActivity = Date()
         defer {
@@ -338,6 +353,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         agent.status = .completed
         agent.lastActivity = Date()
         subAgents[id] = agent
+
+        // Value Analytics (#181): Record work completed
+        AgentGovernanceManager.shared.recordWorkCompleted(
+            agentId: type.rawValue,
+            tasksDone: 1
+        )
     }
 
     func allowedTools(for type: AgentType) -> [String] {
@@ -1873,7 +1894,18 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             allowlist: allowlist
         )
 
-        if autoReview.shouldAutoApprove {
+        // Agent Governance risk check (#181)
+        let govVerdict = AgentGovernanceManager.shared.checkActionRisk(
+            agentId: "supervisor",
+            toolName: toolName,
+            command: extractedCmd,
+            arguments: arguments,
+            directory: extractedDir,
+            workspacePath: currentWorkspacePath,
+            allowlist: allowlist
+        )
+
+        if autoReview.shouldAutoApprove && !govVerdict.requiresHumanApproval {
             let decisionSource: ApprovalVerdictSource = (autoReview.assessment.category == .allowlisted) ? .allowlist : .autoReview
             await AgentAuditLog.shared.recordDecision(
                 toolName: toolName,
@@ -1915,7 +1947,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 isContainerSandboxed: isContainer
             )
         }
-        if verdict.approve != nil {
+        if verdict.approve != nil && !govVerdict.requiresHumanApproval {
             await AgentAuditLog.shared.recordDecision(
                 toolName: toolName, arguments: arguments, approved: true,
                 source: verdict.source, rule: verdict.rule)

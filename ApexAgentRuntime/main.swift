@@ -148,6 +148,12 @@ case .modelRetirementVerify(let jsonOutput):
     print(result.output)
     exit(result.passed ? 0 : 1)
 
+case .agentGovernanceVerify(let jsonOutput):
+    let logPath = "/Users/danielstevens/.gemini/antigravity/worktrees/ApexAgent/issue181_agent_governance/runs/issue181/live-verify-round1.log"
+    let result = await AgentGovernanceLiveVerifier.runVerification(logPath: logPath, jsonOutput: jsonOutput)
+    print(result.output)
+    exit(result.passed ? 0 : 1)
+
 case .proactiveVerify(let jsonOutput):
     let result = await ProactiveInitiativeLiveVerifier.runVerification(jsonOutput: jsonOutput)
     print(result.output)
@@ -165,6 +171,6 @@ case .traceReplay, .tracesList:
     }
     exit(1)
 
-case .launchGUI, .help, .version, .doctor, .diagnostics, .skillsList, .skillsValidate, .skillsShow, .routinesList, .completions, .man, .audit, .sbom, .changelog, .releaseCheck, .provenance, .sarif, .selfTest, .traces, .policy, .approvals:
+case .launchGUI, .help, .version, .doctor, .diagnostics, .skillsList, .skillsValidate, .skillsShow, .routinesList, .completions, .man, .audit, .sbom, .changelog, .releaseCheck, .provenance, .sarif, .selfTest, .traces, .policy, .approvals, .governance:
     ApexAgentApp.main()
 }

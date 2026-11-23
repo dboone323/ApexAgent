@@ -66,6 +66,8 @@ public enum ApexCLICommand: Sendable, Equatable {
     case modelRetirementVerify(jsonOutput: Bool)
     case proactiveVerify(jsonOutput: Bool)
     case personalContextVerify(jsonOutput: Bool)
+    case governance(agentId: String?, jsonOutput: Bool)
+    case agentGovernanceVerify(jsonOutput: Bool)
     case approvals(subcommandArgs: [String], jsonOutput: Bool)
     case daemon
     case spaceCLI(subcommandArgs: [String])
@@ -413,6 +415,14 @@ public enum ApexCLIRouter {
         case "approvals", "--approvals":
             let rest = Array(remaining.dropFirst())
             return ParsedCLIInvocation(command: .approvals(subcommandArgs: rest, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
+        case "governance", "--governance":
+            let rest = Array(remaining.dropFirst())
+            let targetId = rest.first
+            return ParsedCLIInvocation(command: .governance(agentId: targetId, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
+        case "governance-verify", "--governance-verify", "agent-governance-verify", "--agent-governance-verify":
+            return ParsedCLIInvocation(command: .agentGovernanceVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
         default:
             throw ApexCLIError.unknownSubcommand(first)
@@ -1015,6 +1025,10 @@ RoutineManager.shared.loadRoutines()
                 return (String(data: data, encoding: .utf8) ?? "{}", result.passed ? 0 : 1)
             }
             return (result.output, result.passed ? 0 : 1)
+
+        case .governance(let agentId, _):
+            let summary = AgentGovernanceManager.shared.governanceSummaryView(for: agentId)
+            return (summary, 0)
 
         default:
             return nil

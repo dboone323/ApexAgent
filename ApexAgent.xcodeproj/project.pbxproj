@@ -666,6 +666,10 @@
 		B18000010000000000000001 /* ModelRetirement.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18000010000000000000001 /* ModelRetirement.swift */; };
 		B18000010000000000000002 /* ModelRetirementLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18000010000000000000002 /* ModelRetirementLiveVerifier.swift */; };
 		B18000010000000000000003 /* ModelRetirementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18000010000000000000003 /* ModelRetirementTests.swift */; };
+		B18100010000000000000001 /* AgentGovernance.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18100010000000000000001 /* AgentGovernance.swift */; };
+		B18100010000000000000002 /* AgentGovernanceLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18100010000000000000002 /* AgentGovernanceLiveVerifier.swift */; };
+		B18100010000000000000003 /* AgentGovernanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18100010000000000000003 /* AgentGovernanceView.swift */; };
+		B18100010000000000000004 /* AgentGovernanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A18100010000000000000004 /* AgentGovernanceTests.swift */; };
 		B07800010000000000000001 /* ProactiveInitiativeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07800010000000000000001 /* ProactiveInitiativeModels.swift */; };
 		B07800010000000000000002 /* ProactiveInitiativeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07800010000000000000002 /* ProactiveInitiativeService.swift */; };
 		B07800010000000000000003 /* ProactiveInitiativeLiveVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = A07800010000000000000003 /* ProactiveInitiativeLiveVerifier.swift */; };
@@ -1750,6 +1754,10 @@
 		A18000010000000000000001 /* ModelRetirement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRetirement.swift; sourceTree = "<group>"; };
 		A18000010000000000000002 /* ModelRetirementLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRetirementLiveVerifier.swift; sourceTree = "<group>"; };
 		A18000010000000000000003 /* ModelRetirementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRetirementTests.swift; sourceTree = "<group>"; };
+		A18100010000000000000001 /* AgentGovernance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentGovernance.swift; sourceTree = "<group>"; };
+		A18100010000000000000002 /* AgentGovernanceLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentGovernanceLiveVerifier.swift; sourceTree = "<group>"; };
+		A18100010000000000000003 /* AgentGovernanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentGovernanceView.swift; sourceTree = "<group>"; };
+		A18100010000000000000004 /* AgentGovernanceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentGovernanceTests.swift; sourceTree = "<group>"; };
 		A07800010000000000000001 /* ProactiveInitiativeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProactiveInitiativeModels.swift; sourceTree = "<group>"; };
 		A07800010000000000000002 /* ProactiveInitiativeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProactiveInitiativeService.swift; sourceTree = "<group>"; };
 		A07800010000000000000003 /* ProactiveInitiativeLiveVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProactiveInitiativeLiveVerifier.swift; sourceTree = "<group>"; };
@@ -2120,6 +2128,8 @@
 		6A2AB8BCC1FEA8C8361CCA30 /* Security */ = {
 			isa = PBXGroup;
 			children = (
+				A18100010000000000000001 /* AgentGovernance.swift */,
+				A18100010000000000000002 /* AgentGovernanceLiveVerifier.swift */,
 				A08700010000000000000003 /* MCPRegistryTrustScanner.swift */,
 				A08700010000000000000005 /* MCPRegistryLiveVerifier.swift */,
 				01D36BE270D67C0F522A0602 /* AgentAuditLog.swift */,
@@ -2187,6 +2197,7 @@
 		79411B9FF376DD38AB2AF650 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				A18100010000000000000003 /* AgentGovernanceView.swift */,
 				A08700010000000000000004 /* MCPRegistryBrowserView.swift */,
 				159A57C07694CBDB641D9426 /* AmbientApprovalSurfaceView.swift */,
 				89FB6833BB17F9CF840D12D3 /* ANSIColorParser.swift */,
@@ -2658,6 +2669,7 @@
 		FF1EAB66BDCDC6DFDCB0CA7A /* ApexAgentTests */ = {
 			isa = PBXGroup;
 			children = (
+				A18100010000000000000004 /* AgentGovernanceTests.swift */,
 				A08500010000000000000006 /* PersonalContextIndexTests.swift */,
 				A08700010000000000000006 /* MCPRegistryTests.swift */,
 				E1AC59673F796997416BB805 /* A2AProtocolTests.swift */,
@@ -3603,6 +3615,9 @@
 				B17900010000000000000002 /* ModelRouterLiveVerifier.swift in Sources */,
 				B18000010000000000000001 /* ModelRetirement.swift in Sources */,
 				B18000010000000000000002 /* ModelRetirementLiveVerifier.swift in Sources */,
+				B18100010000000000000001 /* AgentGovernance.swift in Sources */,
+				B18100010000000000000002 /* AgentGovernanceLiveVerifier.swift in Sources */,
+				B18100010000000000000003 /* AgentGovernanceView.swift in Sources */,
 				B07800010000000000000001 /* ProactiveInitiativeModels.swift in Sources */,
 				B07800010000000000000002 /* ProactiveInitiativeService.swift in Sources */,
 				B07800010000000000000003 /* ProactiveInitiativeLiveVerifier.swift in Sources */,
@@ -4036,6 +4051,7 @@
 				B11800010000000000000004 /* OnboardingModelPickerTests.swift in Sources */,
 				B17900010000000000000003 /* ModelRouterTests.swift in Sources */,
 				B18000010000000000000003 /* ModelRetirementTests.swift in Sources */,
+				B18100010000000000000004 /* AgentGovernanceTests.swift in Sources */,
 				B07800010000000000000004 /* ProactiveInitiativeTests.swift in Sources */,
 				03C098F1D1822A07123E304F /* ReleaseChangelogEngineTests.swift in Sources */,
 				45538B22E3A36E61F192D220 /* ReleaseProvenanceGeneratorTests.swift in Sources */,
