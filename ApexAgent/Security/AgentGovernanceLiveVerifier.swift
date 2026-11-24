@@ -35,7 +35,7 @@ public enum AgentGovernanceLiveVerifier {
 
         var allPassed = true
         var passedChecks = 0
-        let totalChecks = 8
+        let totalChecks = 9
 
         // Use isolated storage so verification never touches or erases real persisted user settings
         let isolatedSuiteName = "com.apexagent.governance.verifier.\(UUID().uuidString)"
@@ -436,6 +436,60 @@ public enum AgentGovernanceLiveVerifier {
         } else {
             allPassed = false
             logs.append("VERDICT 8: \(check8Verdict)")
+        }
+
+        // -------------------------------------------------------------------------
+        // CHECK 9: Delegated Specialist Governance & Block Enforcement:
+        //          A blocked specialist delegated via delegate_task is refused
+        //          before routing/dispatch with visible notice, and its tool calls
+        //          are blocked at confirmation/execution time.
+        // -------------------------------------------------------------------------
+        logs.append("\n[Check 9] Delegated Specialist Governance & Block Enforcement:")
+        governance.blockAgent(id: "developer", reason: "Blocked for live verification check", actor: "verifier")
+        let devBlockedEval = governance.evaluateExecution(agentId: "developer", estimatedCost: 0.0)
+        let devBlockedRisk = governance.checkActionRisk(agentId: "developer", toolName: "run_shell_command", command: "ls")
+
+        let _ = devBlockedEval.refusalReason ?? ""
+        let devRiskBlocked = !devBlockedRisk.allowed && devBlockedRisk.riskCategory == "agent-blocked"
+
+        // Execute delegation check
+        let delegationResult: String = await {
+            let orch = await MainActor.run { AgentOrchestrator() }
+            let tool = DelegateTaskTool(orchestrator: orch, governance: governance)
+            let args = DelegateTaskTool.Arguments(agentType: "developer", taskDescription: "Run database migration")
+            do {
+                return try await tool.call(arguments: args)
+            } catch {
+                return error.localizedDescription
+            }
+        }()
+
+        let delegationRefused = delegationResult.contains("Refused:") && (delegationResult.contains("Developer") || delegationResult.contains("developer"))
+        logs.append("  -> Delegated execution refusal: \(delegationResult.replacingOccurrences(of: "\n", with: " "))")
+        logs.append("  -> Tool risk blocked: \(devRiskBlocked), category=\(devBlockedRisk.riskCategory ?? "none")")
+
+        // Unblock developer specialist and verify re-approval
+        governance.approveAgent(id: "developer", reason: "Re-approved after check", actor: "verifier")
+        let devApprovedEval = governance.evaluateExecution(agentId: "developer", estimatedCost: 0.0)
+        let devApprovedAfter = devApprovedEval.allowed
+        logs.append("  -> Developer re-approved execution allowed: \(devApprovedAfter)")
+
+        let check9Passed = !devBlockedEval.allowed && devRiskBlocked && delegationRefused && devApprovedAfter
+        let check9Verdict = check9Passed
+            ? "PASS (blocked specialist delegated via delegate_task is refused before routing with visible notice; tool risk evaluated against specialist identity; re-approved specialist executes cleanly)"
+            : "FAIL (delegated specialist governance check failed: devBlocked=\(!devBlockedEval.allowed), devRiskBlocked=\(devRiskBlocked), delegationRefused=\(delegationRefused), devApprovedAfter=\(devApprovedAfter))"
+        checkSummaries.append(CheckSummary(
+            check: 9,
+            name: "Delegated Specialist Governance & Block Enforcement",
+            passed: check9Passed,
+            verdict: check9Verdict
+        ))
+        if check9Passed {
+            passedChecks += 1
+            logs.append("VERDICT 9: \(check9Verdict)")
+        } else {
+            allPassed = false
+            logs.append("VERDICT 9: \(check9Verdict)")
         }
 
         // Summary

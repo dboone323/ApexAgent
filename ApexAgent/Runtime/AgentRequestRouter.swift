@@ -41,6 +41,21 @@ public final class AgentRequestRouter {
         onEvent: (@Sendable (RuntimeEvent) -> Void)? = nil,
         onUpdate: (@Sendable (String) -> Void)? = nil
     ) async -> RuntimeTerminalState {
+        // 0. Governance check on sender identity (#181)
+        let effectiveSenderId: String = switch request.senderIdentity {
+        case .archetype(let type): type.rawValue.lowercased()
+        case .bot(_, let name): name.lowercased()
+        case .orchestrator: "supervisor"
+        case .custom(let s): s.lowercased()
+        default: request.senderIdentity.displayName.lowercased()
+        }
+
+        let senderGovCheck = AgentGovernanceManager.shared.evaluateExecution(agentId: effectiveSenderId, estimatedCost: 0.0)
+        if !senderGovCheck.allowed {
+            let reason = senderGovCheck.refusalReason ?? "Agent '\(effectiveSenderId)' is blocked by governance policy."
+            return .failed(error: reason, isRetryable: false)
+        }
+
         // 1. Broadcast turn start
         let turnEvent = RuntimeEvent.turnStarted(requestId: request.id, conversationId: request.conversationId)
         broadcast(turnEvent)

@@ -217,11 +217,11 @@ struct AgentGovernanceTests {
         #expect(viewOutput.contains("Verified Runs: 2"))
         #expect(viewOutput.contains("Tokens: 5000"))
 
-        // Also run live verifier end-to-end to ensure all 8 checks succeed
+        // Also run live verifier end-to-end to ensure all 9 checks succeed
         let liveResult = await AgentGovernanceLiveVerifier.runVerification()
         #expect(liveResult.passed)
-        #expect(liveResult.passedChecks == 8)
-        #expect(liveResult.totalChecks == 8)
+        #expect(liveResult.passedChecks == 9)
+        #expect(liveResult.totalChecks == 9)
     }
 
     // MARK: - Round 4: Tests for 10 Codex PR #207 Findings (5 P1, 5 P2)
@@ -631,8 +631,8 @@ struct AgentGovernanceTests {
     func testGovernanceVerifyCLIHonorsJsonFlag() async {
         let result = await AgentGovernanceLiveVerifier.runVerification(jsonOutput: true)
         #expect(result.passed)
-        #expect(result.totalChecks == 8)
-        #expect(result.passedChecks == 8)
+        #expect(result.totalChecks == 9)
+        #expect(result.passedChecks == 9)
 
         guard let data = result.output.data(using: .utf8) else {
             Issue.record("Failed to convert verifier output to UTF8 data")
@@ -642,11 +642,11 @@ struct AgentGovernanceTests {
         let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         #expect(json != nil)
         #expect(json?["passed"] as? Bool == true)
-        #expect(json?["totalChecks"] as? Int == 8)
-        #expect(json?["passedChecks"] as? Int == 8)
+        #expect(json?["totalChecks"] as? Int == 9)
+        #expect(json?["passedChecks"] as? Int == 9)
         let checks = json?["checks"] as? [[String: Any]]
         #expect(checks != nil)
-        #expect(checks?.count == 8)
+        #expect(checks?.count == 9)
     }
 
     // MARK: - Round 6: Tests for 3 Second Codex PR #207 Re-Review Findings (1 P1, 2 P2)
@@ -762,6 +762,70 @@ struct AgentGovernanceTests {
             #expect(decision.estimatedCost > 0.0)
         default:
             Issue.record("Expected paid fallback to be routed with authorized spend cap, got \(approvedResult)")
+        }
+    }
+
+    @Test("R7-1 / P1: Blocked specialist delegated via delegate_task is refused before routing")
+    func testBlockedSpecialistDelegationRefusedBeforeRouting() async throws {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        let orchestrator = AgentOrchestrator()
+        let tool = DelegateTaskTool(orchestrator: orchestrator)
+
+        // Block developer specialist
+        governance.blockAgent(id: "developer", reason: "Blocked during security audit", actor: "test_admin")
+        #expect(governance.isAgentBlocked(id: "developer"))
+
+        // Prior message count in orchestrator
+        let priorMessageCount = orchestrator.messages.count
+
+        // Attempt delegation to blocked specialist
+        let args = DelegateTaskTool.Arguments(agentType: "developer", taskDescription: "Refactor database migrations")
+        let result = try await tool.call(arguments: args)
+
+        // Must be refused with clear notice naming the agent and the governance block
+        #expect(result.lowercased().contains("refused") || result.lowercased().contains("blocked"))
+        #expect(result.lowercased().contains("developer") || result.lowercased().contains("codex"))
+        #expect(result.lowercased().contains("governance"))
+
+        // No new streaming or assistant message must have been appended to orchestrator
+        #expect(orchestrator.messages.count == priorMessageCount)
+    }
+
+    @Test("R7-2 / P1: Blocked specialist identity is evaluated in requestConfirmation and tool dispatch")
+    func testBlockedSpecialistIdentityEvaluatedInConfirmationAndToolExecution() async {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        let orchestrator = AgentOrchestrator()
+
+        // Block developer specialist while supervisor remains approved
+        governance.blockAgent(id: "developer", reason: "Blocked during security audit", actor: "test_admin")
+        governance.approveAgent(id: "supervisor", reason: "Supervisor active", actor: "test_admin")
+
+        #expect(governance.isAgentBlocked(id: "developer"))
+        #expect(!governance.isAgentBlocked(id: "supervisor"))
+
+        // When evaluating requestConfirmation for the blocked specialist, it must be refused
+        let specialistConfirmed = await orchestrator.requestConfirmation(
+            toolName: "run_shell_command",
+            arguments: "swift test",
+            riskDescription: "Unit tests",
+            agentId: "developer"
+        )
+        #expect(!specialistConfirmed)
+
+        // When evaluating tool execution for a low-risk tool (e.g. read_file) with the specialist identity,
+        // executeToolByName must throw a 403 error because the agent is blocked
+        await #expect(throws: Error.self) {
+            _ = try await orchestrator.executeToolByName(
+                name: "read_file",
+                jsonArguments: "{\"path\":\"/tmp/test.txt\"}",
+                agentIdentity: .archetype(.developer)
+            )
         }
     }
 }

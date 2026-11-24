@@ -6,9 +6,11 @@ import AppKit
 
 struct DelegateTaskTool: Tool {
     let orchestrator: OrchestratorProvider
+    let governance: AgentGovernanceManager
 
-    init(orchestrator: OrchestratorProvider) {
+    init(orchestrator: OrchestratorProvider, governance: AgentGovernanceManager = .shared) {
         self.orchestrator = orchestrator
+        self.governance = governance
     }
 
     let name = "delegate_task"
@@ -36,6 +38,16 @@ struct DelegateTaskTool: Tool {
                 let agentName = arguments.agentType.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
                 guard let agent = AgentRegistry.shared.resolve(name: agentName) else {
                     return "ERROR: Invalid agentType '\(arguments.agentType)'."
+                }
+
+                // Check governance status before creating sub-agent session or recording delegation (#181)
+                let govResult = governance.evaluateExecution(
+                    agentId: agent.name.lowercased(),
+                    estimatedCost: 0.0
+                )
+                if !govResult.allowed {
+                    let refusal = govResult.refusalReason ?? "Agent '\(agent.name)' is blocked by governance policy. No execution allowed."
+                    return "Refused: \(refusal)"
                 }
 
                 let (allowed, limitMessage) = await MainActor.run {

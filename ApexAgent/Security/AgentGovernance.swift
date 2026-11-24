@@ -443,7 +443,7 @@ public final class AgentGovernanceManager: @unchecked Sendable {
     public func agent(for id: String) -> AgentIdentityRecord? {
         lock.lock()
         defer { lock.unlock() }
-        return agents[id]
+        return agents[id] ?? agents[id.lowercased()]
     }
 
     public func allAgents() -> [AgentIdentityRecord] {
@@ -523,7 +523,8 @@ public final class AgentGovernanceManager: @unchecked Sendable {
     public func isAgentBlocked(id: String) -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        return agents[id]?.status == .blocked
+        let record = agents[id] ?? agents[id.lowercased()]
+        return record?.status == .blocked
     }
 
     // MARK: - Spend Limits & Hard Caps
@@ -610,7 +611,7 @@ public final class AgentGovernanceManager: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
 
-        let agentRecord = agents[agentId]
+        let agentRecord = agents[agentId] ?? agents[agentId.lowercased()]
         let displayName = agentRecord?.displayName ?? agentId
 
         // 1. Check if agent is blocked or pending approval
@@ -845,7 +846,7 @@ public final class AgentGovernanceManager: @unchecked Sendable {
         allowlist: ApprovalAllowlist = .shared
     ) -> GovernanceActionVerdict {
         lock.lock()
-        let agentRecord = agents[agentId]
+        let agentRecord = agents[agentId] ?? agents[agentId.lowercased()]
         lock.unlock()
 
         let displayName = agentRecord?.displayName ?? agentId

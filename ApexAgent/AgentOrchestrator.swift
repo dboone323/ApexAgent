@@ -1581,6 +1581,31 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         bot: BotProfile? = nil,
         agentIdentity: AgentIdentity? = nil
     ) async throws -> String {
+        let effectiveAgentId: String = {
+            if let identity = agentIdentity {
+                switch identity {
+                case .archetype(let type): return type.rawValue.lowercased()
+                case .bot(_, let name): return name.lowercased()
+                case .orchestrator: return "supervisor"
+                case .custom(let s): return s.lowercased()
+                default: return identity.displayName.lowercased()
+                }
+            }
+            return "supervisor"
+        }()
+
+        // Enforce governance status directly on executeToolByName (#181):
+        // A blocked agent cannot execute any tool (including unconfirmed tools like read_file)
+        if AgentGovernanceManager.shared.isAgentBlocked(id: effectiveAgentId) {
+            let err = NSError(
+                domain: "AgentSecurity",
+                code: 403,
+                userInfo: [NSLocalizedDescriptionKey: "Tool '\(name)' execution refused: Agent '\(effectiveAgentId)' is blocked by governance policy."]
+            )
+            logToolEnd(name: name, result: "Denied: Agent '\(effectiveAgentId)' is blocked", status: .denied)
+            throw err
+        }
+
         // Mandatory confirmation gate (gap #5): ensures MLX/Ollama engines
         // — which call orchestrator.executeToolByName directly — are subject
         // to the same confirmation gate as NativeAppleEngine's tool loop.
@@ -1594,7 +1619,8 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             let approved = await requestConfirmation(
                 toolName: name,
                 arguments: jsonArguments,
-                riskDescription: "Risk: \(riskLevel)"
+                riskDescription: "Risk: \(riskLevel)",
+                agentId: effectiveAgentId
             )
             if !approved {
                 let err = NSError(
@@ -1847,7 +1873,8 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         filePath: String? = nil,
         command: String? = nil,
         directory: String? = nil,
-        allowlist: ApprovalAllowlist = .shared
+        allowlist: ApprovalAllowlist = .shared,
+        agentId: String = "supervisor"
     ) async -> Bool {
         let (extractedCmd, extractedDir) = Self.extractCommandAndDirectory(
             toolName: toolName,
@@ -1859,7 +1886,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
         // Agent Governance risk check (#181): A blocked agent gets NO tool approvals before any approval path
         let govVerdict = AgentGovernanceManager.shared.checkActionRisk(
-            agentId: "supervisor",
+            agentId: agentId,
             toolName: toolName,
             command: extractedCmd,
             arguments: arguments,
