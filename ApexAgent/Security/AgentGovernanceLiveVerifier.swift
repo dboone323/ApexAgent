@@ -416,14 +416,26 @@ public enum AgentGovernanceLiveVerifier {
         let devEvalUnderCap = governance.evaluateExecution(agentId: "developer", estimatedCost: 5.00)
         let devEvalOverCap = governance.evaluateExecution(agentId: "developer", estimatedCost: 10.00)
 
-        let check8Passed = (devLimitAfter == 7.50) && devEvalUnderCap.allowed && !devEvalOverCap.allowed
+        // Verify negative cap is refused and leaves configured limit unchanged
+        let negSetResult = governance.setSpendLimit(
+            scopeKey: "agent:developer",
+            scopeKind: .agent,
+            limit: -1.0,
+            reason: "Attempted negative cap",
+            actor: "user"
+        )
+        let devLimitAfterNeg = governance.spendLimit(for: "agent:developer")?.spendLimit ?? 0.0
+        let negRefused = !negSetResult && (devLimitAfterNeg == 7.50)
+
+        let check8Passed = (devLimitAfter == 7.50) && devEvalUnderCap.allowed && !devEvalOverCap.allowed && negRefused
         logs.append("  -> Configured cap: $\(String(format: "%.2f", devLimitAfter))")
+        logs.append("  -> Negative cap rejection (-$1.00 refused): \(negRefused), limit preserved at $\(String(format: "%.2f", devLimitAfterNeg))")
         logs.append("  -> Evaluation within cap ($5.00): allowed=\(devEvalUnderCap.allowed)")
         logs.append("  -> Evaluation over cap ($10.00): allowed=\(devEvalOverCap.allowed), refusal=\(devEvalOverCap.refusalReason ?? "none")")
 
         let check8Verdict = check8Passed
-            ? "PASS (spend cap set through user-facing surface is enforced with $0 over-spend guarantee)"
-            : "FAIL (user spend cap mutation check failed: limit=\(devLimitAfter), withinCapAllowed=\(devEvalUnderCap.allowed), overCapBlocked=\(!devEvalOverCap.allowed))"
+            ? "PASS (spend cap set through user-facing surface is enforced with $0 over-spend guarantee, and negative limits are refused)"
+            : "FAIL (user spend cap mutation check failed: limit=\(devLimitAfter), withinCapAllowed=\(devEvalUnderCap.allowed), overCapBlocked=\(!devEvalOverCap.allowed), negRefused=\(negRefused))"
         checkSummaries.append(CheckSummary(
             check: 8,
             name: "User-Facing Spend-Cap Mutation Surface",

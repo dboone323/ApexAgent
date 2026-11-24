@@ -828,4 +828,123 @@ struct AgentGovernanceTests {
             )
         }
     }
+
+    // MARK: - Round 8: Tests for 3 Second Codex Re-Review P2 Findings
+
+    @Test("R8-1 / P2-1: Setting negative or non-finite spend limits is refused, leaving prior limit unchanged, and paid runs remain stopped by hard cap")
+    func testNegativeOrNonFiniteSpendLimitIsRefused() async {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        // Set an initial valid limit of $5.00
+        let setValid = governance.setSpendLimit(scopeKey: "global", limit: 5.00)
+        #expect(setValid == true)
+        #expect(governance.spendLimit(for: "global")?.spendLimit == 5.00)
+
+        // Attempting to set negative limit (-1.0) must be refused
+        let setNegative = governance.setSpendLimit(scopeKey: "global", limit: -1.0)
+        #expect(setNegative == false)
+        #expect(governance.spendLimit(for: "global")?.spendLimit == 5.00) // Unchanged!
+
+        // Attempting to set non-finite limit (Double.nan or Double.infinity) must be refused
+        let setNaN = governance.setSpendLimit(scopeKey: "global", limit: Double.nan)
+        #expect(setNaN == false)
+        #expect(governance.spendLimit(for: "global")?.spendLimit == 5.00) // Unchanged!
+
+        let setInf = governance.setSpendLimit(scopeKey: "global", limit: Double.infinity)
+        #expect(setInf == false)
+        #expect(governance.spendLimit(for: "global")?.spendLimit == 5.00) // Unchanged!
+
+        // Prove CLI set-limit surfaces failure
+        let (cliText, cliCode) = ApexCLIRouter.renderImmediateSubcommand(.governanceSetLimit(scope: "global", limit: -1.0, jsonOutput: false))!
+        #expect(cliCode != 0)
+        #expect(cliText.contains("ERROR") || cliText.contains("Invalid"))
+        #expect(governance.spendLimit(for: "global")?.spendLimit == 5.00)
+
+        // Reset global to $0.00 and verify hard cap still stops paid execution
+        governance.setSpendLimit(scopeKey: "global", limit: 0.00)
+        let eval = governance.evaluateExecution(agentId: "supervisor", estimatedCost: 0.10)
+        #expect(!eval.allowed)
+        #expect(eval.refusalReason?.contains("Spend cap reached") == true)
+    }
+
+    @Test("R8-2 / P2-2: Blocked supervisor during delegated session construction surfaces governance refusal without trapping")
+    func testBlockedSupervisorDelegatedSessionConstructionRefusedWithoutCrash() async {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        // Block supervisor
+        governance.blockAgent(id: "supervisor", reason: "Testing blocked supervisor model resolution", actor: "admin")
+        #expect(governance.isAgentBlocked(id: "supervisor") == true)
+
+        let orch = await MainActor.run { AgentOrchestrator() }
+        let devAgent = AgentRegistry.shared.resolve(name: "developer")!
+
+        // Direct sessionForAgent should return nil (no crash, no session with nil model)
+        let session = await MainActor.run {
+            orch.sessionForAgent(
+                agent: devAgent,
+                preference: .localSystem,
+                instructions: devAgent.systemPrompt,
+                allowedTools: ["read_file"],
+                toolCallingMode: .allowed,
+                prompt: "Refactor database models"
+            )
+        }
+        #expect(session == nil)
+
+        // Delegated task tool call must return governance refusal, not crash
+        let delegateTool = DelegateTaskTool(orchestrator: orch, governance: governance)
+        let args = DelegateTaskTool.Arguments(agentType: "developer", taskDescription: "Refactor database models")
+        do {
+            let result = try await delegateTool.call(arguments: args)
+            #expect(result.contains("Refused:") && (result.contains("Supervisor") || result.contains("supervisor") || result.contains("governance")))
+        } catch {
+            #expect(error.localizedDescription.contains("Refused") || error.localizedDescription.contains("governance") || error.localizedDescription.contains("blocked"))
+        }
+    }
+
+    @Test("R8-3 / P2-3: Hybrid model preference preserves PCC when available, and selects on-device when multi-agent is enabled or PCC is unavailable")
+    func testHybridModelPreferencePreservesPCCAndOnDevicePolicy() async {
+        let coordinator = AgentSessionCoordinator.shared
+
+        // Case 1: PCC available + multiAgentModeEnabled=false -> applePCC
+        AgentOrchestrator.pccAvailabilityOverride = true
+        defer { AgentOrchestrator.pccAvailabilityOverride = nil }
+
+        let result1 = coordinator.resolveModelResult(
+            preference: .hybrid,
+            multiAgentModeEnabled: false
+        )
+        if case .routed(let decision) = result1 {
+            #expect(decision.selectedProvider == .applePCC)
+        } else {
+            Issue.record("Expected routed decision for hybrid with PCC available, got \(result1)")
+        }
+
+        // Case 2: PCC available + multiAgentModeEnabled=true -> appleOnDevice
+        let result2 = coordinator.resolveModelResult(
+            preference: .hybrid,
+            multiAgentModeEnabled: true
+        )
+        if case .routed(let decision) = result2 {
+            #expect(decision.selectedProvider == .appleOnDevice)
+        } else {
+            Issue.record("Expected routed decision for hybrid with multiAgentModeEnabled=true, got \(result2)")
+        }
+
+        // Case 3: PCC unavailable + multiAgentModeEnabled=false -> appleOnDevice
+        AgentOrchestrator.pccAvailabilityOverride = false
+        let result3 = coordinator.resolveModelResult(
+            preference: .hybrid,
+            multiAgentModeEnabled: false
+        )
+        if case .routed(let decision) = result3 {
+            #expect(decision.selectedProvider == .appleOnDevice)
+        } else {
+            Issue.record("Expected routed decision for hybrid without PCC, got \(result3)")
+        }
+    }
 }

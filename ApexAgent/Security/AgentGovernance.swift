@@ -529,13 +529,14 @@ public final class AgentGovernanceManager: @unchecked Sendable {
 
     // MARK: - Spend Limits & Hard Caps
 
+    @discardableResult
     public func setSpendLimit(
         scopeKey: String,
         limit: Double,
         alertThresholdPercent: Double = 0.80,
         reason: String = "Spend limit updated",
         actor: String = "user"
-    ) {
+    ) -> Bool {
         let kind: SpendLimitScopeKind
         if scopeKey == "global" {
             kind = .global
@@ -550,9 +551,10 @@ public final class AgentGovernanceManager: @unchecked Sendable {
         } else {
             kind = .agent
         }
-        setSpendLimit(scopeKey: scopeKey, scopeKind: kind, limit: limit, alertThresholdPercent: alertThresholdPercent, reason: reason, actor: actor)
+        return setSpendLimit(scopeKey: scopeKey, scopeKind: kind, limit: limit, alertThresholdPercent: alertThresholdPercent, reason: reason, actor: actor)
     }
 
+    @discardableResult
     public func setSpendLimit(
         scopeKey: String,
         scopeKind: SpendLimitScopeKind,
@@ -560,7 +562,23 @@ public final class AgentGovernanceManager: @unchecked Sendable {
         alertThresholdPercent: Double = 0.80,
         reason: String = "Spend limit updated",
         actor: String = "user"
-    ) {
+    ) -> Bool {
+        guard limit >= 0.0, limit.isFinite, alertThresholdPercent >= 0.0, alertThresholdPercent.isFinite else {
+            lock.lock()
+            appendDecisionLocked(
+                actor: actor,
+                targetType: "spendLimit",
+                targetId: scopeKey,
+                action: "refused_invalid_limit",
+                previousValue: spendLimits[scopeKey]?.spendLimit != nil ? String(format: "$%.2f", spendLimits[scopeKey]!.spendLimit) : nil,
+                newValue: "\(limit)",
+                reason: "Negative or non-finite spend limit rejected: \(limit)"
+            )
+            persistLocked()
+            lock.unlock()
+            return false
+        }
+
         lock.lock()
         defer { lock.unlock() }
 
@@ -585,6 +603,7 @@ public final class AgentGovernanceManager: @unchecked Sendable {
             reason: reason
         )
         persistLocked()
+        return true
     }
 
     public func spendLimit(for scopeKey: String) -> SpendLimitRecord? {

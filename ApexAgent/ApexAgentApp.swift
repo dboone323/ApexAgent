@@ -201,7 +201,7 @@ public class AppDelegate: NSObject, NSApplicationDelegate, OrchestratorProvider 
         reasoningLevel: ContextOptions.ReasoningLevel?,
         maxResponseTokens: Int?,
         history: Transcript?
-    ) -> LanguageModelSession {
+    ) -> LanguageModelSession? {
         orchestrator.sessionForAgent(
             agent: agent,
             preference: preference,

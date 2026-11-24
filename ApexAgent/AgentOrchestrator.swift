@@ -197,7 +197,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         reasoningLevel: ContextOptions.ReasoningLevel? = nil,
         maxResponseTokens: Int? = nil,
         history: Transcript? = nil
-    ) -> LanguageModelSession {
+    ) -> LanguageModelSession? {
         sessionForAgent(
             agent: agent,
             preference: preference,
@@ -221,7 +221,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         maxResponseTokens: Int? = nil,
         history: Transcript? = nil,
         prompt: String
-    ) -> LanguageModelSession {
+    ) -> LanguageModelSession? {
         func makeSession<M: LanguageModel>(_ model: M) -> LanguageModelSession {
             let effectiveReasoning = reasoningLevel ?? configuredReasoningLevel
             let effectiveMaxTokens = maxResponseTokens ?? configuredMaxResponseTokens
@@ -250,19 +250,30 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             }
         }
 
-        let model = sessionCoordinator.resolveModel(
+        guard let model = sessionCoordinator.resolveModel(
             preference: preference,
             prompt: prompt,
             instructions: instructions,
             tools: allowedTools,
             multiAgentModeEnabled: multiAgentModeEnabled
-        ) ?? sessionCoordinator.resolveModel(preference: .localSystem)!
+        ) ?? sessionCoordinator.resolveModel(preference: .localSystem) else {
+            return nil
+        }
         return makeSession(model)
     }
+
+    #if DEBUG
+    nonisolated(unsafe) static var pccAvailabilityOverride: Bool? = nil
+    #endif
 
     /// Check if Private Cloud Compute is available by verifying the process has the required entitlement.
     /// Returns false when running in CLI/test environments without code signing.
     nonisolated static func isPrivateCloudComputeAvailable() -> Bool {
+        #if DEBUG
+        if let override = pccAvailabilityOverride {
+            return override
+        }
+        #endif
         let task = SecTaskCreateFromSelf(nil)
         guard let task else { return false }
         let value = SecTaskCopyValueForEntitlement(task, "com.apple.developer.private-cloud-compute" as CFString, nil)

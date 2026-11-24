@@ -240,11 +240,10 @@ struct AgentGovernanceCard: View {
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 80)
                     Button("Save") {
-                        if let newLimit = Double(capInput), newLimit >= 0.0 {
-                            mgr.setSpendLimit(scopeKey: "agent:\(agent.id)", limit: newLimit, reason: "Updated in UI", actor: "user")
+                        if let newLimit = Double(capInput), mgr.setSpendLimit(scopeKey: "agent:\(agent.id)", limit: newLimit, reason: "Updated in UI", actor: "user") {
                             onStatusChanged()
+                            isEditingCap = false
                         }
-                        isEditingCap = false
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.small)

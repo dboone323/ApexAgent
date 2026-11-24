@@ -101,7 +101,15 @@ final class AgentSessionCoordinator {
             case .cloudGemini: return "cloudGemini"
             case .localOllama: return "localOllama"
             case .localMLX: return "localMLX"
-            case .autoPicker, .hybrid: return nil
+            case .autoPicker: return nil
+            case .hybrid:
+                if multiAgentModeEnabled {
+                    return "appleOnDevice"
+                } else if AgentOrchestrator.isPrivateCloudComputeAvailable() {
+                    return "applePCC"
+                } else {
+                    return "appleOnDevice"
+                }
             }
         }()
 

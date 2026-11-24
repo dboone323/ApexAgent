@@ -243,7 +243,7 @@ final class MCPManager: OrchestratorProvider {
         reasoningLevel: ContextOptions.ReasoningLevel? = nil,
         maxResponseTokens: Int? = nil,
         history: Transcript? = nil
-    ) -> LanguageModelSession {
+    ) -> LanguageModelSession? {
         return orchestrator.sessionForAgent(
             agent: agent,
             preference: preference,

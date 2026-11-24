@@ -88,6 +88,16 @@ struct DelegateTaskTool: Tool {
                     return (chatMsg.id, session)
                 }
 
+                guard let subAgentSession else {
+                    let refusal = governance.evaluateExecution(agentId: "supervisor", estimatedCost: 0.0).refusalReason
+                        ?? "Model routing refused: agent 'Supervisor' is blocked by governance policy. No model session available."
+                    await MainActor.run {
+                        orchestrator.updateMessage(id: messageId, content: "Refused: \(refusal)")
+                        orchestrator.updateMessage(id: messageId, isStreaming: false)
+                    }
+                    return "Refused: \(refusal)"
+                }
+
                 // 2. Generate the sub-agent response with AgentRequestRouter resilience & fallback
                 let agentType = AgentType(rawValue: agent.name) ?? .developer
                 let request = AgentRequest(

@@ -221,7 +221,7 @@ struct ConveneMeetingTool: Tool {
         instructions: String,
         topic: String,
         debateHistory: [MeetingTurn]
-    ) -> LanguageModelSession {
+    ) -> LanguageModelSession? {
         // Build the dynamic history
         var transcriptEntries: [Transcript.Entry] = []
         
@@ -247,7 +247,7 @@ struct ConveneMeetingTool: Tool {
 
         _ = Transcript(entries: transcriptEntries) // retained for future session seeding
 
-        let session = orchestrator.orchestrator.sessionForAgent(
+        guard let session = orchestrator.orchestrator.sessionForAgent(
             agent: agent,
             preference: preference,
             instructions: String(instructions.prefix(1200)),
@@ -257,7 +257,9 @@ struct ConveneMeetingTool: Tool {
             maxResponseTokens: nil,
             history: nil,
             prompt: topic
-        )
+        ) else {
+            return nil
+        }
         
         session.prewarm()
         return session

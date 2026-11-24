@@ -1062,12 +1062,27 @@ RoutineManager.shared.loadRoutines()
             }
 
         case .governanceSetLimit(let scope, let limit, let jsonOutput):
-            AgentGovernanceManager.shared.setSpendLimit(
+            let success = AgentGovernanceManager.shared.setSpendLimit(
                 scopeKey: scope,
                 limit: limit,
                 reason: "CLI set-limit",
                 actor: "user"
             )
+            if !success {
+                let errorMsg = "ERROR: Invalid spend limit '\(limit)'. Limit must be a non-negative finite number (>= $0.00)."
+                if jsonOutput {
+                    let dict: [String: Any] = [
+                        "status": "error",
+                        "error": errorMsg,
+                        "scope": scope,
+                        "limit": limit
+                    ]
+                    let data = (try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys])) ?? Data()
+                    return (String(data: data, encoding: .utf8) ?? "{}", 1)
+                } else {
+                    return (errorMsg, 1)
+                }
+            }
             if jsonOutput {
                 let dict: [String: Any] = [
                     "status": "success",
