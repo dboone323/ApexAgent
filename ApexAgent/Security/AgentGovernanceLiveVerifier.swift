@@ -35,7 +35,7 @@ public enum AgentGovernanceLiveVerifier {
 
         var allPassed = true
         var passedChecks = 0
-        let totalChecks = 7
+        let totalChecks = 8
 
         // Use isolated storage so verification never touches or erases real persisted user settings
         let isolatedSuiteName = "com.apexagent.governance.verifier.\(UUID().uuidString)"
@@ -392,6 +392,50 @@ public enum AgentGovernanceLiveVerifier {
         } else {
             allPassed = false
             logs.append("VERDICT 7: \(check7Verdict)")
+        }
+
+        // -------------------------------------------------------------------------
+        // CHECK 8: User-Facing Spend-Cap Mutation Surface
+        // -------------------------------------------------------------------------
+        logs.append("\n[Check 8] User-Facing Spend-Cap Mutation Surface:")
+        governance.setSpendLimit(
+            scopeKey: "global",
+            scopeKind: .global,
+            limit: 20.00,
+            reason: "User mutation via UI/CLI surface",
+            actor: "user"
+        )
+        governance.setSpendLimit(
+            scopeKey: "agent:developer",
+            scopeKind: .agent,
+            limit: 7.50,
+            reason: "User mutation via UI/CLI surface",
+            actor: "user"
+        )
+        let devLimitAfter = governance.spendLimit(for: "agent:developer")?.spendLimit ?? 0.0
+        let devEvalUnderCap = governance.evaluateExecution(agentId: "developer", estimatedCost: 5.00)
+        let devEvalOverCap = governance.evaluateExecution(agentId: "developer", estimatedCost: 10.00)
+
+        let check8Passed = (devLimitAfter == 7.50) && devEvalUnderCap.allowed && !devEvalOverCap.allowed
+        logs.append("  -> Configured cap: $\(String(format: "%.2f", devLimitAfter))")
+        logs.append("  -> Evaluation within cap ($5.00): allowed=\(devEvalUnderCap.allowed)")
+        logs.append("  -> Evaluation over cap ($10.00): allowed=\(devEvalOverCap.allowed), refusal=\(devEvalOverCap.refusalReason ?? "none")")
+
+        let check8Verdict = check8Passed
+            ? "PASS (spend cap set through user-facing surface is enforced with $0 over-spend guarantee)"
+            : "FAIL (user spend cap mutation check failed: limit=\(devLimitAfter), withinCapAllowed=\(devEvalUnderCap.allowed), overCapBlocked=\(!devEvalOverCap.allowed))"
+        checkSummaries.append(CheckSummary(
+            check: 8,
+            name: "User-Facing Spend-Cap Mutation Surface",
+            passed: check8Passed,
+            verdict: check8Verdict
+        ))
+        if check8Passed {
+            passedChecks += 1
+            logs.append("VERDICT 8: \(check8Verdict)")
+        } else {
+            allPassed = false
+            logs.append("VERDICT 8: \(check8Verdict)")
         }
 
         // Summary

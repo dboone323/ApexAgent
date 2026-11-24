@@ -530,6 +530,30 @@ public final class AgentGovernanceManager: @unchecked Sendable {
 
     public func setSpendLimit(
         scopeKey: String,
+        limit: Double,
+        alertThresholdPercent: Double = 0.80,
+        reason: String = "Spend limit updated",
+        actor: String = "user"
+    ) {
+        let kind: SpendLimitScopeKind
+        if scopeKey == "global" {
+            kind = .global
+        } else if scopeKey.hasPrefix("agent:") {
+            kind = .agent
+        } else if scopeKey.hasPrefix("space:") {
+            kind = .space
+        } else if scopeKey.hasPrefix("model:") {
+            kind = .model
+        } else if scopeKey.hasPrefix("user:") {
+            kind = .user
+        } else {
+            kind = .agent
+        }
+        setSpendLimit(scopeKey: scopeKey, scopeKind: kind, limit: limit, alertThresholdPercent: alertThresholdPercent, reason: reason, actor: actor)
+    }
+
+    public func setSpendLimit(
+        scopeKey: String,
         scopeKind: SpendLimitScopeKind,
         limit: Double,
         alertThresholdPercent: Double = 0.80,

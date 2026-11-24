@@ -102,6 +102,8 @@ public struct AgentGovernanceView: View {
 struct AgentGovernanceCard: View {
     let agent: AgentIdentityRecord
     var onStatusChanged: () -> Void
+    @State private var isEditingCap: Bool = false
+    @State private var capInput: String = ""
 
     var body: some View {
         let mgr = AgentGovernanceManager.shared
@@ -215,6 +217,43 @@ struct AgentGovernanceCard: View {
                             .fontWeight(.semibold)
                             .foregroundStyle(.green)
                     }
+                }
+
+                Spacer()
+
+                if !isEditingCap {
+                    Button("Edit Cap") {
+                        capInput = String(format: "%.2f", cap)
+                        isEditingCap = true
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+
+            if isEditingCap {
+                HStack(spacing: 8) {
+                    Text("New Cap ($):")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("0.00", text: $capInput)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 80)
+                    Button("Save") {
+                        if let newLimit = Double(capInput), newLimit >= 0.0 {
+                            mgr.setSpendLimit(scopeKey: "agent:\(agent.id)", limit: newLimit, reason: "Updated in UI", actor: "user")
+                            onStatusChanged()
+                        }
+                        isEditingCap = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+
+                    Button("Cancel") {
+                        isEditingCap = false
+                    }
+                    .buttonStyle(.plain)
+                    .controlSize(.small)
                 }
             }
 

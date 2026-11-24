@@ -256,7 +256,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             instructions: instructions,
             tools: allowedTools,
             multiAgentModeEnabled: multiAgentModeEnabled
-        )
+        ) ?? sessionCoordinator.resolveModel(preference: .localSystem)!
         return makeSession(model)
     }
 
@@ -731,7 +731,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             instructions: agentInstructions,
             tools: [],
             multiAgentModeEnabled: multiAgentModeEnabled
-        )
+        ) ?? localSystemModel()
     }
 
     /// Returns the on-device system language model. Callers are responsible for

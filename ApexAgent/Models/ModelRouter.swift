@@ -618,7 +618,8 @@ public final class ModelRouter: @unchecked Sendable {
                         exhaustedReason: reason,
                         startTime: startTime,
                         catalog: catalog,
-                        limitHits: limitHits
+                        limitHits: limitHits,
+                        approval: approval
                     )
                 }
 
@@ -721,7 +722,7 @@ public final class ModelRouter: @unchecked Sendable {
                 latencyMs: latencyMs,
                 fallbackNotice: fallbackNotice
             )
-            return finalizeDecision(decision)
+            return finalizeDecision(decision, approvedCap: approval?.isApproved == true ? approval?.authorizedSpendCap : nil)
         }
 
         // All free models exhausted without fallback
@@ -765,7 +766,8 @@ public final class ModelRouter: @unchecked Sendable {
         exhaustedReason: String,
         startTime: ContinuousClock.Instant,
         catalog: [String: RoutableModel],
-        limitHits: [String: String]
+        limitHits: [String: String],
+        approval: PaidEscalationApproval? = nil
     ) -> RoutingResolutionResult {
         // Bounded fallback: strictly select next capable free model, excluding exhaustedModel, limitHits, and retired models
         let candidates = catalog.values.filter { model in
@@ -808,7 +810,7 @@ public final class ModelRouter: @unchecked Sendable {
             latencyMs: latencyMs,
             fallbackNotice: notice
         )
-        return finalizeDecision(decision)
+        return finalizeDecision(decision, approvedCap: approval?.isApproved == true ? approval?.authorizedSpendCap : nil)
     }
 
     private func finalizeDecision(_ decision: RoutingDecision, approvedCap: Double? = nil) -> RoutingResolutionResult {

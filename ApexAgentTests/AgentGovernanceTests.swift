@@ -217,11 +217,11 @@ struct AgentGovernanceTests {
         #expect(viewOutput.contains("Verified Runs: 2"))
         #expect(viewOutput.contains("Tokens: 5000"))
 
-        // Also run live verifier end-to-end to ensure all 7 checks succeed
+        // Also run live verifier end-to-end to ensure all 8 checks succeed
         let liveResult = await AgentGovernanceLiveVerifier.runVerification()
         #expect(liveResult.passed)
-        #expect(liveResult.passedChecks == 7)
-        #expect(liveResult.totalChecks == 7)
+        #expect(liveResult.passedChecks == 8)
+        #expect(liveResult.totalChecks == 8)
     }
 
     // MARK: - Round 4: Tests for 10 Codex PR #207 Findings (5 P1, 5 P2)
@@ -631,8 +631,8 @@ struct AgentGovernanceTests {
     func testGovernanceVerifyCLIHonorsJsonFlag() async {
         let result = await AgentGovernanceLiveVerifier.runVerification(jsonOutput: true)
         #expect(result.passed)
-        #expect(result.totalChecks == 7)
-        #expect(result.passedChecks == 7)
+        #expect(result.totalChecks == 8)
+        #expect(result.passedChecks == 8)
 
         guard let data = result.output.data(using: .utf8) else {
             Issue.record("Failed to convert verifier output to UTF8 data")
@@ -642,10 +642,126 @@ struct AgentGovernanceTests {
         let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         #expect(json != nil)
         #expect(json?["passed"] as? Bool == true)
-        #expect(json?["totalChecks"] as? Int == 7)
-        #expect(json?["passedChecks"] as? Int == 7)
+        #expect(json?["totalChecks"] as? Int == 8)
+        #expect(json?["passedChecks"] as? Int == 8)
         let checks = json?["checks"] as? [[String: Any]]
         #expect(checks != nil)
-        #expect(checks?.count == 7)
+        #expect(checks?.count == 8)
+    }
+
+    // MARK: - Round 6: Tests for 3 Second Codex PR #207 Re-Review Findings (1 P1, 2 P2)
+
+    @Test("R6-1 / P1: Ordinary chat model selection routes through governance and enforces spend caps")
+    func testOrdinaryChatModelSelectionEnforcesSpendCap() async {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        let coordinator = AgentSessionCoordinator.shared
+
+        // Under default $0.00 global and supervisor cap, selecting a paid model for chat session is refused (returns nil)
+        let paidApprovalZeroCap = PaidEscalationApproval(isApproved: true, authorizedSpendCap: 0.0)
+        let refusedModel = coordinator.resolveModel(
+            preference: .autoPicker,
+            prompt: "Refactor core module",
+            preferredModelId: "anthropic-claude-3-5-sonnet",
+            approval: paidApprovalZeroCap
+        )
+        #expect(refusedModel == nil)
+
+        // After raising cap and granting approval, selecting paid model succeeds and records spend
+        governance.setSpendLimit(scopeKey: "agent:supervisor", scopeKind: .agent, limit: 10.00, reason: "Allowed spend", actor: "test")
+        let paidApprovalWithCap = PaidEscalationApproval(isApproved: true, authorizedSpendCap: 10.0)
+        let allowedModel = coordinator.resolveModel(
+            preference: .autoPicker,
+            prompt: "Refactor core module",
+            preferredModelId: "anthropic-claude-3-5-sonnet",
+            approval: paidApprovalWithCap
+        )
+        #expect(allowedModel != nil)
+        let spend = governance.spendLimit(for: "agent:supervisor")?.currentSpend ?? 0.0
+        #expect(spend > 0.0)
+    }
+
+    @Test("R6-2 / P2: User-facing spend cap mutation sets limit and is enforced by evaluateExecution")
+    func testUserFacingSpendCapEditorSetsLimitAndEnforcesEvaluation() async {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        // Initial cap for coder is default $0.00
+        let initialEval = governance.evaluateExecution(agentId: "coder", estimatedCost: 1.50)
+        #expect(!initialEval.allowed)
+
+        // Mutate cap via CLI set-limit command (set global cap to 10.00 and coder cap to 5.00)
+        let parseGlobal = try? ApexCLIRouter.parse(arguments: ["ApexAgent", "governance", "set-limit", "--scope", "global", "--limit", "10.00"])
+        #expect(parseGlobal != nil)
+        if let invocation = parseGlobal {
+            let output = await MainActor.run { ApexCLIRouter.renderImmediateSubcommand(invocation.command) }
+            #expect(output != nil)
+            #expect(output?.exitCode == 0)
+        }
+
+        let parseCoder = try? ApexCLIRouter.parse(arguments: ["ApexAgent", "governance", "set-limit", "--scope", "agent:coder", "--limit", "5.00"])
+        #expect(parseCoder != nil)
+        if let invocation = parseCoder {
+            let output = await MainActor.run { ApexCLIRouter.renderImmediateSubcommand(invocation.command) }
+            #expect(output != nil)
+            #expect(output?.exitCode == 0)
+        }
+
+        // Limit must be updated to $5.00
+        let updatedLimit = governance.spendLimit(for: "agent:coder")
+        #expect(updatedLimit?.spendLimit == 5.00)
+
+        // Under new $5.00 cap, $1.50 execution is now allowed
+        let allowedEval = governance.evaluateExecution(agentId: "coder", estimatedCost: 1.50)
+        #expect(allowedEval.allowed)
+
+        // And exceeding $5.00 (e.g. $6.00) is stopped
+        let exceededEval = governance.evaluateExecution(agentId: "coder", estimatedCost: 6.00)
+        #expect(!exceededEval.allowed)
+    }
+
+    @Test("R6-3 / P2: Paid fallback route honors authorized spend cap and is refused without approval")
+    func testPaidFallbackRouteHonorsAuthorizedSpendCap() async {
+        let governance = AgentGovernanceManager.shared
+        governance.resetToDefaults()
+        defer { governance.resetToDefaults() }
+
+        let router = ModelRouter.shared
+        router.clearDecisions()
+        router.clearDailyLimits()
+        defer {
+            router.clearDailyLimits()
+            router.clearDecisions()
+        }
+
+        // Simulate daily limit hits for all capable free models for .coding task
+        router.recordDailyLimitHit(modelId: "localOllama")
+        router.recordDailyLimitHit(modelId: "cloudGemini")
+        router.recordDailyLimitHit(modelId: "localMLX")
+        router.recordDailyLimitHit(modelId: "applePCC")
+        router.recordDailyLimitHit(modelId: "copilot-gpt-4-0613")
+
+        // Without approval, fallback chain cannot escalate to paid model
+        let unapprovedResult = router.route(taskKind: .coding, approval: nil)
+        switch unapprovedResult {
+        case .fallbackExhausted(let reason):
+            #expect(reason.contains("exhausted") || reason.contains("Paid escalation is disallowed"))
+        default:
+            Issue.record("Expected fallbackExhausted without approval, got \(unapprovedResult)")
+        }
+
+        // With positive authorized spend cap, fallback to paid model must be allowed
+        let approvalWithCap = PaidEscalationApproval(isApproved: true, authorizedSpendCap: 15.00)
+        let approvedResult = router.route(taskKind: .coding, approval: approvalWithCap)
+        switch approvedResult {
+        case .routed(let decision):
+            #expect(!decision.isFree)
+            #expect(decision.estimatedCost > 0.0)
+        default:
+            Issue.record("Expected paid fallback to be routed with authorized spend cap, got \(approvedResult)")
+        }
     }
 }

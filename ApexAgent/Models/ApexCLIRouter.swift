@@ -67,6 +67,7 @@ public enum ApexCLICommand: Sendable, Equatable {
     case proactiveVerify(jsonOutput: Bool)
     case personalContextVerify(jsonOutput: Bool)
     case governance(agentId: String?, jsonOutput: Bool)
+    case governanceSetLimit(scope: String, limit: Double, jsonOutput: Bool)
     case agentGovernanceVerify(jsonOutput: Bool)
     case approvals(subcommandArgs: [String], jsonOutput: Bool)
     case daemon
@@ -418,6 +419,31 @@ public enum ApexCLIRouter {
 
         case "governance", "--governance":
             let rest = Array(remaining.dropFirst())
+            if let sub = rest.first, sub == "set-limit" || sub == "set_limit" {
+                var scope = "global"
+                var limitVal = 0.0
+                var idx = 1
+                while idx < rest.count {
+                    let arg = rest[idx]
+                    if arg == "--scope" && idx + 1 < rest.count {
+                        scope = rest[idx + 1]
+                        idx += 2
+                    } else if (arg == "--limit" || arg == "--cap") && idx + 1 < rest.count {
+                        limitVal = Double(rest[idx + 1]) ?? 0.0
+                        idx += 2
+                    } else if idx == 1 && !arg.hasPrefix("-") {
+                        scope = arg
+                        idx += 1
+                        if idx < rest.count && !rest[idx].hasPrefix("-") {
+                            limitVal = Double(rest[idx]) ?? 0.0
+                            idx += 1
+                        }
+                    } else {
+                        idx += 1
+                    }
+                }
+                return ParsedCLIInvocation(command: .governanceSetLimit(scope: scope, limit: limitVal, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+            }
             let targetId = rest.first
             return ParsedCLIInvocation(command: .governance(agentId: targetId, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
@@ -1033,6 +1059,25 @@ RoutineManager.shared.loadRoutines()
             } else {
                 let summary = AgentGovernanceManager.shared.governanceSummaryView(for: agentId)
                 return (summary, 0)
+            }
+
+        case .governanceSetLimit(let scope, let limit, let jsonOutput):
+            AgentGovernanceManager.shared.setSpendLimit(
+                scopeKey: scope,
+                limit: limit,
+                reason: "CLI set-limit",
+                actor: "user"
+            )
+            if jsonOutput {
+                let dict: [String: Any] = [
+                    "status": "success",
+                    "scope": scope,
+                    "limit": limit
+                ]
+                let data = (try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys])) ?? Data()
+                return (String(data: data, encoding: .utf8) ?? "{}", 0)
+            } else {
+                return ("Spend limit for '\(scope)' updated to $\(String(format: "%.2f", limit)).", 0)
             }
 
         default:

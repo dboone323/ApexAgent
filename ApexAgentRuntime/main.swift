@@ -172,6 +172,6 @@ case .traceReplay, .tracesList:
     }
     exit(1)
 
-case .launchGUI, .help, .version, .doctor, .diagnostics, .skillsList, .skillsValidate, .skillsShow, .routinesList, .completions, .man, .audit, .sbom, .changelog, .releaseCheck, .provenance, .sarif, .selfTest, .traces, .policy, .approvals, .governance:
+case .launchGUI, .help, .version, .doctor, .diagnostics, .skillsList, .skillsValidate, .skillsShow, .routinesList, .completions, .man, .audit, .sbom, .changelog, .releaseCheck, .provenance, .sarif, .selfTest, .traces, .policy, .approvals, .governance, .governanceSetLimit:
     ApexAgentApp.main()
 }
