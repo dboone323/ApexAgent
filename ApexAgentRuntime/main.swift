@@ -148,6 +148,13 @@ case .modelRetirementVerify(let jsonOutput):
     print(result.output)
     exit(result.passed ? 0 : 1)
 
+case .agentGovernanceVerify(let jsonOutput):
+    let repoRoot = ApexCLIRouter.resolveRepositoryRoot()
+    let logPath = ProcessInfo.processInfo.environment["APEX_GOVERNANCE_VERIFY_LOG"] ?? repoRoot.appendingPathComponent("runs/issue181/live-verify-round11.log").path
+    let result = await AgentGovernanceLiveVerifier.runVerification(logPath: logPath, jsonOutput: jsonOutput)
+    print(result.output)
+    exit(result.passed ? 0 : 1)
+
 case .proactiveVerify(let jsonOutput):
     let result = await ProactiveInitiativeLiveVerifier.runVerification(jsonOutput: jsonOutput)
     print(result.output)
@@ -165,6 +172,6 @@ case .traceReplay, .tracesList:
     }
     exit(1)
 
-case .launchGUI, .help, .version, .doctor, .diagnostics, .skillsList, .skillsValidate, .skillsShow, .routinesList, .completions, .man, .audit, .sbom, .changelog, .releaseCheck, .provenance, .sarif, .selfTest, .traces, .policy, .approvals:
+case .launchGUI, .help, .version, .doctor, .diagnostics, .skillsList, .skillsValidate, .skillsShow, .routinesList, .completions, .man, .audit, .sbom, .changelog, .releaseCheck, .provenance, .sarif, .selfTest, .traces, .policy, .approvals, .governance, .governanceSetLimit:
     ApexAgentApp.main()
 }

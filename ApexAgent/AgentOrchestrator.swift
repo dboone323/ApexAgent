@@ -197,7 +197,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         reasoningLevel: ContextOptions.ReasoningLevel? = nil,
         maxResponseTokens: Int? = nil,
         history: Transcript? = nil
-    ) -> LanguageModelSession {
+    ) -> LanguageModelSession? {
         sessionForAgent(
             agent: agent,
             preference: preference,
@@ -221,7 +221,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         maxResponseTokens: Int? = nil,
         history: Transcript? = nil,
         prompt: String
-    ) -> LanguageModelSession {
+    ) -> LanguageModelSession? {
         func makeSession<M: LanguageModel>(_ model: M) -> LanguageModelSession {
             let effectiveReasoning = reasoningLevel ?? configuredReasoningLevel
             let effectiveMaxTokens = maxResponseTokens ?? configuredMaxResponseTokens
@@ -250,19 +250,30 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             }
         }
 
-        let model = sessionCoordinator.resolveModel(
+        guard let model = sessionCoordinator.resolveModel(
             preference: preference,
             prompt: prompt,
             instructions: instructions,
             tools: allowedTools,
             multiAgentModeEnabled: multiAgentModeEnabled
-        )
+        ) ?? sessionCoordinator.resolveModel(preference: .localSystem) else {
+            return nil
+        }
         return makeSession(model)
     }
+
+    #if DEBUG
+    nonisolated(unsafe) static var pccAvailabilityOverride: Bool? = nil
+    #endif
 
     /// Check if Private Cloud Compute is available by verifying the process has the required entitlement.
     /// Returns false when running in CLI/test environments without code signing.
     nonisolated static func isPrivateCloudComputeAvailable() -> Bool {
+        #if DEBUG
+        if let override = pccAvailabilityOverride {
+            return override
+        }
+        #endif
         let task = SecTaskCreateFromSelf(nil)
         guard let task else { return false }
         let value = SecTaskCopyValueForEntitlement(task, "com.apple.developer.private-cloud-compute" as CFString, nil)
@@ -328,6 +339,21 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
 
     func runSubAgent(id: SubAgent.ID, type: AgentType, context: String) async {
         guard var agent = subAgents[id] else { return }
+
+        // Agent Governance Check (#181): spend limits, blocked status
+        let govCheck = AgentGovernanceManager.shared.evaluateExecution(
+            agentId: type.rawValue,
+            estimatedCost: 0.0
+        )
+        if !govCheck.allowed {
+            agent.status = .failed
+            agent.error = govCheck.refusalReason
+            agent.result = govCheck.refusalReason
+            agent.lastActivity = Date()
+            subAgents[id] = agent
+            return
+        }
+
         agent.status = .running
         agent.lastActivity = Date()
         defer {
@@ -716,7 +742,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             instructions: agentInstructions,
             tools: [],
             multiAgentModeEnabled: multiAgentModeEnabled
-        )
+        ) ?? localSystemModel()
     }
 
     /// Returns the on-device system language model. Callers are responsible for
@@ -1566,6 +1592,31 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         bot: BotProfile? = nil,
         agentIdentity: AgentIdentity? = nil
     ) async throws -> String {
+        let effectiveAgentId: String = {
+            if let identity = agentIdentity {
+                switch identity {
+                case .archetype(let type): return type.rawValue.lowercased()
+                case .bot(_, let name): return name.lowercased()
+                case .orchestrator: return "supervisor"
+                case .custom(let s): return s.lowercased()
+                default: return identity.displayName.lowercased()
+                }
+            }
+            return "supervisor"
+        }()
+
+        // Enforce governance status directly on executeToolByName (#181):
+        // A blocked agent cannot execute any tool (including unconfirmed tools like read_file)
+        if AgentGovernanceManager.shared.isAgentBlocked(id: effectiveAgentId) {
+            let err = NSError(
+                domain: "AgentSecurity",
+                code: 403,
+                userInfo: [NSLocalizedDescriptionKey: "Tool '\(name)' execution refused: Agent '\(effectiveAgentId)' is blocked by governance policy."]
+            )
+            logToolEnd(name: name, result: "Denied: Agent '\(effectiveAgentId)' is blocked", status: .denied)
+            throw err
+        }
+
         // Mandatory confirmation gate (gap #5): ensures MLX/Ollama engines
         // — which call orchestrator.executeToolByName directly — are subject
         // to the same confirmation gate as NativeAppleEngine's tool loop.
@@ -1579,7 +1630,8 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             let approved = await requestConfirmation(
                 toolName: name,
                 arguments: jsonArguments,
-                riskDescription: "Risk: \(riskLevel)"
+                riskDescription: "Risk: \(riskLevel)",
+                agentId: effectiveAgentId
             )
             if !approved {
                 let err = NSError(
@@ -1620,6 +1672,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 status: "success",
                 durationMs: ms
             )
+            if name == "delegate_task" {
+                AgentGovernanceManager.shared.recordWorkCompleted(
+                    agentId: effectiveAgentId,
+                    tasksDone: 1
+                )
+            }
             return cleanResult
         } catch {
             let duration = ContinuousClock.now - startClock
@@ -1832,8 +1890,46 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         filePath: String? = nil,
         command: String? = nil,
         directory: String? = nil,
-        allowlist: ApprovalAllowlist = .shared
+        allowlist: ApprovalAllowlist = .shared,
+        agentId: String = "supervisor"
     ) async -> Bool {
+        let (extractedCmd, extractedDir) = Self.extractCommandAndDirectory(
+            toolName: toolName,
+            arguments: arguments,
+            explicitCommand: command,
+            explicitDirectory: directory,
+            fallbackDirectory: currentWorkspacePath.isEmpty ? NSHomeDirectory() : currentWorkspacePath
+        )
+
+        // Agent Governance risk check (#181): A blocked agent gets NO tool approvals before any approval path
+        let govVerdict = AgentGovernanceManager.shared.checkActionRisk(
+            agentId: agentId,
+            toolName: toolName,
+            command: extractedCmd,
+            arguments: arguments,
+            directory: extractedDir,
+            workspacePath: currentWorkspacePath,
+            allowlist: allowlist
+        )
+
+        // If governance policy disallows action (e.g. agent blocked or pending approval), refuse immediately
+        if !govVerdict.allowed {
+            await AgentAuditLog.shared.recordDecision(
+                toolName: toolName,
+                arguments: arguments,
+                approved: false,
+                source: .governanceBlock,
+                rule: govVerdict.riskCategory ?? "agent-blocked"
+            )
+            RunTraceManager.shared.recordApproval(
+                toolName: toolName,
+                approved: false,
+                source: .governanceBlock,
+                rule: govVerdict.riskCategory ?? "agent-blocked"
+            )
+            return false
+        }
+
         // H4: the old runtime heuristics (process name contains "xctest",
         // APEX_TEST_MODE, XCTestConfigurationFilePath, argv containing
         // "test") let launch-environment influence disable ALL human
@@ -1855,14 +1951,6 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
         }
         #endif
 
-        let (extractedCmd, extractedDir) = Self.extractCommandAndDirectory(
-            toolName: toolName,
-            arguments: arguments,
-            explicitCommand: command,
-            explicitDirectory: directory,
-            fallbackDirectory: currentWorkspacePath.isEmpty ? NSHomeDirectory() : currentWorkspacePath
-        )
-
         // Low-risk auto-review step (Issue #105)
         let autoReview = ApprovalAutoReview.review(
             toolName: toolName,
@@ -1873,7 +1961,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
             allowlist: allowlist
         )
 
-        if autoReview.shouldAutoApprove {
+        if autoReview.shouldAutoApprove && !govVerdict.requiresHumanApproval {
             let decisionSource: ApprovalVerdictSource = (autoReview.assessment.category == .allowlisted) ? .allowlist : .autoReview
             await AgentAuditLog.shared.recordDecision(
                 toolName: toolName,
@@ -1915,7 +2003,7 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 isContainerSandboxed: isContainer
             )
         }
-        if verdict.approve != nil {
+        if verdict.approve != nil && !govVerdict.requiresHumanApproval {
             await AgentAuditLog.shared.recordDecision(
                 toolName: toolName, arguments: arguments, approved: true,
                 source: verdict.source, rule: verdict.rule)

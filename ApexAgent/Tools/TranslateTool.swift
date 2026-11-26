@@ -256,13 +256,15 @@ struct TranslateTool: Tool {
     private func performOrchestratedTranslation(text: String, from: String, to: String) async throws -> String {
         // Use the native Foundation Models language engine to perform translation
         let prompt = "Translate the following text from \(from) to \(to). Provide only the direct translation with no commentary:\n\n\(text)"
-        let session = await orchestrator.orchestrator.sessionForAgent(
+        guard let session = await orchestrator.orchestrator.sessionForAgent(
             agent: AgentRegistry.shared.resolve(name: "developer") ?? RegisteredAgent(name: "developer", systemPrompt: "You are a translator.", allowedTools: []),
             preference: .localSystem,
             instructions: "You are a professional translator. Translate accurately and return only the translated text.",
             allowedTools: [],
             toolCallingMode: .disallowed
-        )
+        ) else {
+            return "ERROR: Unable to resolve model session for translation."
+        }
         let response = try await session.respond(to: Prompt(prompt))
         return response.content.trimmingCharacters(in: .whitespacesAndNewlines)
     }

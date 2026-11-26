@@ -66,6 +66,9 @@ public enum ApexCLICommand: Sendable, Equatable {
     case modelRetirementVerify(jsonOutput: Bool)
     case proactiveVerify(jsonOutput: Bool)
     case personalContextVerify(jsonOutput: Bool)
+    case governance(agentId: String?, jsonOutput: Bool)
+    case governanceSetLimit(scope: String, limit: Double, jsonOutput: Bool)
+    case agentGovernanceVerify(jsonOutput: Bool)
     case approvals(subcommandArgs: [String], jsonOutput: Bool)
     case daemon
     case spaceCLI(subcommandArgs: [String])
@@ -413,6 +416,57 @@ public enum ApexCLIRouter {
         case "approvals", "--approvals":
             let rest = Array(remaining.dropFirst())
             return ParsedCLIInvocation(command: .approvals(subcommandArgs: rest, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
+        case "governance", "--governance":
+            let rest = Array(remaining.dropFirst())
+            if let sub = rest.first, sub == "set-limit" || sub == "set_limit" {
+                var scope = "global"
+                var rawLimitString: String? = nil
+                var idx = 1
+                while idx < rest.count {
+                    let arg = rest[idx]
+                    if arg == "--scope" {
+                        guard idx + 1 < rest.count else {
+                            throw ApexCLIError.missingOptionValue(flag: "--scope")
+                        }
+                        scope = rest[idx + 1]
+                        idx += 2
+                    } else if arg == "--limit" || arg == "--cap" {
+                        guard idx + 1 < rest.count else {
+                            throw ApexCLIError.missingOptionValue(flag: arg)
+                        }
+                        rawLimitString = rest[idx + 1]
+                        idx += 2
+                    } else if idx == 1 && !arg.hasPrefix("-") {
+                        scope = arg
+                        idx += 1
+                        if idx < rest.count && !rest[idx].hasPrefix("-") {
+                            rawLimitString = rest[idx]
+                            idx += 1
+                        }
+                    } else {
+                        idx += 1
+                    }
+                }
+                guard let rawLimit = rawLimitString else {
+                    throw ApexCLIError.missingSubcommandArgument(
+                        subcommand: "governance set-limit",
+                        expected: "a spend limit value (--limit <amount> or positional <amount>)"
+                    )
+                }
+                guard let limitVal = Double(rawLimit), limitVal.isFinite else {
+                    throw ApexCLIError.missingSubcommandArgument(
+                        subcommand: "governance set-limit",
+                        expected: "a valid numeric spend limit, got '\(rawLimit)'"
+                    )
+                }
+                return ParsedCLIInvocation(command: .governanceSetLimit(scope: scope, limit: limitVal, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+            }
+            let targetId = rest.first
+            return ParsedCLIInvocation(command: .governance(agentId: targetId, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
+
+        case "governance-verify", "--governance-verify", "agent-governance-verify", "--agent-governance-verify":
+            return ParsedCLIInvocation(command: .agentGovernanceVerify(jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
 
         default:
             throw ApexCLIError.unknownSubcommand(first)
@@ -1016,12 +1070,55 @@ RoutineManager.shared.loadRoutines()
             }
             return (result.output, result.passed ? 0 : 1)
 
+        case .governance(let agentId, let jsonOutput):
+            if jsonOutput {
+                let json = AgentGovernanceManager.shared.governanceSummaryJSON(for: agentId)
+                return (json, 0)
+            } else {
+                let summary = AgentGovernanceManager.shared.governanceSummaryView(for: agentId)
+                return (summary, 0)
+            }
+
+        case .governanceSetLimit(let scope, let limit, let jsonOutput):
+            let success = AgentGovernanceManager.shared.setSpendLimit(
+                scopeKey: scope,
+                limit: limit,
+                reason: "CLI set-limit",
+                actor: "user"
+            )
+            if !success {
+                let errorMsg = "ERROR: Invalid spend limit '\(limit)'. Limit must be a non-negative finite number (>= $0.00)."
+                if jsonOutput {
+                    let dict: [String: Any] = [
+                        "status": "error",
+                        "error": errorMsg,
+                        "scope": scope,
+                        "limit": limit
+                    ]
+                    let data = (try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys])) ?? Data()
+                    return (String(data: data, encoding: .utf8) ?? "{}", 1)
+                } else {
+                    return (errorMsg, 1)
+                }
+            }
+            if jsonOutput {
+                let dict: [String: Any] = [
+                    "status": "success",
+                    "scope": scope,
+                    "limit": limit
+                ]
+                let data = (try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys])) ?? Data()
+                return (String(data: data, encoding: .utf8) ?? "{}", 0)
+            } else {
+                return ("Spend limit for '\(scope)' updated to $\(String(format: "%.2f", limit)).", 0)
+            }
+
         default:
             return nil
         }
     }
 
-    private static func resolveRepositoryRoot() -> URL {
+    public static func resolveRepositoryRoot() -> URL {
         let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
         if FileManager.default.fileExists(atPath: cwd.appendingPathComponent("Package.resolved").path) {
             return cwd

@@ -93,6 +93,19 @@ public final class ProviderFallbackExecutor {
                         tokenCounts: capturedTokenCounts,
                         durationMs: elapsedMs
                     )
+
+                    // Record actual spend at execution time for billed model calls (#181 Round 11)
+                    let totalTokens = (capturedTokenCounts?.promptTokens ?? 0) + (capturedTokenCounts?.completionTokens ?? 0)
+                    let actualCost = ModelRouter.shared.costFor(provider: candidate.provider, totalTokens: totalTokens)
+                    if actualCost > 0.0 || totalTokens > 0 {
+                        AgentGovernanceManager.shared.recordSpend(
+                            agentId: bot?.name.lowercased() ?? "supervisor",
+                            modelId: candidate.modelName ?? candidate.provider.displayName,
+                            amount: actualCost,
+                            tokens: totalTokens
+                        )
+                    }
+
                     Self.logger.info(
                         "Provider attempt succeeded: \(candidate.provider.displayName, privacy: .public) in \(elapsedMs, format: .fixed(precision: 1)) ms"
                     )

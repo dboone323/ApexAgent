@@ -1,6 +1,7 @@
 import Foundation
 import FoundationModels
 import SharedKit
+import os
 
 // MARK: - Agent Session Coordinator
 //
@@ -10,6 +11,7 @@ import SharedKit
 @MainActor
 final class AgentSessionCoordinator {
     static let shared = AgentSessionCoordinator()
+    private static let logger = Logger(subsystem: "com.apexagent.ApexAgent", category: "AgentSessionCoordinator")
 
     static let contextCompactionThreshold: Int = 12000
     static let contextPruningMaxChars: Int = 500
@@ -83,44 +85,77 @@ final class AgentSessionCoordinator {
         return Transcript(entries: transcriptEntries)
     }
 
+    func resolveModelResult(
+        preference: AgentModelPreference = .autoPicker,
+        prompt: String = "",
+        instructions: String = "",
+        tools: [String] = [],
+        multiAgentModeEnabled: Bool = false,
+        preferredModelId: String? = nil,
+        approval: PaidEscalationApproval? = nil,
+        spaceId: UUID? = nil
+    ) -> RoutingResolutionResult {
+        let taskKind: ModelTaskKind = tools.contains(where: { $0.contains("code") || $0.contains("file") }) ? .coding : .reasoning
+        let effectivePreferredId: String? = preferredModelId ?? {
+            switch preference {
+            case .localSystem: return "appleOnDevice"
+            case .privateCloud:
+                if AgentOrchestrator.isPrivateCloudComputeAvailable() {
+                    return "applePCC"
+                } else {
+                    Self.logger.info("Private Cloud Compute unavailable; falling back to appleOnDevice")
+                    return "appleOnDevice"
+                }
+            case .cloudGemini: return "cloudGemini"
+            case .localOllama: return "localOllama"
+            case .localMLX: return "localMLX"
+            case .autoPicker: return nil
+            case .hybrid:
+                if multiAgentModeEnabled {
+                    return "appleOnDevice"
+                } else if AgentOrchestrator.isPrivateCloudComputeAvailable() {
+                    return "applePCC"
+                } else {
+                    return "appleOnDevice"
+                }
+            }
+        }()
+
+        return ModelRouter.shared.route(
+            taskKind: taskKind,
+            spaceId: spaceId,
+            hasAttachments: false,
+            preferredModelId: effectivePreferredId,
+            approval: approval
+        )
+    }
+
     func resolveModel(
         preference: AgentModelPreference,
         prompt: String = "",
         instructions: String = "",
         tools: [String] = [],
-        multiAgentModeEnabled: Bool = false
-    ) -> any LanguageModel {
-        switch preference {
-        case .autoPicker:
-            let (resolved, _) = ModelRegistry.resolveProviderForTask(
-                preferred: .autoPicker,
-                prompt: prompt,
-                instructions: instructions,
-                tools: tools
-            )
-            return ModelRegistry.model(for: .explicit(resolved))
-        case .localSystem:
-            return ModelRegistry.model(for: .explicit(.appleOnDevice))
-        case .privateCloud:
-            if AgentOrchestrator.isPrivateCloudComputeAvailable() {
-                return ModelRegistry.model(for: .explicit(.applePCC))
-            } else {
-                return ModelRegistry.model(for: .explicit(.appleOnDevice))
-            }
-        case .cloudGemini:
-            return ModelRegistry.model(for: .explicit(.cloudGemini))
-        case .localOllama:
-            return ModelRegistry.model(for: .explicit(.localOllama))
-        case .localMLX:
-            return ModelRegistry.model(for: .explicit(.localMLX))
-        case .hybrid:
-            if multiAgentModeEnabled {
-                return ModelRegistry.model(for: .explicit(.appleOnDevice))
-            } else if AgentOrchestrator.isPrivateCloudComputeAvailable() {
-                return ModelRegistry.model(for: .explicit(.applePCC))
-            } else {
-                return ModelRegistry.model(for: .explicit(.appleOnDevice))
-            }
+        multiAgentModeEnabled: Bool = false,
+        preferredModelId: String? = nil,
+        approval: PaidEscalationApproval? = nil,
+        spaceId: UUID? = nil
+    ) -> (any LanguageModel)? {
+        let routing = resolveModelResult(
+            preference: preference,
+            prompt: prompt,
+            instructions: instructions,
+            tools: tools,
+            multiAgentModeEnabled: multiAgentModeEnabled,
+            preferredModelId: preferredModelId,
+            approval: approval,
+            spaceId: spaceId
+        )
+
+        switch routing {
+        case .routed(let decision):
+            return ModelRegistry.model(for: .explicit(decision.selectedProvider))
+        case .paidEscalationRefused, .fallbackExhausted:
+            return nil
         }
     }
 

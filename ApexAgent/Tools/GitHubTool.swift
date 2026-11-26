@@ -228,7 +228,12 @@ struct GitHubTool: Tool {
                 throw NSError(domain: "GitHubTool", code: 3, userInfo: [NSLocalizedDescriptionKey: "merge requires repo and number"])
             }
             let cmd = [ghPath, "pr", "merge", String(number), "--repo", repo, "--auto", "--delete-branch"]
-            return try await runCommand(ghPath, cmd)
+            let result = try await runCommand(ghPath, cmd)
+            AgentGovernanceManager.shared.recordWorkCompleted(
+                agentId: "supervisor",
+                prsMerged: 1
+            )
+            return result
         case "checkout":
             guard let repo = args.repo, let number = args.number else {
                 throw NSError(domain: "GitHubTool", code: 3, userInfo: [NSLocalizedDescriptionKey: "checkout requires repo and number"])

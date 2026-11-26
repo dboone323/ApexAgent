@@ -21,5 +21,5 @@ protocol OrchestratorProvider: Sendable {
         reasoningLevel: ContextOptions.ReasoningLevel?,
         maxResponseTokens: Int?,
         history: Transcript?
-    ) -> LanguageModelSession
+    ) -> LanguageModelSession?
 }

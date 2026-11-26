@@ -6,9 +6,11 @@ import AppKit
 
 struct DelegateTaskTool: Tool {
     let orchestrator: OrchestratorProvider
+    let governance: AgentGovernanceManager
 
-    init(orchestrator: OrchestratorProvider) {
+    init(orchestrator: OrchestratorProvider, governance: AgentGovernanceManager = .shared) {
         self.orchestrator = orchestrator
+        self.governance = governance
     }
 
     let name = "delegate_task"
@@ -36,6 +38,16 @@ struct DelegateTaskTool: Tool {
                 let agentName = arguments.agentType.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
                 guard let agent = AgentRegistry.shared.resolve(name: agentName) else {
                     return "ERROR: Invalid agentType '\(arguments.agentType)'."
+                }
+
+                // Check governance status before creating sub-agent session or recording delegation (#181)
+                let govResult = governance.evaluateExecution(
+                    agentId: agent.name.lowercased(),
+                    estimatedCost: 0.0
+                )
+                if !govResult.allowed {
+                    let refusal = govResult.refusalReason ?? "Agent '\(agent.name)' is blocked by governance policy. No execution allowed."
+                    return "Refused: \(refusal)"
                 }
 
                 let (allowed, limitMessage) = await MainActor.run {
@@ -76,6 +88,16 @@ struct DelegateTaskTool: Tool {
                     return (chatMsg.id, session)
                 }
 
+                guard let subAgentSession else {
+                    let refusal = governance.evaluateExecution(agentId: "supervisor", estimatedCost: 0.0).refusalReason
+                        ?? "Model routing refused: agent 'Supervisor' is blocked by governance policy. No model session available."
+                    await MainActor.run {
+                        orchestrator.updateMessage(id: messageId, content: "Refused: \(refusal)")
+                        orchestrator.updateMessage(id: messageId, isStreaming: false)
+                    }
+                    return "Refused: \(refusal)"
+                }
+
                 // 2. Generate the sub-agent response with AgentRequestRouter resilience & fallback
                 let agentType = AgentType(rawValue: agent.name) ?? .developer
                 let request = AgentRequest(
@@ -114,12 +136,20 @@ struct DelegateTaskTool: Tool {
                 }
 
                 // 4. Record subagent turn and handoff
+                let isCompleted = !finalContent.isEmpty && terminalState.isSuccess
                 let handoff = TaskResult(
                     taskId: UUID().uuidString,
-                    status: finalContent.isEmpty ? "failed" : "completed",
+                    status: isCompleted ? "completed" : "failed",
                     resultSummary: finalContent.prefix(2000).description
                 )
                 await AgentRegistry.shared.recordHandoff(handoff)
+
+                if isCompleted {
+                    AgentGovernanceManager.shared.recordWorkCompleted(
+                        agentId: agent.name.lowercased(),
+                        tasksDone: 1
+                    )
+                }
 
                 let returnSummary = finalContent.count > 2500 ? String(finalContent.prefix(2500)) + "\n[... sub-agent report truncated ...]" : finalContent
                 return returnSummary
