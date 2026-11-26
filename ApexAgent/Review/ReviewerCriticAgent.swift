@@ -324,6 +324,12 @@ public final class ReviewerAgent: Sendable {
                 findingsCount: report.findings.count,
                 findingsSummary: report.summary
             )
+            if report.verdict == .pass {
+                AgentGovernanceManager.shared.recordWorkCompleted(
+                    agentId: "reviewer",
+                    verifiedRuns: 1
+                )
+            }
         }
 
         return report

@@ -1,6 +1,7 @@
 import Foundation
 import FoundationModels
 import SharedKit
+import os
 
 // MARK: - Agent Session Coordinator
 //
@@ -10,6 +11,7 @@ import SharedKit
 @MainActor
 final class AgentSessionCoordinator {
     static let shared = AgentSessionCoordinator()
+    private static let logger = Logger(subsystem: "com.apexagent.ApexAgent", category: "AgentSessionCoordinator")
 
     static let contextCompactionThreshold: Int = 12000
     static let contextPruningMaxChars: Int = 500
@@ -97,7 +99,13 @@ final class AgentSessionCoordinator {
         let effectivePreferredId: String? = preferredModelId ?? {
             switch preference {
             case .localSystem: return "appleOnDevice"
-            case .privateCloud: return "applePCC"
+            case .privateCloud:
+                if AgentOrchestrator.isPrivateCloudComputeAvailable() {
+                    return "applePCC"
+                } else {
+                    Self.logger.info("Private Cloud Compute unavailable; falling back to appleOnDevice")
+                    return "appleOnDevice"
+                }
             case .cloudGemini: return "cloudGemini"
             case .localOllama: return "localOllama"
             case .localMLX: return "localMLX"

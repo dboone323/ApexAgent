@@ -136,12 +136,20 @@ struct DelegateTaskTool: Tool {
                 }
 
                 // 4. Record subagent turn and handoff
+                let isCompleted = !finalContent.isEmpty && terminalState.isSuccess
                 let handoff = TaskResult(
                     taskId: UUID().uuidString,
-                    status: finalContent.isEmpty ? "failed" : "completed",
+                    status: isCompleted ? "completed" : "failed",
                     resultSummary: finalContent.prefix(2000).description
                 )
                 await AgentRegistry.shared.recordHandoff(handoff)
+
+                if isCompleted {
+                    AgentGovernanceManager.shared.recordWorkCompleted(
+                        agentId: agent.name.lowercased(),
+                        tasksDone: 1
+                    )
+                }
 
                 let returnSummary = finalContent.count > 2500 ? String(finalContent.prefix(2500)) + "\n[... sub-agent report truncated ...]" : finalContent
                 return returnSummary

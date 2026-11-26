@@ -791,6 +791,58 @@ public final class AgentGovernanceManager: @unchecked Sendable {
         return (isAlert: triggeredAlert != nil, alertMessage: triggeredAlert)
     }
 
+    /// Reconciles or adjusts recorded spend for an agent/scope/model.
+    /// Supports credit/reversals (negative amountDelta) and balance reconciliations based on actual billed costs.
+    @discardableResult
+    public func adjustSpend(
+        agentId: String,
+        spaceId: UUID? = nil,
+        modelId: String? = nil,
+        userId: String? = "default",
+        amountDelta: Double,
+        tokenDelta: Int = 0
+    ) -> (isAlert: Bool, alertMessage: String?) {
+        lock.lock()
+        defer { lock.unlock() }
+
+        let userKey = "user:\(userId ?? "default")"
+        let candidateKeys = [
+            "agent:\(agentId)",
+            spaceId != nil ? "space:\(spaceId!.uuidString)" : nil,
+            modelId != nil ? "model:\(modelId!)" : nil,
+            userKey,
+            "global"
+        ].compactMap { $0 }
+
+        var triggeredAlert: String?
+
+        for key in candidateKeys {
+            if var limit = spendLimits[key] {
+                limit.currentSpend = max(0.0, limit.currentSpend + amountDelta)
+                spendLimits[key] = limit
+
+                if limit.isApproachingLimit {
+                    triggeredAlert = "Notice: Scope '\(key)' spend reached \(Int(limit.utilizationPercent))% of cap ($\(String(format: "%.2f", limit.currentSpend))/$\(String(format: "%.2f", limit.spendLimit)))."
+                }
+            }
+        }
+
+        recordValueAccumulationLocked(
+            agentId: agentId,
+            spaceId: spaceId,
+            modelId: modelId,
+            tasks: 0,
+            prs: 0,
+            verified: 0,
+            tokens: tokenDelta,
+            cost: amountDelta
+        )
+
+        persistLocked()
+
+        return (isAlert: triggeredAlert != nil, alertMessage: triggeredAlert)
+    }
+
     // MARK: - Risky Action Governance
 
     /// Evaluates whether an action (tool invocation or shell command content) mutates workspace state by class.

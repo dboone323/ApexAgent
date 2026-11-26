@@ -888,17 +888,26 @@ public final class ModelRouter: @unchecked Sendable {
             tokenCounts: nil,
             durationMs: decision.latencyMs
         )
+    }
 
-        // Agent governance spend recording (#181):
-        if decision.estimatedCost > 0.0 {
-            AgentGovernanceManager.shared.recordSpend(
-                agentId: "supervisor",
-                spaceId: decision.spaceId,
-                modelId: decision.selectedModelId,
-                amount: decision.estimatedCost,
-                tokens: 1000
-            )
+    /// Computes actual cost for an executed model given real total tokens consumed.
+    public func costFor(modelId: String, totalTokens: Int) -> Double {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let model = models[modelId] ?? models.values.first(where: { $0.id == modelId || $0.displayName == modelId || $0.provider.displayName == modelId }) else {
+            return 0.0
         }
+        return model.isFree ? 0.0 : model.estimatedCostPer1kTokens * (Double(totalTokens) / 1000.0)
+    }
+
+    /// Computes actual cost for an executed provider given real total tokens consumed.
+    public func costFor(provider: ModelProvider, totalTokens: Int) -> Double {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let model = models.values.first(where: { $0.provider == provider }) else {
+            return 0.0
+        }
+        return model.isFree ? 0.0 : model.estimatedCostPer1kTokens * (Double(totalTokens) / 1000.0)
     }
 
     public func recentDecisions() -> [RoutingDecision] {

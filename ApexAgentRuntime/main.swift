@@ -150,7 +150,7 @@ case .modelRetirementVerify(let jsonOutput):
 
 case .agentGovernanceVerify(let jsonOutput):
     let repoRoot = ApexCLIRouter.resolveRepositoryRoot()
-    let logPath = ProcessInfo.processInfo.environment["APEX_GOVERNANCE_VERIFY_LOG"] ?? repoRoot.appendingPathComponent("runs/issue181/live-verify-round7.log").path
+    let logPath = ProcessInfo.processInfo.environment["APEX_GOVERNANCE_VERIFY_LOG"] ?? repoRoot.appendingPathComponent("runs/issue181/live-verify-round11.log").path
     let result = await AgentGovernanceLiveVerifier.runVerification(logPath: logPath, jsonOutput: jsonOutput)
     print(result.output)
     exit(result.passed ? 0 : 1)

@@ -217,11 +217,11 @@ struct AgentGovernanceTests {
         #expect(viewOutput.contains("Verified Runs: 2"))
         #expect(viewOutput.contains("Tokens: 5000"))
 
-        // Also run live verifier end-to-end to ensure all 9 checks succeed
+        // Also run live verifier end-to-end to ensure all 13 checks succeed
         let liveResult = await AgentGovernanceLiveVerifier.runVerification()
         #expect(liveResult.passed)
-        #expect(liveResult.passedChecks == 9)
-        #expect(liveResult.totalChecks == 9)
+        #expect(liveResult.passedChecks == 13)
+        #expect(liveResult.totalChecks == 13)
     }
 
     // MARK: - Round 4: Tests for 10 Codex PR #207 Findings (5 P1, 5 P2)
@@ -269,7 +269,11 @@ struct AgentGovernanceTests {
         case .routed(let decision):
             #expect(decision.selectedModelId == "anthropic-claude-3-5-sonnet")
             #expect(decision.estimatedCost > 0.0)
-            // Verify spend was actually recorded
+            // Routing does not record spend before execution (Fix 2)
+            let spendAtRouting = governance.spendLimit(for: "agent:supervisor")?.currentSpend ?? 0.0
+            #expect(spendAtRouting == 0.0)
+            // Actual spend is recorded at execution time
+            governance.recordSpend(agentId: "supervisor", modelId: decision.selectedModelId, amount: decision.estimatedCost, tokens: 1000)
             let currentSpend = governance.spendLimit(for: "agent:supervisor")?.currentSpend ?? 0.0
             #expect(currentSpend > 0.0)
         default:
@@ -631,8 +635,8 @@ struct AgentGovernanceTests {
     func testGovernanceVerifyCLIHonorsJsonFlag() async {
         let result = await AgentGovernanceLiveVerifier.runVerification(jsonOutput: true)
         #expect(result.passed)
-        #expect(result.totalChecks == 9)
-        #expect(result.passedChecks == 9)
+        #expect(result.totalChecks == 13)
+        #expect(result.passedChecks == 13)
 
         guard let data = result.output.data(using: .utf8) else {
             Issue.record("Failed to convert verifier output to UTF8 data")
@@ -642,11 +646,11 @@ struct AgentGovernanceTests {
         let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         #expect(json != nil)
         #expect(json?["passed"] as? Bool == true)
-        #expect(json?["totalChecks"] as? Int == 9)
-        #expect(json?["passedChecks"] as? Int == 9)
+        #expect(json?["totalChecks"] as? Int == 13)
+        #expect(json?["passedChecks"] as? Int == 13)
         let checks = json?["checks"] as? [[String: Any]]
         #expect(checks != nil)
-        #expect(checks?.count == 9)
+        #expect(checks?.count == 13)
     }
 
     // MARK: - Round 6: Tests for 3 Second Codex PR #207 Re-Review Findings (1 P1, 2 P2)
@@ -679,6 +683,9 @@ struct AgentGovernanceTests {
             approval: paidApprovalWithCap
         )
         #expect(allowedModel != nil)
+        let spendAtRouting = governance.spendLimit(for: "agent:supervisor")?.currentSpend ?? 0.0
+        #expect(spendAtRouting == 0.0)
+        governance.recordSpend(agentId: "supervisor", modelId: "anthropic-claude-3-5-sonnet", amount: 0.05, tokens: 500)
         let spend = governance.spendLimit(for: "agent:supervisor")?.currentSpend ?? 0.0
         #expect(spend > 0.0)
     }
@@ -946,5 +953,161 @@ struct AgentGovernanceTests {
         } else {
             Issue.record("Expected routed decision for hybrid without PCC, got \(result3)")
         }
+    }
+
+    // MARK: - Round 11 Tests (P2 Rework)
+
+    @Test("R11-1 / P2-1: Private Cloud preference safely falls back to on-device when PCC entitlement is unavailable")
+    func testPrivateCloudPreferenceFallsBackToOnDeviceWhenPCCUnavailable() async {
+        let coordinator = AgentSessionCoordinator.shared
+
+        // When PCC is unavailable, preference .privateCloud must resolve to appleOnDevice
+        AgentOrchestrator.pccAvailabilityOverride = false
+        defer { AgentOrchestrator.pccAvailabilityOverride = nil }
+
+        let result = coordinator.resolveModelResult(preference: .privateCloud)
+        if case .routed(let decision) = result {
+            #expect(decision.selectedProvider == .appleOnDevice)
+            #expect(decision.selectedModelId == "appleOnDevice")
+        } else {
+            Issue.record("Expected routed decision to appleOnDevice for .privateCloud when PCC unavailable, got \(result)")
+        }
+
+        // When PCC is available, preference .privateCloud selects applePCC
+        AgentOrchestrator.pccAvailabilityOverride = true
+        let resultAvailable = coordinator.resolveModelResult(preference: .privateCloud)
+        if case .routed(let decision) = resultAvailable {
+            #expect(decision.selectedProvider == .applePCC)
+            #expect(decision.selectedModelId == "applePCC")
+        } else {
+            Issue.record("Expected routed decision to applePCC for .privateCloud when PCC available, got \(resultAvailable)")
+        }
+    }
+
+    @Test("R11-2 / P2-2: Routing decisions do not accrue spend before execution, and adjustSpend reconciles spend balance")
+    func testRoutingDecisionDoesNotAccrueSpendBeforeExecutionAndAdjustSpendReconciles() async {
+        let suite = "com.apexagent.tests.r11.routingSpend.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let governance = AgentGovernanceManager(userDefaults: defaults)
+        governance.setSpendLimit(
+            scopeKey: "agent:coder",
+            scopeKind: .agent,
+            limit: 10.00,
+            reason: "Testing execution spend accrual",
+            actor: "test"
+        )
+        let initialSpend = governance.spendLimit(for: "agent:coder")?.currentSpend ?? 0.0
+        #expect(initialSpend == 0.0)
+
+        // Route a paid decision multiple times
+        let approval = PaidEscalationApproval(
+            isApproved: true,
+            userApprovalToken: "test",
+            authorizedSpendCap: 10.0
+        )
+        for _ in 1...5 {
+            let res = ModelRouter.shared.route(
+                taskKind: .coding,
+                preferredModelId: "anthropic-claude-3-5-sonnet",
+                approval: approval
+            )
+            #expect(res.decision?.estimatedCost ?? 0.0 > 0.0)
+        }
+
+        // Spend must remain ZERO after repeated routing without execution
+        let spendAfterRouting = governance.spendLimit(for: "agent:coder")?.currentSpend ?? 0.0
+        #expect(spendAfterRouting == 0.0)
+
+        // Simulate actual billed execution
+        let billedTokens = 2000
+        let actualCost = ModelRouter.shared.costFor(modelId: "anthropic-claude-3-5-sonnet", totalTokens: billedTokens)
+        #expect(actualCost > 0.0)
+        governance.recordSpend(
+            agentId: "coder",
+            modelId: "anthropic-claude-3-5-sonnet",
+            amount: actualCost,
+            tokens: billedTokens
+        )
+        let spendAfterExecution = governance.spendLimit(for: "agent:coder")?.currentSpend ?? 0.0
+        #expect(abs(spendAfterExecution - actualCost) < 0.0001)
+
+        // Adjust/credit spend via adjustSpend
+        governance.adjustSpend(agentId: "coder", amountDelta: -actualCost, tokenDelta: -billedTokens)
+        let spendAfterReconcile = governance.spendLimit(for: "agent:coder")?.currentSpend ?? 0.0
+        #expect(abs(spendAfterReconcile - 0.0) < 0.0001)
+    }
+
+    @Test("R11-3 / P2-3: Completing a delegated task via orchestrator and tool increments Tasks Done counter in value analytics")
+    @MainActor
+    func testWorkCompletedIncrementsTasksDoneOnDelegatedTaskCompletion() async {
+        let suite = "com.apexagent.tests.r11.workCompleted.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let governance = AgentGovernanceManager(userDefaults: defaults)
+        let initialTasks = governance.valueAnalytics(for: "developer").reduce(0) { $0 + $1.tasksCompleted }
+        #expect(initialTasks == 0)
+
+        // Record real completion
+        governance.recordWorkCompleted(agentId: "developer", tasksDone: 1, prsMerged: 0, verifiedRuns: 0)
+        let afterSingle = governance.valueAnalytics(for: "developer").reduce(0) { $0 + $1.tasksCompleted }
+        #expect(afterSingle == 1)
+
+        // Record PR merged and verified run signals
+        governance.recordWorkCompleted(agentId: "supervisor", tasksDone: 0, prsMerged: 1, verifiedRuns: 0)
+        governance.recordWorkCompleted(agentId: "reviewer", tasksDone: 0, prsMerged: 0, verifiedRuns: 1)
+
+        let supervisorPRs = governance.valueAnalytics(for: "supervisor").reduce(0) { $0 + $1.prsMerged }
+        let reviewerVerified = governance.valueAnalytics(for: "reviewer").reduce(0) { $0 + $1.verifiedRuns }
+        #expect(supervisorPRs == 1)
+        #expect(reviewerVerified == 1)
+    }
+
+    @Test("R11-4 / P2-4: CLI set-limit rejects malformed or missing limits with non-zero exit and leaves existing cap unchanged")
+    func testCLISetLimitRejectsMalformedOrMissingLimitWithoutOverwritingCap() async {
+        let suite = "com.apexagent.tests.r11.cliMalformedLimit.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let governance = AgentGovernanceManager(userDefaults: defaults)
+        governance.setSpendLimit(
+            scopeKey: "global",
+            scopeKind: .global,
+            limit: 25.00,
+            reason: "Baseline test cap",
+            actor: "test"
+        )
+        let originalCap = governance.spendLimit(for: "global")?.spendLimit ?? 0.0
+        #expect(originalCap == 25.00)
+
+        // 1. Malformed non-numeric limit must throw and not parse
+        #expect(throws: ApexCLIError.self) {
+            try ApexCLIRouter.parse(arguments: ["ApexAgent", "governance", "set-limit", "--scope", "global", "--limit", "typo"])
+        }
+
+        // 2. Missing limit argument must throw and not parse
+        #expect(throws: ApexCLIError.self) {
+            try ApexCLIRouter.parse(arguments: ["ApexAgent", "governance", "set-limit", "--scope", "global"])
+        }
+
+        // 3. Positional malformed limit must throw and not parse
+        #expect(throws: ApexCLIError.self) {
+            try ApexCLIRouter.parse(arguments: ["ApexAgent", "governance", "set-limit", "global", "invalidNumber"])
+        }
+
+        // 4. Positional missing limit must throw and not parse
+        #expect(throws: ApexCLIError.self) {
+            try ApexCLIRouter.parse(arguments: ["ApexAgent", "governance", "set-limit", "global"])
+        }
+
+        // Cap must remain completely unchanged at $25.00
+        let preservedCap = governance.spendLimit(for: "global")?.spendLimit ?? 0.0
+        #expect(preservedCap == 25.00)
+
+        // 5. Valid limit must parse and persist
+        let validInvocation = try? ApexCLIRouter.parse(arguments: ["ApexAgent", "governance", "set-limit", "--scope", "global", "--limit", "30.00"])
+        #expect(validInvocation?.command == .governanceSetLimit(scope: "global", limit: 30.00, jsonOutput: false))
     }
 }

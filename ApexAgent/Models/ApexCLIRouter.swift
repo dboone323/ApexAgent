@@ -421,26 +421,44 @@ public enum ApexCLIRouter {
             let rest = Array(remaining.dropFirst())
             if let sub = rest.first, sub == "set-limit" || sub == "set_limit" {
                 var scope = "global"
-                var limitVal = 0.0
+                var rawLimitString: String? = nil
                 var idx = 1
                 while idx < rest.count {
                     let arg = rest[idx]
-                    if arg == "--scope" && idx + 1 < rest.count {
+                    if arg == "--scope" {
+                        guard idx + 1 < rest.count else {
+                            throw ApexCLIError.missingOptionValue(flag: "--scope")
+                        }
                         scope = rest[idx + 1]
                         idx += 2
-                    } else if (arg == "--limit" || arg == "--cap") && idx + 1 < rest.count {
-                        limitVal = Double(rest[idx + 1]) ?? 0.0
+                    } else if arg == "--limit" || arg == "--cap" {
+                        guard idx + 1 < rest.count else {
+                            throw ApexCLIError.missingOptionValue(flag: arg)
+                        }
+                        rawLimitString = rest[idx + 1]
                         idx += 2
                     } else if idx == 1 && !arg.hasPrefix("-") {
                         scope = arg
                         idx += 1
                         if idx < rest.count && !rest[idx].hasPrefix("-") {
-                            limitVal = Double(rest[idx]) ?? 0.0
+                            rawLimitString = rest[idx]
                             idx += 1
                         }
                     } else {
                         idx += 1
                     }
+                }
+                guard let rawLimit = rawLimitString else {
+                    throw ApexCLIError.missingSubcommandArgument(
+                        subcommand: "governance set-limit",
+                        expected: "a spend limit value (--limit <amount> or positional <amount>)"
+                    )
+                }
+                guard let limitVal = Double(rawLimit), limitVal.isFinite else {
+                    throw ApexCLIError.missingSubcommandArgument(
+                        subcommand: "governance set-limit",
+                        expected: "a valid numeric spend limit, got '\(rawLimit)'"
+                    )
                 }
                 return ParsedCLIInvocation(command: .governanceSetLimit(scope: scope, limit: limitVal, jsonOutput: jsonOutput), providerOverride: providerOverride, modelOverride: modelOverride, jsonOutput: jsonOutput)
             }

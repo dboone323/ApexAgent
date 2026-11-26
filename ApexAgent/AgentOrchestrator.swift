@@ -1672,6 +1672,12 @@ public final class AgentOrchestrator: OrchestratorProvider, ToolEventLogger {
                 status: "success",
                 durationMs: ms
             )
+            if name == "delegate_task" {
+                AgentGovernanceManager.shared.recordWorkCompleted(
+                    agentId: effectiveAgentId,
+                    tasksDone: 1
+                )
+            }
             return cleanResult
         } catch {
             let duration = ContinuousClock.now - startClock
