@@ -1,4 +1,5 @@
 import Foundation
+import FoundationModels
 import Testing
 import CryptoKit
 @testable import ApexAgentCore
@@ -377,7 +378,39 @@ struct TraceFirstObservabilityTests {
         #expect(event?.contextSummary == "Generate unit tests")
     }
 
-    @Test("TraceLiveVerifier end-to-end contract")
+    private static func isOllamaProviderAvailable(hostURLString: String) async -> Bool {
+        guard let baseURL = URL(string: hostURLString) else { return false }
+        let tagsURL = baseURL.appendingPathComponent("api/tags")
+        var request = URLRequest(url: tagsURL)
+        request.timeoutInterval = 2
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+                return false
+            }
+            guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let models = json["models"] as? [[String: Any]] else {
+                return false
+            }
+            return !models.isEmpty
+        } catch {
+            return false
+        }
+    }
+
+    private static func hasLiveLocalModelProvider() async -> Bool {
+        if await isOllamaProviderAvailable(hostURLString: ModelRegistry.ollamaHost()) {
+            return true
+        }
+        return SystemLanguageModel.default.availability == .available
+    }
+
+    @Test(
+        "TraceLiveVerifier end-to-end contract",
+        .enabled("no live local model provider available") {
+            await TraceFirstObservabilityTests.hasLiveLocalModelProvider()
+        }
+    )
     @MainActor
     func testTraceLiveVerifierEndToEndContract() async throws {
         let result = await TraceLiveVerifier.runVerification()
@@ -527,5 +560,11 @@ struct TraceFirstObservabilityTests {
            let loadedTrace = try? RunTraceStorage.loadTrace(from: traceURL) {
             #expect(!loadedTrace.events.contains(where: { $0.kind == .modelCall }))
         }
+    }
+
+    @Test("TraceLiveVerifier availability probe reports false for unreachable Ollama endpoint")
+    func testAvailabilityProbeReportsFalseForUnreachableProvider() async {
+        let available = await Self.isOllamaProviderAvailable(hostURLString: "http://127.0.0.1:59999")
+        #expect(available == false)
     }
 }
