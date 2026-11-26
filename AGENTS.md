@@ -77,6 +77,7 @@ All run evidence (dispatch reports, gate logs, sentinels) lives in `runs/` insid
 - **Local CI is the authority**: GitHub Actions cannot execute on this account (runs stay queued; appeal pending). The local gate (`make lint` + `make test-deep`) and pre-push hook ARE the CI.
 - **Cline free models only**: only use free models in Cline (`cline-free/` or `reflection/`). Never enable usage-based billing or add credits.
 - **Stay inside scope**: an out-of-scope find becomes a GitHub issue, not opportunistic scope creep in the current PR.
+- **HQ task-bridge handoff**: preserve `Task ID` (`SETUP-023`), `Project`, `Owner/Agent`, `Status`, `Dependency`, `Evidence`, and `Next Action` in local work notes and the HQ Task and Approval Queues log.
 
 ## Tool configuration map
 
@@ -98,3 +99,9 @@ Runs that take minutes (gates, builds, deploys) are never watched on a timer.
 2. **Blocking waits only.** A supervisor that must wait makes ONE blocking wait for the sentinel, sized to the run's expected duration (gates: ~7–10 min). Polling on a 30-second (or any short) timer across model turns is prohibited — each poll burns a full model turn to learn nothing.
 3. **Checkpointed reports.** The worker writes a checkpoint line to the task's report file at each phase boundary (RED done / implementation done / gate started / gate done with totals) and the completion section as its final action. The supervisor reads the report when the worker's turn ends — the turn ending is the completion event.
 4. **Failure reading.** If a run dies mid-phase, diagnose from the last checkpoint + the log tail. Never re-run just to watch it.
+
+## Economy Mode
+
+- Default to changed-file, checkpointed work; use the AI Workforce incremental audit tool for audit evidence and state its incomplete coverage.
+- Prefer shell/Python; local model work is optional, sequential, and capped at 16,384 context where supported. Stop after two failed attempts.
+- Balanced permits one targeted validation. Deep, historical, or cross-repository audits require Daniel's explicit approval before starting.
