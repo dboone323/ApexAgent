@@ -174,11 +174,11 @@ struct ModelEvaluationsTests {
     func fileReadToolWorkspaceResolution() async throws {
         let orchestrator = await MainActor.run { AgentOrchestrator() }
         let tool = FileReadTool(orchestrator: orchestrator)
-        // Check reading AgentOrchestrator.swift through its root path (~/Developer/ApexAgent/AgentOrchestrator.swift)
+        // Check reading AgentOrchestrator.swift through its root path (~/AI-Workspace/repos/ApexAgent/AgentOrchestrator.swift)
         // or directly via relative path
         let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let testPath = "\(home)/Developer/ApexAgent/AgentOrchestrator.swift"
-        if FileManager.default.fileExists(atPath: "\(home)/Developer/ApexAgent/ApexAgent/AgentOrchestrator.swift") {
+        let testPath = "\(home)/AI-Workspace/repos/ApexAgent/AgentOrchestrator.swift"
+        if FileManager.default.fileExists(atPath: "\(home)/AI-Workspace/repos/ApexAgent/ApexAgent/AgentOrchestrator.swift") {
             let result = try await tool.call(arguments: FileReadTool.Arguments(path: testPath, maxLines: 5))
             #expect(!result.contains("File not found"))
             #expect(result.contains("import Foundation") || result.contains("AgentOrchestrator"))

@@ -383,7 +383,7 @@ struct SecurityTests {
     @Test @MainActor func testSecurityAuditorBlocksShellHistoryAndNetrc() {
         let auditor = SecurityAuditor.shared
         let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let ws = (home as NSString).appendingPathComponent("Developer/ApexAgent")
+        let ws = (home as NSString).appendingPathComponent("AI-Workspace/repos/ApexAgent")
 
         // .bash_history
         #expect(throws: SecuritySandboxError.self) {

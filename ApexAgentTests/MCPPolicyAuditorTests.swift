@@ -9,7 +9,7 @@ struct MCPPolicyAuditorTests {
         let server = MCPServerConfig(
             name: "Safe Project Filesystem",
             command: "npx",
-            arguments: ["-y", "@modelcontextprotocol/server-filesystem", "/Users/developer/Developer/ApexAgent"],
+            arguments: ["-y", "@modelcontextprotocol/server-filesystem", "/Users/developer/AI-Workspace/repos/ApexAgent"],
             transport: "stdio"
         )
 

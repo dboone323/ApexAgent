@@ -74,7 +74,7 @@ All run evidence (dispatch reports, gate logs, sentinels) lives in `runs/` insid
   - `nonisolated` methods on `@MainActor` classes cannot touch isolated `let` or `var` properties.
   - `[weak self]` is illegal in `@Sendable` closures when `Self` is non-Sendable.
   - Offload blocking work using `Task.detached` with `Sendable` captures only; publish results back via `MainActor.run`.
-- **Local CI is the authority**: GitHub Actions cannot execute on this account (runs stay queued; appeal pending). The local gate (`make lint` + `make test-deep`) and pre-push hook ARE the CI.
+- **Local gate + GitHub Actions CI**: `Swift CI` (`xcode-27`) executes and passes on `main` (runs `45931532991` and `46035125193`) alongside the local gate (`make lint` + `make test-deep`) and pre-push hook.
 - **Cline free models only**: only use free models in Cline (`cline-free/` or `reflection/`). Never enable usage-based billing or add credits.
 - **Stay inside scope**: an out-of-scope find becomes a GitHub issue, not opportunistic scope creep in the current PR.
 - **HQ task-bridge handoff**: preserve `Task ID` (`SETUP-023`), `Project`, `Owner/Agent`, `Status`, `Dependency`, `Evidence`, and `Next Action` in local work notes and the HQ Task and Approval Queues log.

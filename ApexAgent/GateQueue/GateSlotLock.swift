@@ -39,7 +39,7 @@ public final class GateSlotLock: Sendable {
             self.lockDirectoryURL = URL(fileURLWithPath: env, isDirectory: true)
         } else {
             let home = FileManager.default.homeDirectoryForCurrentUser
-            self.lockDirectoryURL = home.appendingPathComponent("Developer/ApexAgent/runs/gate.lock.d", isDirectory: true)
+            self.lockDirectoryURL = home.appendingPathComponent("AI-Workspace/repos/ApexAgent/runs/gate.lock.d", isDirectory: true)
         }
         self.staleTimeout = staleTimeout
         self.pollInterval = pollInterval
