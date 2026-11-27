@@ -205,6 +205,37 @@ struct GateQueueWorkerTests {
         #expect(rep3.jobSpec.jobName == "subsequent-gate")
     }
 
+    @Test("Sentinel exit-code propagation: ** TEST FAILED ** in log overrides masked exit 0")
+    func testSentinelPropagatesTestFailedWhenExitMasked() async throws {
+        let projectDir = try createTempDirectory(prefix: "apex-masked-fail-project")
+        let lockDir = try createTempDirectory(prefix: "apex-masked-fail-lock").appendingPathComponent("gate.lock.d")
+        defer {
+            try? FileManager.default.removeItem(at: projectDir)
+            try? FileManager.default.removeItem(at: lockDir.deletingLastPathComponent())
+        }
+
+        let lock = GateSlotLock(lockDirectoryURL: lockDir, staleTimeout: 3600, pollInterval: 0.05)
+        let worker = GateQueueWorker(registeredProjects: [projectDir], lock: lock)
+
+        let maskedFailCmd = [
+            "/bin/sh", "-c",
+            "echo 'Failing tests:'; echo '\tChatProbeTests.mcpInitNotStalled()'; echo '** TEST FAILED **'; exit 0"
+        ]
+        let spec = GateJobSpec(
+            jobName: "masked-fail",
+            targetProject: projectDir.path,
+            gateCommand: maskedFailCmd
+        )
+        try spec.submit()
+
+        let report = try await worker.processNextPendingJob(lockWaitTimeout: 10)
+        #expect(report != nil)
+        #expect(report?.exitCode == 1)
+
+        let sentinel = try String(contentsOf: report!.sentinelFileURL, encoding: .utf8)
+        #expect(sentinel.hasPrefix("1 "))
+    }
+
     @Test("Crash recovery: stale in-progress jobs are discovered, reported, and preserved without re-running")
     func testStaleInProgressRecovery() async throws {
         let projectDir = try createTempDirectory(prefix: "apex-stale-project")

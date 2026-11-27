@@ -260,12 +260,6 @@ public actor GateQueueWorker {
         let duration = Date().timeIntervalSince(startTime)
         let completedAt = Date()
 
-        // Write sibling .done sentinel: "<exit code> <UTC timestamp>\n"
-        let isoFormatter = ISO8601DateFormatter()
-        isoFormatter.formatOptions = [.withInternetDateTime]
-        let sentinelText = "\(processExitCode) \(isoFormatter.string(from: completedAt))\n"
-        try? sentinelText.data(using: .utf8)?.write(to: sentinelFileURL, options: .atomic)
-
         // Load baseline if provided
         var baseline: GateBaseline? = nil
         if let baselinePath = spec.baselineFile, !baselinePath.isEmpty {
@@ -278,14 +272,30 @@ public actor GateQueueWorker {
             baseline = try? GateBaseline.load(from: baselineURL)
         }
 
-        // 3. Report generation
+        // 3. Log analysis & effective exit code (never report 0 when xcodebuild printed ** TEST FAILED **)
         let logData = (try? Data(contentsOf: logFileURL)) ?? Data()
         let logString = String(data: logData, encoding: .utf8) ?? ""
         let analysis = analyzer.analyze(log: logString, baseline: baseline)
 
+        let hasXcodebuildTestFailedLine = logString
+            .components(separatedBy: .newlines)
+            .contains { $0.trimmingCharacters(in: .whitespaces) == "** TEST FAILED **" }
+        let effectiveExitCode: Int32
+        if processExitCode == 0 && (hasXcodebuildTestFailedLine || (analysis.totals?.failed ?? 0) > 0) {
+            effectiveExitCode = 1
+        } else {
+            effectiveExitCode = processExitCode
+        }
+
+        // Write sibling .done sentinel: "<exit code> <UTC timestamp>\n"
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        let sentinelText = "\(effectiveExitCode) \(isoFormatter.string(from: completedAt))\n"
+        try? sentinelText.data(using: .utf8)?.write(to: sentinelFileURL, options: .atomic)
+
         let report = GateJobReport(
             jobSpec: spec,
-            exitCode: processExitCode,
+            exitCode: effectiveExitCode,
             duration: duration,
             logFileURL: logFileURL,
             sentinelFileURL: sentinelFileURL,
