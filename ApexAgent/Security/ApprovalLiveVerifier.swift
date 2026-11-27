@@ -12,7 +12,7 @@ public enum ApprovalLiveVerifier {
         logs.append("================================================================================")
 
         let allowlist = ApprovalAllowlist()
-        let testDir = "/Users/danielstevens/Developer/ApexAgent"
+        let testDir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
         let testCmd = "swift test --filter ApprovalTests"
 
         // Clean any leftover state for deterministic test run

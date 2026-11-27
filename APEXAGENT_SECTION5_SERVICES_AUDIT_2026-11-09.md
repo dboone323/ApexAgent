@@ -4,7 +4,7 @@
 **Auditor:** Antigravity  
 **Packaged:** 2026-11-10  
 **Issue:** #42 — [Goal] Completion program Section 5: Services audit  
-**Repository:** `/Users/danielstevens/Developer/ApexAgent`  
+**Repository:** `/Users/danielstevens/AI-Workspace/repos/ApexAgent`  
 
 ---
 
@@ -32,11 +32,11 @@ This report delivers the Section 5 Services Audit for the ApexAgent Completion P
 ### Item 1: MCP Servers Live Check
 - **Verdict:** **PASS** (with live runtime verification of individual configured servers)
 - **Configured Servers Enumeration:**
-  1. `Filesystem MCP`: Declared in [`ApexAgent/Models/MCPManager.swift:78-84`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/MCPManager.swift#L78-L84). Command: `npx`, args: `["-y", "@modelcontextprotocol/server-filesystem", finalPath]`.
-  2. `Git MCP`: Declared in [`ApexAgent/Models/MCPManager.swift:92-99`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/MCPManager.swift#L92-L99). Command: `/usr/bin/env`, args: `["python3", "-m", "mcp_server_git", "--repository", finalPath]`. Opt-in gate: only loaded when `APEX_ENABLE_GIT_MCP == "1"`.
-  3. `xcodebuildmcp`: Declared in [`ApexAgent/Models/MCPManager.swift:101-113`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/MCPManager.swift#L101-L113). Command: resolved path `/Users/danielstevens/.local/bin/xcodebuildmcp`, args: `["mcp"]`.
-  4. `xcode-native`: Declared in [`ApexAgent/Models/MCPManager.swift:115-124`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/MCPManager.swift#L115-L124). Command: resolved via `resolveXcodeMCPBridgeCommand()` (`/Applications/Xcode.app/Contents/Developer/usr/bin/mcpbridge` or `xcrun mcpbridge`).
-  5. `ApexAgentMCPServer`: Declared in [`ApexAgentXcodePlugin/plugin.json:8-13`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentXcodePlugin/plugin.json#L8-L13). Command: `swift run --package-path ApexAgentXcodePlugin ApexAgentMCPServer`.
+  1. `Filesystem MCP`: Declared in [`ApexAgent/Models/MCPManager.swift:78-84`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/MCPManager.swift#L78-L84). Command: `npx`, args: `["-y", "@modelcontextprotocol/server-filesystem", finalPath]`.
+  2. `Git MCP`: Declared in [`ApexAgent/Models/MCPManager.swift:92-99`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/MCPManager.swift#L92-L99). Command: `/usr/bin/env`, args: `["python3", "-m", "mcp_server_git", "--repository", finalPath]`. Opt-in gate: only loaded when `APEX_ENABLE_GIT_MCP == "1"`.
+  3. `xcodebuildmcp`: Declared in [`ApexAgent/Models/MCPManager.swift:101-113`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/MCPManager.swift#L101-L113). Command: resolved path `/Users/danielstevens/.local/bin/xcodebuildmcp`, args: `["mcp"]`.
+  4. `xcode-native`: Declared in [`ApexAgent/Models/MCPManager.swift:115-124`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/MCPManager.swift#L115-L124). Command: resolved via `resolveXcodeMCPBridgeCommand()` (`/Applications/Xcode.app/Contents/Developer/usr/bin/mcpbridge` or `xcrun mcpbridge`).
+  5. `ApexAgentMCPServer`: Declared in [`ApexAgentXcodePlugin/plugin.json:8-13`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentXcodePlugin/plugin.json#L8-L13). Command: `swift run --package-path ApexAgentXcodePlugin ApexAgentMCPServer`.
 - **Live Evidence Gathered:**
   - `Filesystem MCP`:
     ```bash
@@ -82,13 +82,13 @@ This report delivers the Section 5 Services Audit for the ApexAgent Completion P
 - **Verdict:** **GAP**
 - **Expected:** `127.0.0.1:11434` only (not `0.0.0.0` or wildcard `*`).
 - **Code / Config Constants:**
-  - [`ApexAgent/AgentOrchestrator.swift:227`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/AgentOrchestrator.swift#L227): `private static let defaultOllamaURLString = "http://localhost:11434"`
-  - [`ApexAgent/Coordinators/AgentSessionCoordinator.swift:17`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Coordinators/AgentSessionCoordinator.swift#L17): `static let defaultOllamaURLString = "http://localhost:11434"`
-  - [`ApexAgent/Models/CognitiveMemoryEngine.swift:461`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/CognitiveMemoryEngine.swift#L461): `let resolvedHost = hostURL ?? UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434"`
-  - [`ApexAgent/Models/ModelRegistry.swift:387`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L387): `UserDefaults.standard.string(forKey: ollamaHostKey) ?? "http://localhost:11434"`
-  - [`ApexAgent/Models/OllamaAgentEngine.swift:104`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/OllamaAgentEngine.swift#L104): `let hostStr = UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434"`
-  - [`ApexAgent/Tools/AnalyzeImageTool.swift:167`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/AnalyzeImageTool.swift#L167): `URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434")`
-  - [`ApexAgent/UI/SettingsView.swift:71, 196`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/UI/SettingsView.swift#L71-L196): `ollamaHostURL = UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434"`
+  - [`ApexAgent/AgentOrchestrator.swift:227`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/AgentOrchestrator.swift#L227): `private static let defaultOllamaURLString = "http://localhost:11434"`
+  - [`ApexAgent/Coordinators/AgentSessionCoordinator.swift:17`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Coordinators/AgentSessionCoordinator.swift#L17): `static let defaultOllamaURLString = "http://localhost:11434"`
+  - [`ApexAgent/Models/CognitiveMemoryEngine.swift:461`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/CognitiveMemoryEngine.swift#L461): `let resolvedHost = hostURL ?? UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434"`
+  - [`ApexAgent/Models/ModelRegistry.swift:387`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L387): `UserDefaults.standard.string(forKey: ollamaHostKey) ?? "http://localhost:11434"`
+  - [`ApexAgent/Models/OllamaAgentEngine.swift:104`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/OllamaAgentEngine.swift#L104): `let hostStr = UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434"`
+  - [`ApexAgent/Tools/AnalyzeImageTool.swift:167`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Tools/AnalyzeImageTool.swift#L167): `URL(string: UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434")`
+  - [`ApexAgent/UI/SettingsView.swift:71, 196`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/UI/SettingsView.swift#L71-L196): `ollamaHostURL = UserDefaults.standard.string(forKey: "apex.ollamaHostURL") ?? "http://localhost:11434"`
 - **Live Listener Evidence:**
   ```bash
   $ lsof -nP -iTCP:11434 -sTCP:LISTEN
@@ -106,43 +106,43 @@ This report delivers the Section 5 Services Audit for the ApexAgent Completion P
 ### Item 3: Keychain Credential Paths
 - **Verdict:** **PASS** (Strict classification with zero secret values exposed)
 - **Enumeration & Classification:**
-  1. **macOS Keychain Storage** (`kSecClassGenericPassword`, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` via [`ApexAgent/Models/KeychainManager.swift:22-140`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/KeychainManager.swift#L22-L140)):
-     - `geminiAPIKey`: [`ApexAgent/Models/ModelRegistry.swift:146, 275, 285`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L146) [Keychain]
-     - `githubToken`: [`ApexAgent/Models/ModelRegistry.swift:332, 341`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L332) [Keychain]
-     - `collabToken`: [`ApexAgent/Models/CollaborativeServer.swift:94, 111`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/CollaborativeServer.swift#L94), [`ApexAgent/Models/ModelRegistry.swift:360, 369`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L360) [Keychain]
-     - `gatewayToken`: [`ApexAgent/Models/ApexGatewayServer.swift:52, 56`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/ApexGatewayServer.swift#L52), [`ApexGatewayClient.swift:100`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/ApexGatewayClient.swift#L100) [Keychain]
-     - `a2aAuthToken`: [`ApexAgent/Models/A2AServer.swift:256`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/A2AServer.swift#L256) [Keychain]
-     - `anthropicAPIKey`: [`ApexAgent/Models/AnthropicLanguageModel.swift:91, 326`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/AnthropicLanguageModel.swift#L91) [Keychain]
-     - `openAIAPIKey`: [`ApexAgent/Models/OpenAICompatibleLanguageModel.swift:130`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/OpenAICompatibleLanguageModel.swift#L130) [Keychain]
-     - `appleUserId`: [`ApexAgent/Models/UserAccountManager.swift:47, 84, 123`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/UserAccountManager.swift#L47) [Keychain]
-     - `linearAPIToken`: [`ApexAgent/Security/LinearIntegrationAuditor.swift:243`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Security/LinearIntegrationAuditor.swift#L243) [Keychain]
-     - `linearWebhookSecret`: [`ApexAgent/Security/LinearIntegrationAuditor.swift:259`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Security/LinearIntegrationAuditor.swift#L259) [Keychain]
-     - `braveSearchAPIKey`: [`ApexAgent/Tools/WebSearchTool.swift:111`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/WebSearchTool.swift#L111), [`SettingsView.swift:189, 350`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/UI/SettingsView.swift#L189) [Keychain]
-     - `tavilyAPIKey`: [`ApexAgent/Tools/WebSearchTool.swift:55`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/WebSearchTool.swift#L55), [`SettingsView.swift:190, 367`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/UI/SettingsView.swift#L190) [Keychain]
-     - `apex.discordBotToken`: [`ApexAgent/Models/DiscordMessagePoller.swift:34, 38`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/DiscordMessagePoller.swift#L34), [`DiscordBotTool.swift:131, 135`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/DiscordBotTool.swift#L131) [Keychain]
-     - Dynamic credentials: [`ApexAgent/Security/DotCredentialVault.swift:101, 136, 167`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Security/DotCredentialVault.swift#L101) [Keychain]
+  1. **macOS Keychain Storage** (`kSecClassGenericPassword`, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` via [`ApexAgent/Models/KeychainManager.swift:22-140`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/KeychainManager.swift#L22-L140)):
+     - `geminiAPIKey`: [`ApexAgent/Models/ModelRegistry.swift:146, 275, 285`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L146) [Keychain]
+     - `githubToken`: [`ApexAgent/Models/ModelRegistry.swift:332, 341`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L332) [Keychain]
+     - `collabToken`: [`ApexAgent/Models/CollaborativeServer.swift:94, 111`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/CollaborativeServer.swift#L94), [`ApexAgent/Models/ModelRegistry.swift:360, 369`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L360) [Keychain]
+     - `gatewayToken`: [`ApexAgent/Models/ApexGatewayServer.swift:52, 56`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/ApexGatewayServer.swift#L52), [`ApexGatewayClient.swift:100`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/ApexGatewayClient.swift#L100) [Keychain]
+     - `a2aAuthToken`: [`ApexAgent/Models/A2AServer.swift:256`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/A2AServer.swift#L256) [Keychain]
+     - `anthropicAPIKey`: [`ApexAgent/Models/AnthropicLanguageModel.swift:91, 326`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/AnthropicLanguageModel.swift#L91) [Keychain]
+     - `openAIAPIKey`: [`ApexAgent/Models/OpenAICompatibleLanguageModel.swift:130`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/OpenAICompatibleLanguageModel.swift#L130) [Keychain]
+     - `appleUserId`: [`ApexAgent/Models/UserAccountManager.swift:47, 84, 123`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/UserAccountManager.swift#L47) [Keychain]
+     - `linearAPIToken`: [`ApexAgent/Security/LinearIntegrationAuditor.swift:243`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Security/LinearIntegrationAuditor.swift#L243) [Keychain]
+     - `linearWebhookSecret`: [`ApexAgent/Security/LinearIntegrationAuditor.swift:259`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Security/LinearIntegrationAuditor.swift#L259) [Keychain]
+     - `braveSearchAPIKey`: [`ApexAgent/Tools/WebSearchTool.swift:111`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Tools/WebSearchTool.swift#L111), [`SettingsView.swift:189, 350`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/UI/SettingsView.swift#L189) [Keychain]
+     - `tavilyAPIKey`: [`ApexAgent/Tools/WebSearchTool.swift:55`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Tools/WebSearchTool.swift#L55), [`SettingsView.swift:190, 367`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/UI/SettingsView.swift#L190) [Keychain]
+     - `apex.discordBotToken`: [`ApexAgent/Models/DiscordMessagePoller.swift:34, 38`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/DiscordMessagePoller.swift#L34), [`DiscordBotTool.swift:131, 135`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Tools/DiscordBotTool.swift#L131) [Keychain]
+     - Dynamic credentials: [`ApexAgent/Security/DotCredentialVault.swift:101, 136, 167`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Security/DotCredentialVault.swift#L101) [Keychain]
   2. **Non-Keychain Fallback Sources:**
      - *Environment Variables (Read-Only Fallback)*:
-       - `GEMINI_API_KEY`: [`ApexAgent/Models/ModelRegistry.swift:278`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L278) [Environment]
-       - `GITHUB_COPILOT_TOKEN` / `GITHUB_TOKEN`: [`ApexAgent/Models/GitHubCopilotLanguageModel.swift:52`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/GitHubCopilotLanguageModel.swift#L52) [Environment]
-       - `DISCORD_APEX_TOKEN`: [`ApexAgent/Models/DiscordMessagePoller.swift:31`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/DiscordMessagePoller.swift#L31), [`DiscordBotTool.swift:128`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/DiscordBotTool.swift#L128) [Environment]
-       - `TAVILY_API_KEY`: [`ApexAgent/Tools/WebSearchTool.swift:61`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/WebSearchTool.swift#L61) [Environment]
-       - `BRAVE_SEARCH_API_KEY`: [`ApexAgent/Tools/WebSearchTool.swift:120`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/WebSearchTool.swift#L120) [Environment]
-       - `APEX_TEST_API_KEY`: [`ApexAgent/Models/AutomationWorkflows+1to3.swift:26`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/AutomationWorkflows+1to3.swift#L26) [Environment]
+       - `GEMINI_API_KEY`: [`ApexAgent/Models/ModelRegistry.swift:278`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L278) [Environment]
+       - `GITHUB_COPILOT_TOKEN` / `GITHUB_TOKEN`: [`ApexAgent/Models/GitHubCopilotLanguageModel.swift:52`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/GitHubCopilotLanguageModel.swift#L52) [Environment]
+       - `DISCORD_APEX_TOKEN`: [`ApexAgent/Models/DiscordMessagePoller.swift:31`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/DiscordMessagePoller.swift#L31), [`DiscordBotTool.swift:128`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Tools/DiscordBotTool.swift#L128) [Environment]
+       - `TAVILY_API_KEY`: [`ApexAgent/Tools/WebSearchTool.swift:61`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Tools/WebSearchTool.swift#L61) [Environment]
+       - `BRAVE_SEARCH_API_KEY`: [`ApexAgent/Tools/WebSearchTool.swift:120`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Tools/WebSearchTool.swift#L120) [Environment]
+       - `APEX_TEST_API_KEY`: [`ApexAgent/Models/AutomationWorkflows+1to3.swift:26`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/AutomationWorkflows+1to3.swift#L26) [Environment]
      - *CLI Subprocess Fallback*:
-       - `gh auth token`: [`ApexAgent/Models/GitHubCopilotLanguageModel.swift:69-80`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/GitHubCopilotLanguageModel.swift#L69-L80) [CLI Subprocess]
+       - `gh auth token`: [`ApexAgent/Models/GitHubCopilotLanguageModel.swift:69-80`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/GitHubCopilotLanguageModel.swift#L69-L80) [CLI Subprocess]
      - *Filesystem Configuration Fallback*:
-       - `~/.config/github-copilot/hosts.json`: [`ApexAgent/Models/GitHubCopilotLanguageModel.swift:58-66`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/GitHubCopilotLanguageModel.swift#L58-L66) [Filesystem JSON]
+       - `~/.config/github-copilot/hosts.json`: [`ApexAgent/Models/GitHubCopilotLanguageModel.swift:58-66`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/GitHubCopilotLanguageModel.swift#L58-L66) [Filesystem JSON]
      - *Migrated Legacy Plaintext Stores (One-way deletion into Keychain)*:
-       - `apex.geminiKey`: [`ApexAgent/Models/ModelRegistry.swift:152-157`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L152) [UserDefaults → Migrated & Deleted]
-       - `~/.apex_gemini_key`: [`ApexAgent/Models/ModelRegistry.swift:175`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L175) [File → Migrated & Deleted]
-       - `apex.model.copilotToken`: [`ApexAgent/Models/ModelRegistry.swift:349-354`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L349) [UserDefaults → Migrated & Deleted]
-       - `apex.collabToken`: [`ApexAgent/Models/CollaborativeServer.swift:97-100`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/CollaborativeServer.swift#L97), [`ModelRegistry.swift:377-382`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L377) [UserDefaults → Migrated & Deleted]
-       - `apex.discordBotToken`: [`ApexAgent/Models/DiscordMessagePoller.swift:37-39`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/DiscordMessagePoller.swift#L37), [`DiscordBotTool.swift:134-137`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/DiscordBotTool.swift#L134) [UserDefaults → Migrated & Deleted]
+       - `apex.geminiKey`: [`ApexAgent/Models/ModelRegistry.swift:152-157`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L152) [UserDefaults → Migrated & Deleted]
+       - `~/.apex_gemini_key`: [`ApexAgent/Models/ModelRegistry.swift:175`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L175) [File → Migrated & Deleted]
+       - `apex.model.copilotToken`: [`ApexAgent/Models/ModelRegistry.swift:349-354`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L349) [UserDefaults → Migrated & Deleted]
+       - `apex.collabToken`: [`ApexAgent/Models/CollaborativeServer.swift:97-100`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/CollaborativeServer.swift#L97), [`ModelRegistry.swift:377-382`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/ModelRegistry.swift#L377) [UserDefaults → Migrated & Deleted]
+       - `apex.discordBotToken`: [`ApexAgent/Models/DiscordMessagePoller.swift:37-39`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/DiscordMessagePoller.swift#L37), [`DiscordBotTool.swift:134-137`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Tools/DiscordBotTool.swift#L134) [UserDefaults → Migrated & Deleted]
      - *Remaining Non-Keychain Reads (Filed in #121)*:
-       - `apex.braveSearchAPIKey`: [`ApexAgent/Tools/WebSearchTool.swift:116`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/WebSearchTool.swift#L116) [UserDefaults fallback read]
-       - `apex.tavilyAPIKey`: [`ApexAgent/Tools/WebSearchTool.swift:58`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/WebSearchTool.swift#L58) [UserDefaults fallback read]
-       - `apex.discordWebhookUrl`: [`ApexAgent/Tools/DiscordWebhookTool.swift:45, 80`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/DiscordWebhookTool.swift#L45-L80) [UserDefaults plaintext read/write]
+       - `apex.braveSearchAPIKey`: [`ApexAgent/Tools/WebSearchTool.swift:116`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Tools/WebSearchTool.swift#L116) [UserDefaults fallback read]
+       - `apex.tavilyAPIKey`: [`ApexAgent/Tools/WebSearchTool.swift:58`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Tools/WebSearchTool.swift#L58) [UserDefaults fallback read]
+       - `apex.discordWebhookUrl`: [`ApexAgent/Tools/DiscordWebhookTool.swift:45, 80`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Tools/DiscordWebhookTool.swift#L45-L80) [UserDefaults plaintext read/write]
 - **Follow-up Issue Filed:** **#121** (`[Problem] Remaining plaintext credential reads in UserDefaults (Discord webhook URL; Brave/Tavily fallbacks)`).
 
 ---
@@ -189,7 +189,7 @@ This report delivers the Section 5 Services Audit for the ApexAgent Completion P
 - **Verdict:** **PASS**
 - **Store Initializer Census:**
   - Exhaustive codebase search for `CNContactStore` yields exactly **one** call site across the entire repository:
-    [`ApexAgent/Models/ContactsOptInManager.swift:101`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/ContactsOptInManager.swift#L101):
+    [`ApexAgent/Models/ContactsOptInManager.swift:101`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/ContactsOptInManager.swift#L101):
     ```swift
     101:            let store = CNContactStore()
     ```

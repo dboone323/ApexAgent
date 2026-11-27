@@ -6,7 +6,7 @@
 
 Let an agent work on ApexAgent's codebase autonomously — build, test, fix, iterate — inside a disposable environment, so that:
 
-- If it breaks things, Daniel's real repo at `/Users/danielstevens/Developer/ApexAgent` is untouched.
+- If it breaks things, Daniel's real repo at `/Users/danielstevens/AI-Workspace/repos/ApexAgent` is untouched.
 - If it fixes things, the fixes come out as a reviewable git bundle — never an auto-merge.
 - Nothing leaks: no host files, no real credentials, no open network.
 

@@ -23,19 +23,19 @@ All focused test suites and regressions passed cleanly with zero failures and ze
 ## 2. Modified & Created Files
 
 ### New Test Suites
-- [`ApexAgentTests/DelegateTaskToolTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/DelegateTaskToolTests.swift) (49 lines)
+- [`ApexAgentTests/DelegateTaskToolTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/DelegateTaskToolTests.swift) (49 lines)
   - 4 unit tests covering metadata, recursion depth limits, error handling, and agent registry resolution.
-- [`ApexAgentTests/ConveneMeetingToolTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/ConveneMeetingToolTests.swift) (66 lines)
+- [`ApexAgentTests/ConveneMeetingToolTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/ConveneMeetingToolTests.swift) (66 lines)
   - 5 unit tests covering metadata, array/JSON/comma-separated argument decoding, and participant validation.
-- [`ApexAgentTests/DiscordToolsTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/DiscordToolsTests.swift) (86 lines)
+- [`ApexAgentTests/DiscordToolsTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/DiscordToolsTests.swift) (86 lines)
   - 6 unit tests covering bot and webhook tools, argument decoding, and configuration error handling.
-- [`ApexAgentTests/DynamicToolCallToolTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/DynamicToolCallToolTests.swift) (43 lines)
+- [`ApexAgentTests/DynamicToolCallToolTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/DynamicToolCallToolTests.swift) (43 lines)
   - 3 unit tests covering metadata, unregistered tool rejection, and dynamic tool schema registration.
-- [`ApexAgentTests/DetectImageTextToolTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/DetectImageTextToolTests.swift) (69 lines)
+- [`ApexAgentTests/DetectImageTextToolTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/DetectImageTextToolTests.swift) (69 lines)
   - 3 unit tests covering metadata, missing file handling, and on-device Vision OCR text detection.
 
 ### Project Sync
-- [`ApexAgent.xcodeproj/project.pbxproj`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent.xcodeproj/project.pbxproj)
+- [`ApexAgent.xcodeproj/project.pbxproj`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent.xcodeproj/project.pbxproj)
   - Synchronized via `xcodegen generate` to register all 5 new test files with PBX targets.
 
 ---

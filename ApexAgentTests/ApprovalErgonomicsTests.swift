@@ -13,7 +13,7 @@ struct ApprovalErgonomicsTests {
         let allowlist = ApprovalAllowlist(userDefaults: UserDefaults(suiteName: "test.allowlist.hit") ?? .standard)
         allowlist.removeAll()
 
-        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let dir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
         let cmd = "swift build"
 
         // Before approval: not allowed
@@ -33,7 +33,7 @@ struct ApprovalErgonomicsTests {
         let allowlist = ApprovalAllowlist(userDefaults: UserDefaults(suiteName: "test.allowlist.diffcmd") ?? .standard)
         allowlist.removeAll()
 
-        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let dir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
         allowlist.allow(command: "swift build", directory: dir)
 
         // Different command in same directory: miss
@@ -45,7 +45,7 @@ struct ApprovalErgonomicsTests {
         let allowlist = ApprovalAllowlist(userDefaults: UserDefaults(suiteName: "test.allowlist.diffdir") ?? .standard)
         allowlist.removeAll()
 
-        let dirA = "/Users/danielstevens/Developer/ApexAgent"
+        let dirA = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
         let dirB = "/Users/danielstevens/Developer/OtherProject"
         let cmd = "git status"
 
@@ -60,7 +60,7 @@ struct ApprovalErgonomicsTests {
         let allowlist = ApprovalAllowlist(userDefaults: UserDefaults(suiteName: "test.allowlist.revoke") ?? .standard)
         allowlist.removeAll()
 
-        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let dir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
         let entry1 = allowlist.allow(command: "git fetch", directory: dir)
         let entry2 = allowlist.allow(command: "git branch", directory: dir)
 
@@ -90,7 +90,7 @@ struct ApprovalErgonomicsTests {
         let allowlist = ApprovalAllowlist(userDefaults: UserDefaults(suiteName: "test.allowlist.expiry") ?? .standard)
         allowlist.removeAll()
 
-        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let dir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
         let cmd = "make lint"
         let now = Date()
 
@@ -123,7 +123,7 @@ struct ApprovalErgonomicsTests {
         let payload = PhoneApprovalPayload(
             ask: "Execute terminal command",
             command: "git push origin feat/ui",
-            directory: "/Users/danielstevens/Developer/ApexAgent",
+            directory: "/Users/danielstevens/AI-Workspace/repos/ApexAgent",
             riskSummary: "Pushes local commits to remote origin",
             expiresAt: expiryDate
         )
@@ -131,7 +131,7 @@ struct ApprovalErgonomicsTests {
         // Payload contains exactly what phone needs
         #expect(payload.ask == "Execute terminal command")
         #expect(payload.command == "git push origin feat/ui")
-        #expect(payload.directory == "/Users/danielstevens/Developer/ApexAgent")
+        #expect(payload.directory == "/Users/danielstevens/AI-Workspace/repos/ApexAgent")
         #expect(payload.riskSummary == "Pushes local commits to remote origin")
         #expect(payload.expiresAt == expiryDate)
 
@@ -145,7 +145,7 @@ struct ApprovalErgonomicsTests {
         #expect(jsonDict != nil)
         #expect(jsonDict?["ask"] as? String == "Execute terminal command")
         #expect(jsonDict?["command"] as? String == "git push origin feat/ui")
-        #expect(jsonDict?["directory"] as? String == "/Users/danielstevens/Developer/ApexAgent")
+        #expect(jsonDict?["directory"] as? String == "/Users/danielstevens/AI-Workspace/repos/ApexAgent")
         #expect(jsonDict?["risk_summary"] as? String == "Pushes local commits to remote origin")
         #expect(jsonDict?["expires_at"] != nil)
         #expect(jsonDict?.keys.count == 5) // Exactly 5 keys, nothing more
@@ -154,7 +154,7 @@ struct ApprovalErgonomicsTests {
     // MARK: - Low-Risk Auto-Review vs High-Risk Surfacing
 
     @Test func testAutoReviewLowRiskReadOnlyCommand() {
-        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let dir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
 
         let statusVerdict = ApprovalAutoReview.review(
             toolName: "run_shell_command",
@@ -180,7 +180,7 @@ struct ApprovalErgonomicsTests {
         let allowlist = ApprovalAllowlist(userDefaults: UserDefaults(suiteName: "test.autoreview.allowlist") ?? .standard)
         allowlist.removeAll()
 
-        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let dir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
         let cmd = "swift test --filter LongRunTests"
 
         // Before allowlisting: not auto-approved
@@ -210,7 +210,7 @@ struct ApprovalErgonomicsTests {
     }
 
     @Test func testAutoReviewLowRiskSafeOperations() {
-        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let dir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
 
         let versionVerdict = ApprovalAutoReview.review(
             toolName: "run_shell_command",
@@ -234,7 +234,7 @@ struct ApprovalErgonomicsTests {
     }
 
     @Test func testAutoReviewHighRiskNetworkSend() {
-        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let dir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
 
         let curlVerdict = ApprovalAutoReview.review(
             toolName: "run_shell_command",
@@ -258,7 +258,7 @@ struct ApprovalErgonomicsTests {
     }
 
     @Test func testAutoReviewHighRiskWriteOutsideWorkspace() {
-        let workspace = "/Users/danielstevens/Developer/ApexAgent"
+        let workspace = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
 
         let targetOutsideVerdict = ApprovalAutoReview.review(
             toolName: "write_file",
@@ -282,7 +282,7 @@ struct ApprovalErgonomicsTests {
     }
 
     @Test func testAutoReviewHighRiskDeletion() {
-        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let dir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
 
         let deleteToolVerdict = ApprovalAutoReview.review(
             toolName: "delete_file",
@@ -315,7 +315,7 @@ struct ApprovalErgonomicsTests {
     }
 
     @Test func testAutoReviewHighRiskCredentialUse() {
-        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let dir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
 
         let envVerdict = ApprovalAutoReview.review(
             toolName: "run_shell_command",
@@ -363,7 +363,7 @@ struct ApprovalErgonomicsTests {
         let standardBefore = UserDefaults.standard.data(forKey: standardKey)
 
         let allowlist1 = ApprovalAllowlist(userDefaults: testSuite)
-        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let dir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
         let cmd = "swift build"
         let entry = allowlist1.allow(command: cmd, directory: dir)
 
@@ -381,7 +381,7 @@ struct ApprovalErgonomicsTests {
     }
 
     @Test func testApprovalLiveVerifierLeavesNoGrantBehind() {
-        let testDir = "/Users/danielstevens/Developer/ApexAgent"
+        let testDir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
         let testCmd = "swift test --filter ApprovalTests"
 
         let (output, passed) = ApprovalLiveVerifier.runVerification()
@@ -410,7 +410,7 @@ struct ApprovalErgonomicsTests {
         defer { testSuite.removePersistentDomain(forName: suiteName) }
 
         let allowlist = ApprovalAllowlist(userDefaults: testSuite)
-        let dir = "/Users/danielstevens/Developer/ApexAgent"
+        let dir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
         let cmd = "swift test --filter ApprovalTests"
 
         // Allow command in isolated allowlist

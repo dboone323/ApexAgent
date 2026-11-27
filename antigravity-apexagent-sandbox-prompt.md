@@ -15,7 +15,7 @@ Copy everything in the block below into Antigravity as one prompt.
 You are setting up a sandboxed autonomous development environment for my macOS app ApexAgent on this Mac. Work through the phases in order. This is a security-sensitive setup: the hard rules are non-negotiable, and every claim about isolation must be verified by an actual test, not assumed.
 
 CONTEXT
-- Host: my MacBook Pro (Apple Silicon). Real repo: /Users/danielstevens/Developer/ApexAgent (Xcode project ApexAgent.xcodeproj, scheme ApexAgent, unit test plan ApexAgent-UnitTests). Project toolchain requirement: macOS 27 SDK / Swift 6.4 (Xcode 27 beta on this host).
+- Host: my MacBook Pro (Apple Silicon). Real repo: /Users/danielstevens/AI-Workspace/repos/ApexAgent (Xcode project ApexAgent.xcodeproj, scheme ApexAgent, unit test plan ApexAgent-UnitTests). Project toolchain requirement: macOS 27 SDK / Swift 6.4 (Xcode 27 beta on this host).
 - Design: a disposable Tart (Cirrus Labs) macOS VM. Base VM "apex-base" stays pristine and is never used for agent work; each run clones it to "apex-work", the agent works there, results leave as a git bundle, and the clone is destroyed. Docker is NOT used for the app environment — Docker guests are Linux-only and cannot build a SwiftUI/SwiftData app.
 
 HARD RULES (never violate, for any reason)
@@ -42,7 +42,7 @@ PHASE 2 — Base VM configuration
 - Install the Antigravity CLI in the guest: `curl -fsSL https://antigravity.google/cli/install.sh | bash`.
 - CHECKPOINT (auth): Tell me to run one interactive `agy` session inside the guest and authenticate with my Google account myself. Then verify headless auth works: `agy -p "Reply with exactly: AUTH_OK"` must return AUTH_OK.
 - XCODE GATE: In the guest, run `xcodebuild -version` and `swift --version`. Compare with the project requirement (macOS 27 SDK / Swift 6.4, matching this host). If they do not match, STOP: report the mismatch and my options (e.g., install the matching Xcode from a .xip I provide into the base VM). Do NOT proceed past this gate on a mismatched toolchain.
-- Trial build: create a git bundle from the real repo's current HEAD (`git -C /Users/danielstevens/Developer/ApexAgent bundle create /tmp/apex-in.bundle HEAD`), copy it into the guest via scp, clone it to ~/ApexAgent in the guest, and run `xcodebuild build -project ApexAgent.xcodeproj -scheme ApexAgent -destination "platform=macOS"`. Record: build result, and — by watching what the build fetches — every external host the build process tries to reach (package registries, etc.). This evidence drives Phase 3's allowlist.
+- Trial build: create a git bundle from the real repo's current HEAD (`git -C /Users/danielstevens/AI-Workspace/repos/ApexAgent bundle create /tmp/apex-in.bundle HEAD`), copy it into the guest via scp, clone it to ~/ApexAgent in the guest, and run `xcodebuild build -project ApexAgent.xcodeproj -scheme ApexAgent -destination "platform=macOS"`. Record: build result, and — by watching what the build fetches — every external host the build process tries to reach (package registries, etc.). This evidence drives Phase 3's allowlist.
 - When configuration is complete: shut apex-base down cleanly (`tart stop apex-base`). From now on it is never booted for work — only cloned.
 
 PHASE 3 — Network lockdown + harness scripts

@@ -115,7 +115,7 @@ public enum PromptInjectionLiveVerifier {
         // 5. Privilege Separation & Exec Gating (Fail-Closed)
         // ─────────────────────────────────────────────────────────────────────
         logs.append("\n[5] Testing Privilege Separation & Fail-Closed Exec Gating:")
-        let testDir = "/Users/danielstevens/Developer/ApexAgent"
+        let testDir = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
         let allowlist = ApprovalAllowlist()
 
         // Step 5a: Untainted turn auto-review evaluates low-risk read-only commands

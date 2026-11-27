@@ -9,7 +9,7 @@ Per-tool shim files point here; if a shim and this file disagree, this file wins
 - Native macOS application (Swift / Xcode app).
 - Environment: macOS 27.0, Swift 6.4, Xcode 27.2.
 - Signing & Entitlements: Ad-hoc signing. App sandbox is disabled (`com.apple.security.app-sandbox` is FALSE) — this is a standing architectural fence, never change.
-- Local repo: `/Users/danielstevens/Developer/ApexAgent` · GitHub: `dboone323/ApexAgent`
+- Local repo: `/Users/danielstevens/AI-Workspace/repos/ApexAgent` · GitHub: `dboone323/ApexAgent`
 
 ## The loop (how all work moves)
 

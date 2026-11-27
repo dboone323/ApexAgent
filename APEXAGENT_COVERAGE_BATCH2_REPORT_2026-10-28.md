@@ -21,15 +21,15 @@ All focused test suites and regressions passed cleanly with zero failures and ze
 ## 2. Modified & Created Files
 
 ### Modified Production Code
-- [`Modules/SharedLogging/SharedLogger.swift`](file:///Users/danielstevens/Developer/ApexAgent/Modules/SharedLogging/SharedLogger.swift)
+- [`Modules/SharedLogging/SharedLogger.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/Modules/SharedLogging/SharedLogger.swift)
   - Exposed `public static let subsystem = "com.apexsuite"` as a public constant used across all static loggers, enabling compile-time and runtime validation.
 
 ### New Test Suites
-- [`ApexAgentTests/SharedLoggingTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/SharedLoggingTests.swift)
+- [`ApexAgentTests/SharedLoggingTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/SharedLoggingTests.swift)
   - 3 unit tests verifying subsystem identity, logger instantiation, and non-throwing emission.
-- [`ApexAgentTests/AppGroupDataBusTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/AppGroupDataBusTests.swift)
+- [`ApexAgentTests/AppGroupDataBusTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/AppGroupDataBusTests.swift)
   - 6 unit tests validating AppGroupDataBus behavior under `@MainActor` with isolated in-memory test defaults.
-- [`ApexAgentTests/MCPKitClientTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/MCPKitClientTests.swift)
+- [`ApexAgentTests/MCPKitClientTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/MCPKitClientTests.swift)
   - 7 unit tests covering actor initialization, tool discovery, tool execution, typed decoding, and error paths using a hermetic `MockMCPURLProtocol`.
 
 ---

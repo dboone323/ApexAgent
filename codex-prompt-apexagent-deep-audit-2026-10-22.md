@@ -2,7 +2,7 @@
 
 **For Daniel — how to use this:**
 
-- Paste the whole block below into Codex, started in `/Users/danielstevens/Developer/ApexAgent`. It's read-only: the only file Codex may create is its report, `CODEX_AUDIT_2026-10-22.md`, in the repo root.
+- Paste the whole block below into Codex, started in `/Users/danielstevens/AI-Workspace/repos/ApexAgent`. It's read-only: the only file Codex may create is its report, `CODEX_AUDIT_2026-10-22.md`, in the repo root.
 - It's phased so your tokens go to the highest-value work first: **Phase 1** (dynamic ground truth: git, build, tests, UI plan in your real GUI session, crash logs) and **Phase 2** (deep dives on the known-open clusters) matter most. If tokens run short, Phases 3–5 can be pasted again later as a follow-up — each phase stands alone.
 - Codex will ask approval for terminal commands. Builds, tests, greps, and reads are what you're approving; it shouldn't need a single write approval except the report file.
 - When it's done, paste its chat summary (or the report) back to Monarch. Monarch's static audit is running in parallel — where the two agree, that's high confidence; where they differ is where the interesting problems will be.
@@ -12,10 +12,10 @@
 ```
 # ApexAgent deep-dive audit — 2026-10-22
 
-You are auditing ApexAgent, a macOS Swift/SwiftUI multi-agent app, on the machine where it lives. Repo root: /Users/danielstevens/Developer/ApexAgent (Xcode project ApexAgent.xcodeproj, scheme ApexAgent). A separate static audit is being done from file reads alone; YOUR advantage is the terminal — you can build, run tests, grep the whole tree, and inspect git and system state. Dive deep. Verify by running, not by reading alone.
+You are auditing ApexAgent, a macOS Swift/SwiftUI multi-agent app, on the machine where it lives. Repo root: /Users/danielstevens/AI-Workspace/repos/ApexAgent (Xcode project ApexAgent.xcodeproj, scheme ApexAgent). A separate static audit is being done from file reads alone; YOUR advantage is the terminal — you can build, run tests, grep the whole tree, and inspect git and system state. Dive deep. Verify by running, not by reading alone.
 
 RULES
-- Read-only. Do not edit, fix, format, commit, or push anything. The ONLY file you may create is your report: /Users/danielstevens/Developer/ApexAgent/CODEX_AUDIT_2026-10-22.md
+- Read-only. Do not edit, fix, format, commit, or push anything. The ONLY file you may create is your report: /Users/danielstevens/AI-Workspace/repos/ApexAgent/CODEX_AUDIT_2026-10-22.md
 - Every finding needs evidence: file:line, a grep result, or verbatim command output. Tag each claim [RAN] (verified by executing) or [READ] (verified by reading code).
 - If a check can't run (timeout, missing tool, approval denied), record it as NOT RUN with the reason and move on. Never guess.
 - Be token-efficient: grep and targeted reads over full-file dumps. In the report, excerpt decisive lines and give counts instead of pasting huge outputs.

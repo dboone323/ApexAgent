@@ -10,7 +10,7 @@
 ## 1. Summary of Defects Fixed & Changes Made
 
 ### 1. Subprocess Pipe Deadlock in `SpaceLandingService.swift`
-- **Location:** [`ApexAgent/Models/SpaceLandingService.swift:314-380`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/SpaceLandingService.swift#L314-L380)
+- **Location:** [`ApexAgent/Models/SpaceLandingService.swift:314-380`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/SpaceLandingService.swift#L314-L380)
 - **Defect:** In `SpaceLandingService.defaultHostRun`, `xcodebuild build` and `xcodebuild test` were invoked with `Pipe()` assigned to standardOutput/standardError, followed by blocking `waitUntilExit()` calls prior to reading pipe buffers. Because `xcodebuild` generates megabytes of log output and Darwin anonymous pipes have a 64KB kernel capacity limit, child processes blocked indefinitely on `write()`, deadlocking the test runner or host process.
 - **Remediation:**
   - Implemented `SpaceLandingService.runProcessSafely(executableURL:arguments:timeoutSeconds:)` utilizing Swift 6 async structured concurrency.
@@ -20,12 +20,12 @@
   - Hardened all subprocess invocations in `SpaceLandingService` (`rev-parse`, `bundle verify`, `clone`, `fetch`, `update-ref`, `xcodebuild build`, `xcodebuild test`, and `xcresulttool summary`).
 
 ### 2. Idempotent Bundle Namespace in `TartVMBackend.swift`
-- **Location:** [`ApexAgent/Models/TartVMBackend.swift:55-66`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/TartVMBackend.swift#L55-L66)
+- **Location:** [`ApexAgent/Models/TartVMBackend.swift:55-66`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/TartVMBackend.swift#L55-L66)
 - **Defect:** Concurrent test execution or aborted runs left stale `.bundle` or `.bundle.lock` files in `NSTemporaryDirectory()`, causing parallel tests using the same `spaceID` prefix to collide on `git bundle create`.
 - **Remediation:** Added unique UUID suffixes to temporary seed bundle paths (`seed-\(spaceID)-\(UUID().uuidString).bundle`), pre-cleaned any existing file or lock before creation, and added `defer` cleanup blocks.
 
 ### 3. Structured Diagnostic Logging in `ToolEventLoggerImpl`
-- **Location:** [`ApexAgent/ToolEventLogger.swift:23-53`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/ToolEventLogger.swift#L23-L53)
+- **Location:** [`ApexAgent/ToolEventLogger.swift:23-53`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/ToolEventLogger.swift#L23-L53)
 - **Defect:** Hollow `{}` bodies in `logToolStart`, `logToolEnd`, `logToolEvent`, `updateToolStatus`, and `resolveConfirmation` silently discarded tool lifecycle traces during headless or un-orchestrated runs.
 - **Remediation:** Replaced hollow method bodies with structured diagnostic log emissions using `AppLog.debug(.toolbox, ...)`.
 
@@ -33,7 +33,7 @@
 
 ## 2. Unit Tests Added & Behavioral Verification
 
-Three new unit tests were added to [`ApexAgentTests/SpaceLandingServiceTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/SpaceLandingServiceTests.swift):
+Three new unit tests were added to [`ApexAgentTests/SpaceLandingServiceTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/SpaceLandingServiceTests.swift):
 
 1. **`runProcessSafelyHandlesLargeOutputWithoutDeadlock()`**
    - **Verification:** Spawns a process producing 200,000 bytes (> 3× the 64KB pipe buffer limit) through `SpaceLandingService.runProcessSafely`.

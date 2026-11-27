@@ -22,17 +22,17 @@ All focused test suites and regressions passed cleanly with zero failures and ze
 ## 2. Modified & Created Files
 
 ### New Test Suites
-- [`ApexAgentTests/FileSystemToolsTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/FileSystemToolsTests.swift) (197 lines)
+- [`ApexAgentTests/FileSystemToolsTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/FileSystemToolsTests.swift) (197 lines)
   - 12 unit tests across `CreateDirectoryTool`, `DeleteFileTool`, and `MoveFileTool`.
-- [`ApexAgentTests/FrontmostAppToolTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/FrontmostAppToolTests.swift) (38 lines)
+- [`ApexAgentTests/FrontmostAppToolTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/FrontmostAppToolTests.swift) (38 lines)
   - 2 unit tests covering tool metadata and frontmost application resolution.
-- [`ApexAgentTests/CaptureWindowAndScreenshotToolsTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/CaptureWindowAndScreenshotToolsTests.swift) (71 lines)
+- [`ApexAgentTests/CaptureWindowAndScreenshotToolsTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/CaptureWindowAndScreenshotToolsTests.swift) (71 lines)
   - 5 unit tests covering off-screen window capture, window ID bounds, and screen recording permission handling.
-- [`ApexAgentTests/ContainerStatusToolTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/ContainerStatusToolTests.swift) (157 lines)
+- [`ApexAgentTests/ContainerStatusToolTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/ContainerStatusToolTests.swift) (157 lines)
   - 7 unit tests covering sandbox micro-VM lifecycle, status table formatting, and error reporting.
 
 ### Project Sync
-- [`ApexAgent.xcodeproj/project.pbxproj`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent.xcodeproj/project.pbxproj)
+- [`ApexAgent.xcodeproj/project.pbxproj`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent.xcodeproj/project.pbxproj)
   - Synchronized via `xcodegen generate` to register all 4 new test files with PBX targets.
 
 ---

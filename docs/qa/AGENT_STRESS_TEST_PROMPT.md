@@ -67,7 +67,7 @@ The agent hooks into Swift Package Manager and Xcode test plans with adversarial
 
 ```bash
 # 1. Environment & Xcode configuration
-cd /Users/danielstevens/Developer/ApexAgent
+cd /Users/danielstevens/AI-Workspace/repos/ApexAgent
 export SWIFT_STRICT_CONCURRENCY=complete
 
 # 2. Run targeted test matrix for MCP, Playbooks, and Security Containers (entitlement-preserving)
@@ -128,7 +128,7 @@ let playbook = CollaborationPlaybook(
   "method": "tools/call",
   "params": {
     "name": "read_file",
-    "arguments": { "path": "/Users/danielstevens/Developer/ApexAgent/../../etc/passwd" }
+    "arguments": { "path": "/Users/danielstevens/AI-Workspace/repos/ApexAgent/../../etc/passwd" }
   }
 }
 ```

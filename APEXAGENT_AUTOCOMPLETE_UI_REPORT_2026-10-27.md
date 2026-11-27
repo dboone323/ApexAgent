@@ -62,7 +62,7 @@ Data sources are retrieved dynamically with fallback defaults:
 
 ## 3. Unit Tests Added
 
-Two real functional test cases were added to [`ApexAgentTests/ChatAutocompleteTests.swift`](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentTests/ChatAutocompleteTests.swift):
+Two real functional test cases were added to [`ApexAgentTests/ChatAutocompleteTests.swift`](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentTests/ChatAutocompleteTests.swift):
 
 1. **`testApplyInsertionUpdatesInputTextCorrectly()`**
    - **Verification:** Proves that selecting a bot mention suggestion (e.g. `"@researcher"` for query `"res"`) in a multi-word message (`"Can you ask @res"`) updates `inputText` to `"Can you ask @researcher "` with trailing whitespace.

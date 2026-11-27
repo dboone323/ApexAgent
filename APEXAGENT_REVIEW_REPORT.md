@@ -1,7 +1,7 @@
 # ApexAgent Comprehensive Architecture & Hardening Review Report
 **Date:** October 27, 2026  
 **Auditor:** Autonomous Staff Swift Systems Architect  
-**Workspace:** `/Users/danielstevens/Developer/ApexAgent`  
+**Workspace:** `/Users/danielstevens/AI-Workspace/repos/ApexAgent`  
 **Target Platform:** macOS 27 (Apple Silicon, 16GB Unified Memory), Xcode 27, Swift 6.4  
 **Audit Scope:** Swift 6 Strict Concurrency, Subprocess & Memory Safety, Credential Defense, Test Gate Coverage, and Context Compaction Ceilings.
 

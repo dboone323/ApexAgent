@@ -6,8 +6,8 @@
     <string>com.apexagent.testlog-rotate</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/danielstevens/Developer/ApexAgent/scripts/rotate-test-logs.sh</string>
-        <string>/Users/danielstevens/Developer/ApexAgent/build/test-logs</string>
+        <string>/Users/danielstevens/AI-Workspace/repos/ApexAgent/scripts/rotate-test-logs.sh</string>
+        <string>/Users/danielstevens/AI-Workspace/repos/ApexAgent/build/test-logs</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>

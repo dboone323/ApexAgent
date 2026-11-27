@@ -2,7 +2,7 @@
 **Date:** 2026-10-28  
 **Branch:** `feat/spaces-vm`  
 **Base Commit:** `7435feb3`  
-**Working Directory:** `/Users/danielstevens/Developer/ApexAgent`
+**Working Directory:** `/Users/danielstevens/AI-Workspace/repos/ApexAgent`
 
 ---
 

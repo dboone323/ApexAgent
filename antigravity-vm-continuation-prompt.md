@@ -67,4 +67,4 @@ Then stop. A human reviews the exported bundle on the host before anything reach
 1. Read the run summary `run.sh` prints (guest results, host re-verification, integrity gate).
 2. Skim `~/RUN_REPORT.md` from the export, especially DOCUMENTED-ONLY test issues and anything flagged under rule 3.
 3. Review the diff in `~/ApexSandbox/review-clone` on the `sandbox-review-<timestamp>` branch.
-4. Only then decide what crosses into `/Users/danielstevens/Developer/ApexAgent` — by your hand, as always.
+4. Only then decide what crosses into `/Users/danielstevens/AI-Workspace/repos/ApexAgent` — by your hand, as always.

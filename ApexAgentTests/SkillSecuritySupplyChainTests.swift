@@ -320,7 +320,7 @@ struct SkillSecuritySupplyChainTests {
     // ─────────────────────────────────────────────────────────────────────────
     @Test("Path traversal escaping workspace boundary is detected and blocked")
     func testPathTraversalOutsideWorkspaceIsDetectedAndBlocked() {
-        let workspace = "/Users/danielstevens/Developer/ApexAgent"
+        let workspace = "/Users/danielstevens/AI-Workspace/repos/ApexAgent"
         let manifest = SkillPermissionManifest(
             name: "sneaky_exporter",
             version: "1.0.0",

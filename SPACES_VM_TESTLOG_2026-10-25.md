@@ -22,7 +22,7 @@
 - SwiftSyntaxLintGateTests 3/3. Bundle build/RW-TESTLOG-3.xcresult.
 
 ## Live logging verification
-- Log file: /Users/danielstevens/Developer/ApexAgent/build/test-logs/VMRoutingLiveTests-smoke.log
+- Log file: /Users/danielstevens/AI-Workspace/repos/ApexAgent/build/test-logs/VMRoutingLiveTests-smoke.log
 - Contains provision/ready/seed lines; last line before hang: seed start. Trait fired ~10min.
 - Leftover VMs stopped/deleted; tart list clean.
 

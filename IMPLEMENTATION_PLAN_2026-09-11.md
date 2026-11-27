@@ -68,14 +68,14 @@ The plan is organized into 8 work phases. Each phase is independent and can be e
 
 **Goal:** Install linters, create config files, run first pass, fix auto-fixable violations.
 
-#### [NEW] [.swiftlint.yml](file:///Users/danielstevens/Developer/ApexAgent/.swiftlint.yml)
+#### [NEW] [.swiftlint.yml](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/.swiftlint.yml)
 - Create project-level SwiftLint config with:
   - `strict` mode enabled
   - `excluded: [.build, .dd, .dd-release, Modules/*/Tests]`
   - Custom rules for `nonisolated(unsafe)` usage documentation requirements
   - Opt-in rules: `force_unwrapping`, `implicitly_unwrapped_optional`, `missing_docs`, `closure_body_length`
 
-#### [NEW] [.swiftformat](file:///Users/danielstevens/Developer/ApexAgent/.swiftformat)
+#### [NEW] [.swiftformat](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/.swiftformat)
 - Create SwiftFormat config targeting Swift 6.4:
   - `--swiftversion 6.4`
   - `--indent 4`
@@ -84,7 +84,7 @@ The plan is organized into 8 work phases. Each phase is independent and can be e
   - `--stripunusedargs closure-only`
   - `--exclude .build,.dd,.dd-release`
 
-#### [MODIFY] [Makefile](file:///Users/danielstevens/Developer/ApexAgent/Makefile)
+#### [MODIFY] [Makefile](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/Makefile)
 - Add `lint`, `format`, `lint-fix` targets that invoke SwiftLint and SwiftFormat
 
 ---
@@ -93,23 +93,23 @@ The plan is organized into 8 work phases. Each phase is independent and can be e
 
 **Goal:** Eliminate all `nonisolated(unsafe)` and `@unchecked Sendable` bypasses, replacing them with proper concurrency primitives.
 
-#### [MODIFY] [AgentOrchestrator.swift](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/AgentOrchestrator.swift)
+#### [MODIFY] [AgentOrchestrator.swift](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/AgentOrchestrator.swift)
 - Lines 323–325: Replace `nonisolated(unsafe)` Task storage with a proper actor-isolated `TaskGroup` or Swift 6's `Mutex<Task<Void, Never>?>`
 - Audit `@MainActor` class-level annotation vs method-level redundancies
 
-#### [MODIFY] [CollaborativeServer.swift](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/CollaborativeServer.swift)
+#### [MODIFY] [CollaborativeServer.swift](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/CollaborativeServer.swift)
 - Line 20: Replace `nonisolated(unsafe) var rateLimiters` with `Mutex`-protected or actor-isolated storage
 
-#### [MODIFY] [LaunchAgent.swift](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/LaunchAgent.swift)
+#### [MODIFY] [LaunchAgent.swift](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/LaunchAgent.swift)
 - Line 79: Replace `nonisolated(unsafe) _agentsDirectory` with a computed property or `let` constant
 
-#### [MODIFY] [LocalRetrievalIndex.swift](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/LocalRetrievalIndex.swift)
+#### [MODIFY] [LocalRetrievalIndex.swift](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/LocalRetrievalIndex.swift)
 - Line 73: Replace `nonisolated(unsafe) metadataQuery` — should be actor-isolated or use `@preconcurrency`
 
-#### [MODIFY] [DifferentialScreenPerception.swift](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Tools/DifferentialScreenPerception.swift)
+#### [MODIFY] [DifferentialScreenPerception.swift](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Tools/DifferentialScreenPerception.swift)
 - Line 18: Replace `nonisolated(unsafe) previousFrame` with `Mutex` or actor-isolated storage
 
-#### [MODIFY] [AgentRegistry.swift](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/AgentRegistry.swift)
+#### [MODIFY] [AgentRegistry.swift](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/AgentRegistry.swift)
 - Line 20: Replace `nonisolated(unsafe) registeredAgents` with proper isolation
 
 #### `@unchecked Sendable` Replacements (all files):
@@ -125,7 +125,7 @@ The plan is organized into 8 work phases. Each phase is independent and can be e
 | `RepeatDetector.swift` | 37 | `@unchecked Sendable` with `NSLock` | Swift 6 `Mutex` |
 | `Milestone1ChallengerConcurrencyStressTests.swift` | 143 | `@unchecked Sendable SafeStallCollector` | `Mutex` |
 
-#### [MODIFY] [Package.swift](file:///Users/danielstevens/Developer/ApexAgent/Package.swift)
+#### [MODIFY] [Package.swift](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/Package.swift)
 - Remove `.enableExperimentalFeature("StrictConcurrency")` from all targets (lines 93, 112, 138, 160) — this is the default in Swift 6 and is redundant
 
 ---
@@ -134,7 +134,7 @@ The plan is organized into 8 work phases. Each phase is independent and can be e
 
 **Goal:** Break the 1,932-line monolith into focused components.
 
-#### [MODIFY] [AgentOrchestrator.swift](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/AgentOrchestrator.swift)
+#### [MODIFY] [AgentOrchestrator.swift](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/AgentOrchestrator.swift)
 - Extract agent session lifecycle into new `AgentSessionCoordinator.swift`
 - Extract tool dispatch logic into new `ToolDispatchEngine.swift`
 - Extract audit/governance methods (`verifyPathAllowed`, `isFolderAccessRestricted`) into `SecurityAuditor.swift`
@@ -150,24 +150,24 @@ The plan is organized into 8 work phases. Each phase is independent and can be e
 
 **Goal:** Eliminate all inconsistencies flagged across 6 audit reports.
 
-#### [MODIFY] [README.md](file:///Users/danielstevens/Developer/ApexAgent/README.md)
+#### [MODIFY] [README.md](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/README.md)
 - Update tool count from 32 → 47
 - Update Swift version references to 6.4
 - Add SwiftLint/SwiftFormat badge once configs exist
 
-#### [MODIFY] [IMPLEMENTATION_PLAN.md](file:///Users/danielstevens/Developer/ApexAgent/IMPLEMENTATION_PLAN.md)
+#### [MODIFY] [IMPLEMENTATION_PLAN.md](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/IMPLEMENTATION_PLAN.md)
 - Fix repo reference: `dboone323/fleet.workspace` → `dboone323/ApexAgent`
 - Remove paid-tier CI suggestions that conflict with free-tier policy in `NEXT_STEPS.md`
 
-#### [MODIFY] [PROJECT.md](file:///Users/danielstevens/Developer/ApexAgent/PROJECT.md)
+#### [MODIFY] [PROJECT.md](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/PROJECT.md)
 - Align stated architecture with actual 47-tool, multi-agent, group-chat reality
 - Document WS3/WS4/WS5 status as remaining items
 
-#### [MODIFY] [TASK_MANIFEST.md](file:///Users/danielstevens/Developer/ApexAgent/TASK_MANIFEST.md)
+#### [MODIFY] [TASK_MANIFEST.md](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/TASK_MANIFEST.md)
 - Mark R1–R4 milestones as complete
 - Add WS3/WS4/WS5 items with clear acceptance criteria
 
-#### [DELETE] [Package.swift.bak](file:///Users/danielstevens/Developer/ApexAgent/Package.swift.bak) & [Package.swift.bak2](file:///Users/danielstevens/Developer/ApexAgent/Package.swift.bak2)
+#### [DELETE] [Package.swift.bak](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/Package.swift.bak) & [Package.swift.bak2](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/Package.swift.bak2)
 - Remove stale backup files from repo root
 
 #### Cleanup repo root:
@@ -195,22 +195,22 @@ The plan is organized into 8 work phases. Each phase is independent and can be e
 
 **Goal:** Close security items from prior audits.
 
-#### [MODIFY] [MCPClient](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Models/MCPClient.swift) (process lifecycle)
+#### [MODIFY] [MCPClient](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Models/MCPClient.swift) (process lifecycle)
 - Ensure `stop()` kills the full child process tree (not just the parent), preventing orphaned `node`/`zsh` processes
 
-#### [MODIFY] [project.yml](file:///Users/danielstevens/Developer/ApexAgent/project.yml)
+#### [MODIFY] [project.yml](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/project.yml)
 - Add missing `ApexAgentIntents` dependency for the `ApexAgent` target
 
-#### [MODIFY] [Info.plist](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/Info.plist) (pending user confirmation)
+#### [MODIFY] [Info.plist](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/Info.plist) (pending user confirmation)
 - Remove stale `SUFeedURL` and `SUPublicEDKey` keys
 
 #### [MODIFY] Entitlements (pending user confirmation)
 - Evaluate `group.com.dboone323.fleet` → `group.com.dboone323.apexagent`
 
-#### [MODIFY] [PlaybookRunner.swift](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/PlaybookRunner.swift)
+#### [MODIFY] [PlaybookRunner.swift](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/PlaybookRunner.swift)
 - Sanitize user input before string interpolation in prompt templates to prevent prompt injection
 
-#### [MODIFY] [WorkspaceProactiveAuditor.swift](file:///Users/danielstevens/Developer/ApexAgent/ApexAgent/WorkspaceProactiveAuditor.swift)
+#### [MODIFY] [WorkspaceProactiveAuditor.swift](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgent/WorkspaceProactiveAuditor.swift)
 - Replace fallback `NSHomeDirectory() + "/Developer"` with explicit workspace configuration or guarded scan depth limit
 
 ---
@@ -219,11 +219,11 @@ The plan is organized into 8 work phases. Each phase is independent and can be e
 
 **Goal:** Expand coverage for undertested areas.
 
-#### [MODIFY] [ApexAgentUITests/](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentUITests/)
+#### [MODIFY] [ApexAgentUITests/](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentUITests/)
 - Expand from 2 files to cover at least: settings flow, creation sheets, MCP dashboard navigation, playbook execution flow
 - Fix `static var activeApp: XCUIApplication?` global mutable state (Swift 6 violation at line 25)
 
-#### [MODIFY] [ApexAgentContainerTests/](file:///Users/danielstevens/Developer/ApexAgent/ApexAgentContainerTests/)
+#### [MODIFY] [ApexAgentContainerTests/](file:///Users/danielstevens/AI-Workspace/repos/ApexAgent/ApexAgentContainerTests/)
 - Expand from 1 file to cover: container lifecycle (create/start/stop/destroy), snapshot management, PTY session I/O
 
 #### New test files needed:
