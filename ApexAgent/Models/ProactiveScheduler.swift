@@ -62,10 +62,19 @@ public final class ProactiveScheduler {
     public private(set) var activeFindings: [ProactiveFinding] = []
 
     private var heartbeatTimer: Timer?
+    private let handoffsProvider: @Sendable () async -> [TaskResult]
+    private var handoffTaskIdByFindingId: [UUID: String] = [:]
+    private var dismissedHandoffTaskIds: Set<String> = []
+    private var manualFindings: [ProactiveFinding] = []
     weak var orchestrator: AgentOrchestrator?
     weak var botManager: BotManager?
 
-    public init() {
+    public init(
+        handoffsProvider: @escaping @Sendable () async -> [TaskResult] = {
+            await AgentRegistry.shared.recentHandoffs()
+        }
+    ) {
+        self.handoffsProvider = handoffsProvider
         if UserDefaults.standard.object(forKey: "apex.proactiveScheduler.enabled") != nil {
             self.isEnabled = UserDefaults.standard.bool(forKey: "apex.proactiveScheduler.enabled")
         }
@@ -140,8 +149,10 @@ public final class ProactiveScheduler {
         }
 
         // 3. Check for Stalled Handoffs in AgentRegistry
-        let recentHandoffs = await AgentRegistry.shared.recentHandoffs()
+        let recentHandoffs = await handoffsProvider()
+        var newHandoffMap: [UUID: String] = [:]
         for handoff in recentHandoffs {
+            guard !dismissedHandoffTaskIds.contains(handoff.taskId) else { continue }
             if handoff.status == "in_progress" || handoff.status == "failed" {
                 let finding = ProactiveFinding(
                     title: handoff.status == "failed" ? "Agent Task Failed" : "Agent Task In Progress",
@@ -150,6 +161,7 @@ public final class ProactiveScheduler {
                     targetBotName: nil
                 )
                 findings.append(finding)
+                newHandoffMap[finding.id] = handoff.taskId
             }
         }
 
@@ -162,6 +174,8 @@ public final class ProactiveScheduler {
             }
         }
 
+        findings.append(contentsOf: manualFindings)
+        self.handoffTaskIdByFindingId = newHandoffMap
         self.activeFindings = findings
         return findings
     }
@@ -169,11 +183,27 @@ public final class ProactiveScheduler {
 
     // MARK: - Finding Management & Markdown Formatting
 
+    public func addFinding(_ finding: ProactiveFinding) {
+        manualFindings.append(finding)
+        activeFindings.append(finding)
+    }
+
     public func dismissFinding(id: UUID) {
+        if let taskId = handoffTaskIdByFindingId.removeValue(forKey: id) {
+            dismissedHandoffTaskIds.insert(taskId)
+        }
+        manualFindings.removeAll { $0.id == id }
         activeFindings.removeAll { $0.id == id }
     }
 
     public func clearAllFindings() {
+        for finding in activeFindings {
+            if let taskId = handoffTaskIdByFindingId[finding.id] {
+                dismissedHandoffTaskIds.insert(taskId)
+            }
+        }
+        handoffTaskIdByFindingId.removeAll()
+        manualFindings.removeAll()
         activeFindings.removeAll()
     }
 
