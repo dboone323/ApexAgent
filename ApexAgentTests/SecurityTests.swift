@@ -560,7 +560,7 @@ struct SecurityTests {
     }
 
     @Test @MainActor func testProactiveSchedulerFindingsFormattingAndDismissal() async {
-        let scheduler = ProactiveScheduler.shared
+        let scheduler = ProactiveScheduler(handoffsProvider: { [] })
         scheduler.clearAllFindings()
 
         let emptyMarkdown = scheduler.formatFindingsAsMarkdown()
@@ -572,8 +572,13 @@ struct SecurityTests {
             severity: .warning,
             targetBotName: "tester"
         )
-        // Simulate finding injection
+        scheduler.addFinding(finding)
+        #expect(scheduler.activeFindings.count == 1)
+        #expect(scheduler.formatFindingsAsMarkdown().contains("Test Queue Lag"))
+
         _ = await scheduler.evaluateNow()
+        #expect(scheduler.activeFindings.count == 1)
+
         scheduler.dismissFinding(id: finding.id)
         #expect(scheduler.activeFindings.isEmpty)
     }
